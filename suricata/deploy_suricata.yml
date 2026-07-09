@@ -1,0 +1,72 @@
+---
+- name: Deploy Suricata with integrations
+  hosts: localhost
+  vars:
+    config_file: "{{ config_file | default('deploy_config.yaml') }}"
+  tasks:
+    - name: Install dependencies
+      package:
+        name:
+          - python3
+          - python3-pip
+          - docker
+          - podman
+          - kubectl
+          - ansible
+        state: present
+      become: true
+
+    - name: Install Python dependencies
+      pip:
+        name:
+          - pyyaml
+          - pydantic
+          - psutil
+          - requests
+          - elasticsearch_async
+          - aiohttp
+          - orjson
+          - watchdog
+        state: present
+
+    - name: Copy configuration files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ item }}"
+        mode: '0644'
+      loop:
+        - deploy_config.yaml
+        - docker-compose.yml
+        - Dockerfile
+        - Dockerfile.connector
+        - suricata_connector.py
+        - entrypoint.sh
+        - logrotate
+        - suricata-deployment.yaml
+        - suricata-connector-deployment.yaml
+        - suricata-pvc.yaml
+
+    - name: Read deployment method
+      slurp:
+        src: "{{ config_file }}"
+      register: config_content
+
+    - name: Parse config
+      set_fact:
+        deployment_method: "{{ (config_content.content | b64decode | from_yaml).deployment.method }}"
+
+    - name: Deploy with Docker
+      command: python3 deploy_suricata.py --config {{ config_file }}
+      when: deployment_method == 'docker'
+
+    - name: Deploy with Podman
+      command: python3 deploy_suricata.py --config {{ config_file }}
+      when: deployment_method == 'podman'
+
+    - name: Deploy with Kubernetes
+      command: python3 deploy_suricata.py --config {{ config_file }}
+      when: deployment_method == 'kubernetes'
+
+    - name: Cleanup
+      command: python3 deploy_suricata.py --config {{ config_file }} --cleanup
+      when: cleanup | default(false) | bool

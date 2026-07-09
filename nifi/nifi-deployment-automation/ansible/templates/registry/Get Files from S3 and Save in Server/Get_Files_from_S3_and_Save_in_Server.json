@@ -1,0 +1,2107 @@
+{
+	"template": {
+		"description": "Get Files from S3 and Save in Server",
+		"groupId": "4c830d14-0176-1000-13eb-e5013afa3db6",
+		"name": "Get Files from S3 and Save in Server",
+		"snippet": {
+			"processGroups": {
+				"id": "539c4843-d9d5-3ae0-0000-000000000000",
+				"parentGroupId": "43727f53-6ad8-39d7-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "0b7992a0-eded-31af-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "a5ccfb86-56cb-33ac-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "b19fb7e5-334b-347b-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "1b10cb6f-1b39-3ac6-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "3a4a482f-b813-3c30-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "original",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "536eb9d4-b584-3167-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "1dd482c4-f98d-3d78-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "b19fb7e5-334b-347b-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "split",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "536eb9d4-b584-3167-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "420a62b9-b4f9-357a-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "536eb9d4-b584-3167-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "a5651e9b-7dac-38d3-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "52fd6ec0-e1be-3b2a-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "8fd2af66-896f-3fee-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "536eb9d4-b584-3167-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "576351a4-6aab-3eb8-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "52b580b4-96a2-38ab-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "a5ccfb86-56cb-33ac-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "6aa31fce-aed1-3500-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "00554d13-d615-32ad-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "52b580b4-96a2-38ab-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "6f2f20a4-b3a1-3e03-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "f8ea668b-c093-30b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "52b580b4-96a2-38ab-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "cd06a514-6b13-3ee1-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "144a238b-97f0-3808-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "b19fb7e5-334b-347b-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "d32a9ec8-c6f1-397e-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "0340aef7-6839-327e-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "unmatched",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "b19fb7e5-334b-347b-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "e34e4aef-c77d-3170-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "8ac348c5-ccd6-3690-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "539c4843-d9d5-3ae0-0000-000000000000",
+								"id": "a5ccfb86-56cb-33ac-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"controllerServices": {
+						"id": "acf59e3e-6bb7-3b3e-0000-000000000000",
+						"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+						"bundle": {
+							"artifact": "nifi-record-serialization-services-nar",
+							"group": "org.apache.nifi",
+							"version": "1.12.1"
+						},
+						"comments": "",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Schema Write Strategy",
+									"value": {
+										"name": "Schema Write Strategy"
+									}
+								},
+								{
+									"key": "schema-cache",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.serialization.RecordSchemaCacheService",
+										"name": "schema-cache"
+									}
+								},
+								{
+									"key": "schema-protocol-version",
+									"value": {
+										"name": "schema-protocol-version"
+									}
+								},
+								{
+									"key": "schema-access-strategy",
+									"value": {
+										"name": "schema-access-strategy"
+									}
+								},
+								{
+									"key": "schema-registry",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.schemaregistry.services.SchemaRegistry",
+										"name": "schema-registry"
+									}
+								},
+								{
+									"key": "schema-name",
+									"value": {
+										"name": "schema-name"
+									}
+								},
+								{
+									"key": "schema-version",
+									"value": {
+										"name": "schema-version"
+									}
+								},
+								{
+									"key": "schema-branch",
+									"value": {
+										"name": "schema-branch"
+									}
+								},
+								{
+									"key": "schema-text",
+									"value": {
+										"name": "schema-text"
+									}
+								},
+								{
+									"key": "Date Format",
+									"value": {
+										"name": "Date Format"
+									}
+								},
+								{
+									"key": "Time Format",
+									"value": {
+										"name": "Time Format"
+									}
+								},
+								{
+									"key": "Timestamp Format",
+									"value": {
+										"name": "Timestamp Format"
+									}
+								},
+								{
+									"key": "Pretty Print JSON",
+									"value": {
+										"name": "Pretty Print JSON"
+									}
+								},
+								{
+									"key": "suppress-nulls",
+									"value": {
+										"name": "suppress-nulls"
+									}
+								},
+								{
+									"key": "output-grouping",
+									"value": {
+										"name": "output-grouping"
+									}
+								},
+								{
+									"key": "compression-format",
+									"value": {
+										"name": "compression-format"
+									}
+								},
+								{
+									"key": "compression-level",
+									"value": {
+										"name": "compression-level"
+									}
+								}
+							]
+						},
+						"name": "JsonRecordSetWriter",
+						"persistsState": "false",
+						"properties": {
+							"entry": [
+								{
+									"key": "Schema Write Strategy"
+								},
+								{
+									"key": "schema-cache"
+								},
+								{
+									"key": "schema-protocol-version"
+								},
+								{
+									"key": "schema-access-strategy"
+								},
+								{
+									"key": "schema-registry"
+								},
+								{
+									"key": "schema-name"
+								},
+								{
+									"key": "schema-version"
+								},
+								{
+									"key": "schema-branch"
+								},
+								{
+									"key": "schema-text"
+								},
+								{
+									"key": "Date Format"
+								},
+								{
+									"key": "Time Format"
+								},
+								{
+									"key": "Timestamp Format"
+								},
+								{
+									"key": "Pretty Print JSON"
+								},
+								{
+									"key": "suppress-nulls"
+								},
+								{
+									"key": "output-grouping"
+								},
+								{
+									"key": "compression-format"
+								},
+								{
+									"key": "compression-level"
+								}
+							]
+						},
+						"state": "ENABLED",
+						"type": "org.apache.nifi.json.JsonRecordSetWriter"
+					},
+					"processors": [
+						{
+							"id": "00554d13-d615-32ad-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "1224.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "0340aef7-6839-327e-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "800.0",
+								"y": "560.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "144a238b-97f0-3808-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "-88.0",
+								"y": "568.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "3a4a482f-b813-3c30-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "800.0",
+								"y": "336.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "52b580b4-96a2-38ab-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "992.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Directory",
+											"value": {
+												"name": "Directory"
+											}
+										},
+										{
+											"key": "Conflict Resolution Strategy",
+											"value": {
+												"name": "Conflict Resolution Strategy"
+											}
+										},
+										{
+											"key": "Create Missing Directories",
+											"value": {
+												"name": "Create Missing Directories"
+											}
+										},
+										{
+											"key": "Maximum File Count",
+											"value": {
+												"name": "Maximum File Count"
+											}
+										},
+										{
+											"key": "Last Modified Time",
+											"value": {
+												"name": "Last Modified Time"
+											}
+										},
+										{
+											"key": "Permissions",
+											"value": {
+												"name": "Permissions"
+											}
+										},
+										{
+											"key": "Owner",
+											"value": {
+												"name": "Owner"
+											}
+										},
+										{
+											"key": "Group",
+											"value": {
+												"name": "Group"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Directory",
+											"value": "C:\\Tools\\nifi-1.12.1\\data"
+										},
+										{
+											"key": "Conflict Resolution Strategy",
+											"value": "fail"
+										},
+										{
+											"key": "Create Missing Directories",
+											"value": "true"
+										},
+										{
+											"key": "Maximum File Count"
+										},
+										{
+											"key": "Last Modified Time"
+										},
+										{
+											"key": "Permissions"
+										},
+										{
+											"key": "Owner"
+										},
+										{
+											"key": "Group"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "PutFile",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.PutFile"
+						},
+						{
+							"id": "536eb9d4-b584-3167-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "336.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "JsonPath Expression",
+											"value": {
+												"name": "JsonPath Expression"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "JsonPath Expression",
+											"value": "$.*"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "SplitJson",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "split"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.SplitJson"
+						},
+						{
+							"id": "8ac348c5-ccd6-3690-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "784.0",
+								"y": "784.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "8fd2af66-896f-3fee-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "-88.0",
+								"y": "336.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "a5651e9b-7dac-38d3-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "104.0"
+							},
+							"bundle": {
+								"artifact": "nifi-aws-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Bucket",
+											"value": {
+												"name": "Bucket"
+											}
+										},
+										{
+											"key": "Region",
+											"value": {
+												"name": "Region"
+											}
+										},
+										{
+											"key": "Access Key",
+											"value": {
+												"name": "Access Key"
+											}
+										},
+										{
+											"key": "Secret Key",
+											"value": {
+												"name": "Secret Key"
+											}
+										},
+										{
+											"key": "record-writer",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.serialization.RecordSetWriterFactory",
+												"name": "record-writer"
+											}
+										},
+										{
+											"key": "min-age",
+											"value": {
+												"name": "min-age"
+											}
+										},
+										{
+											"key": "write-s3-object-tags",
+											"value": {
+												"name": "write-s3-object-tags"
+											}
+										},
+										{
+											"key": "write-s3-user-metadata",
+											"value": {
+												"name": "write-s3-user-metadata"
+											}
+										},
+										{
+											"key": "Credentials File",
+											"value": {
+												"name": "Credentials File"
+											}
+										},
+										{
+											"key": "AWS Credentials Provider service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderService",
+												"name": "AWS Credentials Provider service"
+											}
+										},
+										{
+											"key": "Communications Timeout",
+											"value": {
+												"name": "Communications Timeout"
+											}
+										},
+										{
+											"key": "SSL Context Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+												"name": "SSL Context Service"
+											}
+										},
+										{
+											"key": "Endpoint Override URL",
+											"value": {
+												"name": "Endpoint Override URL"
+											}
+										},
+										{
+											"key": "Signer Override",
+											"value": {
+												"name": "Signer Override"
+											}
+										},
+										{
+											"key": "proxy-configuration-service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.proxy.ProxyConfigurationService",
+												"name": "proxy-configuration-service"
+											}
+										},
+										{
+											"key": "Proxy Host",
+											"value": {
+												"name": "Proxy Host"
+											}
+										},
+										{
+											"key": "Proxy Host Port",
+											"value": {
+												"name": "Proxy Host Port"
+											}
+										},
+										{
+											"key": "proxy-user-name",
+											"value": {
+												"name": "proxy-user-name"
+											}
+										},
+										{
+											"key": "proxy-user-password",
+											"value": {
+												"name": "proxy-user-password"
+											}
+										},
+										{
+											"key": "delimiter",
+											"value": {
+												"name": "delimiter"
+											}
+										},
+										{
+											"key": "prefix",
+											"value": {
+												"name": "prefix"
+											}
+										},
+										{
+											"key": "use-versions",
+											"value": {
+												"name": "use-versions"
+											}
+										},
+										{
+											"key": "list-type",
+											"value": {
+												"name": "list-type"
+											}
+										},
+										{
+											"key": "requester-pays",
+											"value": {
+												"name": "requester-pays"
+											}
+										}
+									]
+								},
+								"executionNode": "PRIMARY",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Bucket",
+											"value": "nifi-s3-poc-bucket"
+										},
+										{
+											"key": "Region",
+											"value": "ap-south-1"
+										},
+										{
+											"key": "Access Key"
+										},
+										{
+											"key": "Secret Key"
+										},
+										{
+											"key": "record-writer",
+											"value": "acf59e3e-6bb7-3b3e-0000-000000000000"
+										},
+										{
+											"key": "min-age",
+											"value": "0 sec"
+										},
+										{
+											"key": "write-s3-object-tags",
+											"value": "true"
+										},
+										{
+											"key": "write-s3-user-metadata",
+											"value": "true"
+										},
+										{
+											"key": "Credentials File"
+										},
+										{
+											"key": "AWS Credentials Provider service"
+										},
+										{
+											"key": "Communications Timeout",
+											"value": "30 secs"
+										},
+										{
+											"key": "SSL Context Service"
+										},
+										{
+											"key": "Endpoint Override URL"
+										},
+										{
+											"key": "Signer Override",
+											"value": "Default Signature"
+										},
+										{
+											"key": "proxy-configuration-service"
+										},
+										{
+											"key": "Proxy Host"
+										},
+										{
+											"key": "Proxy Host Port"
+										},
+										{
+											"key": "proxy-user-name"
+										},
+										{
+											"key": "proxy-user-password"
+										},
+										{
+											"key": "delimiter"
+										},
+										{
+											"key": "prefix"
+										},
+										{
+											"key": "use-versions",
+											"value": "false"
+										},
+										{
+											"key": "list-type",
+											"value": "1"
+										},
+										{
+											"key": "requester-pays",
+											"value": "false"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "true",
+							"name": "ListS3",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.aws.s3.ListS3"
+						},
+						{
+							"id": "a5ccfb86-56cb-33ac-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "776.0"
+							},
+							"bundle": {
+								"artifact": "nifi-aws-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Bucket",
+											"value": {
+												"name": "Bucket"
+											}
+										},
+										{
+											"key": "Object Key",
+											"value": {
+												"name": "Object Key"
+											}
+										},
+										{
+											"key": "Region",
+											"value": {
+												"name": "Region"
+											}
+										},
+										{
+											"key": "Access Key",
+											"value": {
+												"name": "Access Key"
+											}
+										},
+										{
+											"key": "Secret Key",
+											"value": {
+												"name": "Secret Key"
+											}
+										},
+										{
+											"key": "Credentials File",
+											"value": {
+												"name": "Credentials File"
+											}
+										},
+										{
+											"key": "AWS Credentials Provider service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderService",
+												"name": "AWS Credentials Provider service"
+											}
+										},
+										{
+											"key": "Communications Timeout",
+											"value": {
+												"name": "Communications Timeout"
+											}
+										},
+										{
+											"key": "Version",
+											"value": {
+												"name": "Version"
+											}
+										},
+										{
+											"key": "SSL Context Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+												"name": "SSL Context Service"
+											}
+										},
+										{
+											"key": "Endpoint Override URL",
+											"value": {
+												"name": "Endpoint Override URL"
+											}
+										},
+										{
+											"key": "Signer Override",
+											"value": {
+												"name": "Signer Override"
+											}
+										},
+										{
+											"key": "encryption-service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.processors.aws.s3.AmazonS3EncryptionService",
+												"name": "encryption-service"
+											}
+										},
+										{
+											"key": "proxy-configuration-service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.proxy.ProxyConfigurationService",
+												"name": "proxy-configuration-service"
+											}
+										},
+										{
+											"key": "Proxy Host",
+											"value": {
+												"name": "Proxy Host"
+											}
+										},
+										{
+											"key": "Proxy Host Port",
+											"value": {
+												"name": "Proxy Host Port"
+											}
+										},
+										{
+											"key": "proxy-user-name",
+											"value": {
+												"name": "proxy-user-name"
+											}
+										},
+										{
+											"key": "proxy-user-password",
+											"value": {
+												"name": "proxy-user-password"
+											}
+										},
+										{
+											"key": "requester-pays",
+											"value": {
+												"name": "requester-pays"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Bucket",
+											"value": "nifi-s3-poc-bucket"
+										},
+										{
+											"key": "Object Key",
+											"value": "${filename}"
+										},
+										{
+											"key": "Region",
+											"value": "ap-south-1"
+										},
+										{
+											"key": "Access Key"
+										},
+										{
+											"key": "Secret Key"
+										},
+										{
+											"key": "Credentials File"
+										},
+										{
+											"key": "AWS Credentials Provider service"
+										},
+										{
+											"key": "Communications Timeout",
+											"value": "30 secs"
+										},
+										{
+											"key": "Version"
+										},
+										{
+											"key": "SSL Context Service"
+										},
+										{
+											"key": "Endpoint Override URL"
+										},
+										{
+											"key": "Signer Override",
+											"value": "Default Signature"
+										},
+										{
+											"key": "encryption-service"
+										},
+										{
+											"key": "proxy-configuration-service"
+										},
+										{
+											"key": "Proxy Host"
+										},
+										{
+											"key": "Proxy Host Port"
+										},
+										{
+											"key": "proxy-user-name"
+										},
+										{
+											"key": "proxy-user-password"
+										},
+										{
+											"key": "requester-pays",
+											"value": "false"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "FetchS3Object",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.aws.s3.FetchS3Object"
+						},
+						{
+							"id": "b19fb7e5-334b-347b-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "344.0",
+								"y": "560.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": {
+												"name": "Destination"
+											}
+										},
+										{
+											"key": "Return Type",
+											"value": {
+												"name": "Return Type"
+											}
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": {
+												"name": "Path Not Found Behavior"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										},
+										{
+											"key": "filename",
+											"value": {
+												"name": "filename"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": "flowfile-attribute"
+										},
+										{
+											"key": "Return Type",
+											"value": "auto-detect"
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": "ignore"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										},
+										{
+											"key": "filename",
+											"value": "$.key"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "EvaluateJsonPath",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "unmatched"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+						},
+						{
+							"id": "f8ea668b-c093-30b6-0000-000000000000",
+							"parentGroupId": "539c4843-d9d5-3ae0-0000-000000000000",
+							"position": {
+								"x": "-104.0",
+								"y": "992.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.1"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "DISABLED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						}
+					]
+				},
+				"flowfileConcurrency": "UNBOUNDED",
+				"flowfileOutboundPolicy": "STREAM_WHEN_AVAILABLE",
+				"name": "Get Files from S3 and Save in Server",
+				"variables": ""
+			}
+		},
+		"timestamp": "01/29/2022 20:54:54 IST",
+		"_encoding-version": "1.3"
+	}
+}

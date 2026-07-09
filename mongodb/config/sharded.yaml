@@ -1,0 +1,11 @@
+# Sharded cluster config - merges with base.yaml
+# Use clusterRole: 'configsvr' for config servers, 'mongos' for routers
+sharding:
+  clusterRole: configsvr  # Change to 'mongos' as needed
+
+# For mongos, add:
+# sharding:
+#   configDB: configReplSet/host1:27019,host2:27019,host3:27019
+
+net:
+  port: 27019  # Configsvr port; use 27017 for mongos

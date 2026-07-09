@@ -1,0 +1,166 @@
+---
+- name: Deploy Vault Cluster
+  hosts: localhost
+  become: true
+  vars_files:
+    - vars/vault.yml
+  tasks:
+    - name: Install required packages
+      package:
+        name:
+          - python3-pip
+          - git
+          - vault
+        state: present
+
+    - name: Install Python dependencies
+      pip:
+        name:
+          - kubernetes
+          - pyyaml
+        state: present
+
+    - name: Create certs directory
+      file:
+        path: "{{ vault_certs_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create config directory
+      file:
+        path: "{{ vault_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy certificate generation script
+      copy:
+        src: "{{ playbook_dir }}/config/generate_certs.py"
+        dest: "{{ vault_config_dir }}/generate_certs.py"
+        mode: '0755'
+
+    - name: Copy Vault configuration
+      copy:
+        src: "{{ playbook_dir }}/config/vault-server.hcl"
+        dest: "{{ vault_config_dir }}/vault-server.hcl"
+        mode: '0644'
+
+    - name: Deploy Vault with Docker
+      when: vault_runtime == "docker"
+      block:
+        - name: Ensure Docker is installed
+          package:
+            name: docker
+            state: present
+
+        - name: Ensure Docker Compose plugin is installed
+          package:
+            name: docker-compose
+            state: present
+
+        - name: Start Docker service
+          service:
+            name: docker
+            state: started
+            enabled: true
+
+        - name: Deploy Docker Compose configuration
+          command: "docker compose -f {{ vault_compose_file }} up -d"
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: docker_deploy
+          changed_when: docker_deploy.rc == 0
+
+        - name: Wait for Vault containers to be running
+          command: "docker compose -f {{ vault_compose_file }} ps -q"
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: docker_ps
+          until: docker_ps.stdout.strip() != ""
+          retries: 30
+          delay: 10
+
+    - name: Deploy Vault with Podman
+      when: vault_runtime == "podman"
+      block:
+        - name: Ensure Podman is installed
+          package:
+            name: podman
+            state: present
+
+        - name: Ensure Podman Compose is installed
+          pip:
+            name: podman-compose
+            state: present
+
+        - name: Deploy Podman Compose configuration
+          command: "podman-compose -f {{ vault_compose_file }} up -d"
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: podman_deploy
+          changed_when: podman_deploy.rc == 0
+
+        - name: Wait for Vault containers to be running
+          command: "podman-compose -f {{ vault_compose_file }} ps -q"
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: podman_ps
+          until: podman_ps.stdout.strip() != ""
+          retries: 30
+          delay: 10
+
+    - name: Deploy Vault with Kubernetes
+      when: vault_runtime == "kubernetes"
+      block:
+        - name: Ensure kubectl is installed
+          package:
+            name: kubectl
+            state: present
+
+        - name: Create Kubernetes namespace
+          kubernetes.core.k8s:
+            api_version: v1
+            kind: Namespace
+            name: "{{ vault_namespace }}"
+            state: present
+
+        - name: Create Vault configuration ConfigMap
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: vault-config
+                namespace: "{{ vault_namespace }}"
+              data:
+                vault-server.hcl: |
+                  {{ lookup('file', playbook_dir + '/config/vault-server.hcl') | indent(18) }}
+                generate_certs.py: |
+                  {{ lookup('file', playbook_dir + '/config/generate_certs.py') | indent(18) }}
+
+        - name: Apply Kubernetes manifest
+          kubernetes.core.k8s:
+            state: present
+            src: "{{ vault_kubernetes_manifest }}"
+            namespace: "{{ vault_namespace }}"
+
+        - name: Wait for Vault pods to be running
+          kubernetes.core.k8s_info:
+            kind: Pod
+            namespace: "{{ vault_namespace }}"
+            label_selectors:
+              - app=vault
+          register: pod_status
+          until: pod_status.resources | length > 0 and pod_status.resources | selectattr('status.phase', 'equal', 'Running') | length == pod_status.resources | length
+          retries: 30
+          delay: 10
+
+    - name: Verify Vault UI accessibility
+      uri:
+        url: "https://localhost:8200/v1/sys/health"
+        validate_certs: false
+        status_code: 200
+      register: vault_ui
+      retries: 30
+      delay: 10
+      until: vault_ui.status == 200

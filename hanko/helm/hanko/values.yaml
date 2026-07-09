@@ -1,0 +1,69 @@
+image:
+  repository: ${CONTAINER_REGISTRY}/hanko
+  tag: latest
+  pullPolicy: IfNotPresent
+
+vault:
+  enabled: true
+  address: ${VAULT_ADDR}
+  secretPath: secret/hanko
+
+db:
+  username: hanko_user
+  password: secure_password
+  repl_user: repl_user
+  repl_password: repl_secure_password
+
+smtp:
+  username: smtp_user
+  password: smtp_secure_password
+
+secrets:
+  jwt_secret: "{{ vault_secret('secret/hanko', 'jwt_secret') }}"
+
+ingress:
+  enabled: true
+  hostname: hanko.your-domain.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  tls: true
+
+replicas: 2
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+networkPolicy:
+  enabled: true
+  allow:
+    - namespace: hanko
+      podSelector:
+        app: postgresql
+    - namespace: hanko
+      podSelector:
+        app: mailslurper
+    - namespace: hanko
+      podSelector:
+        app: elements
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true

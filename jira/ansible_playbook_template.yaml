@@ -1,0 +1,209 @@
+- name: Deploy Jira Stack
+  hosts: all
+  become: true  # Run as root for system-level changes
+  vars:
+    compose_file: "{compose_file}"
+    prometheus_config_dir: "/etc/prometheus"
+    grafana_config_dir: "/etc/grafana"
+    backups_dir: "/srv/jira-backups"
+    traefik_config_dir: "/etc/traefik"
+    docker_group: "docker"
+    ansible_user: "{{ ansible_env.USER | default('ansible') }}"
+  tasks:
+    - name: Install required packages
+      package:
+        name:
+          - docker
+          - python3-pip
+          - curl
+          - git
+        state: present
+      retries: 3
+      delay: 5
+
+    - name: Install docker-compose
+      pip:
+        name: docker-compose
+        state: present
+        executable: pip3
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Docker group
+      group:
+        name: "{{ docker_group }}"
+        state: present
+
+    - name: Add user to Docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: "{{ docker_group }}"
+        append: true
+
+    - name: Harden Docker daemon configuration
+      copy:
+        content: |
+          {
+            "icc": false,
+            "userns-remap": "default",
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            },
+            "live-restore": true,
+            "userland-proxy": false
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      notify: Restart Docker
+
+    - name: Create backup directory with restricted permissions
+      file:
+        path: "{{ backups_dir }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+
+    - name: Ensure .env file has secure permissions
+      file:
+        path: "./.env"
+        mode: '0600'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+      when: ansible_stat.stat.exists
+      vars:
+        ansible_stat: "{{ lookup('stat', './.env') }}"
+
+    - name: Copy Prometheus configuration
+      copy:
+        src: "{{ prometheus_config_dir }}/prometheus.yml"
+        dest: "{{ prometheus_config_dir }}/prometheus.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+      when: ansible_stat.stat.exists
+      vars:
+        ansible_stat: "{{ lookup('stat', './prometheus.yml') }}"
+
+    - name: Create Prometheus alerting rules
+      copy:
+        content: |
+          groups:
+          - name: jira_alerts
+            rules:
+            - alert: JiraDown
+              expr: up{job="jira"} == 0
+              for: 5m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Jira instance is down"
+                description: "{{ '{{ $labels.instance }}' }} has been down for more than 5 minutes."
+            - alert: HighPostgresLatency
+              expr: rate(pg_stat_activity_count[5m]) > 100
+              for: 10m
+              labels:
+                severity: warning
+              annotations:
+                summary: "High PostgreSQL query latency"
+                description: "PostgreSQL query latency is above threshold for {{ '{{ $labels.instance }}' }}."
+        dest: "{{ prometheus_config_dir }}/alerts.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+
+    - name: Configure Grafana datasource for Prometheus
+      copy:
+        content: |
+          apiVersion: 1
+          datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus:9090
+            access: proxy
+            isDefault: true
+        dest: "{{ grafana_config_dir }}/datasources/datasource.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+      notify: Restart Grafana
+
+    - name: Ensure Traefik configuration directory exists
+      file:
+        path: "{{ traefik_config_dir }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+
+    - name: Configure Traefik security headers
+      copy:
+        content: |
+          http:
+            middlewares:
+              secure-headers:
+                headers:
+                  sslRedirect: true
+                  stsSeconds: 31536000
+                  stsIncludeSubdomains: true
+                  stsPreload: true
+                  frameDeny: true
+                  contentTypeNosniff: true
+                  browserXssFilter: true
+        dest: "{{ traefik_config_dir }}/traefik.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ docker_group }}"
+      notify: Restart Traefik
+
+    - name: Deploy Docker Compose stack
+      command: docker-compose -f "{{ compose_file }}" up -d
+      args:
+        chdir: "{{ ansible_env.PWD | default('.') }}"
+
+    - name: Verify Jira service health
+      uri:
+        url: "http://localhost:8080"
+        status_code: 200
+        return_content: false
+      retries: 10
+      delay: 10
+      register: jira_health
+      until: jira_health.status == 200
+
+    - name: Setup log rotation for Docker containers
+      copy:
+        content: |
+          /var/lib/docker/containers/*/*.log {
+            daily
+            rotate 7
+            compress
+            delaycompress
+            missingok
+            notifempty
+            copytruncate
+          }
+        dest: /etc/logrotate.d/docker-containers
+        mode: '0644'
+
+  handlers:
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
+
+    - name: Restart Grafana
+      command: docker-compose -f "{{ compose_file }}" restart grafana
+      args:
+        chdir: "{{ ansible_env.PWD | default('.') }}"
+
+    - name: Restart Traefik
+      command: docker-compose -f "{{ compose_file }}" restart traefik
+      args:
+        chdir: "{{ ansible_env.PWD | default('.') }}"

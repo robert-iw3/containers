@@ -1,0 +1,2079 @@
+{
+   "template":{
+      "description":"This template demonstrates two flows, one is splitting a file on line boundaries, routing the splits based on a regex in the content, merging the less important files together for storage somewhere, and sending the higher priority files down another path to take immediate action.\nThe other does almost the same task but with RouteText.",
+      "name":"SplitRouteMergeVsRouteText",
+      "snippet":{
+         "connections":[
+            {
+               "id":"b080e9fd-866c-4485-b46a-2d39e101c40f",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"f5342239-e0fb-49b8-9c5f-e923a7c81652",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"merged",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b90d3c15-1f03-4a3f-9472-2a78b74037a7",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"efe62999-062f-48c4-8e27-5daeddad1c75",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d47dc47d-611c-4105-8943-a2160166cbd8",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"high priority",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"8f294da1-8171-4009-b931-4cd88682cbfa",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"770e5fa4-5922-4c76-be0f-f9fb38bb52f6",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"8f294da1-8171-4009-b931-4cd88682cbfa",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"splits",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b96c1cbb-e757-4d26-81b3-8b52cba161cd",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"bf6c7e1d-a470-4a4c-b8c4-77c5f0f0c4c7",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"ec44a443-a1b8-4b39-a562-fc988247c3a6",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"fdab8e4e-637b-427f-b4a0-8dcca34b11e9",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"2dbd8f7f-df51-4e47-b4db-b613a2331162",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b90d3c15-1f03-4a3f-9472-2a78b74037a7",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"unmatched",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"8f294da1-8171-4009-b931-4cd88682cbfa",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"a5b65aaa-f228-49f2-a19b-2488788048c1",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"6b48521c-ac2b-4e9c-b8f9-1c7c8ed26b2c",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"unmatched",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"ec44a443-a1b8-4b39-a562-fc988247c3a6",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"35ebb237-9294-4829-97f2-8e7c064b0881",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b96c1cbb-e757-4d26-81b3-8b52cba161cd",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"a5b4da66-f55a-4442-8828-b58a0049e198",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"21de065b-35f7-470c-9ed4-76ddccb36f8b",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"3fa87fca-d8fe-4778-aa6a-b2ccb7cef2d3",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"high priority",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"ec44a443-a1b8-4b39-a562-fc988247c3a6",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "labels":[
+            {
+               "id":"b1833f75-933c-4fa7-9ae8-8e7a754b51e4",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1300.7218740265675",
+                  "y":"709.822123905386"
+               },
+               "height":"75.75601196289062",
+               "label":"Using SplitText->RouteContent \nmakes it so every line will be it's\nown FlowFile.",
+               "style":{
+                  "entry":{
+                     "key":"font-size",
+                     "value":"18px"
+                  }
+               },
+               "width":"290.6275329589844"
+            },
+            {
+               "id":"6bbae6bc-1da8-42c8-a51d-dd7befef9b6d",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"2085.829270502367",
+                  "y":"716.7090278083588"
+               },
+               "height":"125.34172821044922",
+               "label":"Using RouteText makes it so all the\n\"high priority\" lines in the FlowFile\nwill be routed as one new FlowFile \nand all the unmatched lines will be \nrouted as another.",
+               "style":{
+                  "entry":{
+                     "key":"font-size",
+                     "value":"18px"
+                  }
+               },
+               "width":"323.6846923828125"
+            }
+         ],
+         "processors":[
+            {
+               "id":"fdab8e4e-637b-427f-b4a0-8dcca34b11e9",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"2449.1532133269707",
+                  "y":"372.57083036972745"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":{
+                              "description":"The input directory from which to pull files",
+                              "displayName":"Input Directory",
+                              "dynamic":"false",
+                              "name":"Input Directory",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"File Filter",
+                           "value":{
+                              "defaultValue":"[^\\.].*",
+                              "description":"Only files whose names match the given regular expression will be picked up",
+                              "displayName":"File Filter",
+                              "dynamic":"false",
+                              "name":"File Filter",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Path Filter",
+                           "value":{
+                              "description":"When Recurse Subdirectories is true, then only subdirectories whose path matches the given regular expression will be scanned",
+                              "displayName":"Path Filter",
+                              "dynamic":"false",
+                              "name":"Path Filter",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"10",
+                              "description":"The maximum number of files to pull in each iteration",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Keep Source File",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the file is not deleted after it has been copied to the Content Repository; this causes the file to be picked up continually and is useful for testing purposes.  If not keeping original NiFi will need write permissions on the directory it is pulling from otherwise it will ignore the file.",
+                              "displayName":"Keep Source File",
+                              "dynamic":"false",
+                              "name":"Keep Source File",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Recurse Subdirectories",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not to pull files from subdirectories",
+                              "displayName":"Recurse Subdirectories",
+                              "dynamic":"false",
+                              "name":"Recurse Subdirectories",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Polling Interval",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"Indicates how long to wait before performing a directory listing",
+                              "displayName":"Polling Interval",
+                              "dynamic":"false",
+                              "name":"Polling Interval",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Ignore Hidden Files",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not hidden files should be ignored",
+                              "displayName":"Ignore Hidden Files",
+                              "dynamic":"false",
+                              "name":"Ignore Hidden Files",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Age",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"The minimum age that a file must be in order to be pulled; any file younger than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Minimum File Age",
+                              "dynamic":"false",
+                              "name":"Minimum File Age",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Age",
+                           "value":{
+                              "description":"The maximum age that a file must be in order to be pulled; any file older than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Maximum File Age",
+                              "dynamic":"false",
+                              "name":"Maximum File Age",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Size",
+                           "value":{
+                              "defaultValue":"0 B",
+                              "description":"The minimum size that a file must be in order to be pulled",
+                              "displayName":"Minimum File Size",
+                              "dynamic":"false",
+                              "name":"Minimum File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Size",
+                           "value":{
+                              "description":"The maximum size that a file can be in order to be pulled",
+                              "displayName":"Maximum File Size",
+                              "dynamic":"false",
+                              "name":"Maximum File Size",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":"/nifi/input"
+                        },
+                        {
+                           "key":"File Filter"
+                        },
+                        {
+                           "key":"Path Filter"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Keep Source File"
+                        },
+                        {
+                           "key":"Recurse Subdirectories"
+                        },
+                        {
+                           "key":"Polling Interval"
+                        },
+                        {
+                           "key":"Ignore Hidden Files"
+                        },
+                        {
+                           "key":"Minimum File Age"
+                        },
+                        {
+                           "key":"Maximum File Age"
+                        },
+                        {
+                           "key":"Minimum File Size"
+                        },
+                        {
+                           "key":"Maximum File Size"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"1 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"GetFile",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All files are routed to success",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GetFile"
+            },
+            {
+               "id":"b90d3c15-1f03-4a3f-9472-2a78b74037a7",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1470.1397855925957",
+                  "y":"935.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Merge Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Generates 'bins' of FlowFiles and fills each bin as full as possible. FlowFiles are placed into a bin based on their size and optionally their attributes (if the <Correlation Attribute> property is set)",
+                                    "displayName":"Bin-Packing Algorithm",
+                                    "value":"Bin-Packing Algorithm"
+                                 },
+                                 {
+                                    "description":"Combines fragments that are associated by attributes back into a single cohesive FlowFile. If using this strategy, all FlowFiles must have the attributes <fragment.identifier>, <fragment.count>, and <fragment.index> or alternatively (for backward compatibility purposes) <segment.identifier>, <segment.count>, and <segment.index>. All FlowFiles with the same value for \"fragment.identifier\" will be grouped together. All FlowFiles in this group must have the same value for the \"fragment.count\" attribute. All FlowFiles in this group must have a unique value for the \"fragment.index\" attribute between 0 and the value of the \"fragment.count\" attribute.",
+                                    "displayName":"Defragment",
+                                    "value":"Defragment"
+                                 }
+                              ],
+                              "defaultValue":"Bin-Packing Algorithm",
+                              "description":"Specifies the algorithm used to merge content. The 'Defragment' algorithm combines fragments that are associated by attributes back into a single cohesive FlowFile. The 'Bin-Packing Algorithm' generates a FlowFile populated by arbitrarily chosen FlowFiles",
+                              "displayName":"Merge Strategy",
+                              "dynamic":"false",
+                              "name":"Merge Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Merge Format",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single TAR file. The FlowFiles' <path> attribute will be used to create a directory in the TAR file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the TAR file. If a FlowFile has an attribute named <tar.permissions> that is 3 characters, each between 0-7, that attribute will be used as the TAR entry's 'mode'.",
+                                    "displayName":"TAR",
+                                    "value":"TAR"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single ZIP file. The FlowFiles' <path> attribute will be used to create a directory in the ZIP file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the ZIP file. The <Compression Level> property indicates the ZIP compression to use.",
+                                    "displayName":"ZIP",
+                                    "value":"ZIP"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 3 FlowFile Stream",
+                                    "displayName":"FlowFile Stream, v3",
+                                    "value":"FlowFile Stream, v3"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 2 FlowFile Stream",
+                                    "displayName":"FlowFile Stream, v2",
+                                    "value":"FlowFile Stream, v2"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 1 FlowFile Package",
+                                    "displayName":"FlowFile Tar, v1",
+                                    "value":"FlowFile Tar, v1"
+                                 },
+                                 {
+                                    "description":"The contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                    "displayName":"Binary Concatenation",
+                                    "value":"Binary Concatenation"
+                                 },
+                                 {
+                                    "description":"The Avro contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                    "displayName":"Avro",
+                                    "value":"Avro"
+                                 }
+                              ],
+                              "defaultValue":"Binary Concatenation",
+                              "description":"Determines the format that will be used to merge the content.",
+                              "displayName":"Merge Format",
+                              "dynamic":"false",
+                              "name":"Merge Format",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attribute Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Keep Only Common Attributes",
+                                    "value":"Keep Only Common Attributes"
+                                 },
+                                 {
+                                    "displayName":"Keep All Unique Attributes",
+                                    "value":"Keep All Unique Attributes"
+                                 }
+                              ],
+                              "defaultValue":"Keep Only Common Attributes",
+                              "description":"Determines which FlowFile attributes should be added to the bundle. If 'Keep All Unique Attributes' is selected, any attribute on any FlowFile that gets bundled will be kept unless its value conflicts with the value from another FlowFile. If 'Keep Only Common Attributes' is selected, only the attributes that exist on all FlowFiles in the bundle, with the same value, will be preserved.",
+                              "displayName":"Attribute Strategy",
+                              "dynamic":"false",
+                              "name":"Attribute Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Correlation Attribute Name",
+                           "value":{
+                              "description":"If specified, like FlowFiles will be binned together, where 'like FlowFiles' means FlowFiles that have the same value for this Attribute. If not specified, FlowFiles are bundled by the order in which they are pulled from the queue.",
+                              "displayName":"Correlation Attribute Name",
+                              "dynamic":"false",
+                              "name":"Correlation Attribute Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum Number of Entries",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The minimum number of files to include in a bundle",
+                              "displayName":"Minimum Number of Entries",
+                              "dynamic":"false",
+                              "name":"Minimum Number of Entries",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Number of Entries",
+                           "value":{
+                              "description":"The maximum number of files to include in a bundle. If not specified, there is no maximum.",
+                              "displayName":"Maximum Number of Entries",
+                              "dynamic":"false",
+                              "name":"Maximum Number of Entries",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum Group Size",
+                           "value":{
+                              "defaultValue":"0 B",
+                              "description":"The minimum size of for the bundle",
+                              "displayName":"Minimum Group Size",
+                              "dynamic":"false",
+                              "name":"Minimum Group Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Group Size",
+                           "value":{
+                              "description":"The maximum size for the bundle. If not specified, there is no maximum.",
+                              "displayName":"Maximum Group Size",
+                              "dynamic":"false",
+                              "name":"Maximum Group Size",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Max Bin Age",
+                           "value":{
+                              "description":"The maximum age of a Bin that will trigger a Bin to be complete. Expected format is <duration> <time unit> where <duration> is a positive integer and time unit is one of seconds, minutes, hours",
+                              "displayName":"Max Bin Age",
+                              "dynamic":"false",
+                              "name":"Max Bin Age",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum number of Bins",
+                           "value":{
+                              "defaultValue":"100",
+                              "description":"Specifies the maximum number of bins that can be held in memory at any one time",
+                              "displayName":"Maximum number of Bins",
+                              "dynamic":"false",
+                              "name":"Maximum number of Bins",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Delimiter Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"The values of Header, Footer, and Demarcator will be retrieved from the contents of a file",
+                                    "displayName":"Filename",
+                                    "value":"Filename"
+                                 },
+                                 {
+                                    "description":"The values of Header, Footer, and Demarcator will be specified as property values",
+                                    "displayName":"Text",
+                                    "value":"Text"
+                                 }
+                              ],
+                              "defaultValue":"Filename",
+                              "description":"Determines if Header, Footer, and Demarcator should point to files containing the respective content, or if the values of the properties should be used as the content.",
+                              "displayName":"Delimiter Strategy",
+                              "dynamic":"false",
+                              "name":"Delimiter Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Header File",
+                           "value":{
+                              "description":"Filename specifying the header to use. If not specified, no header is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Header",
+                              "dynamic":"false",
+                              "name":"Header File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Footer File",
+                           "value":{
+                              "description":"Filename specifying the footer to use. If not specified, no footer is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Footer",
+                              "dynamic":"false",
+                              "name":"Footer File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Demarcator File",
+                           "value":{
+                              "description":"Filename specifying the demarcator to use. If not specified, no demarcator is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Demarcator",
+                              "dynamic":"false",
+                              "name":"Demarcator File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Compression Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"0",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "displayName":"1",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "displayName":"2",
+                                    "value":"2"
+                                 },
+                                 {
+                                    "displayName":"3",
+                                    "value":"3"
+                                 },
+                                 {
+                                    "displayName":"4",
+                                    "value":"4"
+                                 },
+                                 {
+                                    "displayName":"5",
+                                    "value":"5"
+                                 },
+                                 {
+                                    "displayName":"6",
+                                    "value":"6"
+                                 },
+                                 {
+                                    "displayName":"7",
+                                    "value":"7"
+                                 },
+                                 {
+                                    "displayName":"8",
+                                    "value":"8"
+                                 },
+                                 {
+                                    "displayName":"9",
+                                    "value":"9"
+                                 }
+                              ],
+                              "defaultValue":"1",
+                              "description":"Specifies the compression level to use when using the Zip Merge Format; if not using the Zip Merge Format, this value is ignored",
+                              "displayName":"Compression Level",
+                              "dynamic":"false",
+                              "name":"Compression Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Keep Path",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If using the Zip or Tar Merge Format, specifies whether or not the FlowFiles' paths should be included in their entry names; if using other merge strategy, this value is ignored",
+                              "displayName":"Keep Path",
+                              "dynamic":"false",
+                              "name":"Keep Path",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Merge Strategy"
+                        },
+                        {
+                           "key":"Merge Format"
+                        },
+                        {
+                           "key":"Attribute Strategy"
+                        },
+                        {
+                           "key":"Correlation Attribute Name"
+                        },
+                        {
+                           "key":"Minimum Number of Entries",
+                           "value":"5"
+                        },
+                        {
+                           "key":"Maximum Number of Entries",
+                           "value":"10"
+                        },
+                        {
+                           "key":"Minimum Group Size"
+                        },
+                        {
+                           "key":"Maximum Group Size"
+                        },
+                        {
+                           "key":"Max Bin Age",
+                           "value":"60 seconds"
+                        },
+                        {
+                           "key":"Maximum number of Bins"
+                        },
+                        {
+                           "key":"Delimiter Strategy"
+                        },
+                        {
+                           "key":"Header File"
+                        },
+                        {
+                           "key":"Footer File"
+                        },
+                        {
+                           "key":"Demarcator File"
+                        },
+                        {
+                           "key":"Compression Level"
+                        },
+                        {
+                           "key":"Keep Path"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"MergeContent",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"If the bundle cannot be created, all FlowFiles that would have been used to created the bundle will be transferred to failure",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The FlowFile containing the merged content",
+                     "name":"merged"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The FlowFiles that were used to create the bundle",
+                     "name":"original"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.MergeContent"
+            },
+            {
+               "id":"b96c1cbb-e757-4d26-81b3-8b52cba161cd",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1624.1397855925957",
+                  "y":"547.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Line Split Count",
+                           "value":{
+                              "description":"The number of lines that will be added to each split file",
+                              "displayName":"Line Split Count",
+                              "dynamic":"false",
+                              "name":"Line Split Count",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Header Line Count",
+                           "value":{
+                              "defaultValue":"0",
+                              "description":"The number of lines that should be considered part of the header; the header lines will be duplicated to all split files",
+                              "displayName":"Header Line Count",
+                              "dynamic":"false",
+                              "name":"Header Line Count",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Remove Trailing Newlines",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Whether to remove newlines at the end of each split file. This should be false if you intend to merge the split files later",
+                              "displayName":"Remove Trailing Newlines",
+                              "dynamic":"false",
+                              "name":"Remove Trailing Newlines",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Line Split Count",
+                           "value":"1"
+                        },
+                        {
+                           "key":"Header Line Count"
+                        },
+                        {
+                           "key":"Remove Trailing Newlines"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"SplitText",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"If a file cannot be split for some reason, the original file will be routed to this destination and nothing will be routed elsewhere",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The original input file will be routed to this destination when it has been successfully split into 1 or more files",
+                     "name":"original"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The split files will be routed to this destination when an input file is successfully split into 1 or more split files",
+                     "name":"splits"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.SplitText"
+            },
+            {
+               "id":"8f294da1-8171-4009-b931-4cd88682cbfa",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1627.1397855925957",
+                  "y":"717.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Match Requirement",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"content must match exactly",
+                                    "value":"content must match exactly"
+                                 },
+                                 {
+                                    "displayName":"content must contain match",
+                                    "value":"content must contain match"
+                                 }
+                              ],
+                              "defaultValue":"content must match exactly",
+                              "description":"Specifies whether the entire content of the file must match the regular expression exactly, or if any part of the file (up to Content Buffer Size) can contain the regular expression in order to be considered a match",
+                              "displayName":"Match Requirement",
+                              "dynamic":"false",
+                              "name":"Match Requirement",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Content Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer in order to apply the regular expressions. If the size of the FlowFile exceeds this value, any amount of this value will be ignored",
+                              "displayName":"Content Buffer Size",
+                              "dynamic":"false",
+                              "name":"Content Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"high priority",
+                           "value":{
+                              "description":"",
+                              "displayName":"high priority",
+                              "dynamic":"true",
+                              "name":"high priority",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Match Requirement"
+                        },
+                        {
+                           "key":"Character Set"
+                        },
+                        {
+                           "key":"Content Buffer Size"
+                        },
+                        {
+                           "key":"high priority",
+                           "value":"^(\"R.*)$"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"RouteOnContent",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"",
+                     "name":"high priority"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that do not match any of the user-supplied regular expressions will be routed to this relationship",
+                     "name":"unmatched"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.RouteOnContent"
+            },
+            {
+               "id":"d47dc47d-611c-4105-8943-a2160166cbd8",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1887.1397855925957",
+                  "y":"934.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"SEND ALERT",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"f5342239-e0fb-49b8-9c5f-e923a7c81652",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1470.1397855925957",
+                  "y":"1128.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Store For Later",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"a5b4da66-f55a-4442-8828-b58a0049e198",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1621.1397855925957",
+                  "y":"365.4767751939462"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":{
+                              "description":"The input directory from which to pull files",
+                              "displayName":"Input Directory",
+                              "dynamic":"false",
+                              "name":"Input Directory",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"File Filter",
+                           "value":{
+                              "defaultValue":"[^\\.].*",
+                              "description":"Only files whose names match the given regular expression will be picked up",
+                              "displayName":"File Filter",
+                              "dynamic":"false",
+                              "name":"File Filter",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Path Filter",
+                           "value":{
+                              "description":"When Recurse Subdirectories is true, then only subdirectories whose path matches the given regular expression will be scanned",
+                              "displayName":"Path Filter",
+                              "dynamic":"false",
+                              "name":"Path Filter",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"10",
+                              "description":"The maximum number of files to pull in each iteration",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Keep Source File",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the file is not deleted after it has been copied to the Content Repository; this causes the file to be picked up continually and is useful for testing purposes.  If not keeping original NiFi will need write permissions on the directory it is pulling from otherwise it will ignore the file.",
+                              "displayName":"Keep Source File",
+                              "dynamic":"false",
+                              "name":"Keep Source File",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Recurse Subdirectories",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not to pull files from subdirectories",
+                              "displayName":"Recurse Subdirectories",
+                              "dynamic":"false",
+                              "name":"Recurse Subdirectories",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Polling Interval",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"Indicates how long to wait before performing a directory listing",
+                              "displayName":"Polling Interval",
+                              "dynamic":"false",
+                              "name":"Polling Interval",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Ignore Hidden Files",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not hidden files should be ignored",
+                              "displayName":"Ignore Hidden Files",
+                              "dynamic":"false",
+                              "name":"Ignore Hidden Files",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Age",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"The minimum age that a file must be in order to be pulled; any file younger than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Minimum File Age",
+                              "dynamic":"false",
+                              "name":"Minimum File Age",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Age",
+                           "value":{
+                              "description":"The maximum age that a file must be in order to be pulled; any file older than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Maximum File Age",
+                              "dynamic":"false",
+                              "name":"Maximum File Age",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Size",
+                           "value":{
+                              "defaultValue":"0 B",
+                              "description":"The minimum size that a file must be in order to be pulled",
+                              "displayName":"Minimum File Size",
+                              "dynamic":"false",
+                              "name":"Minimum File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Size",
+                           "value":{
+                              "description":"The maximum size that a file can be in order to be pulled",
+                              "displayName":"Maximum File Size",
+                              "dynamic":"false",
+                              "name":"Maximum File Size",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":"/nifi/input"
+                        },
+                        {
+                           "key":"File Filter"
+                        },
+                        {
+                           "key":"Path Filter"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Keep Source File"
+                        },
+                        {
+                           "key":"Recurse Subdirectories"
+                        },
+                        {
+                           "key":"Polling Interval"
+                        },
+                        {
+                           "key":"Ignore Hidden Files"
+                        },
+                        {
+                           "key":"Minimum File Age"
+                        },
+                        {
+                           "key":"Maximum File Age"
+                        },
+                        {
+                           "key":"Minimum File Size"
+                        },
+                        {
+                           "key":"Maximum File Size"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"1 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"GetFile",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All files are routed to success",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GetFile"
+            },
+            {
+               "id":"ec44a443-a1b8-4b39-a562-fc988247c3a6",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"2450.8354231580884",
+                  "y":"723.5959372200559"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Lines will be routed to each relationship whose corresponding expression evaluates to 'true'",
+                                    "displayName":"Route to each matching Property Name",
+                                    "value":"Route to each matching Property Name"
+                                 },
+                                 {
+                                    "description":"Requires that all user-defined expressions evaluate to 'true' for the line to be considered a match",
+                                    "displayName":"Route to 'matched' if line matches all conditions",
+                                    "value":"Route to 'matched' if line matches all conditions"
+                                 },
+                                 {
+                                    "description":"Requires that at least one user-defined expression evaluate to 'true' for the line to be considered a match",
+                                    "displayName":"Route to 'matched' if lines matches any condition",
+                                    "value":"Route to 'matched' if lines matches any condition"
+                                 }
+                              ],
+                              "defaultValue":"Route to each matching Property Name",
+                              "description":"Specifies how to determine which Relationship(s) to use when evaluating the lines of incoming text against the 'Matching Strategy' and user-defined properties.",
+                              "displayName":"Routing Strategy",
+                              "dynamic":"false",
+                              "name":"Routing Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Matching Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Match lines based on whether the line starts with the property value",
+                                    "displayName":"Starts With",
+                                    "value":"Starts With"
+                                 },
+                                 {
+                                    "description":"Match lines based on whether the line ends with the property value",
+                                    "displayName":"Ends With",
+                                    "value":"Ends With"
+                                 },
+                                 {
+                                    "description":"Match lines based on whether the line contains the property value",
+                                    "displayName":"Contains",
+                                    "value":"Contains"
+                                 },
+                                 {
+                                    "description":"Match lines based on whether the line equals the property value",
+                                    "displayName":"Equals",
+                                    "value":"Equals"
+                                 },
+                                 {
+                                    "description":"Match lines based on whether the line exactly matches the Regular Expression that is provided as the Property value",
+                                    "displayName":"Matches Regular Expression",
+                                    "value":"Matches Regular Expression"
+                                 },
+                                 {
+                                    "description":"Match lines based on whether the line contains some text that matches the Regular Expression that is provided as the Property value",
+                                    "displayName":"Contains Regular Expression",
+                                    "value":"Contains Regular Expression"
+                                 }
+                              ],
+                              "description":"Specifies how to evaluate each line of incoming text against the user-defined properties.",
+                              "displayName":"Matching Strategy",
+                              "dynamic":"false",
+                              "name":"Matching Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the incoming text is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Ignore Leading/Trailing Whitespace",
+                           "value":{
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not the whitespace at the beginning and end of the lines should be ignored when evaluating the line.",
+                              "displayName":"Ignore Leading/Trailing Whitespace",
+                              "dynamic":"false",
+                              "name":"Ignore Leading/Trailing Whitespace",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Ignore Case",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, capitalization will not be taken into account when comparing values. E.g., matching against 'HELLO' or 'hello' will have the same result.",
+                              "displayName":"Ignore Case",
+                              "dynamic":"false",
+                              "name":"Ignore Case",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Grouping Regular Expression",
+                           "value":{
+                              "description":"Specifies a Regular Expression to evaluate against each line to determine which Group the line should be placed in. The Regular Expression must have at least one Capturing Group that defines the line's Group. If multiple Capturing Groups exist in the Regular Expression, the Group from all Capturing Groups. Two lines will not be placed into the same FlowFile unless the they both have the same value for the Group (or neither line matches the Regular Expression). For example, to group together all lines in a CSV File by the first column, we can set this value to \"(.*?),.*\". Two lines that have the same Group but different Relationships will never be placed into the same FlowFile.",
+                              "displayName":"Grouping Regular Expression",
+                              "dynamic":"false",
+                              "name":"Grouping Regular Expression",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"high priority",
+                           "value":{
+                              "description":"",
+                              "displayName":"high priority",
+                              "dynamic":"true",
+                              "name":"high priority",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy"
+                        },
+                        {
+                           "key":"Matching Strategy",
+                           "value":"Matches Regular Expression"
+                        },
+                        {
+                           "key":"Character Set"
+                        },
+                        {
+                           "key":"Ignore Leading/Trailing Whitespace"
+                        },
+                        {
+                           "key":"Ignore Case"
+                        },
+                        {
+                           "key":"Grouping Regular Expression"
+                        },
+                        {
+                           "key":"high priority",
+                           "value":"^(\"R.*)$"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"RouteText",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"",
+                     "name":"high priority"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The original input file will be routed to this destination when the lines have been successfully routed to 1 or more relationships",
+                     "name":"original"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"Data that does not satisfy the required user-defined rules will be routed to this Relationship",
+                     "name":"unmatched"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.RouteText"
+            },
+            {
+               "id":"3fa87fca-d8fe-4778-aa6a-b2ccb7cef2d3",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"2715.1532133269707",
+                  "y":"941.5708303697274"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"SEND ALERT",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"6b48521c-ac2b-4e9c-b8f9-1c7c8ed26b2c",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"2303.0196684050957",
+                  "y":"947.3987112291024"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Store For Later",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            }
+         ]
+      },
+      "timestamp":"12/03/2020 15:38:06 EST"
+   }
+}

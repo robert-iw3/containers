@@ -1,0 +1,54 @@
+---
+stages:
+  - prepare
+  - install
+  - configure
+  - validate
+  - rollback
+
+variables:
+  ANSIBLE_VAULT_PASSWORD_FILE: vault_pass.txt
+
+prepare_host:
+  stage: prepare
+  script:
+    - ansible-playbook playbooks/nomad.yml --vault-password-file=$ANSIBLE_VAULT_PASSWORD_FILE --tags prepare
+  tags:
+    - nomad
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+install_nomad:
+  stage: install
+  script:
+    - ansible-playbook playbooks/nomad.yml --vault-password-file=$ANSIBLE_VAULT_PASSWORD_FILE --tags install
+  tags:
+    - nomad
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+configure_nomad:
+  stage: configure
+  script:
+    - ansible-playbook playbooks/nomad.yml --vault-password-file=$ANSIBLE_VAULT_PASSWORD_FILE --tags configure
+  tags:
+    - nomad
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+validate_nomad:
+  stage: validate
+  script:
+    - ansible-playbook playbooks/nomad.yml --vault-password-file=$ANSIBLE_VAULT_PASSWORD_FILE --tags validate
+  tags:
+    - nomad
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+rollback_nomad:
+  stage: rollback
+  script:
+    - ansible-playbook playbooks/nomad.yml --vault-password-file=$ANSIBLE_VAULT_PASSWORD_FILE --tags rollback
+  when: manual
+  tags:
+    - nomad

@@ -1,0 +1,69 @@
+import import_declare_test  # noqa: F401
+import sys
+from tenable_validations import *  # noqa: F403
+from io_collector import IOCollector
+from tenable_utility import get_credentials
+from splunklib import modularinput as smi
+from setup_logger import setup_logging
+logger = setup_logging("ta_tenable_tenable_io_audit_logs")
+
+class TENABLE_IO_AUDIT_LOGS(smi.Script):
+    def __init__(self):
+        super(TENABLE_IO_AUDIT_LOGS, self).__init__()
+
+    def get_scheme(self):
+        scheme = smi.Scheme('tenable_io_audit_logs')
+        scheme.description = 'TVM Audit Logs'
+        scheme.use_external_validation = True
+        scheme.streaming_mode_xml = True
+        scheme.use_single_instance = False
+
+        scheme.add_argument(
+            smi.Argument(
+                'name',
+                title='Name',
+                description='Name',
+                required_on_create=True
+            )
+        )
+        scheme.add_argument(
+            smi.Argument(
+                'global_account',
+                required_on_create=True,
+            )
+        )
+        scheme.add_argument(
+            smi.Argument(
+                'start_time',
+                required_on_create=False,
+            )
+        )
+        return scheme
+
+    def validate_input(self, definition: smi.ValidationDefinition):
+        app_name = 'TA-tenable'
+        global_account_name = definition.parameters.get('global_account')
+        _, account_stanza = get_credentials(definition.metadata['session_key'], global_account_name)
+        tenable_account_type = account_stanza.get("tenable_account_type")
+        if tenable_account_type != "tenable_io":
+            raise ValueError("Please select the correct account.")
+
+        validate_io_interval(definition.parameters.get("interval"))  # noqa: F405
+        validate_start_time(definition.parameters.get("start_time"))  # noqa: F405
+
+    def stream_events(self, inputs: smi.InputDefinition, ew: smi.EventWriter):
+        input_items = [{'count': len(inputs.inputs)}]
+        for input_name, input_item in inputs.inputs.items():
+            input_item['name'] = input_name
+            input_items.append(input_item)
+        input_name = input_items[1]['name']
+        meta_configs = self._input_definition.metadata
+        session_key = meta_configs['session_key']
+
+        ingester = IOCollector(logger, ew, input_items[1], session_key)
+        ingester.collect_events(collect_audit_data=True)
+
+
+if __name__ == '__main__':
+    exit_code = TENABLE_IO_AUDIT_LOGS().run(sys.argv)
+    sys.exit(exit_code)

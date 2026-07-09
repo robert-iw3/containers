@@ -1,0 +1,591 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sonarqube
+  labels:
+    app: sonarqube
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonarqube-secrets
+  namespace: sonarqube
+type: Opaque
+stringData:
+  postgresql-username: "${POSTGRESQL_USERNAME}"
+  postgresql-password: "${POSTGRESQL_PASSWORD}"
+  postgresql-replication-user: "${POSTGRESQL_REPLICATION_USER}"
+  postgresql-replication-password: "${POSTGRESQL_REPLICATION_PASSWORD}"
+  traefik-auth-users: "username:${TRAEFIK_AUTH_HASHED_PASSWORD}" # Replace with hashed password (e.g., bcrypt)
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-config
+  namespace: sonarqube
+data:
+  postgresql-database: "${POSTGRESQL_DATABASE}"
+  postgresql-hostname: "${POSTGRESQL_HOSTNAME}"
+  backup-postgresql-hostname: "${BACKUP_POSTGRESQL_HOSTNAME}"
+  sonarqube-hostname: "${SONARQUBE_HOSTNAME}"
+  sonar-jdbc-url: "jdbc:postgresql://${POSTGRESQL_HOSTNAME}/${POSTGRESQL_DATABASE}"
+  traefik-config.yml: |
+    # Add contents of traefik/config.yml here
+  traefik-tls.yml: |
+    # Add contents of traefik/tls.yml here
+  traefik.yml: |
+    # Add contents of traefik/traefik.yml here
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-data
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-extensions
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-logs
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-temp
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-data
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-postgres-backups
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: sonarqube
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: postgres
+        image: ${POSTGRESQL_IMAGE}
+        env:
+        - name: POSTGRESQL_REPLICATION_MODE
+          value: "master"
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-password
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: sonarqube-config
+              key: postgresql-database
+        - name: POSTGRESQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-replication-user
+        - name: POSTGRESQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-replication-password
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: postgresql-data
+          mountPath: /var/lib/postgresql/data
+        - name: sonarqube-db
+          mountPath: /bitnami/postgresql
+        resources:
+          limits:
+            memory: "2048Mi"
+          requests:
+            memory: "512Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres", "-h", "${POSTGRES_IPv4}"]
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: postgresql-data
+        persistentVolumeClaim:
+          claimName: postgresql-data
+      - name: sonarqube-db
+        persistentVolumeClaim:
+          claimName: sonarqube-db
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: sonarqube
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+  namespace: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: sonarqube
+        image: ${SONARQUBE_IMAGE}
+        env:
+        - name: SONAR_JDBC_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sonarqube-config
+              key: sonar-jdbc-url
+        - name: SONAR_JDBC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-username
+        - name: SONAR_JDBC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-secrets
+              key: postgresql-password
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: sonarqube-data
+          mountPath: /opt/sonarqube/data
+        - name: sonarqube-extensions
+          mountPath: /opt/sonarqube/extensions
+        - name: sonarqube-logs
+          mountPath: /opt/sonarqube/logs
+        - name: sonarqube-temp
+          mountPath: /opt/sonarqube/temp
+        resources:
+          limits:
+            memory: "2048Mi"
+          requests:
+            memory: "512Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: In
+                values: ["true"]
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: sonarqube-data
+        persistentVolumeClaim:
+          claimName: sonarqube-data
+      - name: sonarqube-extensions
+        persistentVolumeClaim:
+          claimName: sonarqube-extensions
+      - name: sonarqube-logs
+        persistentVolumeClaim:
+          claimName: sonarqube-logs
+      - name: sonarqube-temp
+        persistentVolumeClaim:
+          claimName: sonarqube-temp
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  namespace: sonarqube
+spec:
+  selector:
+    app: sonarqube
+  ports:
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: sonarqube
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: traefik
+        image: docker.io/traefik:latest
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        - containerPort: 8080
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+          readOnly: true
+        - name: traefik-config
+          mountPath: /etc/traefik/dynamic/config.yml
+          subPath: config.yml
+        - name: traefik-config
+          mountPath: /traefik.yml
+          subPath: traefik.yml
+        - name: traefik-config
+          mountPath: /etc/traefik/dynamic/tls.yml
+          subPath: tls.yml
+        - name: traefik-certs
+          mountPath: /traefik/certs/sonarqube.ca.pem
+          subPath: sonarqube.ca.pem
+        - name: traefik-certs
+          mountPath: /traefik/certs/sonarqube.testing.io.pem
+          subPath: sonarqube.testing.io.pem
+        - name: traefik-certs
+          mountPath: /traefik/certs/sonarqube.testing.io-key.pem
+          subPath: sonarqube.testing.io-key.pem
+        resources:
+          limits:
+            memory: "2048Mi"
+          requests:
+            memory: "512Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: In
+                values: ["true"]
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+      - name: traefik-config
+        configMap:
+          name: sonarqube-config
+          items:
+          - key: traefik-config.yml
+            path: config.yml
+          - key: traefik.yml
+            path: traefik.yml
+          - key: traefik-tls.yml
+            path: tls.yml
+      - name: traefik-certs
+        secret:
+          name: traefik-certs
+          items:
+          - key: sonarqube.ca.pem
+            path: sonarqube.ca.pem
+          - key: sonarqube.testing.io.pem
+            path: sonarqube.testing.io.pem
+          - key: sonarqube.testing.io-key.pem
+            path: sonarqube.testing.io-key.pem
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: sonarqube
+spec:
+  selector:
+    app: traefik
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: admin
+  type: LoadBalancer
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sonarqube
+  namespace: sonarqube
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`sonarqube.io`)
+    kind: Rule
+    services:
+    - name: sonarqube
+      port: 9000
+    middlewares:
+    - name: compress
+  tls:
+    certResolver: letsencrypt
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik
+  namespace: sonarqube
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`traefik.testing.io`)
+    kind: Rule
+    services:
+    - name: traefik
+      port: 8080
+    middlewares:
+    - name: https-redirect
+  - match: Host(`traefik.testing.io`)
+    kind: Rule
+    services:
+    - name: traefik
+      port: 8080
+    middlewares:
+    - name: traefik-auth
+  tls:
+    certResolver: letsencrypt
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: sonarqube
+spec:
+  compress: {}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: sonarqube
+spec:
+  redirectScheme:
+    scheme: https
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-auth
+  namespace: sonarqube
+spec:
+  basicAuth:
+    secret: sonarqube-secrets
+    usersKey: traefik-auth-users
+
+---
+# Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: sonarqube
+spec:
+  schedule: "0 0 * * *" # Daily at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            fsGroup: 1001
+          containers:
+          - name: backup
+            image: ${POSTGRESQL_IMAGE}
+            command:
+            - sh
+            - -c
+            - |
+              pg_dump -h ${POSTGRESQL_HOSTNAME} -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/sonarqube-postgres/backups/sonarqube-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz
+              find /srv/sonarqube-postgres/backups -type f -mtime +7 -delete
+            env:
+            - name: POSTGRESQL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sonarqube-secrets
+                  key: postgresql-username
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: sonarqube-config
+                  key: postgresql-database
+            volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: sonarqube-postgres-backups
+              mountPath: /srv/sonarqube-postgres/backups
+            resources:
+              limits:
+                memory: "2048Mi"
+              requests:
+                memory: "512Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+          restartPolicy: OnFailure
+          volumes:
+          - name: localtime
+            hostPath:
+              path: /etc/localtime
+          - name: sonarqube-postgres-backups
+            persistentVolumeClaim:
+              claimName: sonarqube-postgres-backups

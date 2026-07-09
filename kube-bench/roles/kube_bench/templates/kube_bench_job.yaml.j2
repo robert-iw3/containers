@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kube-bench-{{ inventory_hostname }}-{{ ansible_date_time.epoch }}
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: kube-bench
+        image: kube-bench:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: etc
+          mountPath: /etc
+          readOnly: true
+        - name: var
+          mountPath: /var
+          readOnly: true
+        - name: kubectl
+          mountPath: /usr/local/mount-from-host/bin
+        - name: kubeconfig
+          mountPath: /.kube
+        env:
+        - name: KUBECONFIG
+          value: /.kube/config
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: etc
+        hostPath:
+          path: /etc
+      - name: var
+        hostPath:
+          path: /var
+      - name: kubectl
+        hostPath:
+          path: {{ kubectl_path | default('/usr/local/bin') }}
+      - name: kubeconfig
+        hostPath:
+          path: {{ kubeconfig_path | default('/root/.kube') }}
+      restartPolicy: Never
+  backoffLimit: 0

@@ -1,0 +1,29 @@
+---
+monitoring_data_dir: "/opt/monitoring"
+monitoring_user: "monitoring"
+monitoring_group: "monitoring"
+
+prometheus_image: "docker.io/prom/prometheus:v3.13.0"
+prometheus_port: 9090
+prometheus_retention: "15d"
+prometheus_scrape_interval: "15s"
+
+grafana_image: "docker.io/grafana/grafana:12.3.8"
+grafana_port: 3000
+# Must be supplied by the operator (ansible-vault or -e); no default password ships.
+grafana_admin_password: ""
+
+alertmanager_enabled: false
+alertmanager_image: "docker.io/prom/alertmanager:v0.33.1"
+alertmanager_port: 9093
+# Receiver webhook for fired alerts (e.g. Slack-compatible endpoint); required when alertmanager_enabled.
+alertmanager_webhook_url: ""
+
+# Sources allowed to reach Prometheus/Grafana/Alertmanager; monitoring host itself is always allowed.
+monitoring_allowed_ips: ["127.0.0.1"]
+
+nomad_tls_enabled: true
+nomad_tls_ca_file: "/etc/nomad.d/ca.pem"
+
+# Disable in containers/CI where firewall changes are impossible.
+monitoring_manage_firewall: true

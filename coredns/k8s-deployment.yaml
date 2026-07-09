@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns-deployment
+  labels:
+    app: coredns
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: coredns
+  template:
+    metadata:
+      labels:
+        app: coredns
+    spec:
+      containers:
+      - name: coredns
+        image: docker.io/coredns/coredns:latest
+        command:
+        - -conf
+        - /root/coredns/Corefile
+        volumeMounts:
+        - name: config-volume
+          mountPath: /root/coredns/Corefile
+          subPath: Corefile
+        - name: zones-volume
+          mountPath: /root/coredns/zones
+        ports:
+        - containerPort: 53
+          protocol: UDP
+      volumes:
+      - name: config-volume
+        configMap:
+          name: coredns-config
+      - name: zones-volume
+        configMap:
+          name: coredns-zones
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns-service
+spec:
+  selector:
+    app: coredns
+  ports:
+    - protocol: UDP
+      port: 53
+      targetPort: 53
+  type: ClusterIP  # Change to LoadBalancer for external access if needed

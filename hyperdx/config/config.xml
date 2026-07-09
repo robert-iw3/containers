@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <logger>
+        <level>information</level>  <!-- Prod: information instead of trace -->
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+        <size>1000M</size>
+        <count>3</count>
+    </logger>
+    <prometheus>
+        <endpoint>/metrics</endpoint>  <!-- For integration -->
+        <port>9363</port>
+        <metrics>true</metrics>
+        <asynchronous_metrics>true</asynchronous_metrics>
+        <status_info>true</status_info>
+        <events>true</events>
+    </prometheus>
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <!-- Add <listen_host>0.0.0.0</listen_host> for external access -->
+    <max_concurrent_queries>100</max_concurrent_queries>  <!-- Tune for scalability -->
+</clickhouse>

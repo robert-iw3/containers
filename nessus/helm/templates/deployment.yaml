@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nessus.fullname" . }}
+  namespace: nessus
+  labels:
+    {{- include "nessus.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "nessus.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nessus.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "tenableofficial/nessus:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8834
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+          - name: ACTIVATION_CODE
+            value: "{{ .Values.nessus.activation_code }}"
+          - name: USERNAME
+            value: "{{ .Values.nessus.username }}"
+          - name: PASSWORD
+            value: "{{ .Values.nessus.password }}"
+          - name: AUTO_UPDATE
+            value: "{{ .Values.auto_update }}"

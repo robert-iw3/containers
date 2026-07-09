@@ -1,0 +1,7 @@
+---
+- name: Restart Nomad
+  systemd:
+    name: "{{ nomad_service_name }}"
+    state: restarted
+    daemon_reload: yes
+  become: yes

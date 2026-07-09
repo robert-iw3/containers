@@ -1,0 +1,127 @@
+volumes:
+  redmine_data:
+    driver: local
+  redmine_logs:
+    driver: local
+  postgres_storage:
+    driver: local
+
+networks:
+  redmine:
+    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - redmine
+
+services:
+  postgresql:
+    <<: *common-vars-apps
+    build:
+      context: postgres/
+    container_name: postgresql
+    hostname: postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_storage:/var/lib/postgresql/data:Z
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redmine:
+    <<: *common-vars-apps
+    container_name: redmine
+    hostname: redmine.io
+    build: ./
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - TZ=America/Denver
+
+      - DB_ADAPTER=postgresql
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_SSL_MODE=prefer
+
+      - REDMINE_PORT=10445
+      - REDMINE_HTTPS=true
+      - SSL_KEY_PATH=/certs/redmine.key
+      - SSL_CERTIFICATE_PATH=/certs/redmine.crt
+      - SSL_DHPARAM_PATH=/certs/dhparam.pem
+      - REDMINE_RELATIVE_URL_ROOT=
+      - REDMINE_SECRET_TOKEN=
+
+      - REDMINE_SUDO_MODE_ENABLED=false
+      - REDMINE_SUDO_MODE_TIMEOUT=15
+
+      - REDMINE_CONCURRENT_UPLOADS=2
+
+      - REDMINE_BACKUP_SCHEDULE=
+      - REDMINE_BACKUP_EXPIRY=
+      - REDMINE_BACKUP_TIME=
+
+      - SMTP_ENABLED=false
+      - SMTP_METHOD=smtp
+      - SMTP_DOMAIN=www.example.com
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=mailer@example.com
+      - SMTP_PASS=password
+      - SMTP_STARTTLS=true
+      - SMTP_AUTHENTICATION=:login
+
+      - IMAP_ENABLED=false
+      - IMAP_HOST=imap.gmail.com
+      - IMAP_PORT=993
+      - IMAP_USER=mailer@example.com
+      - IMAP_PASS=password
+      - IMAP_SSL=true
+      - IMAP_INTERVAL=30
+    ports:
+      - "127.0.0.1:10083:80"
+      - "127.0.0.1:10445:443"
+    volumes:
+      - redmine_data:/home/redmine/data:Z
+      - redmine_logs:/var/log/redmine:Z
+      - ./certs:/certs:ro,z
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -I -s --cacert /certs/ca.crt https://localhost:10445 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  ha-proxy:
+    <<: *common-vars-apps
+    build:
+      context: haproxy/
+    container_name: ha-proxy
+    user: root
+    volumes:
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+      #- /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
+      - ./certs:/certs:z
+      - ./errors:/usr/local/etc/haproxy/errors:ro,Z
+    ports:
+      - 80:80
+      - 443:443

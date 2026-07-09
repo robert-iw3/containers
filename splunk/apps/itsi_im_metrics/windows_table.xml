@@ -1,0 +1,207 @@
+<form version="1.1">
+  <label>Windows Metrics (table)</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 15 minutes</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Processor.%_Processor_Time" instance="_Total" BY host span=1s
+| rename host AS Host
+| stats avg(maxValue) AS CPU BY Host
+| sort -CPU
+| eval "CPU %"=floor(CPU)
+| table Host, "CPU %"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="CPU %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=80, "#FFFFFF", value>80 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Memory</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Memory.%_Committed_Bytes_In_Use" BY host span=1s
+| rename host AS Host
+| stats avg(maxValue) AS Memory_Util BY Host
+| sort -Memory_Util
+| eval "Memory Utlisation %"=floor(Memory_Util)
+| table Host, "Memory Utlisation %"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Memory Utlisation %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=80, "#FFFFFF", value>80 AND value<=90, "#FF9900", value>90, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Disk Queue</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="LogicalDisk.Avg._Disk_Queue_Length" instance="*:" BY host, instance span=1s
+| eval Host=host." (".instance.")"
+| stats avg(maxValue) AS AvgDiskQueue BY Host
+| sort -AvgDiskQueue
+| eval "Average Disk Queue"=floor(AvgDiskQueue)
+| table Host, "Average Disk Queue"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Disk Space</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats avg(_value) AS avgValue WHERE index="windows-metrics" metric_name="LogicalDisk.%_Free_Space" instance="*:" BY host, instance span=1s
+| eval Host=host." (".instance.")"
+| stats min(avgValue) AS Free_Space BY Host
+| eval disk_util=100-Free_Space
+| sort -disk_util
+| eval "Disk Space Utilisation %"=floor(disk_util)
+| table Host, "Disk Space Utilisation %"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Disk Space Utilisation %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=90, "#FFFFFF", value>90 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Uplink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Network_Interface.Bytes_Sent/sec" BY host span=1s
+| rename host AS Host
+| stats avg(maxValue) AS Bytes_Sent_per_sec BY Host
+| sort -Bytes_Sent_per_sec
+| eval "Uplink (MBps)"=tostring(round(Bytes_Sent_per_sec/pow(1024,2)), "commas")
+| table Host, "Uplink (MBps)"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Downlink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Network_Interface.Bytes_Received/sec" BY host span=1s
+| rename host AS Host
+| stats avg(maxValue) AS Bytes_Received_per_sec BY Host
+| sort -Bytes_Received_per_sec
+| eval "Downlink (MBps)"=tostring(round(Bytes_Received_per_sec/pow(1024,2)), "commas")
+| table Host, "Downlink (MBps)"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Uptime</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="System.System_Up_Time" BY host span=1s
+| rename host AS Host
+| stats max(maxValue) AS System_Up_Time BY Host
+| sort -System_Up_Time
+| eval "Uptime (day)"=tostring(round(System_Up_Time/60/60/24), "commas")
+| table Host, "Uptime (day)"
+| head 10
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

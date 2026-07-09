@@ -1,0 +1,25 @@
+apiVersion: 1
+
+datasources:
+  - name: Elasticsearch - Raw Logs
+    uid: es-raw-logs
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "logs-raw*"
+    jsonData:
+      timeField: timestamp
+      esVersion: "9.4.3"
+      logMessageField: message
+      logLevelField: level
+    isDefault: true
+
+  - name: Elasticsearch - Metrics
+    uid: es-metrics
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "logs-metrics-1m*"
+    jsonData:
+      timeField: window_start
+      esVersion: "9.4.3"

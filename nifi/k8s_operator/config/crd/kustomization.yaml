@@ -1,0 +1,45 @@
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+- bases/nifi.konpyutaika.com_nificlusters.yaml
+- bases/nifi.konpyutaika.com_nifiusers.yaml
+- bases/nifi.konpyutaika.com_nifiusergroups.yaml
+- bases/nifi.konpyutaika.com_nifidataflows.yaml
+- bases/nifi.konpyutaika.com_nifiparametercontexts.yaml
+
+- bases/nifi.konpyutaika.com_nifiregistryclients.yaml
+- bases/nifi.konpyutaika.com_nifinodegroupautoscalers.yaml
+- bases/nifi.konpyutaika.com_nificonnections.yaml
+- bases/nifi.konpyutaika.com_nifiresources.yaml
+# +kubebuilder:scaffold:crdkustomizeresource
+
+patchesStrategicMerge:
+# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
+# patches here are for enabling the conversion webhook for each CRD
+#- patches/webhook_in_nificlusters.yaml
+#- patches/webhook_in_nifiusers.yaml
+#- patches/webhook_in_nifiusergroups.yaml
+#- patches/webhook_in_nifidataflows.yaml
+#- patches/webhook_in_nifiparametercontexts.yaml
+#- patches/webhook_in_nifiregistryclients.yaml
+#- patches/webhook_in_nifinodegroupautoscalers.yaml
+#- patches/webhook_in_nificonnections.yaml
+# +kubebuilder:scaffold:crdkustomizewebhookpatch
+
+# [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
+# patches here are for enabling the CA injection for each CRD
+#- patches/cainjection_in_nificlusters.yaml
+#- patches/cainjection_in_nifiusers.yaml
+#- patches/cainjection_in_nifiusergroups.yaml
+#- patches/cainjection_in_nifidataflows.yaml
+#- patches/cainjection_in_nifiparametercontexts.yaml
+#- patches/cainjection_in_nifiregistryclients.yaml
+#- patches/cainjection_in_nifinodegroupautoscalers.yaml
+#- patches/cainjection_in_nificonnections.yaml
+#- patches/cainjection_in_nifiresources.yaml
+# +kubebuilder:scaffold:crdkustomizecainjectionpatch
+
+# the following config is for teaching kustomize how to do kustomization for CRDs.
+configurations:
+- kustomizeconfig.yaml

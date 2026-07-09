@@ -1,0 +1,30 @@
+version: '3'
+
+volumes:
+  confluence-postgres:
+
+networks:
+  confluence:
+    name: confluence
+    driver: bridge
+
+services:
+  postgres:
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres
+    hostname: postgres-confluence.io
+    ports:
+      - 5432:5432
+    volumes:
+      - confluence-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - confluence

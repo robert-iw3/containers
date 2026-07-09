@@ -1,0 +1,64 @@
+api:
+  insecure: false
+  dashboard: true
+providers:
+  docker:
+    exposedByDefault: false
+{% if kubernetes_enabled %}
+  kubernetesCRD: {}
+{% endif %}
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+{% if use_letsencrypt %}
+certificatesResolvers:
+  le:
+    acme:
+      email: {{ gitea_admin_email }}
+      storage: /data/acme.json
+      tlsChallenge: {}
+{% else %}
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/server.crt
+      keyFile: /etc/traefik/certs/server.key
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/server.crt
+        keyFile: /etc/traefik/certs/server.key
+{% endif %}
+http:
+  middlewares:
+    securityHeaders:
+      headers:
+        contentSecurityPolicy: "default-src 'self'"
+        stsSeconds: 31536000
+        frameDeny: true
+        browserXssFilter: true
+    modsecurity:
+      modsecurity:
+        configFile: /etc/traefik/modsecurity.conf
+    rateLimit:
+      rateLimit:
+        average: 100
+        burst: 200
+    dashboardAuth:
+      basicAuth:
+        users:
+          - "admin:$apr1$H6uskkkD$5y78re.7R3fW7rB4H3J0B1" # admin:admin
+log:
+  level: INFO
+  format: json
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: keep

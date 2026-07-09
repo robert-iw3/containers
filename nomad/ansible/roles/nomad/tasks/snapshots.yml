@@ -1,0 +1,47 @@
+---
+- name: Persist management token for scheduled snapshots
+  copy:
+    content: "{{ hostvars[groups['nomad_servers'][0]]['nomad_bootstrap_token'] }}"
+    dest: "{{ nomad_config_dir }}/mgmt.token"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  no_log: true
+  when: nomad_acl_enabled and hostvars[groups['nomad_servers'][0]]['nomad_bootstrap_token'] is defined
+
+- name: Create snapshot directory
+  file:
+    path: "{{ nomad_snapshot_dir }}"
+    state: directory
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0700"
+  become: yes
+
+- name: Deploy snapshot script
+  template:
+    src: nomad-snapshot.sh.j2
+    dest: /usr/local/bin/nomad-snapshot.sh
+    owner: root
+    group: root
+    mode: "0755"
+  become: yes
+
+- name: Deploy snapshot systemd units
+  template:
+    src: "nomad-snapshot.{{ item }}.j2"
+    dest: "/etc/systemd/system/nomad-snapshot.{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [service, timer]
+  become: yes
+
+- name: Enable snapshot timer
+  systemd:
+    name: nomad-snapshot.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes

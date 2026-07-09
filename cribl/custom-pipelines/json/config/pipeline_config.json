@@ -1,0 +1,163 @@
+{
+  "id": "{{pipeline_id}}",
+  "description": "Optimized pipeline for JSON data with early filtering, performance tracking, and scalable handling for varying structures.",
+  "conf": {
+    "asyncTimeout": 30000,
+    "groups": [
+      {
+        "id": "prep_group",
+        "description": "Initial parsing and enrichment; early drop. (Split point for pre-processing.)",
+        "functions": [
+          {
+            "id": "early_filter",
+            "type": "eval",
+            "conf": {
+              "keep": "Object.keys($).length > 0"
+            },
+            "description": "Early filter to drop empty JSON objects"
+          },
+          {
+            "id": "start_timer",
+            "type": "eval",
+            "conf": {
+              "assignments": ["__start_time = Date.now()"]
+            },
+            "description": "Start performance timer"
+          },
+          {
+            "id": "parse_json_data",
+            "type": "parse",
+            "conf": {
+              "parser": "json_auto",
+              "onError": "drop"
+            },
+            "description": "Parse JSON; drop malformed"
+          },
+          {
+            "id": "unroll_nested",
+            "type": "unroll",
+            "conf": {
+              "path": "$.*",
+              "filter": "Array.isArray($)"
+            },
+            "description": "Unroll nested arrays"
+          },
+          {
+            "id": "validate_dynamic",
+            "type": "eval",
+            "conf": {
+              "keep": "(id !== undefined || category !== undefined) || (__error = true, false)"
+            },
+            "description": "Dynamic validation"
+          },
+          {
+            "id": "rename_and_mask",
+            "type": "js",
+            "conf": {
+              "function": "function process(event) { if (event.data) { event.event_data = event.data; delete event.data; } Object.keys(event).forEach(key => { if (key.startsWith('sensitive_')) { event[key] = '***MASKED***'; } if (typeof event[key] === 'object') { event[key + '_flattened'] = JSON.stringify(event[key]); } }); return event; }"
+            },
+            "description": "Combined rename, mask, and flatten for varying JSON"
+          },
+          {
+            "id": "enrich_eval",
+            "type": "eval",
+            "conf": {
+              "assignments": [
+                "_time = Date.now()",
+                "source = '{{source_tag}}'",
+                "host = C.INTERNAL.host"
+              ]
+            },
+            "description": "Enrich with metadata"
+          }
+        ]
+      },
+      {
+        "id": "process_group",
+        "description": "Aggregation and volume control; group limits. (Split point for post-processing.)",
+        "functions": [
+          {
+            "id": "aggregate_summary",
+            "type": "aggregate",
+            "conf": {
+              "groupBy": ["category"],
+              "aggregations": ["count() as event_count", "avg(value) as avg_value"],
+              "interval": "{{aggregate_interval}}",
+              "maxGroups": 1000
+            },
+            "description": "Aggregate with group limit"
+          },
+          {
+            "id": "suppress_duplicates",
+            "type": "suppress",
+            "conf": {
+              "fields": ["id"],
+              "maxEventsInMemory": 10000,
+              "maxKBytesInMemory": 1024
+            },
+            "description": "Suppress duplicates"
+          },
+          {
+            "id": "limit_batches",
+            "type": "limit",
+            "conf": {
+              "maxEvents": {{limit_max_events}},
+              "onExceed": "drop"
+            },
+            "description": "Limit"
+          },
+          {
+            "id": "sample_data",
+            "type": "sample",
+            "conf": {
+              "rate": {{sample_rate}}
+            },
+            "description": "Sample"
+          }
+        ]
+      },
+      {
+        "id": "output_group",
+        "description": "Error handling, routing, and metrics",
+        "functions": [
+          {
+            "id": "end_timer",
+            "type": "eval",
+            "conf": {
+              "assignments": ["__processing_time = Date.now() - __start_time"]
+            },
+            "description": "Calculate processing time"
+          },
+          {
+            "id": "error_route",
+            "type": "routes",
+            "conf": {
+              "routes": [
+                {
+                  "filter": "__error == true",
+                  "output": "{{error_output}}",
+                  "description": "Route errors"
+                },
+                {
+                  "filter": "true",
+                  "output": "{{main_output}}",
+                  "description": "Main route"
+                }
+              ]
+            },
+            "description": "Route with error handling"
+          },
+          {
+            "id": "metrics_export",
+            "type": "metrics",
+            "conf": {
+              "metrics": ["event_count", "__processing_time"],
+              "output": "{{metrics_destination}}"
+            },
+            "description": "Export metrics"
+          }
+        ]
+      }
+    ]
+  }
+}

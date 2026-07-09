@@ -1,0 +1,72 @@
+version: '3'
+
+networks:
+  traefik:
+    external: true
+
+services:
+  traefik:
+    container_name: traefik
+    image: docker.io/traefik:latest
+    hostname: traefik.testing.io
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      sonarnet:
+        ipv4_address: ${TRAEFIK_IPv4}
+      traefik:
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      #- $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config.yml:/etc/traefik/dynamic/config.yml:ro
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      #- ./traefik/certs/acme.json:/acme.json
+      #if using own certs example, ensure to update "tls.yml".
+      - ./traefik/tls.yml:/etc/traefik/dynamic/tls.yml:ro
+      - ./traefik/certs/sonarqube.ca.pem:/traefik/certs/sonarqube.ca.pem:ro
+      - ./traefik/certs/sonarqube.testing.io.pem:/traefik/certs/sonarqube.testing.io.pem:ro
+      - ./traefik/certs/sonarqube.testing.io-key.pem:/traefik/certs/sonarqube.testing.io-key.pem:ro
+    restart: on-failure
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      providers:
+        swarm:
+          endpoint: "unix:///var/run/docker.sock"
+          useBindPortIP: true
+          network: traefik
+          refreshSeconds: 30
+          httpClientTimeout: 300
+          tls:
+            ca: /traefik/certs/sonarqube.ca.pem
+            cert: /traefik/certs/sonarqube.testing.io.pem
+            key: /traefik/certs/sonarqube.testing.io-key.pem
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.traefik.entrypoints=web"
+        - "traefik.http.routers.traefik.rule=Host(`traefik.testing.io`)"
+        - "traefik.http.routers.traefik.middlewares=https-redirect"
+        - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https"
+        - "traefik.http.middlewares.traefik-auth.basicauth.users=username:$$hashed$$pass$$/md5/sha1/bcrypt"
+        - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+        - "traefik.http.routers.traefik-secure.rule=Host(`traefik.testing.io`)"
+        - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+        - "traefik.http.routers.traefik-secure.tls=true"
+        - "traefik.http.routers.traefik-secure.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.traefik-secure.tls.domains[0].main=traefik.testing.io"
+        - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.traefik.testing.io"
+        - "traefik.http.routers.traefik-secure.service=api@internal"
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

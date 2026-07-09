@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {service_name}
+  annotations:
+    prometheus.io/scrape: "true"  # Enable Prometheus scraping
+    prometheus.io/port: "{metrics_port}"  # e.g., 8080 for Jira, 5432 for PostgreSQL
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {service_name}
+  template:
+    metadata:
+      labels:
+        app: {service_name}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"  # Prevent eviction for critical services
+    spec:
+      securityContext:  # Pod-level security
+        runAsNonRoot: true
+        fsGroup: 1000  # Ensure volumes are owned by non-root group
+      containers:
+      - name: {service_name}
+        image: {image}
+        ports:
+          - containerPort: {main_port}  # e.g., 8080 for Jira, 5432 for PostgreSQL
+        env:  # Environment variables from compose
+          - name: JVM_MINIMUM_MEMORY
+            value: "{jvm_min_memory}"  # e.g., 2048m for Jira
+          - name: JVM_MAXIMUM_MEMORY
+            value: "{jvm_max_memory}"  # e.g., 4096m for Jira
+          - name: POSTGRESQL_USERNAME
+            value: "{postgres_username}"  # e.g., jira_user
+          - name: POSTGRESQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: jira-secrets
+                key: postgres_password
+          - name: POSTGRESQL_DATABASE
+            value: "{postgres_database}"  # e.g., jira_db
+          - name: POSTGRESQL_REPLICATION_USER
+            value: "{postgres_repl_user}"  # e.g., repl_user
+          - name: POSTGRESQL_REPLICATION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: jira-secrets
+                key: postgres_repl_password
+          - name: WALLARM_API_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: jira-secrets
+                key: wallarm_api_token
+          - name: ATL_JDBC_URL
+            value: "jdbc:postgresql://postgres-jira.dev:5432/{postgres_database}"
+          # Add more service-specific env vars as needed
+        volumeMounts:  # Volumes from compose
+          - mountPath: /var/atlassian/application-data/jira
+            name: jira-data
+            readOnly: false
+          - mountPath: /bitnami/postgresql
+            name: postgres-data
+            readOnly: false
+          - mountPath: /backups/db
+            name: postgres-backups
+            readOnly: false
+          - mountPath: /backups/app
+            name: jira-backups
+            readOnly: false
+          - mountPath: /etc/wallarm/jira-api-openapi.json
+            name: openapi-spec
+            readOnly: true
+          - mountPath: /letsencrypt
+            name: traefik-certificates
+            readOnly: false
+          - mountPath: /prometheus
+            name: prometheus-data
+            readOnly: false
+          - mountPath: /var/lib/grafana
+            name: grafana-data
+            readOnly: false
+        resources:  # Resource limits/reservations from compose
+          limits:
+            cpu: "{cpu_limit}"  # e.g., '2.0' for Jira
+            memory: "{memory_limit}"  # e.g., '4096M' for Jira
+          requests:
+            cpu: "{cpu_request}"  # e.g., '1.0' for Jira
+            memory: "{memory_request}"  # e.g., '2048M' for Jira
+        securityContext:  # Container-level security
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true  # Adjust for services needing write access
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+        livenessProbe:  # Based on compose healthcheck
+          httpGet:
+            path: /{health_path}  # e.g., / for Jira, /health for Wallarm
+            port: {health_port}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /{health_path}
+            port: {health_port}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:  # Define volumes
+        - name: jira-data
+          persistentVolumeClaim:
+            claimName: jira-data-pvc
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-data-pvc
+        - name: postgres-backups
+          persistentVolumeClaim:
+            claimName: postgres-backups-pvc
+        - name: jira-backups
+          persistentVolumeClaim:
+            claimName: jira-backups-pvc
+        - name: openapi-spec
+          configMap:
+            name: jira-openapi-config
+        - name: traefik-certificates
+          persistentVolumeClaim:
+            claimName: traefik-certificates-pvc
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: prometheus-data-pvc
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: grafana-data-pvc

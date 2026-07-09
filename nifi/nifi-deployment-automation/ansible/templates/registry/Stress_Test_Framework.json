@@ -1,0 +1,288 @@
+{
+   "template":{
+      "description":"This stress test will help an administrator find out what the pure framework oriented overhead of NiFi will be under load.  Specifically it generates as many flow files as possible as fast as possible, updates an attribute or two, and makes a simple routing decision.  All of this is aimed at putting pressure on the FlowFile repository and Provenance repositories.  It doesn't cause any IO nor anything really interesting in terms of CPU.",
+      "name":"Stress Test: Framework",
+      "snippet":{
+         "processGroups":{
+            "id":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+            "parentGroupId":"d752d5e7-707a-4a1d-88b4-1c04de2a9a3b",
+            "position":{
+               "x":"745.0",
+               "y":"103.0"
+            },
+            "activeRemotePortCount":"0",
+            "comments":"This is a stress test which simply generates a very high volume of objects with no content for the sole purpose of isolating the speed at which general framework operations can occur.\n\nLargely it establishes how quickly the framework can checkpoint/commit operations against the write ahead log.  This flow would also expose performance degradation brought about by inappropriately low heap sizes, provenance performance, logging configurations, etc..",
+            "contents":{
+               "connections":[
+                  {
+                     "id":"96439cce-3677-458b-8efb-b1b001dc6c97",
+                     "parentGroupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"2000",
+                     "destination":{
+                        "groupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                        "id":"dfbe93f1-549c-432d-b04d-8b679e256103",
+                        "type":"PROCESSOR"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"success",
+                     "source":{
+                        "groupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                        "id":"523e0590-d1d2-45b4-8d6e-d580ef4c35af",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  },
+                  {
+                     "id":"c05f2583-ec56-4343-ba77-fd1406884330",
+                     "parentGroupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"200",
+                     "destination":{
+                        "groupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                        "id":"523e0590-d1d2-45b4-8d6e-d580ef4c35af",
+                        "type":"PROCESSOR"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"success",
+                     "source":{
+                        "groupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                        "id":"6ffe3449-1694-4e4c-af69-510dee66b9b3",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  }
+               ],
+               "processors":[
+                  {
+                     "id":"6ffe3449-1694-4e4c-af69-510dee66b9b3",
+                     "parentGroupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                     "position":{
+                        "x":"293.0",
+                        "y":"49.0"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"1",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":[
+                              {
+                                 "key":"File Size",
+                                 "value":"0 KB"
+                              },
+                              {
+                                 "key":"Batch Size",
+                                 "value":"100"
+                              },
+                              {
+                                 "key":"Data Format"
+                              },
+                              {
+                                 "key":"Unique FlowFiles"
+                              }
+                           ]
+                        },
+                        "runDurationMillis":"0",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"GenerateFlowFile",
+                     "relationships":{
+                        "autoTerminate":"false",
+                        "description":"",
+                        "name":"success"
+                     },
+                     "state":"STOPPED",
+                     "style":"",
+                     "supportsEventDriven":"false",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.standard.GenerateFlowFile"
+                  },
+                  {
+                     "id":"dfbe93f1-549c-432d-b04d-8b679e256103",
+                     "parentGroupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                     "position":{
+                        "x":"288.0",
+                        "y":"467.0"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"2",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":{
+                              "key":"Routing Strategy"
+                           }
+                        },
+                        "runDurationMillis":"50",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"RouteOnAttribute",
+                     "relationships":{
+                        "autoTerminate":"true",
+                        "description":"FlowFiles that do not match any user-define expression will be routed here",
+                        "name":"unmatched"
+                     },
+                     "state":"STOPPED",
+                     "style":"",
+                     "supportsEventDriven":"true",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.standard.RouteOnAttribute"
+                  },
+                  {
+                     "id":"523e0590-d1d2-45b4-8d6e-d580ef4c35af",
+                     "parentGroupId":"f2cdb42a-0b36-433f-b7d1-de814aec396e",
+                     "position":{
+                        "x":"287.0",
+                        "y":"259.0"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"2",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":[
+                              {
+                                 "key":"property 1",
+                                 "value":"value 1"
+                              },
+                              {
+                                 "key":"property 2",
+                                 "value":"value 2 ${nextInt()}"
+                              }
+                           ]
+                        },
+                        "runDurationMillis":"100",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"UpdateAttribute",
+                     "relationships":{
+                        "autoTerminate":"false",
+                        "description":"All FlowFiles are routed to this relationship",
+                        "name":"success"
+                     },
+                     "state":"STOPPED",
+                     "style":"",
+                     "supportsEventDriven":"true",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                  }
+               ]
+            },
+            "disabledCount":"0",
+            "inactiveRemotePortCount":"0",
+            "inputPortCount":"0",
+            "invalidCount":"0",
+            "name":"Stress Test Framework",
+            "outputPortCount":"0",
+            "parent":{
+               "id":"d752d5e7-707a-4a1d-88b4-1c04de2a9a3b",
+               "name":"NiFi Flow"
+            },
+            "runningCount":"0",
+            "stoppedCount":"3"
+         }
+      },
+      "timestamp":"01/06/2020 22:10:03 EST"
+   }
+}

@@ -1,0 +1,122 @@
+stages:
+  - build
+  - test
+  - docker
+  - validate
+  - deploy
+
+# Default settings for all jobs
+default:
+  image: node:24
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - .npm/
+
+# Workflow rules to control pipeline execution
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: always
+    - when: never
+
+# Build and test the React app
+build_job:
+  stage: build
+  script:
+    - npm ci
+    - npm run lint
+    - npm run format
+    - npm run build:css
+    - npm run build
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 day
+
+# Run tests
+test_job:
+  stage: test
+  script:
+    - npm ci
+    - npm test
+
+# Build and push Docker image
+docker_build_push:
+  stage: docker
+  image: docker:27
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker build -t $CI_REGISTRY_IMAGE:latest -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -f Dockerfile-react .
+    - docker push $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+# Scan Docker image
+docker_scan:
+  stage: docker
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --severity HIGH,CRITICAL --exit-code 1 $CI_REGISTRY_IMAGE:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+# Validate plugin with Nessus API
+validate_plugin:
+  stage: validate
+  script:
+    - curl -X POST -H "X-ApiKeys: $NESSUS_API_KEYS" -F "plugin=@dist/plugin.nasl" $NESSUS_API_URL/plugins/upload
+  variables:
+    NESSUS_API_URL: https://api-fw.testing.io:8088
+    NESSUS_API_KEYS: $NESSUS_API_KEYS
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+# Deploy to production (manual approval)
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - apk add --no-cache openssh-client bash
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh -o StrictHostKeyChecking=no user@$DEPLOY_HOST << 'EOF'
+        # Pull the latest image
+        docker login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+        docker pull $CI_REGISTRY_IMAGE:latest
+
+        # Copy docker-compose.yml and secrets
+        mkdir -p ~/nessus-stack
+        scp $CI_PROJECT_DIR/docker-compose.yml user@$DEPLOY_HOST:~/nessus-stack/
+        echo "$NESSUS_API_KEYS" > ~/nessus-stack/secrets/nessus_api_keys.txt
+
+        # Deploy with podman-compose
+        cd ~/nessus-stack
+        podman-compose up -d --force-recreate
+      EOF
+  variables:
+    DEPLOY_HOST: your-vm-host
+    CI_REGISTRY: registry.gitlab.com
+    CI_REGISTRY_IMAGE: $CI_REGISTRY/$CI_PROJECT_PATH
+    NESSUS_API_KEYS: $NESSUS_API_KEYS
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: false
+  environment:
+    name: production
+    url: https://nessus.testing.io/app

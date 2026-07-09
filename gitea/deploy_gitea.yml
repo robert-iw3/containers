@@ -1,0 +1,337 @@
+---
+- name: Deploy production-ready Gitea with Ansible
+  hosts: gitea_hosts
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    gitea_user: svc-gitea
+    gitea_data_dir: /home/{{ gitea_user }}/gitea
+    gitea_compose_dir: /home/{{ gitea_user }}/gitea-compose
+    podman_enabled: "{{ podman_enabled | default(true) }}"
+    kubernetes_enabled: "{{ kubernetes_enabled | default(false) }}"
+    use_letsencrypt: "{{ use_letsencrypt | default(true) }}"
+    docker_compose_version: 5.3.1
+    gitea_image: docker.io/gitea/gitea:1.26.4
+    postgresql_image: docker.io/bitnami/postgresql:latest
+    traefik_image: docker.io/traefik:v3.7.6
+    minio_image: quay.io/minio/minio:latest
+    loki_image: docker.io/grafana/loki:3.7.3
+    pgbouncer_image: docker.io/edoburu/pgbouncer:v1.25.2-p0
+    vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://vault:8200', true) }}"
+    vault_role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
+    vault_secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
+    backup_encryption_key: "{{ lookup('env', 'BACKUP_ENCRYPTION_KEY') }}"
+    cert_dir: "{{ gitea_data_dir }}/certs"
+    ca_cert: "{{ cert_dir }}/ca.crt"
+    ca_key: "{{ cert_dir }}/ca.key"
+    server_cert: "{{ cert_dir }}/server.crt"
+    server_key: "{{ cert_dir }}/server.key"
+
+  pre_tasks:
+    - name: Ensure gitea user exists
+      user:
+        name: "{{ gitea_user }}"
+        state: present
+        create_home: true
+    - name: Enable linger for gitea user (Podman)
+      command: loginctl enable-linger "{{ gitea_user }}"
+      changed_when: false
+      when: podman_enabled
+    - name: Install required packages (Podman)
+      package:
+        name:
+          - podman
+          - podman-docker
+          - podman-compose
+          - python3-pip
+          - openssl
+          - curl
+        state: present
+      when: podman_enabled
+    - name: Install required packages (Docker)
+      package:
+        name:
+          - docker
+          - docker-compose
+          - python3-pip
+          - openssl
+          - curl
+        state: present
+      when: not podman_enabled and not kubernetes_enabled
+    - name: Install Ansible collections
+      command: ansible-galaxy collection install community.general containers.podman community.hashi_vault
+      changed_when: false
+      when: podman_enabled
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+      when: podman_enabled
+    - name: Check Podman socket existence
+      stat:
+        path: "/run/user/{{ ansible_user_uid }}/podman/podman.sock"
+      register: podman_socket
+      when: podman_enabled
+    - name: Fail if Podman socket is missing
+      fail:
+        msg: "Podman socket not found at /run/user/{{ ansible_user_uid }}/podman/podman.sock"
+      when: podman_enabled and not podman_socket.stat.exists
+    - name: Ensure Podman socket is running
+      systemd:
+        name: podman.socket
+        state: started
+        enabled: true
+        scope: user
+      become: true
+      become_user: "{{ gitea_user }}"
+      when: podman_enabled
+    - name: Set SELinux context for Podman socket
+      command: chcon -t container_runtime_t /run/user/{{ ansible_user_uid }}/podman/podman.sock
+      changed_when: false
+      when: podman_enabled and ansible_selinux is defined and ansible_selinux.status == "enabled"
+    - name: Ensure Gitea directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: '0755'
+      loop:
+        - "{{ gitea_data_dir }}"
+        - "{{ gitea_compose_dir }}"
+        - "{{ gitea_data_dir }}/prometheus"
+        - "{{ gitea_data_dir }}/loki"
+        - "{{ cert_dir }}"
+    - name: Retrieve Vault secrets
+      community.hashi_vault.vault_login:
+        url: "{{ vault_addr }}"
+        role_id: "{{ vault_role_id }}"
+        secret_id: "{{ vault_secret_id }}"
+      register: vault_login
+      when: not kubernetes_enabled
+    - name: Validate Vault secrets
+      community.hashi_vault.vault_read:
+        url: "{{ vault_addr }}"
+        path: secret/gitea
+        auth_method: approle
+        role_id: "{{ vault_role_id }}"
+        secret_id: "{{ vault_secret_id }}"
+      register: gitea_secrets
+      failed_when: >
+        gitea_secrets.data is not defined or
+        gitea_secrets.data.postgresql_username is not defined or
+        gitea_secrets.data.postgresql_password is not defined or
+        gitea_secrets.data.postgresql_database is not defined or
+        gitea_secrets.data.postgresql_replication_user is not defined or
+        gitea_secrets.data.postgresql_replication_password is not defined or
+        gitea_secrets.data.gitea_admin_user is not defined or
+        gitea_secrets.data.gitea_admin_password is not defined or
+        gitea_secrets.data.gitea_admin_email is not defined or
+        gitea_secrets.data.gitea_domain is not defined or
+        gitea_secrets.data.gitea_ssh_domain is not defined or
+        gitea_secrets.data.gitea_root_url is not defined or
+        gitea_secrets.data.gitea_ssh_port is not defined or
+        gitea_secrets.data.minio_access_key is not defined or
+        gitea_secrets.data.minio_secret_key is not defined
+      when: not kubernetes_enabled
+    - name: Set Gitea facts
+      set_fact:
+        postgresql_username: "{{ gitea_secrets.data.postgresql_username }}"
+        postgresql_password: "{{ gitea_secrets.data.postgresql_password }}"
+        postgresql_database: "{{ gitea_secrets.data.postgresql_database }}"
+        postgresql_replication_user: "{{ gitea_secrets.data.postgresql_replication_user }}"
+        postgresql_replication_password: "{{ gitea_secrets.data.postgresql_replication_password }}"
+        gitea_admin_user: "{{ gitea_secrets.data.gitea_admin_user }}"
+        gitea_admin_password: "{{ gitea_secrets.data.gitea_admin_password }}"
+        gitea_admin_email: "{{ gitea_secrets.data.gitea_admin_email }}"
+        gitea_domain: "{{ gitea_secrets.data.gitea_domain }}"
+        gitea_ssh_domain: "{{ gitea_secrets.data.gitea_ssh_domain }}"
+        gitea_root_url: "{{ gitea_secrets.data.gitea_root_url }}"
+        gitea_ssh_port: "{{ gitea_secrets.data.gitea_ssh_port }}"
+        minio_access_key: "{{ gitea_secrets.data.minio_access_key }}"
+        minio_secret_key: "{{ gitea_secrets.data.minio_secret_key }}"
+        backup_encryption_key: "{{ gitea_secrets.data.backup_encryption_key | default(backup_encryption_key) }}"
+      when: not kubernetes_enabled
+    - name: Ensure DNS resolution for internal services
+      command: getent hosts {{ item }}
+      loop:
+        - patroni-gitea.dev.io
+        - loki.dev.io
+        - minio.dev.io
+      register: dns_check
+      ignore_errors: true
+      changed_when: false
+      when: not kubernetes_enabled
+    - name: Fail if DNS resolution fails
+      fail:
+        msg: "DNS resolution failed for {{ item.item }}. Ensure DNS or /etc/hosts is configured."
+      when: item.rc != 0
+      loop: "{{ dns_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: not kubernetes_enabled
+    - name: Copy OpenSSL configuration files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ cert_dir }}/{{ item.dest }}"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: '0644'
+      loop:
+        - { src: templates/ca.conf.j2, dest: ca.conf }
+        - { src: templates/server.conf.j2, dest: server.conf }
+      when: not use_letsencrypt
+    - name: Generate CA key and certificate
+      command: >
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes
+        -keyout {{ ca_key }} -out {{ ca_cert }}
+        -config {{ cert_dir }}/ca.conf
+      args:
+        creates: {{ ca_cert }}
+      when: not use_letsencrypt
+    - name: Generate server key and CSR
+      command: >
+        openssl req -newkey rsa:2048 -nodes
+        -keyout {{ server_key }} -out {{ cert_dir }}/server.csr
+        -config {{ cert_dir }}/server.conf
+      args:
+        creates: {{ server_key }}
+      when: not use_letsencrypt
+    - name: Sign server certificate
+      command: >
+        openssl x509 -req -in {{ cert_dir }}/server.csr -CA {{ ca_cert }}
+        -CAkey {{ ca_key }} -CAcreateserial -out {{ server_cert }}
+        -days 365 -sha256 -extfile {{ cert_dir }}/server.conf -extensions v3_req
+      args:
+        creates: {{ server_cert }}
+      when: not use_letsencrypt
+    - name: Ensure certificate permissions
+      file:
+        path: "{{ item }}"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: "{{ '0644' if 'crt' in item else '0600' }}"
+      loop:
+        - "{{ ca_cert }}"
+        - "{{ server_cert }}"
+        - "{{ server_key }}"
+      when: not use_letsencrypt
+    - name: Schedule certificate renewal cron job
+      cron:
+        name: renew-certificates
+        user: "{{ gitea_user }}"
+        minute: "0"
+        hour: "3"
+        day: "1"
+        month: "*"
+        job: >
+          openssl req -newkey rsa:2048 -nodes -keyout {{ server_key }} -out {{ cert_dir }}/server.csr -config {{ cert_dir }}/server.conf && \
+          openssl x509 -req -in {{ cert_dir }}/server.csr -CA {{ ca_cert }} -CAkey {{ ca_key }} -CAcreateserial -out {{ server_cert }} \
+          -days 365 -sha256 -extfile {{ cert_dir }}/server.conf -extensions v3_req && \
+          systemctl restart podman-gitea-traefik
+        state: present
+      when: not use_letsencrypt and podman_enabled
+    - name: Copy Vault policy
+      template:
+        src: templates/vault_policy.hcl.j2
+        dest: "{{ gitea_compose_dir }}/vault_policy.hcl"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: '0644'
+      when: not kubernetes_enabled
+    - name: Apply Vault rotation policy
+      command: vault policy write gitea-policy {{ gitea_compose_dir }}/vault_policy.hcl
+      when: not kubernetes_enabled
+
+  tasks:
+    - name: Copy configuration files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ gitea_compose_dir }}/{{ item.dest }}"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: templates/docker-compose.yml.j2, dest: docker-compose.yml, mode: '0644' }
+        - { src: templates/prometheus.yml.j2, dest: prometheus/prometheus.yml, mode: '0644' }
+        - { src: templates/modsecurity.conf.j2, dest: modsecurity.conf, mode: '0644' }
+        - { src: templates/traefik.yml.j2, dest: traefik.yml, mode: '0644' }
+        - { src: templates/pgbouncer.ini.j2, dest: pgbouncer.ini, mode: '0644' }
+        - { src: templates/grafana-datasource.yml.j2, dest: grafana-datasource.yml, mode: '0644' }
+      when: not kubernetes_enabled
+    - name: Copy certificates to compose directory
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ gitea_compose_dir }}/{{ item.dest }}"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "{{ ca_cert }}", dest: ca.crt, mode: '0644' }
+        - { src: "{{ server_cert }}", dest: server.crt, mode: '0644' }
+        - { src: "{{ server_key }}", dest: server.key, mode: '0600' }
+      when: not use_letsencrypt and not kubernetes_enabled
+    - name: Deploy with Podman Compose
+      command: podman-compose -f {{ gitea_compose_dir }}/docker-compose.yml up -d
+      become: true
+      become_user: "{{ gitea_user }}"
+      environment:
+        DOCKER_HOST: "unix:///run/user/{{ ansible_user_uid }}/podman/podman.sock"
+      when: podman_enabled and not kubernetes_enabled
+    - name: Deploy with Docker
+      command: docker-compose -f {{ gitea_compose_dir }}/docker-compose.yml up -d
+      when: not podman_enabled and not kubernetes_enabled
+    - name: Copy Kubernetes manifests
+      template:
+        src: templates/gitea-k8s.yml.j2
+        dest: "{{ gitea_compose_dir }}/gitea-k8s.yml"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: '0644'
+      when: kubernetes_enabled
+    - name: Apply Kubernetes secret for certificates
+      command: >
+        kubectl create secret generic gitea-certs --namespace gitea
+        --from-file=tls.crt={{ server_cert }}
+        --from-file=tls.key={{ server_key }}
+        --from-file=ca.crt={{ ca_cert }}
+        --dry-run=client -o yaml | kubectl apply -f -
+      when: kubernetes_enabled and not use_letsencrypt
+      run_once: true
+    - name: Apply Kubernetes manifests
+      command: kubectl apply -f {{ gitea_compose_dir }}/gitea-k8s.yml
+      register: kubectl_apply
+      retries: 3
+      delay: 10
+      until: kubectl_apply.rc == 0
+      when: kubernetes_enabled
+    - name: Create Gitea admin user (Docker/Podman)
+      command: >
+        podman exec -u git gitea /usr/local/bin/gitea admin user create
+        --admin --username {{ gitea_admin_user }}
+        --password {{ gitea_admin_password }}
+        --email {{ gitea_admin_email }}
+      register: create_user
+      changed_when: create_user.rc != 1 and '"already exists" not in create_user.stdout'
+      failed_when: create_user.rc != 0 and '"already exists" not in create_user.stdout'
+      when: podman_enabled and not kubernetes_enabled
+    - name: Create Gitea admin user (Kubernetes)
+      command: >
+        kubectl exec -n gitea -it $(kubectl get pod -n gitea -l app=gitea -o jsonpath='{.items[0].metadata.name}') -- \
+        /usr/local/bin/gitea admin user create --admin --username {{ gitea_admin_user }} \
+        --password {{ gitea_admin_password }} --email {{ gitea_admin_email }}
+      register: create_user
+      changed_when: create_user.rc != 1 and '"already exists" not in create_user.stdout'
+      failed_when: create_user.rc != 0 and '"already exists" not in create_user.stdout'
+      when: kubernetes_enabled
+    - name: Wait for Gitea to be healthy
+      uri:
+        url: "https://{{ gitea_domain }}/"
+        status_code: 200
+        validate_certs: "{{ not use_letsencrypt }}"
+      register: result
+      retries: 30
+      delay: 10
+      until: result.status == 200
+      when: not kubernetes_enabled

@@ -1,0 +1,42 @@
+rudderWorkspaceToken:
+  secretName: rudderstack-secrets
+  secretKey: workspace-token
+replicaCount: {{ replicas }}
+image:
+  repository: {{ image_registry }}/rudderlabs/rudder-server
+  tag: "{{ rudder_version }}"
+transformer:
+  image:
+    repository: {{ image_registry }}/rudderlabs/rudder-transformer
+    tag: "{{ transformer_version }}"
+service:
+  type: ClusterIP
+  port: 8080
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1024Mi"
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+fluentd:
+  enabled: {{ enable_logging }}
+  image:
+    repository: fluent/fluentd
+    tag: v1.14-1
+postgresql:
+  enabled: true
+  auth:
+    username: rudder
+    database: rudderstack
+    existingSecret: rudderstack-secrets
+    secretKeys:
+      userKey: postgres-user
+      passwordKey: postgres-password
+      databaseKey: postgres-database
+config:
+  configBackendURL: "{{ config_backend_url }}"
+  enableTelemetry: {{ enable_telemetry }}

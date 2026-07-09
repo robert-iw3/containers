@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flink-tls
+  namespace: {{ namespace }}
+type: Opaque
+data:
+  keystore.jks: "{{ lookup('file', cert_path + '/keystore.jks') | b64encode }}"
+  truststore.jks: "{{ lookup('file', cert_path + '/truststore.jks') | b64encode }}"

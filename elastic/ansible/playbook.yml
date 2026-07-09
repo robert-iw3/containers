@@ -1,0 +1,8 @@
+---
+- name: Deploy Elastic Stack
+  hosts: "{{ target | default('k8s') }}"
+  become: yes
+  vars:
+    project_dir: "/opt/elastic-deployment"
+  roles:
+    - elastic_stack

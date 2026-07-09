@@ -1,0 +1,48 @@
+---
+services:
+  csv-splunk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - CSV_LOG_DIR=/var/log/csv_data
+      - SCHEMAS_FILE=/app/schemas.yaml
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - ENABLE_SPLUNK=true
+      - CSV_DELIMITER=${CSV_DELIMITER:-,}
+    volumes:
+      - csv-logs:/var/log/csv_data:Z
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '1G'
+    restart: unless-stopped
+  csv-elasticsearch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - CSV_LOG_DIR=/var/log/csv_data
+      - SCHEMAS_FILE=/app/schemas.yaml
+      - ES_HOST=${ES_HOST:-http://localhost:9200}
+      - ES_INDEX=${ES_INDEX:-csv-logs}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - ENABLE_SPLUNK=false
+      - CSV_DELIMITER=${CSV_DELIMITER:-,}
+    volumes:
+      - csv-logs:/var/log/csv_data:Z
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '1G'
+    restart: unless-stopped
+volumes:
+  csv-logs:

@@ -1,0 +1,7 @@
+main = rule {
+  all job.task_groups as tg {
+    all tg.tasks as task {
+      task.resources.cpu > 0 and task.resources.memory_mb > 0
+    }
+  }
+}

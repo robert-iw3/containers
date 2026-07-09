@@ -1,0 +1,38 @@
+# Create with: nomad volume create volume.hcl
+# Claim from a job with:
+#
+#   group "db" {
+#     volume "data" {
+#       type            = "csi"
+#       source          = "postgres-data"
+#       attachment_mode = "file-system"
+#       access_mode     = "single-node-writer"
+#     }
+#     task "postgres" {
+#       volume_mount {
+#         volume      = "data"
+#         destination = "/var/lib/postgresql/data"
+#       }
+#     }
+#   }
+
+id        = "postgres-data"
+name      = "postgres-data"
+type      = "csi"
+plugin_id = "aws-ebs"
+
+capacity_min = "10GiB"
+capacity_max = "50GiB"
+
+capability {
+  access_mode     = "single-node-writer"
+  attachment_mode = "file-system"
+}
+
+mount_options {
+  fs_type = "ext4"
+}
+
+parameters {
+  type = "gp3"
+}

@@ -1,0 +1,18 @@
+/* data-pipeline-and-processor
+ *
+ *
+ *
+ * Description:
+ */
+package util
+
+import org.apache.log4j.Logger
+
+object LoggerCreator {
+
+  def getLogger(loggerName: String): Logger = {
+    // Not needed as log34j.properties is loaded automatically
+    // PropertyConfigurator.configure(log4jConfigPath)
+    Logger.getLogger(loggerName)
+  }
+}

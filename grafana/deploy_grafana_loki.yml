@@ -1,0 +1,62 @@
+---
+- name: Deploy Grafana/Loki stack
+  hosts: localhost
+  tasks:
+    - name: Ensure required directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /etc/grafana
+        - /var/lib/grafana
+        - /var/log/grafana
+        - /srv/grafana-postgres/backups
+
+    - name: Copy configuration files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: 'ldap.toml', dest: '/etc/grafana/ldap.toml' }
+        - { src: 'prometheus.yml', dest: '/etc/prometheus/prometheus.yml' }
+        - { src: 'loki-config.yml', dest: '/etc/loki/loki-config.yml' }
+
+    - name: Deploy Docker Compose services
+      docker_compose:
+        project_name: grafana-loki
+        definition:
+          version: '3.8'
+          services:
+            grafana:
+              image: "{{ grafana_image }}"
+              environment: "{{ grafana_env }}"
+              volumes:
+                - "./ldap.toml:/etc/grafana/ldap.toml"
+              ports:
+                - "3000:3000"
+            loki:
+              image: "{{ loki_image }}"
+              ports:
+                - "3100:3100"
+              volumes:
+                - "./loki-config.yml:/etc/loki/loki-config.yml"
+            prometheus:
+              image: "{{ prometheus_image }}"
+              ports:
+                - "9090:9090"
+              volumes:
+                - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+            postgres:
+              image: "{{ postgres_image }}"
+              ports:
+                - "5432:5432"
+              volumes:
+                - "grafana-postgres:/var/lib/postgresql/data"
+            wallarm:
+              image: "{{ wallarm_image }}"
+              ports:
+                - "80:80"
+                - "443:443"
+              environment: "{{ wallarm_env }}"

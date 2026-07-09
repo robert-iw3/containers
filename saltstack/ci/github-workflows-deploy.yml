@@ -1,0 +1,24 @@
+name: Deploy SaltStack
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: ['docker', 'podman', 'kubernetes']
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest tests/
+      - name: Run deployment
+        run: python deploy_saltstack.py --platform ${{ matrix.platform }} --config config/config.yaml
+        env:
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}

@@ -1,0 +1,36 @@
+## Cluster Settings
+cluster.name: ${ELASTIC_CLUSTER_NAME}
+node.name:    ${ELASTIC_NODE_NAME}
+network.host: ${ES_NODE_1_IP}
+transport.host: ${ES_NODE_1_IP}
+
+## Cluster Settings
+discovery.seed_hosts: ${ELASTIC_DISCOVERY_SEEDS}
+cluster.initial_master_nodes: ${ELASTIC_INIT_MASTER_NODE}
+
+## License
+xpack.license.self_generated.type: trial
+
+# Security
+xpack.security.enabled: true
+xpack.security.authc.token.enabled: true
+xpack.security.authc.api_key.enabled: true
+
+# transport security settings
+# This is mostly used for inter-node communications between parts of the ELK stack
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.key: ${CONFIG_DIR}/elasticsearch.key
+xpack.security.transport.ssl.certificate: ${CONFIG_DIR}/elasticsearch.crt
+xpack.security.transport.ssl.certificate_authorities: ${CONFIG_DIR}/ca.crt
+xpack.security.transport.ssl.verification_mode: certificate
+
+# HTTP security setttings
+# This is used for client server ssl/tls communications (e.g. browser to kibana)
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key: ${CONFIG_DIR}/elasticsearch.key
+xpack.security.http.ssl.certificate: ${CONFIG_DIR}/elasticsearch.crt
+xpack.security.http.ssl.certificate_authorities: ${CONFIG_DIR}/ca.crt
+
+# Monitoring
+xpack.monitoring.collection.enabled: true
+

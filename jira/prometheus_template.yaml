@@ -1,0 +1,109 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s  # Faster alert evaluation
+
+scrape_configs:
+  - job_name: 'jira'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['jira:8080']
+    relabel_configs:  # Drop sensitive labels for security
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: instance
+      - action: labeldrop
+        regex: '(sensitive_label|secret|password)'
+
+  - job_name: 'postgresql'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['postgresql:9187']  # Use postgres_exporter port
+    tls_config:
+      insecure_skip_verify: true  # Use CA cert in prod
+
+  - job_name: 'wallarm'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['wallarm-node:80']
+
+  - job_name: 'traefik'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['traefik:8080']
+    basic_auth:
+      username: admin
+      password: "{traefik_metrics_pass}"  # Use secret in prod
+
+  - job_name: 'grafana'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['grafana:3000']
+
+  - job_name: 'backups'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['backups-jira:9187']  # Assume exporter for backup metrics
+
+  # Placeholder for user-configured jobs
+  # - job_name: 'custom_app'
+  #   static_configs:
+  #     - targets: ['app1:port']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']  # Assume Alertmanager deployed
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+groups:
+  - name: jira_alerts
+    rules:
+    - alert: JiraHighCPU
+      expr: rate(container_cpu_usage_seconds_total{container="jira"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage in Jira"
+        description: "CPU usage is above 80% for Jira pod."
+    - alert: PostgresConnectionSpike
+      expr: pg_stat_activity_count > 50
+      for: 10m
+      labels:
+        severity: critical
+      annotations:
+        summary: "PostgreSQL connection spike"
+        description: "More than 50 active connections to PostgreSQL."
+    - alert: JiraFailedLogins
+      expr: rate(jira_authentication_failures_total[5m]) > 5
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Jira failed login attempts"
+        description: "More than 5 failed login attempts detected in 5 minutes."
+    - alert: WallarmAnomalyDetected
+      expr: wallarm_blocked_requests_total > 10
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Wallarm detected API anomalies"
+        description: "More than 10 blocked requests detected by Wallarm, indicating potential attack."
+    - alert: BackupFailure
+      expr: backup_success_total{job="backups"} == 0
+      for: 24h
+      labels:
+        severity: critical
+      annotations:
+        summary: "Backup job failed"
+        description: "No successful backups detected in the last 24 hours."
+    - alert: HighDiskUsage
+      expr: node_filesystem_free_bytes{mountpoint="/"} < 1073741824  # 1GB
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Low disk space"
+        description: "Less than 1GB free disk space on node."

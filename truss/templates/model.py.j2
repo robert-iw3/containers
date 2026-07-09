@@ -1,0 +1,60 @@
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from typing import Dict
+
+MODEL_NAME = "{{ model_name }}"
+DEFAULT_MAX_LENGTH = {{ max_length | default(128) }}
+PIPELINE_TYPE = "{{ pipeline_type | default('text-generation') }}"
+
+class {{ model_class_name }}:
+    def __init__(self, data_dir: str, config: Dict, **kwargs) -> None:
+        self._data_dir = data_dir
+        self._config = config
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"THE DEVICE INFERENCE IS RUNNING ON IS: {self.device}")
+        self.tokenizer = None
+        self.pipeline = None
+
+    def load(self):
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+            model_kwargs = {
+                "device_map": "auto",
+                "trust_remote_code": True,
+                "low_cpu_mem_usage": True
+            }
+            try:
+                model_kwargs["load_in_8bit"] = True
+                model_kwargs["attn_implementation"] = "flash_attention_2"
+            except Exception as e:
+                print(f"8-bit or flash attention not supported: {e}")
+
+            model = AutoModelForCausalLM.from_pretrained(
+                MODEL_NAME,
+                **model_kwargs
+            )
+
+            self.pipeline = pipeline(
+                PIPELINE_TYPE,
+                model=model,
+                tokenizer=self.tokenizer,
+                torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32,
+                trust_remote_code=True,
+                device_map="auto"
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model: {e}")
+
+    def predict(self, request: Dict) -> Dict:
+        with torch.no_grad():
+            try:
+                prompt = request.pop("prompt")
+                data = self.pipeline(
+                    prompt,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    max_length=DEFAULT_MAX_LENGTH,
+                    **request
+                )[0]
+                return {"data": data}
+            except Exception as exc:
+                return {"status": "error", "data": None, "message": str(exc)}

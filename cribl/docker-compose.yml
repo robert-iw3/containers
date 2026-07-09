@@ -1,0 +1,101 @@
+---
+networks:
+  data:
+    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  networks: ['data']
+  security_opt: ['no-new-privileges:true']
+  restart: on-failure
+  env_file: ['.env']
+  labels:
+    - "traefik.enable=true"  # For reverse proxy
+    - "traefik.http.routers.cribl.rule=Host(`cribl.local`)"
+
+services:
+  master:
+    <<: *common-vars-apps
+    image: cribl/cribl:latest
+    user: 999:999
+    environment:
+      - CRIBL_DIST_MODE=master
+      - CRIBL_DIST_LEADER_URL=tcp://${CRIBL_DIST_TOKEN:-criblmaster}@0.0.0.0:4200
+      - CRIBL_VOLUME_DIR=/opt/cribl/local
+      - SCOPE_METRIC_DEST=udp://${CRIBL_STATSD:-workers:8125}
+      - SCOPE_EVENT_DEST=tcp://${CRIBL_TCPJSON:-workers:10001}
+      - CRIBL_SPLUNK=${SPLUNK_HOST:-workers:9999}
+      - CRIBL_SPLUNK_ARGS=-ssl-cert-path /opt/cribl/certs/client.pem
+      - CRIBL_SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-}
+      - CRIBL_ELASTIC=${ELASTIC_HOST:-http://workers:10200}
+      - CRIBL_ELASTIC_AUTH=${ELASTIC_API_KEY:-}
+    ports:
+      - "19000:9000"
+    volumes:
+      - cribl_config:/opt/cribl/local:Z
+      - cribl_state:/opt/cribl/state:Z
+      - ./certs:/opt/cribl/certs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 8G  # Increased for high load
+          cpus: '4'
+
+  workers:
+    <<: *common-vars-apps
+    image: cribl/cribl:latest
+    user: 999:999
+    depends_on:
+      master:
+        condition: service_healthy
+    environment:
+      - CRIBL_DIST_MODE=worker
+      - CRIBL_DIST_LEADER_URL=tcp://${CRIBL_DIST_TOKEN:-criblmaster}@master:4200
+      - CRIBL_VOLUME_DIR=/opt/cribl/local
+      - SCOPE_METRIC_DEST=udp://${CRIBL_STATSD:-workers:8125}
+      - SCOPE_EVENT_DEST=tcp://${CRIBL_TCPJSON:-workers:10001}
+      - CRIBL_SPLUNK=${SPLUNK_HOST:-workers:9999}
+      - CRIBL_SPLUNK_ARGS=-ssl-cert-path /opt/cribl/certs/client.pem
+      - CRIBL_SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-}
+      - CRIBL_ELASTIC=${ELASTIC_HOST:-http://workers:10200}
+      - CRIBL_ELASTIC_AUTH=${ELASTIC_API_KEY:-}
+    ports:
+      - "10200:10200"
+      - "10088:10088"
+      - "9999:9999"
+      - "5140:5140"
+      - "5140:5140/udp"
+      - "8125:8125"
+      - "8125:8125/udp"
+      - "10001:10001"
+    volumes:
+      - cribl_workers_config:/opt/cribl/local:Z
+      - cribl_workers_state:/opt/cribl/state:Z
+      - ./certs:/opt/cribl/certs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 8G  # Increased
+          cpus: '4'
+      replicas: 1  # Scaled via args in deploy script
+
+volumes:
+  cribl_config:
+    driver: local
+  cribl_state:
+    driver: local
+  cribl_workers_config:
+    driver: local
+  cribl_workers_state:
+    driver: local

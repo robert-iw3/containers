@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "data-pipelines-with-airflow-2nd-ed"
+version = "2.0.0"
+description = ""
+authors = ["Ismael Cabral <ismael.cabral@xebia.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+apache-airflow = {extras = ["postgres"], version = "^2.10.2"}
+pre-commit = "^3.5.0"
+pandas = "^2.2.3"
+apache-airflow-providers-postgres = "^5.13.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.27.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "Q", "I", "E225"]
+ignore = []
+extend-select = ["E225"]
+
+[tool.black.format]
+line-length = 110
+
+[tool.isort]
+line_length = 110
+profile = "black"

@@ -1,0 +1,99 @@
+volumes:
+  redmine_data:
+    driver: local
+  redmine_logs:
+    driver: local
+  postgres_storage:
+    driver: local
+
+networks:
+  redmine:
+    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  networks:
+    - redmine
+
+services:
+  postgresql:
+    <<: *common-vars-apps
+    image: postgres:16
+    container_name: postgresql
+    hostname: postgresql
+    environment:
+      POSTGRES_USER: {{ postgres_user }}
+      POSTGRES_PASSWORD: {{ postgres_password }}
+      POSTGRES_DB: {{ postgres_db }}
+    volumes:
+      - postgres_storage:/var/lib/postgresql/data:Z
+    ports:
+      - "127.0.0.1:{{ postgres_port }}:5432"
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U {{ postgres_user }} -d {{ postgres_db }}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redmine:
+    <<: *common-vars-apps
+    image: redmine:6.1.2
+    container_name: redmine
+    hostname: redmine.io
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      TZ: {{ timezone }}
+      DB_ADAPTER: postgresql
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_USER: {{ postgres_user }}
+      DB_PASS: {{ postgres_password }}
+      DB_NAME: {{ postgres_db }}
+      DB_SSL_MODE: prefer
+      REDMINE_PORT: {{ redmine_port }}
+      REDMINE_HTTPS: true
+      SSL_KEY_PATH: /certs/redmine.key
+      SSL_CERTIFICATE_PATH: /certs/redmine.crt
+      SSL_DHPARAM_PATH: /certs/dhparam.pem
+      REDMINE_SECRET_TOKEN: {{ redmine_secret_token }}
+      REDMINE_SUDO_MODE_ENABLED: false
+      REDMINE_CONCURRENT_UPLOADS: 2
+      SMTP_ENABLED: {{ smtp_enabled }}
+      SMTP_METHOD: smtp
+      SMTP_DOMAIN: {{ smtp_domain }}
+      SMTP_HOST: {{ smtp_host }}
+      SMTP_PORT: {{ smtp_port }}
+      SMTP_USER: {{ smtp_user }}
+      SMTP_PASS: {{ smtp_password }}
+      SMTP_STARTTLS: true
+      SMTP_AUTHENTICATION: :login
+    ports:
+      - "127.0.0.1:{{ redmine_http_port }}:80"
+      - "127.0.0.1:{{ redmine_port }}:443"
+    volumes:
+      - redmine_data:/usr/src/redmine/files:Z
+      - redmine_logs:/var/log/redmine:Z
+      - {{ certs_path }}:/certs:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "curl -I -s --cacert /certs/ca.crt https://localhost:{{ redmine_port }} | grep -q 'HTTP/1.1 302 Found'"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  ha-proxy:
+    <<: *common-vars-apps
+    image: haproxy:2.8
+    container_name: ha-proxy
+    user: root
+    volumes:
+      - {{ docker_socket }}:/var/run/docker.sock:ro
+      - {{ haproxy_config_path }}:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
+      - {{ certs_path }}:/certs:z
+      - {{ errors_path }}:/usr/local/etc/haproxy/errors:ro,Z
+    ports:
+      - "{{ haproxy_http_port }}:80"
+      - "{{ haproxy_https_port }}:443"

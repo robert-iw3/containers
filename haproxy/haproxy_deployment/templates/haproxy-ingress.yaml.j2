@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: haproxy-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  {% for service in services | default([{'name': 'default', 'backend': 'localhost', 'port': 8080}]) %}
+  - host: "{{ service.name }}.example.com"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: haproxy
+            port:
+              number: {{ service.port }}
+  {% endfor %}

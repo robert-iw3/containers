@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <users>
+        <default>
+            <password>${CLICKHOUSE_API_PASSWORD}</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+        </default>
+        <!-- Add more users for roles, e.g., agg, wrk -->
+        <agg_user>
+            <password>${CLICKHOUSE_AGG_PASSWORD}</password>
+            <networks><ip>::/0</ip></networks>
+            <profile>readonly</profile>  <!-- Customize profiles -->
+        </agg_user>
+        <wrk_user>
+            <password>${CLICKHOUSE_WRK_PASSWORD}</password>
+            <networks><ip>::/0</ip></networks>
+            <profile>default</profile>
+        </wrk_user>
+    </users>
+    <profiles>
+        <default/>
+        <readonly>
+            <readonly>1</readonly>
+        </readonly>
+    </profiles>
+    <quotas>
+        <default/>
+    </quotas>
+</clickhouse>

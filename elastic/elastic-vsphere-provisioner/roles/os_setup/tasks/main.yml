@@ -1,0 +1,119 @@
+---
+# === COMMON OS SETUP (ALL NODES) ===
+- name: Update package cache (Debian/Ubuntu)
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Update package cache (RHEL/Alma)
+  dnf:
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+  become: yes
+
+- name: Install base packages
+  package:
+    name:
+      - curl
+      - vim
+      - git
+      - ca-certificates
+      - gnupg
+      - openssh-server
+    state: present
+  become: yes
+
+- name: Create elastic system user
+  user:
+    name: elastic
+    shell: /bin/bash
+    groups: docker,podman
+    append: yes
+    create_home: yes
+  become: yes
+
+- name: Create certs directory
+  file:
+    path: "{{ certs_dir }}"
+    state: directory
+    mode: '0750'
+    owner: root
+    group: root
+  become: yes
+
+- name: Create data directory
+  file:
+    path: "{{ data_dir }}"
+    state: directory
+    mode: '0750'
+    owner: elastic
+    group: elastic
+  become: yes
+
+# === ELASTICSEARCH-SPECIFIC TUNING ===
+- name: Set vm.max_map_count (Elasticsearch only)
+  sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: yes
+  when: "'elasticsearch' in group_names"
+  become: yes
+
+- name: Increase file descriptors (Elasticsearch only)
+  pam_limits:
+    domain: "*"
+    limit_type: "{{ item.type }}"
+    limit_item: nofile
+    value: "{{ item.value }}"
+  loop:
+    - { type: soft, value: 65535 }
+    - { type: hard, value: 65535 }
+  when: "'elasticsearch' in group_names"
+  become: yes
+
+- name: Disable swap (Elasticsearch only)
+  command: swapoff -a
+  when: "'elasticsearch' in group_names and ansible_swaptotal_mb > 0"
+  become: yes
+
+- name: Remove swap from fstab (Elasticsearch only)
+  mount:
+    path: none
+    src: "{{ item }}"
+    fstype: swap
+    state: absent
+  loop: "{{ ansible_mounts | selectattr('fstype', 'equalto', 'swap') | map(attribute='device') | list }}"
+  when: "'elasticsearch' in group_names"
+  become: yes
+
+# === KIBANA/FLEET-SPECIFIC TUNING (LIGHTER) ===
+- name: Increase file descriptors (Kibana/Fleet only)
+  pam_limits:
+    domain: "*"
+    limit_type: "{{ item.type }}"
+    limit_item: nofile
+    value: "{{ item.value }}"
+  loop:
+    - { type: soft, value: 4096 }
+    - { type: hard, value: 4096 }
+  when: "'kibana' in group_names"
+  become: yes
+
+# === REBOOT IF NEEDED ===
+- name: Reboot if kernel params changed
+  reboot:
+    msg: "Rebooting for OS tuning"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+  when: ansible_reboot_pending is defined
+  become: yes
+
+- name: Wait for reboot completion
+  wait_for_connection:
+    delay: 30
+    timeout: 300

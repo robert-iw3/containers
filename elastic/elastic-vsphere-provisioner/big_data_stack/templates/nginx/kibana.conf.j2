@@ -1,0 +1,13 @@
+upstream kibana {
+  {% for host in groups['kibana'] %}
+  server {{ hostvars[host]['ansible_host'] }}:5601;
+  {% endfor %}
+}
+
+server {
+  listen 5601;
+  server_name kibana;
+  location / {
+    proxy_pass http://kibana;
+  }
+}

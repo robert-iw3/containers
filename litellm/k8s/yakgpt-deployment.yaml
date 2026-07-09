@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yakgpt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yakgpt
+  template:
+    metadata:
+      labels:
+        app: yakgpt
+    spec:
+      containers:
+        - name: yakgpt
+          image: yakgpt/yakgpt:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "512Mi"
+            requests:
+              cpu: "0.1"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yakgpt
+spec:
+  selector:
+    app: yakgpt
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000

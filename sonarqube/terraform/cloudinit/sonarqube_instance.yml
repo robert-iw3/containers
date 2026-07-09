@@ -1,0 +1,56 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+package_upgrade: true
+locale: en_GB.UTF-8
+write_files:
+  - path: /usr/local/bin/yum-update
+    permissions: '0755'
+    content: |
+      #!/bin/sh
+      yum -y update
+  - path: /etc/crontab
+    content: |
+      0 7 * * * /usr/local/bin/yum-update
+    append: true
+
+runcmd:
+  - |
+    yum-config-manager --disable amzn2extra-docker
+    amazon-linux-extras install epel -y
+    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_8_Stream/devel:kubic:libcontainers:stable.repo
+    yum -y install yum-plugin-copr
+    yum -y copr enable lsm5/container-selinux
+    yum -y install podman
+    cat>/usr/local/bin/sonarqube-cloudinit.sh<<EOF
+    set -xeuo pipefail
+
+    echo "Starting Bootstrapping $(date)"
+    yum update -y
+    yum install podman git -y
+    _git_clone_sub ()
+    {
+        REPO_NAME="$(echo $2 | grep -oE '[^/]+$')";
+        git clone --filter=blob:none --no-checkout $2
+        cd $REPO_NAME;
+        git sparse-checkout set --no-cone "$1/*"
+        if [ -n "$3" ]; then
+            git pull origin $3;
+            git checkout $3;
+        else
+            git fetch origin;
+            git checkout main
+            [[ $? != 0 ]] && git checkout master;
+        fi
+    }
+    _git_clone_sub sonarqube https://github.com/rwlxxvii/containers
+    cd sonarqube
+    podman build -t sonarqube .
+    podman run --rm -it --name sonarqube -p 9000:9000 -d sonarqube:latest
+    echo "Bootstrapping Complete"
+    exit 0
+
+    EOF
+  - 'chmod 0755 /usr/local/bin/sonarqube-cloudinit.sh'
+  - '/usr/local/bin/sonarqube-cloudinit.sh | tee -a /var/log/sonarqube-cloudinit.log'

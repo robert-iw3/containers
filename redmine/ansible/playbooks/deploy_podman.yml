@@ -1,0 +1,34 @@
+- name: Deploy Redmine with Podman
+  hosts: localhost
+  become: false
+  tasks:
+    - name: Ensure required directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ certs_path }}"
+        - "{{ errors_path }}"
+
+    - name: Copy HAProxy configuration
+      template:
+        src: haproxy.cfg.j2
+        dest: "{{ haproxy_config_path }}"
+        mode: '0644'
+
+    - name: Copy Docker Compose template for Podman
+      template:
+        src: docker-compose.yml.j2
+        dest: docker-compose.yml
+        mode: '0644'
+
+    - name: Validate Podman Compose file
+      command: podman-compose -f docker-compose.yml config
+      register: compose_validate
+      changed_when: false
+
+    - name: Deploy Redmine with Podman Compose
+      command: podman-compose -f docker-compose.yml up -d
+      register: compose_up
+      changed_when: compose_up.rc == 0

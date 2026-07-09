@@ -1,0 +1,190 @@
+<form version="1.1">
+  <label>SSH Hunter - Key Details</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_sshkey" searchWhenChanged="true">
+      <label>SSH Key</label>
+      <fieldForLabel>ssh_key_details.friendly_name</fieldForLabel>
+      <fieldForValue>ssh_key_details.friendly_name</fieldForValue>
+      <search>
+        <query>`sandfly_search_sshkeys` event_type=ssh_key_details
+| dedup ssh_key_details.friendly_name
+| sort ssh_key_details.friendly_name</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Friendly Name</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| table ssh_key_details.friendly_name</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Banned Key</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_key_tags path=ssh_key_details.key_tags{}
+| eval aaa_is_banned_key = if(isnull(mvfind(aaa_key_tags, "^Banned$")), "false", "true")
+| table aaa_is_banned_key
+| eval range=if(aaa_is_banned_key=="true", "severe", "low")</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Key Value ($tok_sshkey$)</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| table ssh_key_details.friendly_name ssh_key_details.key_type ssh_key_details.key_value
+| rename ssh_key_details.friendly_name as "Friendly Name"
+| rename ssh_key_details.key_type as "Key Type"
+| rename ssh_key_details.key_value as "Pubkey"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__key_summary?form.tok_sshkey=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Key Hashes</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| table ssh_key_details.hash.md5 ssh_key_details.hash.sha1 ssh_key_details.hash.sha256 ssh_key_details.hash.sha512
+| rename ssh_key_details.hash.md5 as "md5 Hash"
+| rename ssh_key_details.hash.sha1 as "sha1 Hash"
+| rename ssh_key_details.hash.sha256 as "sha256 Hash"
+| rename ssh_key_details.hash.sha512 as "sha512 Hash"
+| transpose column_name="Hash Type"
+| rename "row 1" as "Hash Value"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Key Meta</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_key_tags path=ssh_key_details.key_tags{}
+| eval is_banned_key = if(isnull(mvfind(aaa_key_tags, "^Banned$")), "false", "true")
+| eval aaa_key_tags_list=if(isnull(aaa_key_tags),"&lt;none&gt;",mvjoin(aaa_key_tags,", "))
+| eval first_seen_epoch = strptime('ssh_key_details.first_seen', "%Y-%m-%dT%H:%M:%S%Z")
+| eval local_first_seen = strftime(first_seen_epoch, "%Y-%m-%dT%H:%M:%S %Z")
+| eval first_seen_time_diff = ceiling(now() - first_seen_epoch)
+| eval first_seen_duration = tostring(first_seen_time_diff, "duration")
+| eval key_first_seen=replace(first_seen_duration,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes")
+| eval last_seen_epoch = strptime('ssh_key_details.last_seen', "%Y-%m-%dT%H:%M:%S%Z")
+| eval local_last_seen = strftime(last_seen_epoch, "%Y-%m-%dT%H:%M:%S %Z")
+| eval last_seen_time_diff = ceiling(now() - last_seen_epoch)
+| eval last_seen_duration = tostring(last_seen_time_diff, "duration")
+| eval key_last_seen=replace(last_seen_duration,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes")
+| table ssh_key_details.first_seen local_first_seen key_first_seen ssh_key_details.last_seen local_last_seen key_last_seen ssh_key_details.num_hosts_current ssh_key_details.num_hosts_total ssh_key_details.num_users_current ssh_key_details.num_users_total is_banned_key aaa_key_tags_list
+| rename ssh_key_details.first_seen as "First Seen (UTC)"
+| rename local_first_seen as "First Seen (Local Time)"
+| rename key_first_seen as "Key First Seen"
+| rename ssh_key_details.last_seen as "Last Seen (UTC)"
+| rename local_last_seen as "Last Seen (Local Time)"
+| rename key_last_seen as "Key Last Seen"
+| rename ssh_key_details.num_hosts_current as "Current Hosts"
+| rename ssh_key_details.num_hosts_total as "Total Hosts"
+| rename ssh_key_details.num_users_current as "Current Users"
+| rename ssh_key_details.num_users_total as "Total Users"
+| rename is_banned_key as "Banned Key"
+| rename aaa_key_tags_list as "Key Tags"
+| transpose column_name="Meta Data"
+| rename "row 1" as "Meta Value"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="Meta Value">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Key Zones</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_key_zones path=ssh_key_details.key_zones{}
+| mvexpand aaa_key_zones
+| eval aaa_key_zones_len = len(aaa_key_zones)
+| where aaa_key_zones_len&gt;0
+| fields - ssh_key_details.*
+| spath input=aaa_key_zones
+| eval description=if(isnull(description) OR len(description)==0, "&lt;none&gt;", description)
+| table name description hosts_count key_permitted permitted_keys_count violation_host_count
+| rename name as "Zone"
+| rename description as "Description"
+| rename hosts_count as "Zone Hosts"
+| rename key_permitted as "Key Permitted"
+| rename permitted_keys_count as "Permitted Keys"
+| rename violation_host_count as "Violation Hosts"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Raw Event Details</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details ssh_key_details.friendly_name="$tok_sshkey$"
+| dedup ssh_key_details.friendly_name</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+      </event>
+    </panel>
+  </row>
+</form>

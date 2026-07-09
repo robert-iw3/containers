@@ -1,0 +1,302 @@
+---
+- name: Deploy Splunk Podman Container with systemd
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    network_interface: eth0
+    ansible_control_node_network: 10.0.77.0/24
+    subnet_allow_fw_traffic: 10.0.77.0/24
+    podman_systemd_user: splunk
+    podman_systemd_name: splunkenterprise
+    podman_systemd_image: splunk:latest
+    podman_systemd_network: splunk
+    podman_systemd_unit_path: /home/splunk/.config/systemd/user
+    podman_systemd_file: container-splunk.service
+    podman_systemd_description: Splunk Enterprise Container
+    podman_systemd_ports: ["8000", "8088", "9997", "8089", "1514"]
+    podman_systemd_volumes:
+      - "splunk-data:/opt/splunk/var:Z"
+      - "/home/splunk/splunk-config/system/local:/opt/splunk/etc/system/local:ro,Z"
+      - "/path/to/Splunk_Enterprise_Q3FY24.lic:/opt/splunk/etc/licenses/enterprise.lic:ro,Z"
+    podman_systemd_environment:
+      SPLUNK_PASSWORD: "{{ vault_splunk_password }}"
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_ENABLE_LISTEN: "9997"
+      SPLUNK_ADD: "tcp 1514"
+      SPLUNK_LICENSE_URI: "/opt/splunk/etc/licenses/enterprise.lic"
+      SPLUNK_ROLE: splunk_standalone
+    splunk_password: "{{ vault_splunk_password }}"  # Must be defined in vault
+    splunk_license: /path/to/Splunk_Enterprise_Q3FY24.lic  # Update with actual path
+    memory: 6g
+    cpus: 1.5
+    splunk_config_dir: /home/splunk/splunk-config
+  tasks:
+    - name: Install podman and dependencies
+      ansible.builtin.package:
+        name:
+          - podman
+          - podman-compose
+          - firewalld
+        state: present
+      become: yes
+
+    - name: Configure sysctl for Splunk
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - { name: vm.max_map_count, value: '262144' }
+        - { name: vm.swappiness, value: '1' }
+        - { name: net.core.rmem_default, value: '31457280' }
+        - { name: net.core.rmem_max, value: '31457280' }
+        - { name: net.core.wmem_default, value: '31457280' }
+        - { name: net.core.wmem_max, value: '31457280' }
+        - { name: net.core.somaxconn, value: '65535' }
+        - { name: net.core.netdev_max_backlog, value: '65536' }
+        - { name: net.core.optmem_max, value: '25165824' }
+        - { name: net.ipv4.tcp_rmem, value: '8192 87380 16777216' }
+        - { name: net.ipv4.udp_rmem_min, value: '16384' }
+        - { name: net.ipv4.tcp_wmem, value: '8192 65536 16777216' }
+        - { name: net.ipv4.udp_wmem_min, value: '16384' }
+        - { name: net.ipv4.tcp_retries2, value: '5' }
+      become: yes
+
+    - name: Disable transparent huge pages
+      ansible.builtin.copy:
+        content: "never"
+        dest: /sys/kernel/mm/transparent_hugepage/enabled
+        mode: '0644'
+      become: yes
+
+    - name: Create splunk group
+      ansible.builtin.group:
+        name: splunk
+        system: yes
+      become: yes
+
+    - name: Create splunk user
+      ansible.builtin.user:
+        name: splunk
+        group: splunk
+        system: yes
+        create_home: yes
+        shell: /bin/bash
+        state: present
+      become: yes
+      register: splunk_user
+
+    - name: Add splunk user to systemd-journal group
+      ansible.builtin.user:
+        name: splunk
+        groups: systemd-journal
+        append: yes
+      become: yes
+
+    - name: Add splunk user to subuid file
+      ansible.builtin.lineinfile:
+        path: /etc/subuid
+        regexp: "^splunk:.*"
+        line: "splunk:165536:65536"
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+
+    - name: Add splunk group to subgid file
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        regexp: "^splunk:.*"
+        line: "splunk:165536:65536"
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+
+    - name: Enable lingering for splunk user
+      ansible.builtin.command:
+        cmd: "loginctl enable-linger splunk"
+        creates: "/var/lib/systemd/linger/splunk"
+      become: yes
+
+    - name: Create Splunk configuration directory
+      ansible.builtin.file:
+        path: "{{ splunk_config_dir }}/system/local"
+        state: directory
+        mode: '0755'
+      become: yes
+      become_user: splunk
+
+    - name: Copy Splunk configuration files
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ splunk_config_dir }}/system/local/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: 'files/web.conf', dest: 'web.conf' }
+        - { src: 'files/inputs.conf', dest: 'inputs.conf' }
+      become: yes
+      become_user: splunk
+
+    - name: Create Podman network
+      containers.podman.podman_network:
+        name: "{{ podman_systemd_network }}"
+        state: present
+      become: yes
+      become_user: splunk
+
+    - name: Create Podman volume for Splunk data
+      containers.podman.podman_volume:
+        name: splunk-data
+        state: present
+      become: yes
+      become_user: splunk
+
+    - name: Build Splunk image
+      containers.podman.podman_image:
+        name: splunk
+        tag: latest
+        path: ./enterprise
+        build:
+          cache: no
+          force_rm: true
+          format: oci
+          annotation:
+            app: splunk
+            function: data-wrangling
+            info: Splunk Enterprise for data
+      become: yes
+      become_user: splunk
+
+    - name: Clean up unused images
+      ansible.builtin.shell: |
+        podman image prune -f
+      become: yes
+      become_user: splunk
+
+    - name: Create Splunk systemd unit file
+      ansible.builtin.template:
+        src: systemd-unit.splunk.j2
+        dest: "{{ podman_systemd_unit_path }}/{{ podman_systemd_file }}"
+        mode: '0644'
+      become: yes
+      become_user: splunk
+
+    - name: Deploy Splunk container
+      containers.podman.podman_container:
+        image: "{{ podman_systemd_image }}"
+        name: "{{ podman_systemd_name }}"
+        hostname: splunkenterprise
+        state: started
+        volumes: "{{ podman_systemd_volumes }}"
+        env: "{{ podman_systemd_environment }}"
+        ports: "{{ podman_systemd_ports | map('regex_replace', '^(.*)$', '\\1:\\1') | list }}"
+        network: "{{ podman_systemd_network }}"
+        cap_drop:
+          - ALL
+        cap_add:
+          - NET_BIND_SERVICE
+        restart_policy: on-failure
+        memory: "{{ memory }}"
+        cpus: "{{ cpus }}"
+        log_driver: journald
+      become: yes
+      become_user: splunk
+      register: result
+      until: result is success
+      retries: 10
+      delay: 15
+
+    - name: Enable and start container-splunk service
+      ansible.builtin.systemd:
+        name: "{{ podman_systemd_file }}"
+        enabled: true
+        state: started
+        scope: user
+      become: yes
+      become_user: splunk
+
+    - name: Enable podman-auto-update.timer
+      ansible.builtin.systemd:
+        name: podman-auto-update.timer
+        enabled: true
+        scope: user
+      become: yes
+      become_user: splunk
+      when: enable_podman_auto_updates_timer | default(false) | bool
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: Set network interface to firewalld drop zone
+      ansible.posix.firewalld:
+        zone: drop
+        interface: "{{ network_interface }}"
+        permanent: true
+        state: enabled
+      become: yes
+
+    - name: Allow SSH from Ansible control node network
+      ansible.posix.firewalld:
+        rich_rule: "rule family=ipv4 source address={{ ansible_control_node_network }} port port=22 protocol=tcp accept"
+        zone: drop
+        state: enabled
+        immediate: yes
+        permanent: yes
+      become: yes
+
+    - name: Configure firewall ports for Splunk
+      ansible.posix.firewalld:
+        rich_rule: "rule family=ipv4 source address={{ subnet_allow_fw_traffic }} port port={{ item }} protocol=tcp accept"
+        zone: drop
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop: "{{ podman_systemd_ports }}"
+      become: yes
+
+    - name: Schedule Splunk data volume backup
+      ansible.builtin.cron:
+        name: "Backup Splunk data"
+        user: splunk
+        minute: "0"
+        hour: "2"
+        job: "podman volume export splunk-data > /backups/splunk-data-$(date +%Y%m%d).tar"
+      become: yes
+      become_user: splunk
+
+    - name: Set SELinux context for Splunk directories
+      ansible.builtin.command:
+        cmd: chcon -R -t container_file_t {{ splunk_config_dir }} /home/splunk/.local/share/containers
+      become: yes
+
+    - name: Configure Splunk health check
+      containers.podman.podman_container:
+        healthcheck: "curl -s -f http://localhost:8000/en-US/splunkd/__raw/services/server/health/splunkd || exit 1"
+        healthcheck_interval: 30s
+        healthcheck_timeout: 5s
+        healthcheck_retries: 3
+      become: yes
+      become_user: splunk
+
+#    - name: Deploy Podman Prometheus exporter
+#      containers.podman.podman_container:
+#        image: quay.io/prometheus/node-exporter:latest
+#        name: node-exporter
+#        state: started
+#        ports:
+#          - "9100:9100"
+#        args:
+#          - "--collector.podman"
+#        network: "{{ podman_systemd_network }}"
+#      become: yes
+#      become_user: splunk

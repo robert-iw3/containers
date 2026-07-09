@@ -1,0 +1,75 @@
+# Based on 'splunk enable boot-start'
+[Unit]
+Description=Splunk service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+# Run chown as root
+ExecStartPre=+chown -R splunk:splunk "/opt/splunk"
+# https://docs.splunk.com/Documentation/Splunk/latest/Installation/UpgradeonUNIX#Upgrade_and_accept_the_license_agreement_simultaneously
+ExecStart=/opt/splunk/bin/splunk _internal_launch_under_systemd --accept-license --answer-yes
+# https://www.freedesktop.org/software/systemd/man/systemd.service.html#id-1.9.8
+ExecStartPost=+-chown -R splunk:splunk "/sys/fs/cgroup/system.slice/%n"
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutStopSec=360
+LimitNOFILE=65536
+LimitRTPRIO=99
+SuccessExitStatus=51 52
+RestartPreventExitStatus=51
+RestartForceExitStatus=52
+User=splunk
+Group=splunk
+Delegate=true
+# Allow Splunk Web to listen on port <1024
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+# https://fedoraproject.org/wiki/Changes/SystemdSecurityHardening#Detailed_Description
+DevicePolicy=closed
+KeyringMode=private
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateMounts=yes
+# requires network access
+# PrivateNetwork=no
+PrivateTmp=true
+# required to listen on port <1024
+# PrivateUsers=no
+# see ProtectProc
+# ProcSubset=all
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=read-only
+ProtectHostname=yes
+# required by Splunk_TA_nix/vmstat_metric.sh
+ProtectKernelLogs=no
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+# required by Splunk_TA_nix especially "ps"
+# ProtectProc=default
+ProtectSystem=strict
+ReadWritePaths=/opt/splunk
+RemoveIPC=yes
+# AF_NETLINK is used by Splunk_TA_nix/interfaces_metric.sh
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallErrorNumber=EPERM
+# the sets in older systemd (e.g. v252) have incomplete list of system calls, so allow-list does not work
+# https://github.com/systemd/systemd/blob/main/src/shared/seccomp-util.c
+# @memlock & @sync are notably used by kvstore/mongodb
+# @sync is used by Splunk_TA_nix/update.sh when running package manager
+# @privileged is used by Splunk_TA_nix/interfaces_metric.sh
+SystemCallFilter=~@clock @cpu-emulation @debug @module @mount @obsolete @pkey @raw-io @reboot @sandbox @swap
+# @system-service set in older systemd (<= v252) has incomplete list of system calls, so the following allow-list does not work
+# SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target

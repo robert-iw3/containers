@@ -1,0 +1,30 @@
+---
+# forwarder in a container
+volumes:
+  opt-forwarder-etc:
+  opt-forwarder-var:
+
+networks:
+  splunk:
+    driver: bridge
+
+services:
+  splunkuniversalforwarder:
+    build: .
+    hostname: splunkuniversalforwarder.io
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+    volumes:
+      - opt-forwarder-etc:/opt/splunk/etc:Z
+      - opt-forwarder-var:/opt/splunk/var:Z
+      - /var/log:/var/log:ro,Z
+    ports:
+      - "8000:8000"
+      - "8088:8088"
+      - "9997:9997"
+      - "8089:8089"
+      - "1514:1514"
+    networks: ['splunk']
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped
+

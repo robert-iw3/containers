@@ -1,0 +1,334 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security - Whitelist Rule Details</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_id" searchWhenChanged="true">
+      <label>Whitelist Rule</label>
+      <fieldForLabel>whitelist_name</fieldForLabel>
+      <fieldForValue>whitelist_id</fieldForValue>
+      <search>
+        <query>`sandfly_search_whitelist`
+| dedup whitelist_rule.id
+| eval whitelist_name=tostring('whitelist_rule.id') + " " + 'whitelist_rule.sandfly'
+| table whitelist_rule.id whitelist_name
+| rename whitelist_rule.id as whitelist_id
+| sort whitelist_id</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Id</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| table whitelist_rule.id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Sandfly</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| table whitelist_rule.sandfly</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Active</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval is_active=if('whitelist_rule.active'=="true","Active","Inactive")
+| table is_active</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Whitelist Type</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval whitelist_type=if('whitelist_rule.exclude_sandfly'=="true", "Disable Sandfly", "Match Rules")
+| table whitelist_type</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Scope</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| eval num_host_tags=mvcount('whitelist_rule.host_tags{}')
+| fillnull value=0 num_host_tags
+| eval scope=if(num_host_ids==0 AND num_host_tags==0, "None", "match")
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags&gt;0, "Mixed", scope)
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags==0, "Match Host IDs", scope)
+| eval scope=if(num_host_ids==0 AND num_host_tags&gt;0, "Match By Tags", scope)
+| eval scope=if('whitelist_rule.all_hosts'=="true", "All Hosts", scope)
+| table scope</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Number of Hosts Covered</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| table whitelist_rule.hosts_covered</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| table whitelist_rule.comment
+| rename whitelist_rule.comment as "Comment"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$tags_panel_show$">
+      <title>Number of Tags</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_host_tags=mvcount('whitelist_rule.host_tags{}')
+| fillnull value=0 num_host_tags
+| search num_host_tags&gt;0
+| table num_host_tags</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+          <progress>
+            <condition match="'job.resultCount' &gt; 0">
+              <set token="tags_panel_show">true</set>
+            </condition>
+            <condition>
+              <unset token="tags_panel_show"></unset>
+            </condition>
+          </progress>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel depends="$tags_panel_show$">
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_host_tags=mvcount('whitelist_rule.host_tags{}')
+| fillnull value=0 num_host_tags
+| search num_host_tags&gt;0
+| eval aaa_host_tag='whitelist_rule.host_tags{}'
+| mvexpand aaa_host_tag
+| map
+    [ search `sandfly_search_hosts_summary`
+    | dedup host_summary.host_id
+    | eval aaa_tag="$$aaa_host_tag$$"
+    | eval aaa_tag_found=if(isnull(mvfind('host_summary.tags{}', aaa_tag)), "false", "true")
+    | search aaa_tag_found="true"]
+| table aaa_tag host_summary.hostname host_summary.last_seen_ip_addr host_summary.os_info_node host_summary.host_id
+| rename aaa_tag as "Tag"
+| rename host_summary.hostname as "Target Address"
+| rename host_summary.last_seen_ip_addr as "IP Address"
+| rename host_summary.os_info_node as "Hostname"
+| rename host_summary.host_id as "HostID"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/sandfly_security__host_details?form.tok_host_id=$row.HostID$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$hosts_panel_show$">
+      <title>Number of Host IDs</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| search num_host_ids&gt;0
+| table num_host_ids</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+          <progress>
+            <condition match="'job.resultCount' &gt; 0">
+              <set token="hosts_panel_show">true</set>
+            </condition>
+            <condition>
+              <unset token="hosts_panel_show"></unset>
+            </condition>
+          </progress>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel depends="$hosts_panel_show$">
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| search num_host_ids&gt;0
+| eval aaa_host_id='whitelist_rule.host_ids{}'
+| mvexpand aaa_host_id
+| foreach whitelist_rule.host_info.*
+    [ eval t_match = if(like("&lt;&lt;FIELD&gt;&gt;", "%" + aaa_host_id + "%"), "true", "false")
+    | eval fieldnames=if(t_match == "true", mvappend(fieldnames,"&lt;&lt;FIELD&gt;&gt;"), fieldnames)
+    | eval t_value=if(isnull('&lt;&lt;FIELD&gt;&gt;') or len('&lt;&lt;FIELD&gt;&gt;')==0, "foobar", '&lt;&lt;FIELD&gt;&gt;')
+    | eval fieldvalues=if(t_match == "true", mvappend(fieldvalues,'&lt;&lt;FIELD&gt;&gt;'), fieldvalues)]
+    ```| table aaa_host_id namematch fieldnames fielddata fieldvalues```
+| eval t_hostname=mvindex(fieldvalues,mvfind(fieldnames,".*" + aaa_host_id + "\.hostname"))
+| eval t_ip_addr=mvindex(fieldvalues,mvfind(fieldnames,".*" + aaa_host_id + "\.last_seen_ip_addr"))
+| eval t_node_name=mvindex(fieldvalues,mvfind(fieldnames,".*" + aaa_host_id + "\.node_name"))
+| table t_hostname t_ip_addr t_node_name aaa_host_id
+| rename t_hostname as "Target Address"
+| rename t_ip_addr as "IP Address"
+| rename t_node_name as "Hostname"
+| rename aaa_host_id as "HostID"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/sandfly_security__host_details?form.tok_host_id=$row.HostID$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$rules_panel_show$">
+      <title>Number of Rules</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_rules=mvcount('whitelist_rule.rules{}')
+| fillnull value=0 num_rules
+| search num_rules &gt; 0
+| table num_rules</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+          <progress>
+            <condition match="'job.resultCount'&gt; 0">
+              <set token="rules_panel_show">true</set>
+            </condition>
+            <condition>
+              <unset token="rules_panel_show"></unset>
+            </condition>
+          </progress>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel depends="$rules_panel_show$">
+      <title>Rules Operator</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_rules=mvcount('whitelist_rule.rules{}')
+| fillnull value=0 num_rules
+| search num_rules &gt; 0
+| table whitelist_rule.rule_op
+| rename whitelist_rule.rule_op as rule_op</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel depends="$rules_panel_show$">
+      <title>Rules</title>
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id
+| eval num_rules=mvcount('whitelist_rule.rules{}')
+| fillnull value=0 num_rules
+| search num_rules &gt; 0
+| table whitelist_rule.rules{}
+| rename whitelist_rule.rules{} as "Rules"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.id=$tok_id$
+| dedup whitelist_rule.id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+      </event>
+    </panel>
+  </row>
+</form>

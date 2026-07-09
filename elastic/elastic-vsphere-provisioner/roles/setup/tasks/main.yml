@@ -1,0 +1,46 @@
+---
+# Setup: Generate certs and set passwords
+- name: Copy setup scripts
+  copy:
+    src: setup/
+    dest: /opt/elastic/setup/
+    mode: preserve
+  become: yes
+
+- name: Run setup container
+  docker_container:
+    name: elastic-setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - /opt/elastic/setup/entrypoint.sh:/entrypoint.sh:ro
+      - /opt/elastic/setup/lib.sh:/lib.sh:ro
+      - /opt/elastic/certs:/usr/share/elasticsearch/config/certs:z
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      KIBANA_SYSTEM_PASSWORD: "{{ kibana_password }}"
+      ES_IPS: "{{ es_ips }}"
+      KIBANA_IP: "{{ kibana_ip }}"
+    command: /entrypoint.sh
+    state: started
+    timeout: 300
+  when: container_runtime == "docker"
+  become: yes
+
+- name: Run setup container (Podman)
+  containers.podman.podman_container:
+    name: elastic-setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - /opt/elastic/setup/entrypoint.sh:/entrypoint.sh:ro
+      - /opt/elastic/setup/lib.sh:/lib.sh:ro
+      - /opt/elastic/certs:/usr/share/elasticsearch/config/certs:z
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      KIBANA_SYSTEM_PASSWORD: "{{ kibana_password }}"
+      ES_IPS: "{{ es_ips }}"
+      KIBANA_IP: "{{ kibana_ip }}"
+    command: /entrypoint.sh
+    state: started
+    timeout: 300
+  when: container_runtime == "podman"
+  become: yes

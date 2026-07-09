@@ -1,0 +1,19 @@
+# Remote state backend. Copy to backend.tf and edit; without it state stays
+# local, and two concurrent applies (or CI + an operator) will race or corrupt
+# state. The bucket must exist and be versioned before `tofu init`:
+#
+#   aws s3api create-bucket --bucket <bucket> --region <region>
+#   aws s3api put-bucket-versioning --bucket <bucket> \
+#     --versioning-configuration Status=Enabled
+#
+# Then migrate existing local state with: tofu init -migrate-state
+
+terraform {
+  backend "s3" {
+    bucket       = "my-terraform-state-bucket"
+    key          = "nomad/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

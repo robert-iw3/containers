@@ -1,0 +1,17 @@
+# Persistence Volume definition removed because it somehow made problems with the postgres container.
+# Volume now gets created dynamically (based on the claim).
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: postgres
+  name: postgres-pv-claim
+  namespace: hanko
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100M

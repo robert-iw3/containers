@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:9.5.2
+        ports:
+        - containerPort: 3000
+          name: grafana-port
+        volumeMounts:
+        - name: config
+          mountPath: /etc/grafana/provisioning
+        env:
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Viewer"
+      volumes:
+      - name: config
+        configMap:
+          name: grafana-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: default
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+      access: proxy
+      isDefault: true
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      options:
+        path: /etc/grafana/provisioning/dashboards
+  haproxy-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "HAProxy Dashboard",
+        "panels": [
+          {
+            "type": "graph",
+            "title": "HTTP Request Rate",
+            "targets": [
+              {
+                "expr": "rate(haproxy_frontend_http_requests_total[5m])",
+                "legendFormat": "{{frontend}}"
+              }
+            ],
+            "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+          },
+          {
+            "type": "graph",
+            "title": "Backend Response Time",
+            "targets": [
+              {
+                "expr": "rate(haproxy_backend_response_time_ms[5m])",
+                "legendFormat": "{{backend}}"
+              }
+            ],
+            "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+          },
+          {
+            "type": "graph",
+            "title": "Connection Rate",
+            "targets": [
+              {
+                "expr": "rate(haproxy_frontend_connections_total[5m])",
+                "legendFormat": "{{frontend}}"
+              }
+            ],
+            "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+          },
+          {
+            "type": "graph",
+            "title": "Error Rate",
+            "targets": [
+              {
+                "expr": "rate(haproxy_backend_http_errors_total[5m])",
+                "legendFormat": "{{backend}}"
+              }
+            ],
+            "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+          },
+          {
+            "type": "graph",
+            "title": "Session Rate",
+            "targets": [
+              {
+                "expr": "rate(haproxy_frontend_session_rate[5m])",
+                "legendFormat": "{{frontend}}"
+              }
+            ],
+            "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 }
+          },
+          {
+            "type": "graph",
+            "title": "SSL Connections",
+            "targets": [
+              {
+                "expr": "rate(haproxy_frontend_ssl_sessions_total[5m])",
+                "legendFormat": "{{frontend}}"
+              }
+            ],
+            "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 }
+          }
+        ],
+        "schemaVersion": 36,
+        "version": 1
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  selector:
+    app: grafana
+  ports:
+  - name: grafana-port
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP

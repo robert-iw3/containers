@@ -1,0 +1,47 @@
+# Base MongoDB 8.0 production config
+storage:
+  dbPath: /data/db
+  journal:
+    enabled: true
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 1  # Tune to 50% RAM - 0.5GB
+
+systemLog:
+  destination: file
+  path: /var/log/mongodb/mongod.log
+  logAppend: true
+  verbosity: 0
+  timeStampFormat: iso8601-utc
+  logRotation:
+    rotateEveryKB: 1000  # Rotate logs ~1MB
+
+net:
+  port: 27017
+  bindIp: 0.0.0.0  # Use firewall/VPC security
+  maxIncomingConnections: 10000
+  tls:
+    mode: requireTLS  # Enforce TLS
+    certificateKeyFile: /etc/ssl/mongodb.pem  # Mount cert
+    CAFile: /etc/ssl/ca.pem
+    clusterFile: /etc/ssl/mongodb-cluster.pem  # For internal cluster auth
+
+security:
+  authorization: enabled
+  keyFile: /etc/mongod-keyfile  # 400 perms, for repl/sharded
+  transitionToAuth: true  # Graceful auth enable
+
+processManagement:
+  pidFilePath: /var/run/mongodb/mongod.pid
+  timeZoneInfo: /usr/share/zoneinfo
+
+operationProfiling:
+  slowOpThresholdMs: 100
+  mode: slowOp
+  slowOpSampleRate: 100  # Sample all slow ops for perf
+
+auditLog:
+  destination: file
+  format: JSON
+  path: /var/log/mongodb/auditLog.json
+  filter: '{ atype: { $ne: "authenticate" } }'  # Log non-auth ops

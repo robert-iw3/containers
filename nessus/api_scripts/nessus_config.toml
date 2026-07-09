@@ -1,0 +1,32 @@
+# Nessus server configuration
+# Required: url
+# Authentication: Use either api_keys or credentials, not both
+[nessus]
+url = "https://nessus.example.com:8834"
+verify_ssl = false
+folder_id = 3
+
+[nessus.api_keys]
+access_key = "your_access_key_here"
+secret_key = "your_secret_key_here"
+
+# Optional: Use username/password for token-based auth
+# [nessus.credentials]
+# username = "admin"
+# password = "securepassword123"
+
+[nessus.report]
+formats = ["json", "csv", "html", "nessus"]
+chapters = ["vuln_by_host", "vuln_hosts_summary"]
+db_password = "nessus"
+
+# Ticketing system configuration
+[ticketing.jira]
+url = "https://your-jira-instance.atlassian.net"
+token = "your_jira_api_token"
+project_key = "VULN"
+
+[ticketing.servicenow]
+url = "https://your-instance.service-now.com"
+username = "your_servicenow_username"
+password = "your_servicenow_password"

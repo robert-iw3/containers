@@ -1,0 +1,73 @@
+http:
+  routers:
+    n8n:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`n8n.io`, `www.n8n.io`)"
+      middlewares:
+        - 443-redirect
+        - n8n-headers
+        - auth
+        - compression
+      service: n8n
+      tls:
+        options:
+          default:
+            minVersion: VersionTLS12
+            sniStrict: true
+            cipherSuites:
+              - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+              - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            curvePreferences:
+              - CurveP521
+              - CurveP384
+  services:
+    n8n:
+      loadBalancer:
+        servers:
+          - url: "https://n8n.io:5678"
+        passHostHeader: true
+        healthCheck:
+          path: /status
+          interval: 10s
+          timeout: 3s
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          # echo $(htpasswd -nb admin "enter_password") - example
+          # c6d22cbd0d7c64299c3ba472aa9be156c8596bf56a1d4ae23b90ec8d8c23876b948ddc2b653b7466
+          - "admin:$apr1$E2eXkby8$E3Ggy5ycSCl4v21A81Cxq/"
+    compression:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+    443-redirect:
+      redirectScheme:
+        scheme: https
+        port: "5678"
+        permanent: true
+    n8n-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
+        accessControlAllowOrigin: "origin-list-or-null"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customFrameOptionsValue: "SAMEORIGIN"
+        referrerPolicy: "same-origin"
+        featurePolicy: "vibrate 'self'"
+        stsSeconds: 315360000
+        contentSecurityPolicy: default-src 'self'
+

@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: snyk-scanner-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: snyk-scanner
+        image: your-docker-repo/snyk-scanner:latest  # Build and push the image first
+        args:
+          - "--token=$(SNYK_TOKEN)"
+          - "--dirs=/scan/dir1,/scan/dir2"
+          - "--jar-dirs=/scan/jars"
+          - "--remote-repo-url=your-repo-url"
+          - "--url=https://example.com/codebase.zip"
+          - "--code-name=myproject"
+          - "--html-output-dir=/reports"
+        env:
+          - name: SNYK_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: snyk-secret
+                key: token
+        volumeMounts:
+          - name: code-volume
+            mountPath: /scan/dir1
+          - name: code-volume
+            mountPath: /scan/dir2
+            subPath: dir2  # If multiple subdirs
+          - name: jars-volume
+            mountPath: /scan/jars
+          - name: reports-volume
+            mountPath: /reports
+      volumes:
+        - name: code-volume
+          hostPath:
+            path: /path/to/local/code  # Adjust for your host
+        - name: jars-volume
+          hostPath:
+            path: /path/to/local/jars
+        - name: reports-volume
+          emptyDir: {}  # Or persistentVolumeClaim for persistence
+      restartPolicy: Never

@@ -1,0 +1,42 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+
+    - name: Create CoreDNS directories
+      file:
+        path: /root/coredns/zones
+        state: directory
+
+    - name: Copy Corefile
+      copy:
+        src: ./Corefile
+        dest: /root/coredns/Corefile
+
+    - name: Copy zones
+      copy:
+        src: ./zones/
+        dest: /root/coredns/zones/
+
+    - name: Run CoreDNS container
+      docker_container:
+        name: dns
+        image: docker.io/coredns/coredns:latest
+        state: started
+        restart_policy: always
+        command: -conf /root/coredns/Corefile
+        volumes:
+          - /root/coredns/zones/:/root/coredns/zones/:ro
+          - /root/coredns/Corefile:/root/coredns/Corefile:ro
+        ports:
+          - "53:53/udp"

@@ -1,0 +1,311 @@
+%YAML 1.1
+---
+# ==============================================================================
+# suricata.yaml -- IDS/IPS configuration TEMPLATE  (Suricata 8.0.x)
+#
+# This is a TEMPLATE. The entrypoint substitutes the placeholder tokens from
+# environment variables at start time, so ONE image runs as a passive IDS, an
+# inline af-packet bridge IPS, or an NFQUEUE IPS with no rebuild. Defaults for
+# every token are applied by the entrypoint, so an env var left unset still
+# yields a valid config.
+#
+# NOTE ON SYNTAX: placeholders use a double-at token (not ${NAME}) on purpose. Suricata's
+# own config uses $HOME_NET / $EXTERNAL_NET self-references that MUST survive
+# into the rendered file untouched; using a distinct double-at token namespace
+# guarantees the renderer never clobbers Suricata's variables.
+#
+# -- Mode selection ------------------------------------------------------------
+#   IPS_MODE          ids | ips                  detection vs blocking
+#   INLINE_METHOD     afpacket_bridge | nfqueue  how packets are inspected inline
+# -- Network model -------------------------------------------------------------
+#   HOME_NET          protected CIDRs, e.g. "[10.0.0.0/8,192.168.0.0/16]"
+#   CAPTURE_INTERFACE IDS sniff iface / first bridge leg
+#   BRIDGE_IFACE_B    second bridge leg for afpacket_bridge IPS
+# -- Availability vs security --------------------------------------------------
+#   EXCEPTION_POLICY  auto(=fail CLOSED in IPS) | ignore(=fail OPEN) | drop-flow | ...
+#   STREAM_INLINE     auto | yes | no
+# ==============================================================================
+
+default-log-dir: /var/log/suricata/
+default-rule-path: /var/lib/suricata/rules/
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+threshold-file: /etc/suricata/threshold.config
+
+# ==============================================================================
+# NETWORK GROUPS -- foundation of a risk-based ruleset.
+# Only HOME_NET is templated; every other group derives from it via Suricata's
+# own $-variable resolution, which keeps the file portable.
+# ==============================================================================
+vars:
+  address-groups:
+    HOME_NET: "@@HOME_NET@@"
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS: "$HOME_NET"
+    DNS_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    DC_SERVERS: "$HOME_NET"
+    K8S_API: "@@K8S_API@@"
+    DOCKER_HOSTS: "@@DOCKER_HOSTS@@"
+
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+    SSH_PORTS: "22"
+    DNP3_PORTS: "20000"
+    MODBUS_PORTS: "502"
+    FILE_DATA_PORTS: "[$HTTP_PORTS,110,143]"
+    KUBE_API_PORTS: "[6443,8443,10250]"
+    DOCKER_API_PORTS: "[2375,2376]"
+
+# ==============================================================================
+# DATASETS -- scalable, hot-reloadable IOC matching. Rules reference these by
+# name (dataset:isset,<name>); the backing files live under /etc/suricata/data
+# and can be updated + reloaded without editing any rule.
+# ==============================================================================
+datasets:
+  defaults:
+    memcap: 100mb
+    hashsize: 16384
+  bad-ips:
+    type: ip
+    state: /etc/suricata/data/bad_ips.lst
+  bad-domains:
+    type: string
+    state: /etc/suricata/data/bad_domains.lst
+  bad-tls-sni:
+    type: string
+    state: /etc/suricata/data/bad_sni.lst
+  bad-ja3:
+    type: string
+    state: /etc/suricata/data/bad_ja3.lst
+  bad-file-md5:
+    type: md5
+    state: /etc/suricata/data/bad_file_md5.lst
+
+# ==============================================================================
+# ACTION ORDER -- risk-based blocking precedence (independent of file order):
+#   pass   -> allowlist wins over everything (escape hatch)
+#   drop   -> known-bad blocked even if a later alert rule also matches
+#   reject -> active reset/unreach to the offender
+#   alert  -> log only
+# ==============================================================================
+action-order:
+  - pass
+  - drop
+  - reject
+  - alert
+
+# ==============================================================================
+# RULE FILES -- risk-tiered (precedence comes from action-order, not this list):
+#   Tier 0 allowlist.rules       pass   -- known-good
+#   Tier 1 block-known-bad.rules drop   -- high-confidence IOCs / exploits
+#   Tier 2 suspicious.rules      alert  -- escalates to drop via rate_filter
+#   Tier 3 policy.rules          alert  -- informational / policy
+#   plus   suricata.rules        managed feed (suricata-update merged output)
+# ==============================================================================
+rule-files:
+  - allowlist.rules
+  - block-known-bad.rules
+  - suspicious.rules
+  - policy.rules
+  - suricata.rules
+
+# ==============================================================================
+# EXCEPTION POLICY -- IPS "fail mode" master switch (Suricata 7.0+).
+# auto = fail CLOSED (drop) on internal limits; ignore = fail OPEN. The single
+# most important availability-vs-security dial in the file.
+# ==============================================================================
+exception-policy: @@EXCEPTION_POLICY@@
+
+file-store:
+  version: 2
+  enabled: @@FILESTORE_ENABLED@@
+  dir: /var/log/suricata/files
+  force-hash: [md5]
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+      ja3-fingerprints: @@JA3_ENABLED@@
+    http:
+      enabled: yes
+      libhtp:
+        default-config:
+          personality: IDS
+          request-body-limit: 100kb
+          response-body-limit: 100kb
+    ssh:
+      enabled: yes
+    dns:
+      tcp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+      udp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+
+stats:
+  enabled: yes
+  interval: 8
+
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      community-id: true
+      community-id-seed: 0
+      types:
+        - alert:
+            metadata: yes
+            tagged-packets: yes
+            payload: @@EVE_ALERT_PAYLOAD@@
+            packet: @@EVE_ALERT_PACKET@@
+        - drop:
+            alerts: yes
+            flows: all
+        - anomaly:
+            enabled: yes
+        - http:
+            extended: yes
+        - dns:
+            version: 2
+        - tls:
+            extended: yes
+        - files:
+            force-magic: no
+        - flow:
+            exception-policy: true
+        - stats:
+            totals: yes
+
+  - stats:
+      enabled: yes
+      filename: stats.log
+      append: no
+
+logging:
+  default-log-level: @@LOG_LEVEL@@
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        level: info
+        filename: /var/log/suricata/suricata.log
+
+# ==============================================================================
+# CAPTURE / RUN MODE -- the entrypoint selects ONE path via the command line it
+# builds and by rewriting copy-mode before start.
+#   IDS:                 suricata --af-packet      (copy-mode ids, passive)
+#   IPS afpacket bridge: suricata --af-packet      (copy-mode ips forwards/blocks)
+#   IPS nfqueue:         suricata -q 0 -q 1 ...
+#
+# Bridge-mode REQUIREMENTS (the entrypoint enforces these):
+#   matching threads + MTU on both legs; distinct cluster-id; use-mmap yes;
+#   NIC offload (gro/lro/tso/gso) DISABLED on both legs.
+# ==============================================================================
+af-packet:
+  - interface: @@CAPTURE_INTERFACE@@
+    threads: @@AF_THREADS@@
+    cluster-id: @@AF_CLUSTER_ID_A@@
+    cluster-type: cluster_flow
+    defrag: @@AF_DEFRAG@@
+    use-mmap: yes
+    mmap-locked: yes
+    tpacket-v3: yes
+    ring-size: @@AF_RING_SIZE@@
+    buffer-size: @@AF_BUFFER_SIZE@@
+    checksum-checks: auto
+    copy-mode: @@AF_COPY_MODE@@
+    copy-iface: @@BRIDGE_IFACE_B@@
+
+  - interface: @@BRIDGE_IFACE_B@@
+    threads: @@AF_THREADS@@
+    cluster-id: @@AF_CLUSTER_ID_B@@
+    cluster-type: cluster_flow
+    defrag: @@AF_DEFRAG@@
+    use-mmap: yes
+    mmap-locked: yes
+    tpacket-v3: yes
+    ring-size: @@AF_RING_SIZE@@
+    buffer-size: @@AF_BUFFER_SIZE@@
+    checksum-checks: auto
+    copy-mode: @@AF_COPY_MODE@@
+    copy-iface: @@CAPTURE_INTERFACE@@
+
+  - interface: default
+
+nfq:
+  mode: @@NFQ_MODE@@
+  repeat-mark: 1
+  repeat-mask: 1
+  route-queue: 2
+  batchcount: @@NFQ_BATCHCOUNT@@
+  fail-open: @@NFQ_FAIL_OPEN@@
+
+# detect is a MAP, not a list.
+detect:
+  profile: @@DETECT_PROFILE@@
+  custom-values:
+    toclient-groups: 3
+    toserver-groups: 25
+  sgh-mpm-context: auto
+  inspection-recursion-limit: 3000
+  prefilter:
+    default: mpm
+
+mpm-algo: @@MPM_ALGO@@
+spm-algo: @@SPM_ALGO@@
+
+threading:
+  set-cpu-affinity: @@CPU_AFFINITY@@
+  cpu-affinity:
+    - management-cpu-set:
+        cpu: [ 0 ]
+    - worker-cpu-set:
+        cpu: [ "@@WORKER_CPUS@@" ]
+  detect-thread-ratio: 1.0
+
+flow:
+  managers: 1
+  recyclers: 1
+  memcap: @@FLOW_MEMCAP@@
+  hash-size: 65536
+  prealloc: 10000
+  emergency-recovery: 30
+
+stream:
+  memcap: @@STREAM_MEMCAP@@
+  checksum-validation: yes
+  midstream: false
+  inline: @@STREAM_INLINE@@
+  reassembly:
+    memcap: @@REASSEMBLY_MEMCAP@@
+    depth: 1mb
+    toserver-chunk-size: 2560
+    toclient-chunk-size: 2560
+
+defrag:
+  memcap: 32mb
+  prealloc: yes
+  timeout: 60
+
+host-os-policy:
+  linux: [0.0.0.0/0]
+
+host-mode: auto
+runmode: @@RUNMODE@@
+max-pending-packets: @@MAX_PENDING_PACKETS@@

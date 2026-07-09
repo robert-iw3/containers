@@ -1,0 +1,172 @@
+name: 'Deploy'
+
+# Trigger on CI workflow completion
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+env:
+  AWS_REGION: us-east-1                  # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY_ECS: ecs-repo           # set this to your Amazon ECR repository name
+  ECR_REPOSITORY_LAMBDA: lambda-repo
+  QDRANT_URL: ${{ secrets.QDRANT_URL }}
+  QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-lambda:
+    name: Deploy (Amazon ECR - Lambda Functions)
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Create ECR repository
+      run: |
+        AWS_ECR_REPOSITORY_NAME=${{ env.ECR_REPOSITORY_LAMBDA }}
+        if ! aws ecr describe-repositories --repository-names $AWS_ECR_REPOSITORY_NAME > /dev/null 2>&1; then
+          aws ecr create-repository --repository-name $AWS_ECR_REPOSITORY_NAME --image-scanning-configuration scanOnPush=true
+        fi
+
+    - name: Build, tag, and push image to Amazon ECR (Lambda Functions)
+      id: build-image
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: ./lambda_functions/docker/Dockerfile
+        push: true
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_LAMBDA}}:${{ github.sha }}
+
+  terraform:
+      name: 'Terraform (IaC)'
+      needs: deploy-lambda
+      runs-on: ubuntu-latest
+      environment: production
+
+      defaults:
+        run:
+          shell: bash
+
+      steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: |
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) && \
+            cd terraform && terraform init \
+               -backend-config="region=$AWS_REGION" \
+               -backend-config='assume_role={"role_arn":"arn:aws:iam::'$AWS_ACCOUNT_ID':role/terraform_state_role"}'
+
+      - name: Terraform Format
+        run: make tf-fmt
+
+      - name: Terraform Plan
+        run: make tf-plan
+
+        # On push to "main", build or change infrastructure according to Terraform configuration files
+        # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
+      - name: Terraform Apply
+        # if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
+        run: make tf-deploy
+
+  deploy-secrets:
+    name: Deploy secrets to AWS Secrets Manager
+    needs: [terraform, deploy-lambda]
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload Qdrant secrets to AWS Secrets Manager
+        env:
+          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+        run: |
+            aws secretsmanager put-secret-value --secret-id prod/qdrant_url --secret-string $QDRANT_URL
+            aws secretsmanager put-secret-value --secret-id prod/qdrant_api_key --secret-string $QDRANT_API_KEY
+
+  deploy-ecs:
+    name: Deploy (Amazon ECR - ECS)
+    needs: [terraform, deploy-lambda, deploy-secrets]
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build a docker container and
+        # push it to ECR so that it can
+        # be deployed to ECS.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_ECS:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_ECS:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_ECS:$IMAGE_TAG" >> $GITHUB_OUTPUT

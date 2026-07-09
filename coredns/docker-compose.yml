@@ -1,0 +1,12 @@
+---
+services:
+  dns:
+    image: docker.io/coredns/coredns:latest
+    container_name: dns
+    restart: always
+    command: -conf /root/coredns/Corefile
+    volumes:
+      - ./zones/:/root/coredns/zones/:ro
+      - ./Corefile:/root/coredns/Corefile:ro
+    ports:
+      - 53:53/udp

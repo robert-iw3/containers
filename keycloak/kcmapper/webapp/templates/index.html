@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KcMapper – Web Analyzer</title>
+
+    <!-- Tailwind stand-alone script served locally -->
+    <script src="{{ url_for('static', filename='js/tailwindcss.min.js') }}"></script>
+
+    <style>
+        body {
+            background-color: #111827;
+            color: #d1d5db;
+        }
+
+        .table-cell {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #374151;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .sidebar-item {
+            display: block;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+        }
+
+        .sidebar-item:hover {
+            background-color: #374151;
+        }
+
+        .summary-arrow {
+            transition: transform 0.2s;
+        }
+
+        details[open] .summary-arrow {
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+
+<body class="font-sans">
+    <div class="flex h-screen bg-gray-900">
+        <!-- Sidebar -->
+        <aside class="w-1/3 lg:w-1/4 bg-gray-800 p-4 overflow-y-auto border-r border-gray-700">
+            <h1 class="text-2xl font-bold text-white mb-4">KcMapper Queries</h1>
+            <nav id="query-list-container" class="space-y-2"></nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+            <div id="welcome-message">
+                <h2 class="text-3xl font-bold text-white">Welcome to KcMapper Analyzer</h2>
+                <p class="mt-2 text-gray-400">Select a query from the sidebar to begin.</p>
+            </div>
+
+            <div id="main-content-area" class="hidden">
+                <h2 id="query-title" class="text-3xl font-bold text-white mb-2"></h2>
+                <p id="query-description" class="text-gray-400 mb-6"></p>
+
+                <div id="params-form" class="mb-6 space-y-4 bg-gray-800 p-6 rounded-lg"></div>
+                <button id="execute-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Execute
+                    Query</button>
+
+                <div id="results-container" class="mt-8">
+                    <div id="loading" class="hidden text-center p-4">
+                        <p>Loading…</p>
+                    </div>
+                    <div id="error-message"
+                        class="hidden bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg"></div>
+
+                    <div id="results-table-container" class="hidden">
+                        <h3 class="text-2xl font-semibold text-white mb-4">Results</h3>
+                        <div class="bg-gray-800 rounded-lg shadow-lg overflow-x-auto">
+                            <table id="results-table" class="min-w-full">
+                                <thead id="results-table-head" class="bg-gray-700"></thead>
+                                <tbody id="results-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        /************************************
+         * Utility Functions
+         ************************************/
+        const sanitizeId = str => str.replace(/[^a-zA-Z0-9_-]/g, "");
+
+        /************************************
+         * DOM References
+         ************************************/
+        const queryListContainer = document.getElementById("query-list-container");
+        const mainContentArea = document.getElementById("main-content-area");
+        const welcomeMessage = document.getElementById("welcome-message");
+        const queryTitle = document.getElementById("query-title");
+        const queryDescription = document.getElementById("query-description");
+        const paramsForm = document.getElementById("params-form");
+        const executeBtn = document.getElementById("execute-btn");
+        const loadingDiv = document.getElementById("loading");
+        const errorDiv = document.getElementById("error-message");
+        const resultsTableContainer = document.getElementById("results-table-container");
+        const resultsTableHead = document.getElementById("results-table-head");
+        const resultsTableBody = document.getElementById("results-table-body");
+
+        /************************************
+         * Application State
+         ************************************/
+        let queriesData = {};
+        let currentQueryName = null;
+
+        /************************************
+         * Sidebar Construction
+         ************************************/
+        async function fetchAndBuildSidebar() {
+            try {
+                const res = await fetch('/api/queries');
+                queriesData = await res.json();
+                buildAccordion(queriesData);
+            } catch (err) {
+                console.error('Failed to load queries:', err);
+                queryListContainer.textContent = 'Could not load queries.';
+            }
+        }
+
+        function buildAccordion(data) {
+            const grouped = {};
+            for (const name in data) {
+                const q = data[name];
+                const cat = q.category || 'Uncategorized';
+                (grouped[cat] ??= []).push({ key: name, ...q });
+            }
+            queryListContainer.textContent = '';
+            for (const category of Object.keys(grouped).sort((a, b) => a.localeCompare(b))) {
+                const details = document.createElement('details');
+                details.open = true;
+                details.className = 'text-white';
+
+                const summary = document.createElement('summary');
+                summary.className = 'flex justify-between items-center p-2 font-semibold cursor-pointer list-none bg-gray-700 rounded-lg hover:bg-gray-600';
+                summary.innerHTML = `<span>${category} (${grouped[category].length})</span><svg class="w-5 h-5 summary-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+                details.appendChild(summary);
+
+                const listDiv = document.createElement('div');
+                listDiv.className = 'pl-4 mt-1 space-y-1';
+                grouped[category].sort((a, b) => a.name.localeCompare(b.name)).forEach(q => {
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.className = 'sidebar-item text-sm text-gray-300';
+                    link.textContent = q.name;
+                    link.addEventListener('click', e => { e.preventDefault(); displayQueryForm(q.key, q); });
+                    listDiv.appendChild(link);
+                });
+                details.appendChild(listDiv);
+                queryListContainer.appendChild(details);
+            }
+        }
+
+        /************************************
+         * Autocomplete helper (patched)
+         ************************************/
+        async function populateAutocomplete(input, sourceQuery, dependentParams = {}) {
+            const listId = input.getAttribute('list');
+            if (!listId) {
+                console.warn(`populateAutocomplete: input lacks list attribute (sourceQuery=${sourceQuery})`);
+                return;
+            }
+
+            // Ensure datalist element exists – create it dynamically if necessary
+            let datalist = document.getElementById(listId);
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = listId;
+                // Insert right after the input so <input list="…"> finds it easily
+                input.parentNode.appendChild(datalist);
+            }
+
+            try {
+                const res = await fetch('/api/autocomplete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_query: sourceQuery, params: dependentParams })
+                });
+                const suggestions = await res.json();
+                datalist.textContent = '';
+                suggestions.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    datalist.appendChild(opt);
+                });
+            } catch (err) {
+                console.error(`Autocomplete failed for ${sourceQuery}:`, err);
+            }
+        }
+
+        /************************************
+         * Display parameter form
+         ************************************/
+        function displayQueryForm(key, details) {
+            currentQueryName = key;
+            hideResults();
+            welcomeMessage.classList.add('hidden');
+            mainContentArea.classList.remove('hidden');
+
+            queryTitle.textContent = details.name;
+            queryDescription.textContent = details.description || '';
+
+            paramsForm.textContent = '';
+            const params = details.params || [];
+
+            if (!params.length) {
+                const p = document.createElement('p');
+                p.className = 'text-gray-400';
+                p.textContent = 'This query requires no parameters.';
+                paramsForm.appendChild(p);
+                return;
+            }
+
+            const headline = document.createElement('h3');
+            headline.className = 'font-semibold text-lg text-white mb-3';
+            headline.textContent = 'Parameters';
+            paramsForm.appendChild(headline);
+
+            params.forEach(param => {
+                const safeName = sanitizeId(param.name);
+                const datalistId = `datalist-${safeName}`;
+
+                const wrapper = document.createElement('div');
+
+                const label = document.createElement('label');
+                label.className = 'block mb-1 text-sm font-medium text-gray-400';
+                label.setAttribute('for', `param-${safeName}`);
+                label.textContent = param.name;
+                wrapper.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `param-${safeName}`;
+                input.name = param.name;
+                input.className = 'bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5';
+                input.setAttribute('list', datalistId);
+                input.required = true;
+                wrapper.appendChild(input);
+
+                // Create empty datalist placeholder
+                const datalist = document.createElement('datalist');
+                datalist.id = datalistId;
+                wrapper.appendChild(datalist);
+
+                paramsForm.appendChild(wrapper);
+
+                if (param.autocomplete) {
+                    if (param.depends_on) {
+                        setTimeout(() => {
+                            const depInput = document.getElementById(`param-${sanitizeId(param.depends_on)}`);
+                            if (depInput) {
+                                depInput.addEventListener('input', () => {
+                                    const depParams = { [param.depends_on]: depInput.value };
+                                    populateAutocomplete(input, param.autocomplete, depParams);
+                                });
+                            }
+                        });
+                    } else {
+                        populateAutocomplete(input, param.autocomplete);
+                    }
+                }
+            });
+        }
+
+        /************************************
+         * Execute query & render results
+         ************************************/
+        executeBtn.addEventListener('click', async () => {
+            if (!currentQueryName) return;
+
+            // Collect params
+            const params = {};
+            let allFilled = true;
+            paramsForm.querySelectorAll('input').forEach(input => {
+                if (!input.value) allFilled = false;
+                params[input.name] = input.value;
+            });
+
+            if (!allFilled) {
+                showError('Please fill in all required parameters.');
+                return;
+            }
+
+            showLoading();
+            try {
+                const res = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query_name: currentQueryName, params })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'An unknown error occurred.');
+                displayResults(result);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        /************************************
+         * Results rendering & helpers
+         ************************************/
+        function displayResults(data) {
+            hideResults();
+            resultsTableContainer.classList.remove('hidden');
+
+            // Header
+            resultsTableHead.textContent = '';
+            const headerRow = document.createElement('tr');
+            data.keys.forEach(k => {
+                const th = document.createElement('th');
+                th.className = 'table-cell text-left text-xs font-medium text-gray-300 uppercase tracking-wider';
+                th.textContent = k;
+                headerRow.appendChild(th);
+            });
+            resultsTableHead.appendChild(headerRow);
+
+            // Body
+            resultsTableBody.textContent = '';
+            if (data.records.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = data.keys.length || 1;
+                td.className = 'table-cell text-center text-gray-500';
+                td.textContent = 'Query executed successfully, but returned no results.';
+                tr.appendChild(td);
+                resultsTableBody.appendChild(tr);
+                return;
+            }
+
+            data.records.forEach(record => {
+                const tr = document.createElement('tr');
+                data.keys.forEach(k => {
+                    const td = document.createElement('td');
+                    td.className = 'table-cell text-sm';
+                    let value = record[k];
+                    if (typeof value === 'object' && value !== null) value = JSON.stringify(value, null, 2);
+                    td.textContent = value;
+                    tr.appendChild(td);
+                });
+                resultsTableBody.appendChild(tr);
+            });
+        }
+
+        function showError(message) {
+            hideResults();
+            errorDiv.classList.remove('hidden');
+            errorDiv.textContent = `Error: ${message}`;
+        }
+        function showLoading() {
+            hideResults();
+            loadingDiv.classList.remove('hidden');
+            executeBtn.disabled = true;
+        }
+        function hideLoading() {
+            loadingDiv.classList.add('hidden');
+            executeBtn.disabled = false;
+        }
+        function hideResults() {
+            errorDiv.classList.add('hidden');
+            resultsTableContainer.classList.add('hidden');
+        }
+
+        /* Kick things off */
+        fetchAndBuildSidebar();
+    </script>
+</body>
+
+</html>

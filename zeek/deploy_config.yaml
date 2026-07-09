@@ -1,0 +1,36 @@
+zeek:
+  version: '8.0.4'
+  interface: 'eth0'
+  log_dir: '/var/log/zeek'
+  spool_dir: '/var/spool/zeek'
+  worker_processes: 4
+  network_mode: 'host'
+  cluster:
+    enabled: false
+    nodes:
+      - type: manager
+        host: localhost
+      - type: proxy
+        host: localhost
+      - type: worker
+        host: localhost
+        interface: eth0
+security:
+  restrict_filters: 'tcp port 80 or tcp port 443'
+  disable_ssl_validation: false
+  enable_json_logs: true
+  disable_password_logging: true
+deployment:
+  method: 'docker'  # Options: docker, podman, kubernetes, ansible
+  namespace: 'zeek'
+  container_name: 'zeek-monitor'
+splunk:
+  enabled: true
+  hec_url: 'https://your-splunk-host:8088/services/collector/event'
+  hec_token: 'your-splunk-hec-token'
+elasticsearch:
+  enabled: true
+  host: 'http://localhost:9200'
+  index: 'zeek-logs'
+buffer_timeout: 5.0
+worker_count: 4

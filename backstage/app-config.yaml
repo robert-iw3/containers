@@ -1,0 +1,115 @@
+app:
+  title: Backstage Example App
+  baseUrl: http://localhost:3000
+  experimental:
+    packages: all
+  support:
+    url: https://github.com/backstage/backstage/issues
+    items:
+      - title: Issues
+        icon: github
+        links:
+          - url: https://github.com/backstage/backstage/issues
+            title: GitHub Issues
+      - title: Discord Chatroom
+        icon: chat
+        links:
+          - url: https://discord.gg/backstage-687207715902193673
+            title: '#backstage'
+  packageName: example-app
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+  cors:
+    origin: http://localhost:3000
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+  csp:
+    connect-src: ["'self'", 'http:', 'https:']
+  reading:
+    allow:
+      - host: example.com
+      - host: '*.mozilla.org'
+
+proxy:
+  endpoints:
+    '/circleci/api':
+      target: https://circleci.com/api/v1.1
+      headers:
+        Circle-Token: ${CIRCLECI_AUTH_TOKEN}
+    '/jenkins/api':
+      target: http://localhost:8080
+      headers:
+        Authorization: ${JENKINS_BASIC_AUTH_HEADER}
+    '/travisci/api':
+      target: https://api.travis-ci.com
+      changeOrigin: true
+      headers:
+        Authorization: ${TRAVISCI_AUTH_TOKEN}
+        travis-api-version: '3'
+
+organization:
+  name: My Company
+
+techdocs:
+  builder: 'local'
+  generator:
+    runIn: 'docker'
+  publisher:
+    type: 'local'
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+  rules:
+    - allow:
+        - Component
+        - API
+        - Resource
+        - System
+        - Domain
+        - Location
+  locations:
+    - type: file
+      target: ../catalog-model/examples/all.yaml
+    - type: file
+      target: ../catalog-model/examples/acme-corp.yaml
+      rules:
+        - allow: [User, Group]
+    - type: file
+      target: ../../plugins/github-actions/examples/sample.yaml
+    - type: file
+      target: ../../plugins/techdocs-backend/examples/documented-component/catalog-info.yaml
+    - type: file
+      target: ../../plugins/adr/examples/component/catalog-info.yaml
+    - type: file
+      target: ../../plugins/scaffolder-backend/sample-templates/all-templates.yaml
+      rules:
+        - allow: [Template]
+
+auth:
+  environment: development
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+        enterpriseInstanceUrl: ${AUTH_GITHUB_ENTERPRISE_INSTANCE_URL}
+
+permission:
+  enabled: true

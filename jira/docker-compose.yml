@@ -1,0 +1,247 @@
+---
+volumes:
+  jira-postgres:
+  jira-data:
+  jira-postgres-backups:
+  jira-data-backups:
+  traefik-certificates:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  jira-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${JIRA_SUBNET}
+          gateway: ${JIRA_GATEWAY}
+  traefik:
+    external: true
+
+services:
+  postgresql:
+    image: bitnami/postgresql:latest
+    container_name: postgres-jira
+    hostname: postgres-jira.dev
+    ports:
+      - 5432:5432
+    volumes:
+      - jira-postgres:/bitnami/postgresql:z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      ALLOW_EMPTY_PASSWORD: no  # Enhanced security: No empty passwords
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      jira-net:
+        ipv4_address: ${POSTGRESQL_IPv4}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+        reservations:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  jira:
+    image: atlassian/jira-software:latest
+    container_name: jira
+    hostname: ${JIRA_HOSTNAME}
+    volumes:
+      - jira-data:/var/atlassian/application-data/jira:z
+    environment:
+      JVM_MINIMUM_MEMORY: ${JIRA_JVM_MINIMUM_MEMORY}
+      JVM_MAXIMUM_MEMORY: ${JIRA_JVM_MAXIMUM_MEMORY}
+      ATL_PROXY_NAME: ${JIRA_HOSTNAME}
+      ATL_TOMCAT_SECURE: true
+      ATL_TOMCAT_SCHEME: https
+      ATL_PROXY_PORT: 443
+      ATL_DB_TYPE: postgres72
+      ATL_DB_DRIVER: org.postgresql.Driver
+      ATL_JDBC_USER: ${POSTGRESQL_USERNAME}
+      ATL_JDBC_PASSWORD: ${POSTGRESQL_PASSWORD}
+      ATL_JDBC_URL: jdbc:postgresql://postgres-jira.dev:5432/${POSTGRESQL_DATABASE}
+      # Security enhancement: Enable CSRF protection, etc.
+      ATL_TOMCAT_CONTEXT_PATH: /
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    ports:
+      - 8080:8080
+    networks:
+      jira-net:
+        ipv4_address: ${JIRA_IPv4}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4096M
+        reservations:
+          memory: 2048M
+    security_opt:
+      - no-new-privileges:true
+
+  wallarm-node:
+    image: wallarm/node:latest
+    container_name: wallarm-node
+    hostname: wallarm-node.dev
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      WALLARM_API_HOST: ${WALLARM_API_HOST}
+      WALLARM_API_TOKEN: ${WALLARM_API_TOKEN}
+      WALLARM_API_CA_VERIFY: ${WALLARM_API_CA_VERIFY}
+      WALLARM_MODE: block  # Enhanced: Block mode for production
+      NGINX_PORT: 80
+      WALLARM_LABELS: group=production
+      NGINX_BACKEND: jira:8080
+      WALLARM_OPENAPI_SPEC: /etc/wallarm/jira-api-openapi.json
+    volumes:
+      - ./jira-api-openapi.json:/etc/wallarm/jira-api-openapi.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - jira-net
+      - traefik
+    depends_on:
+      jira:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  backups:
+    image: bitnami/postgresql:latest
+    container_name: backups-jira
+    hostname: backups-jira.dev
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          sleep ${BACKUP_INTERVAL_HOURS}h
+          TIMESTAMP=$$(date "+%Y-%m-%d_%H-%M")
+          PGPASSWORD=${POSTGRES_PASSWORD} pg_dump -h postgres-jira.dev -p 5432 -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME} | gzip > /backups/db/jira-postgres-backup-$${TIMESTAMP}.gz
+          tar -zcpf /backups/app/jira-application-data-backup-$${TIMESTAMP}.tar.gz /var/atlassian/application-data/jira
+          find /backups/db -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+          find /backups/app -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+        done
+    volumes:
+      - jira-postgres-backups:/backups/db
+      - jira-data-backups:/backups/app
+      - jira-data:/var/atlassian/application-data/jira:ro
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-jira.dev
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      jira-net:
+        ipv4_address: ${BACKUP_POSTGRESQL_IPv4}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      jira:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 256M
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For Podman, adjust socket
+      - traefik-certificates:/letsencrypt
+    command:
+      - --log.level=INFO
+      - --api.insecure=false  # Security: Disable insecure API
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --certificatesresolvers.myresolver.acme.email=admin@example.com
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    labels:
+      - traefik.enable=true
+      # Additional security labels
+    restart: unless-stopped
+    networks:
+      - traefik
+      - jira-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - ${PROMETHEUS_PORT}:9090
+    restart: unless-stopped
+    networks:
+      - jira-net
+    # Configurable to scrape metrics from other apps via env or config
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false  # Security: Disable sign-ups
+    ports:
+      - ${GRAFANA_PORT}:3000
+    restart: unless-stopped
+    networks:
+      - jira-net
+    depends_on:
+      - prometheus

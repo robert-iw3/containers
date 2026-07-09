@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: test operator statefulset
+templates:
+  - statefulset.yaml
+  - configmap.yaml
+tests:
+  - it: ECK image, fips + ubi
+    set:
+      config.ubiOnly: true
+      image.fips: true
+      image.tag: "2.16.1"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.elastic.co/eck/eck-operator-ubi-fips:2.16.1"
+  - it: ECK image, no fips, no ubi
+    set:
+      image.tag: "2.16.1"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.elastic.co/eck/eck-operator:2.16.1"
+  - it: ECK image, fips, no ubi
+    set:
+      image.fips: true
+      image.tag: "2.16.1"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.elastic.co/eck/eck-operator-fips:2.16.1"
+  - it: ECK image, no fips, ubi
+    set:
+      config.ubiOnly: true
+      image.tag: "2.16.1"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.elastic.co/eck/eck-operator-ubi:2.16.1"
+  - it: should have automount service account tokens set by default
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+  - it: should disable automount service account tokens
+    set:
+      automountServiceAccountToken: false
+      serviceAccount:
+        automountServiceAccountToken: false
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+  - it: should render custom labels, and annotations values properly
+    set:
+      statefulsetAnnotations:
+        key1: value1
+      statefulsetLabels:
+        key2: value2
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: metadata.annotations
+          value:
+            key1: value1
+      - template: statefulset.yaml
+        equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: elastic-operator
+            app.kubernetes.io/version: 3.1.0-SNAPSHOT
+            helm.sh/chart: eck-operator-3.1.0-SNAPSHOT
+            key2: value2
+  - it: should use the specified webhook secret name
+    set:
+      webhook:
+        manageCerts: false
+        certsSecret: "my-webhook-server-cert"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.volumes[1].name
+          value: cert
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.volumes[1].secret.secretName
+          value: my-webhook-server-cert
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].env[2].name
+          value: WEBHOOK_SECRET
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.containers[0].env[2].value
+          value: my-webhook-server-cert
+  - it: should set dnsPolicy to ClusterFirstWithHostNet when hostNetwork is enabled
+    set:
+      hostNetwork: true
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.dnsPolicy
+          value: "ClusterFirstWithHostNet"
+  - it: should render dnsPolicy properly when hostNetwork is enabled
+    set:
+      hostNetwork: true
+      dnsPolicy: ClusterFirst
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.dnsPolicy
+          value: "ClusterFirst"
+  - it: should render dnsPolicy and dnsConfig properly
+    set:
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        nameservers: "1.2.3.4"
+    asserts:
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.hostNetwork
+          value: null
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.dnsPolicy
+          value: "ClusterFirst"
+      - template: statefulset.yaml
+        equal:
+          path: spec.template.spec.dnsConfig.nameservers
+          value: "1.2.3.4"

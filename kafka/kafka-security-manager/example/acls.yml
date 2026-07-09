@@ -1,0 +1,29 @@
+users:
+  alice:
+    topics:
+      topic_name1:
+        - Read
+      topic_name_group*:
+        - Read
+      my-kafka-streams-app*:
+        - Create
+  bob:
+    groups:
+      group1:
+        - Write,Deny,12.34.56.78
+    transactional_ids:
+      groups-*:
+        - All
+  peter:
+    clusters:
+      kafka-cluster:
+        - Create
+  schemareg:
+    topics:
+      _schemas:
+        - All
+      '*':
+        - All
+    groups:
+      schema-registry:
+        - All

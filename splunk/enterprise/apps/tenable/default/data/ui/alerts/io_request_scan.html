@@ -1,0 +1,36 @@
+<form class="form-horizontal form-complex">
+    <div class="control-group">
+        <label class="control-label" for="io_request_scan_scan_name">Scan Name <span class="required">*</span> </label>
+        <div class="controls">
+        <input type="text" name="action.io_request_scan.param.scan_name" id="io_request_scan_scan_name"/>
+                    <span class="help-block">
+                        Enter the Scan Name.
+                    </span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="io_request_scan_host_name">Host Name</label>
+        <div class="controls">
+        <input type="text" name="action.io_request_scan.param.host_name" id="io_request_scan_host_name"/>
+                    <span class="help-block">
+                        Supports hostname and token both. e.g: 'ipvm.biz' or $result.dest$
+                    </span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="io_request_scan_ip">IP Address</label>
+        <div class="controls">
+        <input type="text" name="action.io_request_scan.param.ip" id="io_request_scan_ip"/>
+                    <span class="help-block">
+                        Supports ip and token both. e.g: 'some.example.com'/'21.5.2.1' or $result.dest_ip$ or $result.dest$
+                    </span>
+        </div>
+    </div>
+    <label class="control-label" for="io_request_scan_account">Tenable IO Account</label>
+        <div class="controls">
+        <splunk-search-dropdown name="action.io_request_scan.param.account_name" id="io_request_scan_account"
+            search = "| rest /servicesNS/nobody/TA-tenable/configs/conf-ta_tenable_account splunk_server=local | search tenable_account_type=tenable_io | table title"
+            label-field="title" value-field="title" />
+        <span class="help-block">Tenable IO Account to use.</span>
+        </div>
+</form>

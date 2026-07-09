@@ -1,0 +1,26 @@
+#include <tunables/global>
+
+profile kube_bench_profile flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Allow read-only access to necessary files
+  /etc/** r,
+  /var/** r,
+  /usr/local/mount-from-host/bin/kubectl rx,
+  /.kube/config r,
+
+  # Allow execution of kube-bench
+  /usr/local/bin/kube-bench rx,
+
+  # Allow network access for kubectl
+  network tcp,
+  network udp,
+
+  # Allow necessary capabilities
+  capability dac_override,
+  capability net_bind_service,
+
+  # Deny write access to sensitive areas
+  deny /etc/** w,
+  deny /var/** w,
+}

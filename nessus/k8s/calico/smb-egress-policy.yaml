@@ -1,0 +1,28 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-smb-nessus-egress
+spec:
+  selector: network == 'nessus'
+  applyOnForward: true
+  types:
+  - Egress
+  egress:
+  # Allow SMB
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports:
+      - 445
+---
+apiVersion: projectcalico.org/v3
+kind: HostEndpoint
+metadata:
+  name: server.being.scanned
+  labels:
+    network: nessus
+spec:
+  interfaceName: eth1
+  node: some-server-being-scanned
+  expectedIPs:
+  - 192.168.0.45

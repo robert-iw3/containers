@@ -1,0 +1,170 @@
+<form version="1.1">
+  <label>Windows Top Processes by Host</label>
+  <!-- Snapshot interval is configured in [perfmon://Process] of windows-inputs.conf -->
+  <description>Process Explorer is snapshot by Splunk agent every minute. Number of events=number of snapshots. A busy host may inadvertently skip snaphosts.</description>
+  <fieldset submitButton="true" autoRun="false">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 60 minutes</default>
+    </input>
+    <input type="text" token="count_threshold" searchWhenChanged="false">
+      <label>Count threshold (show hosts with less than or equal to x snapshots):</label>
+      <default>50</default>
+    </input>
+    <input type="text" token="cpu_threshold" searchWhenChanged="false">
+      <label>CPU threshold (show processes with more than this threshold):</label>
+      <default>50</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>Busy Hosts</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats count AS event_count WHERE index="windows-metrics" metric_name="Process.%_Processor_Time" instance="_Total" BY host
+| where event_count<=$count_threshold$
+| sort event_count, host
+| rename host AS Host, event_count AS Events
+| addinfo
+| eval "Expected Events"=floor((info_max_time-info_min_time)/60)
+| table Host, Events, "Expected Events"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Events">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value>=290, "#FFFFFF", value==1, "#FF9900")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats avg(_value) AS CPU, count AS Events WHERE index="windows-metrics" metric_name="Process.%_Processor_Time"
+  [| mstats count AS event_count WHERE index="windows-metrics" metric_name="Process.%_Processor_Time" instance="_Total" BY host
+  | where event_count<=$count_threshold$
+  | table host] NOT instance IN ("Idle", "_Total") BY host, instance
+| where CPU>$cpu_threshold$
+| sort host, -CPU
+| streamstats reset_on_change=true count BY host
+| where count<=5
+| eval CPU=floor(CPU)
+| rename host AS Host, instance AS Process, CPU AS "CPU %"
+| addinfo
+| eval "Expected Events"=floor((info_max_time-info_min_time)/60)
+| table Host, Process, "CPU %", Events, "Expected Events"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="CPU %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=90, "#FFFFFF", value>90 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+<!-- https://www.mssqltips.com/sqlservertutorial/9183/perfmon-counters-for-cpu-usage-memory-disk-and-network-performance/ -->
+        <title>Privileged CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats avg(_value) AS CPU, count AS Events WHERE index="windows-metrics" metric_name="Process.%_Privileged_Time"
+  [| mstats count AS event_count WHERE index="windows-metrics" metric_name="Process.%_Privileged_Time" instance="_Total" BY host
+  | where event_count<=$count_threshold$
+  | table host] NOT instance IN ("Idle", "_Total") BY host, instance
+| where CPU>$cpu_threshold$
+| sort host, -CPU
+| streamstats reset_on_change=true count BY host
+| where count<=5
+| eval CPU=floor(CPU)
+| rename host AS Host, instance AS Process, CPU AS "CPU %"
+| addinfo
+| eval "Expected Events"=floor((info_max_time-info_min_time)/60)
+| table Host, Process, "CPU %", Events, "Expected Events"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="CPU %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=90, "#FFFFFF", value>90 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>User CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats avg(_value) AS CPU, count AS Events WHERE index="windows-metrics" metric_name="Process.%_User_Time"
+  [| mstats count AS event_count WHERE index="windows-metrics" metric_name="Process.%_User_Time" instance="_Total" BY host
+  | where event_count<=$count_threshold$
+  | table host] NOT instance IN ("Idle", "_Total") BY host, instance
+| where CPU>$cpu_threshold$
+| sort host, -CPU
+| streamstats reset_on_change=true count BY host
+| where count<=5
+| eval CPU=floor(CPU)
+| rename host AS Host, instance AS Process, CPU AS "CPU %"
+| addinfo
+| eval "Expected Events"=floor((info_max_time-info_min_time)/60)
+| table Host, Process, "CPU %", Events, "Expected Events"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="CPU %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=90, "#FFFFFF", value>90 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

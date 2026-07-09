@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: haproxy
+  namespace: default
+  labels:
+    app: haproxy
+spec:
+  replicas: {{ replicas | default(2) }}
+  selector:
+    matchLabels:
+      app: haproxy
+  template:
+    metadata:
+      labels:
+        app: haproxy
+      annotations:
+        pod-security.kubernetes.io/enforce: restricted
+    spec:
+      serviceAccountName: haproxy
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: haproxy
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: haproxy
+        image: haproxy:{{ haproxy_version | default('3.0.8') }}
+        ports:
+        {% for service in services | default([{'name': 'default', 'backend': 'localhost', 'port': 8080}]) %}
+        - containerPort: {{ service.port }}
+          name: {{ service.name }}-port
+        {% endfor %}
+        - containerPort: 8404
+          name: metrics-port
+        volumeMounts:
+        - name: config
+          mountPath: /usr/local/etc/haproxy
+        - name: certs
+          mountPath: /usr/local/etc/haproxy/certs
+        - name: socket
+          mountPath: /var/run/docker.sock
+        resources:
+          limits:
+            cpu: "2"
+            memory: "1Gi"
+          requests:
+            cpu: "1"
+            memory: "512Mi"
+        livenessProbe:
+          exec:
+            command:
+            - haproxy
+            - -v
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        securityContext:
+          runAsUser: 99
+          runAsGroup: 99
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+      volumes:
+      - name: config
+        configMap:
+          name: haproxy-config
+      - name: certs
+        secret:
+          secretName: haproxy-certs
+      - name: socket
+        hostPath:
+          path: {{ socket_path | default('/var/run/docker.sock') }}

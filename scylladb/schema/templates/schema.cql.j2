@@ -1,0 +1,46 @@
+{#- Renders CQL for arbitrary keyspaces/tables from schema.yaml.
+    Performance profiles ("timeseries", "registry") apply tuning automatically;
+    TWCS windows are sized from the TTL so the count never exceeds Scylla's
+    twcs_max_window_count (50). -#}
+{%- macro twcs_window(ttl) -%}
+{#- pick a window unit/size so ttl/window <= 45 (headroom under the 50 cap) -#}
+{%- set days = (ttl / 86400) | round(0, 'ceil') | int -%}
+{%- if days <= 2 -%}
+'compaction_window_unit': 'HOURS', 'compaction_window_size': {{ ((ttl / 3600 / 45) | round(0, 'ceil') | int) if ttl > 0 else 1 }}
+{%- else -%}
+'compaction_window_unit': 'DAYS', 'compaction_window_size': {{ ((days / 45) | round(0, 'ceil')) | int if (days / 45) > 1 else 1 }}
+{%- endif -%}
+{%- endmacro -%}
+{% for ks in keyspaces %}
+CREATE KEYSPACE IF NOT EXISTS {{ ks.name }}
+  WITH replication = {'class': '{{ ks.replication.class }}'
+  {%- if ks.replication.datacenters %}{% for dc, rf in ks.replication.datacenters.items() %}, '{{ dc }}': '{{ rf }}'{% endfor %}
+  {%- else %}, 'replication_factor': '{{ ks.replication.replication_factor | default(3) }}'{% endif %}}
+  AND durable_writes = true;
+
+{% for tbl in ks.tables %}
+CREATE TABLE IF NOT EXISTS {{ ks.name }}.{{ tbl.name }} (
+{%- for col in tbl.columns %}
+  {{ col.name }} {{ col.type }}{{ "," if not loop.last or True }}
+{%- endfor %}
+  PRIMARY KEY (({{ tbl.partition_key | join(', ') }}){% if tbl.clustering_key %}, {{ tbl.clustering_key | join(', ') }}{% endif %})
+)
+{#- Build the WITH option list independently of clustering order so every
+    profile/TTL/compaction setting is emitted regardless of table shape. -#}
+{%- set opts = [] -%}
+{%- if tbl.clustering_order -%}
+  {%- set _ = opts.append("CLUSTERING ORDER BY (" ~ (tbl.clustering_order.items() | map('join', ' ') | join(', ')) ~ ")") -%}
+{%- endif -%}
+{%- if tbl.ttl_seconds -%}
+  {%- set _ = opts.append("default_time_to_live = " ~ tbl.ttl_seconds) -%}
+{%- endif -%}
+{%- if tbl.profile == 'timeseries' -%}
+  {%- set _ = opts.append("compaction = { 'class': 'TimeWindowCompactionStrategy', " ~ twcs_window(tbl.ttl_seconds | default(0)) ~ " }") -%}
+  {%- set _ = opts.append("compression = {'sstable_compression': 'ZstdCompressor'}") -%}
+  {%- set _ = opts.append("gc_grace_seconds = 3600") -%}
+  {%- set _ = opts.append("speculative_retry = '99.0PERCENTILE'") -%}
+{%- endif -%}
+{% if opts %} WITH {{ opts | join('\n  AND ') }}{% endif %};
+
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "schema-registry.fullname" . }}-test"
+  labels:
+    {{- include "schema-registry.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  serviceAccountName: {{ include "schema-registry.fullname" . }}-sa
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['-qO-', '{{ include "schema-registry.fullname" . }}:{{ .Values.port }}/config']
+      resources:
+        requests:
+          memory: "200Mi"
+          cpu: "10m"
+        limits:
+          memory: "200Mi"
+          cpu: "10m"
+  restartPolicy: Never

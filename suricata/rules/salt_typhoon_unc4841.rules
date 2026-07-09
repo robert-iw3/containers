@@ -1,0 +1,22 @@
+# Suricata rules for detecting Salt Typhoon and UNC4841 activity
+# Covers DNS queries for 45+ malicious domains and connections to low-density IPs
+
+# DNS Rule: Detects queries to known Salt Typhoon/UNC4841 C2 domains
+
+alert dns any any -> any any (msg:"Salt Typhoon / UNC4841 C2 Domain DNS Query"; \
+dns_query; pcre:"/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*(aria-hidden|asparticrooftop|caret-right|chatscreend|chekoodver|cloudprocenter|clubworkmistake|col-lg|colourtinctem|componfrom|dateupdata|e-forwardviewupdata|fessionalwork|fjtest-block|fitbookcatwer|followkoon|gandhibludtric|gesturefavour|getdbecausehub|goldenunder|hateupopred|incisivelyfut|infraredsen|junsamyoung|lookpumrron|materialplies|morrowadded|newhkdaily|onlineeylity|pulseathermakf|qatarpenble|redbludfootvr|requiredvalue|ressicepro|shalaordereport|siderheycook|sinceretehope|solveblemten|togetheroffway|toodblackrun|troublendsef|unfeelmoonvd|verfiedoccurr|waystrkeprosh|xdmgwctese)\.com$/i"; \
+classtype:trojan-activity; sid:1000001; rev:1; metadata:apt CHINA, actor Salt_Typhoon, actor UNC4841;)
+
+# TCP Rule: Detects connections to low-density IPs associated with Salt Typhoon/UNC4841
+# Requires $SALT_TYPH00N_IPS defined in suricata.yaml or included IP list file
+
+alert tcp $HOME_NET any -> $SALT_TYPH00N_IPS any (msg:"Connection to Salt Typhoon / UNC4841 Associated IP"; \
+flow:established,to_server; file_data; content:"GET"; http_method; content:"HTTP"; http_header; \
+classtype:trojan-activity; sid:1000002; rev:1; metadata:apt CHINA, actor Salt_Typhoon, actor UNC4841;)
+
+# Notes:
+# - DNS rule matches root domains and subdomains (e.g., imap.dateupdata.com, dateupdata.com) using PCRE for efficiency.
+# - IP rule targets HTTP connections to low-density IPs from the Silent Push report (2021-2025). Extend to HTTPS (tcp/443) or other protocols as needed.
+# - Populate $SALT_TYPH00N_IPS in suricata.yaml or use the accompanying salt_typhoon_ips.txt file.
+# - Recommended: Add threshold (e.g., threshold: type both, track by_src, count 1, seconds 300) to reduce noise.
+# - Test with dns-spoof or tcpreplay in a lab environment. Check historical DNS logs (past 5 years) for these domains/IPs as per article guidance.

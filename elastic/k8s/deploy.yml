@@ -1,0 +1,488 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  ports:
+    - port: 9200
+      targetPort: 9200
+  selector:
+    app: elasticsearch
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      initContainers:
+        - name: init-system
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ['/bin/sh']
+          args:
+            - -c
+            - >-
+              sysctl -w vm.max_map_count=262144 &&
+              sysctl -w fs.file-max=65536
+          resources: {}
+          securityContext:
+            privileged: true
+        - name: setup-certs-system
+          image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+          env:
+            - name: KIBANA_SYSTEM_PASSWORD
+              value: kibana
+            - name: ELASTIC_PASSWORD
+              value: elastic
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/certs
+          command:
+            - bash
+            - -c
+            - |
+              if [ x${ELASTIC_PASSWORD} == x ]; then
+                echo "Set the ELASTIC_PASSWORD environment variable in the env spec";
+                exit 1;
+              elif [ x${KIBANA_SYSTEM_PASSWORD} == x ]; then
+                echo "Set the KIBANA_SYSTEM_PASSWORD environment variable in the env spec";
+                exit 1;
+              fi;
+              if [ ! -f certs/ca.zip ]; then
+                echo "Creating CA";
+                bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+                unzip config/certs/ca.zip -d config/certs;
+              fi;
+              if [ ! -f certs/certs.zip ]; then
+                echo "Creating certs";
+                echo -ne \
+                "instances:\n"\
+                "  - name: elasticsearch\n"\
+                "    dns:\n"\
+                "      - elasticsearch\n"\
+                "      - localhost\n"\
+                "    ip:\n"\
+                "      - 127.0.0.1\n"\
+                "  - name: kibana\n"\
+                "    dns:\n"\
+                "      - kibana\n"\
+                "      - localhost\n"\
+                "    ip:\n"\
+                "      - 127.0.0.1\n"\
+                "  - name: fleet-server\n"\
+                "    dns:\n"\
+                "      - fleet-server\n"\
+                "      - localhost\n"\
+                "    ip:\n"\
+                "      - 127.0.0.1\n"\
+                > config/certs/instances.yml;
+                bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+                unzip config/certs/certs.zip -d config/certs;
+                cat config/certs/elasticsearch/elasticsearch.crt config/certs/ca/ca.crt > config/certs/elasticsearch/elasticsearch.chain.pem
+              fi;
+              echo "Setting file permissions"
+              chown -R root:root config/certs;
+              find . -type d -exec chmod 750 \{\} \;;
+              find . -type f -exec chmod 640 \{\} \;;
+              echo "Waiting for Elasticsearch availability";
+              until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+              echo "Setting kibana_system password";
+              until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_SYSTEM_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+              echo "All done!";
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.0.3
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/certs
+            - name: elastic-data
+              mountPath: /usr/share/elasticsearch/data
+          ports:
+            - containerPort: 9200
+          env:
+            - name: node.name
+              value: elasticsearch
+            - name: cluster.name
+              value: k8s-cluster
+            - name: discovery.type
+              value: single-node
+            - name: ELASTIC_PASSWORD
+              value: elastic
+            - name: bootstrap.memory_lock
+              value: "true"
+            - name: xpack.security.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.enabled
+              value: "true"
+            - name: xpack.security.transport.ssl.enabled
+              value: "true"
+            - name: xpack.license.self_generated.type
+              value: trial
+            - name: xpack.security.http.ssl.key
+              value: certs/elasticsearch/elasticsearch.key
+            - name: xpack.security.http.ssl.certificate
+              value: certs/elasticsearch/elasticsearch.chain.pem
+            - name: xpack.security.http.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.http.ssl.verification_mode
+              value: certificate
+            - name: xpack.security.http.ssl.client_authentication
+              value: optional
+            - name: xpack.security.transport.ssl.key
+              value: certs/elasticsearch/elasticsearch.key
+            - name: xpack.security.transport.ssl.certificate
+              value: certs/elasticsearch/elasticsearch.crt
+            - name: xpack.security.transport.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.transport.ssl.verification_mode
+              value: certificate
+            - name: xpack.security.transport.ssl.client_authentication
+              value: optional
+            - name: ES_JAVA_OPTS
+              value: "-Xms2g -Xmx2g"
+          resources:
+            limits:
+              cpu: '2'
+              memory: 4Gi
+            requests:
+              cpu: 200m
+              memory: 3000Mi
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          terminationGracePeriodSeconds: 20
+          securityContext:
+            capabilities:
+              add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              # Readiness probe adapted from the Docker healthcheck script.
+              command: ["sh", "-c", "curl --max-time 1 -s http://localhost:9200 | grep -q 'missing authentication credentials'"]
+            initialDelaySeconds: 10
+            periodSeconds: 1
+            timeoutSeconds: 10
+            failureThreshold: 120
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+    - metadata:
+        name: elastic-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  ports:
+    - port: 5601
+      targetPort: 5601
+  selector:
+    app: kibana
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana-wolfi:9.0.3
+          ports:
+            - containerPort: 5601
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/kibana/config/certs
+            - name: kibana-data
+              mountPath: /usr/share/kibana/data
+          env:
+            - name: SERVERNAME
+              value: kibana
+            - name: ELASTICSEARCH_HOSTS
+              value: http://elasticsearch:9200
+            - name: ELASTICSEARCH_USERNAME
+              value: kibana_system
+            - name: ELASTICSEARCH_PASSWORD
+              value: elastic
+            - name: MONITORING_UI_CONTAINER_ELASTICSEARCH_ENABLED
+              value: "true"
+            - name: server.ssl.enabled
+              value: true
+            - name: elasticsearch.ssl.verificationMode
+              value: none
+            - name: elasticsearch.ssl.certificateAuthorities
+              value: config/certs/ca/ca.crt
+            - name: server.ssl.certificate
+              value: config/certs/kibana/kibana.crt
+            - name: server.ssl.key
+              value: config/certs/kibana/kibana.key
+            - name: XPACK_SECURITY_ENCRYPTIONKEY
+              value: fhjskloppd678ehkdfdlliverpoolfcr
+            - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+              value: fhjskloppd678ehkdfdlliverpoolfcr
+            - name: SERVER_HOST
+              value: 0.0.0.0
+            - name: SERVER_PUBLICBASEURL
+              value: http://127.0.0.1:5601
+          resources:
+            limits:
+              cpu: '2'
+              memory: 4Gi
+            requests:
+              cpu: 200m
+              memory: 3000Mi
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          terminationGracePeriodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "curl --max-time 1 -s http://localhost:5601/api/status | grep -q 'available'"]
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            failureThreshold: 300
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+    - metadata:
+        name: kibana-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet
+spec:
+  ports:
+    - port: 8220
+      targetPort: 8220
+  selector:
+    app: fleet
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fleet
+  template:
+    metadata:
+      labels:
+        app: fleet
+    spec:
+      containers:
+        - name: fleet
+          image: docker.elastic.co/elastic-agent/elastic-agent-wolfi:9.0.3
+          ports:
+            - containerPort: 8220
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+            - name: fleet-data
+              mountPath: /usr/share/elastic-agent
+            - name: podman-socket
+              mountPath: /var/run/podman/podman.sock
+          env:
+            - name: FLEET_ENROLL
+              value: 1
+            - name: FLEET_SERVER_POLICY_ID
+              value: fleet-server-policy
+            - name: FLEET_SERVER_ENABLE
+              value: 1
+            - name: KIBANA_FLEET_SETUP
+              value: 1
+            - name: KIBANA_HOST
+              value: https://kibana:5601
+            - name: FLEET_URL
+              value: https://fleet-server:8220
+            - name: FLEET_SERVER_ELASTICSEARCH_HOST
+              value: https://elasticsearch:9200
+            - name: FLEET_CA
+              value: /certs/ca/ca.crt
+            - name: KIBANA_FLEET_USERNAME
+              value: elastic
+            - name: KIBANA_FLEET_PASSWORD
+              value: elastic
+            - name: FLEET_SERVER_CERT
+              value: /certs/fleet-server/fleet-server.crt
+            - name: FLEET_SERVER_CERT_KEY
+              value: /certs/fleet-server/fleet-server.key
+            - name: FLEET_SERVER_ELASTICSEARCH_CA
+              value: /certs/ca/ca.crt
+            - name: KIBANA_FLEET_CA
+              value: /certs/ca/ca.crt
+          resources:
+            limits:
+              cpu: '1'
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 1500Mi
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          terminationGracePeriodSeconds: 20
+          securityContext:
+            privileged: true
+          volumes:
+          - name: podman-socket
+            hostPath:
+              path: /var/run/podman/podman.sock
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+    - metadata:
+        name: fleet-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+
+---
+# This is the minimal yaml configuration needed to listen on all interfaces for
+# OTLP logs, metrics and traces, exporting to Elasticsearch.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edot-collector-config
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    connectors:
+      elasticapm:
+    processors:
+      elastictrace:
+    exporters:
+      elasticsearch:
+        endpoint: http://elasticsearch:9200
+        user: elastic
+        password: elastic
+        mapping:
+          mode: otel
+        logs_dynamic_index:
+          enabled: true
+        metrics_dynamic_index:
+          enabled: true
+        traces_dynamic_index:
+          enabled: true
+        flush:
+          interval: 1s  # improve responsiveness in example apps (default 30s)
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [elastictrace]
+          exporters: [elasticapm, elasticsearch]
+        metrics:
+          receivers: [otlp]
+          processors: []
+          exporters: [elasticsearch]
+        metrics/aggregated:
+          receivers: [elasticapm]
+          processors: []
+          exporters: [elasticsearch]
+        logs:
+          receivers: [otlp]
+          processors: []
+          exporters: [elasticapm, elasticsearch]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+spec:
+  ports:
+    - name: grpc
+      port: 4317
+      targetPort: 4317
+    - name: http
+      port: 4318
+      targetPort: 4318
+  selector:
+    app: otel-collector
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: docker.elastic.co/elastic-agent/elastic-otel-collector:9.0.3
+          command: ["/usr/bin/tini", "--"]
+          args: ["/usr/local/bin/docker-entrypoint", "--config=/usr/share/elastic-agent/config.yaml"]
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/elastic-agent/config.yaml
+              subPath: config.yaml
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+          readinessProbe:
+            tcpSocket:
+              port: 4317
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            failureThreshold: 300
+          securityContext:
+            capabilities:
+              add: [ "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID" ]
+              drop: [ "ALL" ]
+      volumes:
+        - name: config
+          configMap:
+            name: edot-collector-config

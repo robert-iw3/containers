@@ -1,0 +1,26 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+  networks:
+    - elastic
+
+services:
+  fluentd:
+    <<: *common-vars-apps
+    build: .
+    volumes:
+      - ./fluentd/conf:/fluentd/etc
+    links:
+      - "elasticsearch"
+    ports:
+      - "5140:5140/udp"
+      - "24224:24224"
+      - "24224:24224/udp"
+    logging:
+        driver: "json-file"
+        options:
+            max-size: 100m
+            max-file: "5"

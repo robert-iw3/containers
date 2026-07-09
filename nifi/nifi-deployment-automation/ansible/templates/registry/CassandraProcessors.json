@@ -1,0 +1,1047 @@
+{
+	"template": {
+		"description": "A basic template that executes multiple CQL commands using QueryCassandra and PutCassandraQL. In Cassandra there first must be a \"simplex\" so that PutCassandraQL create a \"users\" table within it. Then QueryCassandra can be used to query it.",
+		"name": "CassandraProcessors",
+		"snippet": {
+			"connections": [
+				{
+					"id": "9e8fc19c-e894-4d08-9366-6220f318bffa",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "bfec692f-6149-4421-90b6-17f873be2e94",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "3d70d8ec-7859-4431-80a4-f131f7a77b32",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "7766b0d8-8e0e-438b-94c9-86f1a229eff9",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "ea6cb3cb-7c09-437a-94e0-efdf7e4f6a7b",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "b981b959-92b8-4779-9e66-3985ecc82db8",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "62f2124c-a03f-4ddf-8633-c3055a3b32c9",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "b981b959-92b8-4779-9e66-3985ecc82db8",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+						"id": "dc4cd3e0-d243-47e1-93aa-6420b9f18066",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"processors": [
+				{
+					"id": "b981b959-92b8-4779-9e66-3985ecc82db8",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"position": {
+						"x": "984.0",
+						"y": "71.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "JSON container options",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "none",
+												"value": "none"
+											},
+											{
+												"displayName": "array",
+												"value": "array"
+											}
+										],
+										"defaultValue": "array",
+										"description": "Determines how stream of records is exposed: either as a sequence of single Objects (none) (i.e. writing every Object to a new line), or as an array of Objects (array).",
+										"displayName": "JSON container options",
+										"dynamic": "false",
+										"name": "JSON container options",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Wrap Single Record",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "Determines if the resulting output for empty records or a single record should be wrapped in a container array as specified by 'JSON container options'",
+										"displayName": "Wrap Single Record",
+										"dynamic": "false",
+										"name": "Wrap Single Record",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "JSON container options",
+									"value": "array"
+								},
+								{
+									"key": "Wrap Single Record",
+									"value": "false"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ConvertAvroToJSON",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship if it cannot be parsed as Avro or cannot be converted to JSON for any reason",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "A FlowFile is routed to this relationship after it has been converted to JSON",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.avro.ConvertAvroToJSON"
+				},
+				{
+					"id": "dc4cd3e0-d243-47e1-93aa-6420b9f18066",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"position": {
+						"x": "467.0",
+						"y": "72.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "CQL select query",
+									"value": {
+										"description": "CQL select query",
+										"displayName": "CQL select query",
+										"dynamic": "false",
+										"name": "CQL select query",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Cassandra Contact Points",
+									"value": {
+										"description": "Contact points are addresses of Cassandra nodes. The list of contact points should be comma-separated and in hostname:port format. Example node1:port,node2:port,....",
+										"displayName": "Cassandra Contact Points",
+										"dynamic": "false",
+										"name": "Cassandra Contact Points",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Keyspace",
+									"value": {
+										"description": "The Cassandra Keyspace to connect to. If none is specified, the query will need to include the keyspace name before any table reference.",
+										"displayName": "Keyspace",
+										"dynamic": "false",
+										"name": "Keyspace",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardSSLContextService",
+											"value": "7e6b8b13-bc3d-425e-93b2-a6f4c0698864"
+										},
+										"description": "The SSL Context Service used to provide client certificate information for TLS/SSL connections.",
+										"displayName": "SSL Context Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Client Auth",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "WANT",
+												"value": "WANT"
+											},
+											{
+												"displayName": "REQUIRED",
+												"value": "REQUIRED"
+											},
+											{
+												"displayName": "NONE",
+												"value": "NONE"
+											}
+										],
+										"defaultValue": "NONE",
+										"description": "Client authentication policy when connecting to secure (TLS/SSL) cluster. Possible values are REQUIRED, WANT, NONE. This property is only used when an SSL Context has been defined and enabled.",
+										"displayName": "Client Auth",
+										"dynamic": "false",
+										"name": "Client Auth",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Username",
+									"value": {
+										"description": "Username to access the Cassandra cluster",
+										"displayName": "Username",
+										"dynamic": "false",
+										"name": "Username",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Password",
+									"value": {
+										"description": "Password to access the Cassandra cluster",
+										"displayName": "Password",
+										"dynamic": "false",
+										"name": "Password",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Wait Time",
+									"value": {
+										"defaultValue": "0 seconds",
+										"description": "The maximum amount of time allowed for a running CQL select query. Must be of format <duration> <TimeUnit> where <duration> is a non-negative integer and TimeUnit is a supported Time Unit, such as: nanos, millis, secs, mins, hrs, days. A value of zero means there is no limit.",
+										"displayName": "Max Wait Time",
+										"dynamic": "false",
+										"name": "Max Wait Time",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Fetch size",
+									"value": {
+										"defaultValue": "0",
+										"description": "The number of result rows to be fetched from the result set at a time. Zero is the default and means there is no limit.",
+										"displayName": "Fetch size",
+										"dynamic": "false",
+										"name": "Fetch size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "CQL select query",
+									"value": "select * from users"
+								},
+								{
+									"key": "Cassandra Contact Points",
+									"value": "127.0.0.1:9042"
+								},
+								{
+									"key": "Keyspace",
+									"value": "simplex"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Client Auth"
+								},
+								{
+									"key": "Username",
+									"value": "cassandra"
+								},
+								{
+									"key": "Password"
+								},
+								{
+									"key": "Max Wait Time",
+									"value": "10 seconds"
+								},
+								{
+									"key": "Fetch size",
+									"value": "0"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "5 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "QueryCassandra",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "SQL query execution failed. Incoming FlowFile will be penalized and routed to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship if the query cannot be completed but attempting the operation again may succeed",
+							"name": "retry"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Successfully created FlowFile from SQL query result set.",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.cassandra.QueryCassandra"
+				},
+				{
+					"id": "bfec692f-6149-4421-90b6-17f873be2e94",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"position": {
+						"x": "989.0",
+						"y": "482.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Cassandra Contact Points",
+									"value": {
+										"description": "Contact points are addresses of Cassandra nodes. The list of contact points should be comma-separated and in hostname:port format. Example node1:port,node2:port,....",
+										"displayName": "Cassandra Contact Points",
+										"dynamic": "false",
+										"name": "Cassandra Contact Points",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Keyspace",
+									"value": {
+										"description": "The Cassandra Keyspace to connect to. If none is specified, the query will need to include the keyspace name before any table reference.",
+										"displayName": "Keyspace",
+										"dynamic": "false",
+										"name": "Keyspace",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardSSLContextService",
+											"value": "7e6b8b13-bc3d-425e-93b2-a6f4c0698864"
+										},
+										"description": "The SSL Context Service used to provide client certificate information for TLS/SSL connections.",
+										"displayName": "SSL Context Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Client Auth",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "WANT",
+												"value": "WANT"
+											},
+											{
+												"displayName": "REQUIRED",
+												"value": "REQUIRED"
+											},
+											{
+												"displayName": "NONE",
+												"value": "NONE"
+											}
+										],
+										"defaultValue": "NONE",
+										"description": "Client authentication policy when connecting to secure (TLS/SSL) cluster. Possible values are REQUIRED, WANT, NONE. This property is only used when an SSL Context has been defined and enabled.",
+										"displayName": "Client Auth",
+										"dynamic": "false",
+										"name": "Client Auth",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Username",
+									"value": {
+										"description": "Username to access the Cassandra cluster",
+										"displayName": "Username",
+										"dynamic": "false",
+										"name": "Username",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Password",
+									"value": {
+										"description": "Password to access the Cassandra cluster",
+										"displayName": "Password",
+										"dynamic": "false",
+										"name": "Password",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Wait Time",
+									"value": {
+										"defaultValue": "0 seconds",
+										"description": "The maximum amount of time allowed for a running CQL select query. Must be of format <duration> <TimeUnit> where <duration> is a non-negative integer and TimeUnit is a supported Time Unit, such as: nanos, millis, secs, mins, hrs, days. A value of zero means there is no limit.",
+										"displayName": "Max Wait Time",
+										"dynamic": "false",
+										"name": "Max Wait Time",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "100",
+										"description": "The preferred number of FlowFiles to put to Cassandra in a single transaction",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Cassandra Contact Points",
+									"value": "127.0.0.1:9042"
+								},
+								{
+									"key": "Keyspace",
+									"value": "simplex"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Client Auth"
+								},
+								{
+									"key": "Username",
+									"value": "cassandra"
+								},
+								{
+									"key": "Password"
+								},
+								{
+									"key": "Max Wait Time"
+								},
+								{
+									"key": "Batch Size"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutCassandraQL",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship if Cassandra cannot be updated and retrying the operation will also fail, such as an invalid statement or an integrity constraint violation",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship if Cassandra cannot be updated but attempting the operation again may succeed",
+							"name": "retry"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship after Cassandra is successfully updated",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.cassandra.PutCassandraQL"
+				},
+				{
+					"id": "ea6cb3cb-7c09-437a-94e0-efdf7e4f6a7b",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"position": {
+						"x": "985.0",
+						"y": "292.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": {
+										"description": "The directory to which files should be written. You may use expression language such as /aa/bb/${path}",
+										"displayName": "Directory",
+										"dynamic": "false",
+										"name": "Directory",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Conflict Resolution Strategy",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "replace",
+												"value": "replace"
+											},
+											{
+												"displayName": "ignore",
+												"value": "ignore"
+											},
+											{
+												"displayName": "fail",
+												"value": "fail"
+											}
+										],
+										"defaultValue": "fail",
+										"description": "Indicates what should happen when a file with the same name already exists in the output directory",
+										"displayName": "Conflict Resolution Strategy",
+										"dynamic": "false",
+										"name": "Conflict Resolution Strategy",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Create Missing Directories",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "If true, then missing destination directories will be created. If false, flowfiles are penalized and sent to failure.",
+										"displayName": "Create Missing Directories",
+										"dynamic": "false",
+										"name": "Create Missing Directories",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum File Count",
+									"value": {
+										"description": "Specifies the maximum number of files that can exist in the output directory",
+										"displayName": "Maximum File Count",
+										"dynamic": "false",
+										"name": "Maximum File Count",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Last Modified Time",
+									"value": {
+										"description": "Sets the lastModifiedTime on the output file to the value of this attribute.  Format must be yyyy-MM-dd'T'HH:mm:ssZ.  You may also use expression language such as ${file.lastModifiedTime}.",
+										"displayName": "Last Modified Time",
+										"dynamic": "false",
+										"name": "Last Modified Time",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Permissions",
+									"value": {
+										"description": "Sets the permissions on the output file to the value of this attribute.  Format must be either UNIX rwxrwxrwx with a - in place of denied permissions (e.g. rw-r--r--) or an octal number (e.g. 644).  You may also use expression language such as ${file.permissions}.",
+										"displayName": "Permissions",
+										"dynamic": "false",
+										"name": "Permissions",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Owner",
+									"value": {
+										"description": "Sets the owner on the output file to the value of this attribute.  You may also use expression language such as ${file.owner}.",
+										"displayName": "Owner",
+										"dynamic": "false",
+										"name": "Owner",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Group",
+									"value": {
+										"description": "Sets the group on the output file to the value of this attribute.  You may also use expression language such as ${file.group}.",
+										"displayName": "Group",
+										"dynamic": "false",
+										"name": "Group",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": "/Users/mburgess/tmp"
+								},
+								{
+									"key": "Conflict Resolution Strategy",
+									"value": "replace"
+								},
+								{
+									"key": "Create Missing Directories",
+									"value": "true"
+								},
+								{
+									"key": "Maximum File Count"
+								},
+								{
+									"key": "Last Modified Time"
+								},
+								{
+									"key": "Permissions"
+								},
+								{
+									"key": "Owner"
+								},
+								{
+									"key": "Group"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutFile",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Files that could not be written to the output directory for some reason are transferred to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "Files that have been successfully written to the output directory are transferred to this relationship",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.PutFile"
+				},
+				{
+					"id": "3d70d8ec-7859-4431-80a4-f131f7a77b32",
+					"parentGroupId": "7b4a7fd3-3cc2-4c76-affd-bfbf8f33782a",
+					"position": {
+						"x": "476.0",
+						"y": "485.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Script Engine",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "ECMAScript",
+												"value": "ECMAScript"
+											},
+											{
+												"displayName": "Groovy",
+												"value": "Groovy"
+											},
+											{
+												"displayName": "lua",
+												"value": "lua"
+											},
+											{
+												"displayName": "python",
+												"value": "python"
+											},
+											{
+												"displayName": "ruby",
+												"value": "ruby"
+											}
+										],
+										"defaultValue": "ECMAScript",
+										"description": "The engine to execute scripts",
+										"displayName": "Script Engine",
+										"dynamic": "false",
+										"name": "Script Engine",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Script File",
+									"value": {
+										"description": "Path to script file to execute. Only one of Script File or Script Body may be used",
+										"displayName": "Script File",
+										"dynamic": "false",
+										"name": "Script File",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Script Body",
+									"value": {
+										"description": "Body of script to execute. Only one of Script File or Script Body may be used",
+										"displayName": "Script Body",
+										"dynamic": "false",
+										"name": "Script Body",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Module Directory",
+									"value": {
+										"description": "Comma-separated list of paths to files and/or directories which contain modules required by the script.",
+										"displayName": "Module Directory",
+										"dynamic": "false",
+										"name": "Module Directory",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Script Engine",
+									"value": "Groovy"
+								},
+								{
+									"key": "Script File"
+								},
+								{
+									"key": "Script Body",
+									"value": "DDL = \n\"\"\"DROP TABLE IF EXISTS users;\n   CREATE TABLE simplex.users (user_id text PRIMARY KEY, first_name text, last_name text, age int, emails set<text>, top_places list<text>, todo map<timestamp, text>);\n\"\"\"\n\nDDL.eachLine { ddl ->\n      flowFile = session.create()\n      flowFile = session.write(flowFile, { outStream ->\n        outStream.write(ddl.getBytes('UTF-8'))\n    } as OutputStreamCallback)\n    session.transfer(flowFile, REL_SUCCESS)\n}\n\nTEST_CQL = [\n    [ \n      statement: 'INSERT INTO users (user_id, first_name, last_name, age, emails) VALUES(?,?,?,?,?);',\n      params: [ \n                [ type: 'text', value: '\\'frodo\\'' ],\n                [ type: 'text', value: '\\'Frodo\\'' ],\n                [ type: 'text', value: '\\'Baggins\\'' ],\n                [ type: 'int', value: '30'],\n                [ type: 'set<text>', value: '{\\'f@baggins.com\\', \\'baggins@gmail.com\\'}']\n              ]\n    ],\n    [\n      statement: 'UPDATE users SET emails = emails + ? WHERE user_id = ?',\n      params: [\n                [ type: 'set<text>', value: '{\\'fb@friendsofmordor.org\\'}' ],\n                [ type: 'text', value: '\\'frodo\\'' ]\n              ]\n    ],\n    [ \n      statement: 'UPDATE users SET top_places = ? WHERE user_id = ?',\n      params: [\n                [ type: 'list<text>', value: '[ \\'rivendell\\', \\'rohan\\' ]' ],\n                [ type: 'text', value: '\\'frodo\\'' ]\n              ]\n    ],\n    [ \n      statement: 'UPDATE simplex.users SET top_places = ? + top_places WHERE user_id = ?',\n      params: [\n                [ type: 'list<text>', value: '[ \\'the shire\\' ]' ],\n                [ type: 'text', value: '\\'frodo\\'' ]\n              ]\n    ],\n    [ \n      statement: 'UPDATE users SET top_places = ? + top_places WHERE user_id = ?',\n      params: [\n                [ type: 'list<text>', value: '[ \\'the shire\\' ]' ],\n                [ type: 'text', value: '\\'frodo\\'' ]\n              ]\n    ],\n    [ \n      statement: 'UPDATE users SET top_places = top_places + ? WHERE user_id = ?',\n      params: [\n                [ type: 'list<text>', value: '[ \\'mordor\\' ]' ],\n                [ type: 'text', value: '\\'frodo\\'' ]\n              ]\n    ],\n    [\n      statement: 'INSERT INTO users (user_id, first_name, last_name) VALUES(?,?,?)',\n      params: [\n                [ type: 'text', value: '\\'mattyb\\'' ],\n                [ type: 'text', value: '\\'Matt\\'' ],\n                [ type: 'text', value: '\\'Burgess\\'' ]\n              ]\n    ],\n    [ \n      statement: 'UPDATE users SET emails = ? WHERE user_id = ?',\n      params: [\n                [ type: 'set<text>', value: '{\\'mattyb149@gmail.com\\', \\'mburgess@hortonworks.com\\'}' ],\n                [ type: 'text', value: '\\'mattyb\\'' ]\n              ]\n    ]\n]\n\nTEST_CQL.each { test ->\n     flowFile = session.create()\n     flowFile = session.write(flowFile, { outStream ->\n        outStream.write(test.statement.getBytes('UTF-8'))\n    } as OutputStreamCallback)\n    test.params.eachWithIndex { param, index ->\n        flowFile = session.putAttribute(flowFile, \"cql.args.${index+1}.type\", param.type)\n        flowFile = session.putAttribute(flowFile, \"cql.args.${index+1}.value\", param.value)\n    }\n    session.transfer(flowFile, REL_SUCCESS)\n}"
+								},
+								{
+									"key": "Module Directory"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "60 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ExecuteScript",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles that failed to be processed",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles that were successfully processed",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "false",
+					"type": "org.apache.nifi.processors.script.ExecuteScript"
+				}
+			]
+		},
+		"timestamp": "02/25/2022 09:26:22 EST"
+	}
+}

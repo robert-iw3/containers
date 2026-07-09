@@ -1,0 +1,23 @@
+---
+- name: Ensure Neo4j data directory exists
+  file:
+    path: "{{ project_dir }}/data"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Create Neo4j PVC for Kubernetes
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: neo4j-data
+        namespace: default
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+    state: present
+  when: orchestrator == "kubernetes"

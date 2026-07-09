@@ -1,0 +1,28 @@
+[ req ]
+default_bits = 2048
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+default_md = sha256
+
+[ req_distinguished_name ]
+C = US
+ST = ExampleState
+L = ExampleCity
+O = Gitea
+OU = Gitea Services
+CN = {{ gitea_domain }}
+emailAddress = {{ gitea_admin_email }}
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = {{ gitea_domain }}
+DNS.2 = grafana.{{ gitea_domain }}
+DNS.3 = minio.{{ gitea_domain }}
+DNS.4 = prometheus.{{ gitea_domain }}
+DNS.5 = loki.{{ gitea_domain }}

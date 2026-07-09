@@ -1,0 +1,56 @@
+# Enterprise Sharded + CIS Level 1/2 (MongoDB 8.0)
+# Merges with base.yaml; CIS: 1.2 Auth enabled, 2.1 TLS, 2.3 Audit, 1.4 Disable JS, etc.
+
+sharding:
+  clusterRole: mongos  # For routers; use 'configsvr' for config, 'shardsvr' for shards
+  # configDB: configReplSet/shard1:27019,shard2:27019,shard3:27019  # Add post-deploy
+
+replication:
+  replSetName: shard0  # Per-shard; init via mongos
+  # For config: replSetName: configReplSet
+
+security:
+  # CIS 1.2, 2.2: Authorization enabled (already in base)
+  # CIS 2.4: Use X.509 for cluster auth (better than keyFile for scale)
+  clusterAuthMode: x509  # Requires certs; fallback: keyFile
+  # CIS 2.5: No built-in roles for apps; use custom
+  javascriptEnabled: false  # CIS 1.4: Disable JS eval for security (minor perf gain)
+
+net:
+  # CIS 1.1: Bind to specific IPs (e.g., 0.0.0.0 for sharded, but firewall)
+  bindIp: 0.0.0.0
+  # CIS 2.1: TLS required (already in base)
+  tls:
+    mode: requireTLS
+    certificateKeyFile: /etc/ssl/mongodb.pem
+    CAFile: /etc/ssl/ca.pem
+    clusterFile: /etc/ssl/mongodb-cluster.pem  # X.509 for internal
+    allowConnectionsWithoutCertificates: false  # Strict
+    FIPSMode: true  # If hardware supports; CIS 2.1 advanced
+
+auditLog:
+  # CIS 2.3: Enable audit, but filter for perf (audit ~5% overhead)
+  destination: file
+  format: JSON
+  path: /var/log/mongodb/auditLog.json
+  filter: '{ atype: { $in: ["createCollection", "dropCollection", "authCheck"] }, param: { command: { $exists: true } } }'  # CIS: Log DDL/auth; sample 10% for scale
+  logRotation:
+    timeInHours: 24
+    sizeInBytes: 104857600  # 100MB
+
+operationProfiling:
+  # CIS 2.6: Profile for security (detect anomalies), but sample for perf
+  mode: slowOp
+  slowOpThresholdMs: 100
+  slowOpSampleRate: 10  # Low for high-scale (balance: full in dev)
+
+# Scaling Perf: Increase for enterprise
+net:
+  maxIncomingConnections: 10000  # CIS 1.5: Limit to prevent DoS
+  connectionPool:
+    maxPoolSize: 200  # Per mongos
+
+storage:
+  # CIS 2.7: Encryption at rest (WiredTiger default; Enterprise for EKM)
+  encryption:
+    enabled: true  # If Enterprise

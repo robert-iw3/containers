@@ -1,0 +1,70 @@
+---
+- name: Deploy TinyAuth with Ansible
+  hosts: all
+  become: true
+  tasks:
+    - name: Ensure Podman is installed
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Create auth network
+      containers.podman.podman_network:
+        name: auth
+        state: present
+
+    - name: Pull Traefik image
+      containers.podman.podman_image:
+        name: docker.io/traefik:v3.4
+
+    - name: Pull Whoami image
+      containers.podman.podman_image:
+        name: traefik/whoami:latest
+
+    - name: Pull TinyAuth image
+      containers.podman.podman_image:
+        name: ghcr.io/steveiliop56/tinyauth:v3
+
+    - name: Copy .env file
+      ansible.builtin.copy:
+        src: .env
+        dest: /opt/tinyauth/.env
+        mode: '0600'
+
+    - name: Create Traefik container
+      containers.podman.podman_container:
+        name: traefik
+        image: docker.io/traefik:v3.4
+        command: --api.insecure=true --providers.docker
+        ports:
+          - "80:80"
+        volumes:
+          - "{{ lookup('env', 'XDG_RUNTIME_DIR') }}/podman/podman.sock:/var/run/docker.sock:ro"
+        network: auth
+        state: started
+        restart_policy: always
+
+    - name: Create Whoami container
+      containers.podman.podman_container:
+        name: whoami
+        image: traefik/whoami:latest
+        network: auth
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.nginx.rule: "Host(`whoami.example.com`)"
+          traefik.http.routers.nginx.middlewares: "tinyauth"
+        state: started
+        restart_policy: always
+
+    - name: Create TinyAuth container
+      containers.podman.podman_container:
+        name: tinyauth
+        image: ghcr.io/steveiliop56/tinyauth:v3
+        env_file: /opt/tinyauth/.env
+        network: auth
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.tinyauth.rule: "Host(`tinyauth.example.com`)"
+          traefik.http.middlewares.tinyauth.forwardauth.address: "http://tinyauth:3000/api/auth/traefik"
+        state: started
+        restart_policy: always

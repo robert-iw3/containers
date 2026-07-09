@@ -1,0 +1,115 @@
+---
+- name: Sets Nomad arch -> linux_amd64
+  set_fact:
+    arch: linux_amd64
+  when: ansible_system == "Linux"
+
+- name: Sets Nomad arch -> darwin_amd64
+  set_fact:
+    arch: darwin_amd64
+  when: ansible_system == "Darwin"
+
+- name: Creates configuration directories
+  file:
+    path="{{ item }}"
+    owner={{ nomad.user | default('root') }}
+    group={{ nomad.group  | default('staff') }}
+    mode=755
+    state=directory
+  sudo: yes
+  with_items:
+    - "{{ nomad.dirs }}"
+  tags:
+    - hashicorp
+    - nomad
+    - install
+    - setup
+
+
+- name: Setup nomad config @ bootstrap box
+  when: "'nomad-bootstrap' in group_names"
+  template:
+    src="../templates/nomad-bootstrap.hcl.j2"
+    dest="{{ nomad.config.dir }}/config.hcl"
+    force=yes
+    owner={{ nomad.user }}
+    group={{ nomad.group }}
+  sudo: yes
+  register: bootstrap_obj
+  tags:
+    - nomad
+    - setup
+    - config
+
+- name: Setup nomad config @  server boxes
+  when: "'nomad-servers' in group_names and 'nomad-bootstrap' not in group_names"
+  template:
+    src="../templates/nomad-server.hcl.j2"
+    dest="{{ nomad.config.dir }}/config.hcl"
+    force=yes
+    owner={{ nomad.user }}
+    group={{ nomad.group }}
+  sudo: yes
+  tags:
+    - nomad
+    - setup
+    - config
+
+- name: Setup nomad config @ client boxes
+  when: "'nomad-clients' in group_names"
+  template:
+    src="../templates/nomad-client.hcl.j2"
+    dest="{{ nomad.config.dir }}/config.hcl"
+    force=yes
+    group={{ nomad.group }}
+    owner={{ nomad.user }}
+  sudo: yes
+  tags:
+    - nomad
+    - setup
+    - config
+
+- name: Setup nomad service config file
+  template:
+    src="../templates/nomad.conf.j2"
+    dest="{{ nomad.config.service_file }}"
+    owner=root
+    group=root
+  sudo: yes
+  tags:
+    - nomad
+    - setup
+    - config
+
+- name: Start Nomad boostrap
+  service: name=nomad state=started
+  tags:
+    - nomad
+    - service
+
+
+- name: Setup Nomad's Env Vars
+  template:
+    src="../templates/nomad.sh.j2"
+    dest="/etc/profile.d/nomad.sh"
+    owner=root
+    group=root
+    mode=644
+  sudo: yes
+  tags:
+    - nomad
+    - env_vars
+
+- name: Restart Nomad boostrap
+  service: name=nomad state=restarted
+  when: "'nomad-bootstrap' in group_names"
+  tags:
+    - nomad
+    - service
+
+- name: Restart Nomad servers and clients
+  service: name=consul state=restarted
+  when: "'nomad-bootstrap' not in group_names"
+  tags:
+    - nomad
+    - service

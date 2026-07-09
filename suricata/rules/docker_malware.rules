@@ -1,0 +1,49 @@
+# Suricata rules for detecting Docker API-targeting malware
+# Covers Tor domains, webhook URL, file hashes, and behavioral patterns
+
+# Rule 1: Detect DNS queries to malicious Tor domains
+alert dns any any -> any any (msg:"Docker Malware Tor Domain DNS Query"; \
+dns_query; content:"|wtxqf54djhp5pskv2lfyduub5ievxbyvlzjgjopk6hxge5umombr63ad.onion|"; nocase; \
+classtype:trojan-activity; sid:1000003; rev:1; metadata:malware Docker_API_Malware;)
+
+alert dns any any -> any any (msg:"Docker Malware Tor Domain DNS Query (Binary Download)"; \
+dns_query; content:"|2hdv5kven4m422wx4dmqabotumkeisrstzkzaotvuhwx3aebdig573qd.onion|"; nocase; \
+classtype:trojan-activity; sid:1000004; rev:1; metadata:malware Docker_API_Malware;)
+
+# Rule 2: Detect HTTP POST to webhook.site (Telnet credential exfiltration)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"Docker Malware Webhook Credential Exfiltration"; \
+flow:established,to_server; http.method; content:"POST"; http.host; content:"webhook.site"; http.uri; \
+content:"/4fea5cbb-8863-4f25-862a-fd8f02095207"; classtype:trojan-activity; sid:1000005; rev:1; metadata:malware Docker_API_Malware;)
+
+# Rule 3: Detect Docker API access attempts (port 2375)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"Suspicious Docker API Access Attempt"; \
+flow:to_server; content:"POST"; http_method; content:"/v1"; http_uri; content:"create"; http_uri; \
+classtype:attempted-admin; sid:1000006; rev:1; metadata:malware Docker_API_Malware;)
+
+# Rule 4: Detect Base64-encoded commands in HTTP requests to Docker API
+alert tcp $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"Docker Malware Base64 Command in Docker API Request"; \
+flow:to_server; content:"POST"; http_method; content:"/containers/create"; http_uri; content:"Cmd"; http_raw_body; \
+pcre:"/echo\s+[A-Za-z0-9+/=]{20,}\s*\|\s*base64\s*-d\s*\|\s*sh/i"; classtype:trojan-activity; sid:1000007; rev:1; metadata:malware Docker_API_Malware;)
+
+# Rule 5: Detect file hashes of malicious binaries/scripts
+alert file $HOME_NET any -> any any (msg:"Docker Malware File Hash Detected (docker-init.sh)"; \
+filemd5:docker_malware_hashes.txt; content:"C38e013ed9aa1ef46411bef9605f7a41823f3eefebb8b30b9e35f39723c14d7c"; \
+classtype:trojan-activity; sid:1000008; rev:1; metadata:malware Docker_API_Malware;)
+
+alert file $HOME_NET any -> any any (msg:"Docker Malware File Hash Detected (system)"; \
+filemd5:docker_malware_hashes.txt; content:"649974453ed40b72d08d378d72d43161ed5bd093a4f80eb5285f75e16fedbeb2"; \
+classtype:trojan-activity; sid:1000009; rev:1; metadata:malware Docker_API_Malware;)
+
+alert file $HOME_NET any -> any any (msg:"Docker Malware File Hash Detected (dockerd)"; \
+filemd5:docker_malware_hashes.txt; content:"9451d3dc4b0ff9ea6afa503ffbfcd877944cac0860d6a0b8779c2bb5d03d3446"; \
+classtype:trojan-activity; sid:1000010; rev:1; metadata:malware Docker_API_Malware;)
+
+# Notes:
+# - Rule 1-2: Detect DNS queries to Tor domains used for C2 and binary downloads.
+# - Rule 3: Flags external connections to Docker API port 2375, focusing on container creation attempts.
+# - Rule 4: Detects Base64-encoded commands in Docker API POST requests, a hallmark of this malware's initial access.
+# - Rule 5: Matches MD5 hashes of known malicious files (docker-init.sh, system, dockerd) using a hash list file.
+# - Place docker_malware_hashes.txt in /etc/suricata/data/ and reference in suricata.yaml.
+# - Test with tcpreplay or simulated traffic to port 2375 or Tor domains.
+# - For historical analysis, check logs for these IOCs and monitor new containers mounting /hostroot or /etc.
+# - Consider thresholding (e.g., threshold: type both, track by_src, count 1, seconds 300) to reduce noise.

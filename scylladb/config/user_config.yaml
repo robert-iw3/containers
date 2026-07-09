@@ -1,0 +1,74 @@
+platform: docker
+db_type: enterprise-sharded
+num_datacenters: 1
+num_racks: 2
+nodes_per_rack: 3
+storage_gb: 100
+ram_gb: 16
+num_tenants: 20  # 1 for single DB, 100 for enterprise
+root_username: admin
+root_password: changeme  # Use Vault in production
+tls_enabled: true
+cert_path: ./certs
+ca_cn: ScyllaDB CA
+node_cn: ScyllaDB Node
+cluster_cn: ScyllaDB Cluster
+san: dns:localhost,ip:127.0.0.1  # Customize SANs for production
+cert_days: 365
+data_path: ./data
+image: scylladb/scylla-enterprise:5.4
+tenant_prefix: tenant_
+app_user_role: MODIFY
+tenant_config:
+  keyspaces:
+    - name: orders
+      replication:
+        class: SimpleStrategy
+        replication_factor: 3
+      tables:
+        - name: data
+          columns:
+            - name: order_id
+              type: uuid
+            - name: customer_id
+              type: text
+            - name: order_date
+              type: timestamp
+            - name: amount
+              type: decimal
+          partition_key: customer_id
+          clustering_key: order_date
+          indexes:
+            - name: order_id_idx
+              column: order_id
+      initial_data:
+        - table: data
+          rows:
+            - order_id: uuid()
+              customer_id: "cust_1"
+              order_date: "2025-09-07T00:00:00Z"
+              amount: 99.99
+    - name: users
+      replication:
+        class: SimpleStrategy
+        replication_factor: 3
+      tables:
+        - name: profiles
+          columns:
+            - name: user_id
+              type: text
+            - name: email
+              type: text
+            - name: created_at
+              type: timestamp
+          partition_key: user_id
+          indexes:
+            - name: email_idx
+              column: email
+      initial_data:
+        - table: profiles
+          rows:
+            - user_id: "user_1"
+              email: "user1@example.com"
+              created_at: "2025-09-07T00:00:00Z"
+    # Add more keyspaces or leave empty for defaults

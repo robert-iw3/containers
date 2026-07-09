@@ -1,0 +1,24 @@
+- name: Deploy SaltStack to Kubernetes
+  hosts: k8s_control
+  become: yes
+  tasks:
+    - name: Ensure namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
+    - name: Deploy Fluentd ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../generated/fluentd-config.yml"
+
+    - name: Deploy SaltStack manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+      loop:
+        - "{{ playbook_dir }}/../generated/salt-deployment.yml"
+        - "{{ playbook_dir }}/../generated/salt-service.yml"
+        - "{{ playbook_dir }}/../generated/network-policy.yml"

@@ -1,0 +1,645 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-secrets
+  namespace: keycloak
+type: Opaque
+stringData:
+  postgresql-username: "${POSTGRESQL_USERNAME}"
+  postgresql-password: "${POSTGRESQL_PASSWORD}"
+  postgresql-replication-user: "${POSTGRESQL_REPLICATION_USER}"
+  postgresql-replication-password: "${POSTGRESQL_REPLICATION_PASSWORD}"
+  keycloak-user: "${KEYCLOAK_USER}"
+  keycloak-password: "${KEYCLOAK_PASSWORD}"
+  traefik-auth-users: "traefikadmin:${TRAEFIK_AUTH_HASHED_PASSWORD}"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-config
+  namespace: keycloak
+data:
+  postgresql-database: "${POSTGRESQL_DATABASE}"
+  db-vendor: "${DB_VENDOR}"
+  db-addr: "postgres.keycloak.svc.cluster.local"
+  db-port: "5432"
+  jgroups-discovery-protocol: "${JGROUPS_DISCOVERY_PROTOCOL}"
+  jgroups-discovery-properties: "${JGROUPS_DISCOVERY_PROPERTIES}"
+  proxy-address-forwarding: "${PROXY_ADDRESS_FORWARDING}"
+  keycloak-loglevel: "${KEYCLOAK_LOGLEVEL}"
+  letsencrypt-email: "${LETSENCRYPT_EMAIL}"
+  traefik.yml: |
+    log:
+      level: INFO
+    accessLog: {}
+    api:
+      dashboard: true
+      insecure: false
+    ping:
+      entryPoint: ping
+    entryPoints:
+      ping:
+        address: ":8082"
+      web:
+        address: ":80"
+      websecure:
+        address: ":443"
+    providers:
+      kubernetesCRD:
+        enabled: true
+        namespaces:
+        - keycloak
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: "${LETSENCRYPT_EMAIL}"
+          storage: /etc/traefik/acme/acme.json
+          tlsChallenge: true
+    metrics:
+      prometheus:
+        buckets: [0.1, 0.3, 1.2, 5.0]
+    global:
+      checkNewVersion: true
+      sendAnonymousUsage: false
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak-postgres
+  namespace: keycloak
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak-postgres-backups
+  namespace: keycloak
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: traefik-certificates
+  namespace: keycloak
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-cert
+  namespace: keycloak
+spec:
+  secretName: keycloak-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - keycloak.io
+  - traefik.io
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-network-policy
+  namespace: keycloak
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: keycloak
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8443
+    - protocol: TCP
+      port: 5432
+  - from:
+    - podSelector:
+        matchLabels:
+          app: traefik
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: keycloak
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: postgres
+        image: docker.io/bitnami/postgresql:latest
+        env:
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: postgresql-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: postgresql-password
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: postgresql-database
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: keycloak-postgres
+          mountPath: /bitnami/postgresql
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1024Mi"
+          requests:
+            cpu: "0.25"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-d", "${POSTGRESQL_DATABASE}", "-U", "${POSTGRESQL_USERNAME}"]
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 5
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: postgres
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: keycloak-postgres
+        persistentVolumeClaim:
+          claimName: keycloak-postgres
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: keycloak
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  clusterIP: None
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533
+        fsGroup: 65533
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:latest
+        env:
+        - name: DB_VENDOR
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: db-vendor
+        - name: DB_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: db-addr
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: db-port
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: postgresql-database
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: postgresql-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: postgresql-password
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: keycloak-user
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secrets
+              key: keycloak-password
+        - name: JGROUPS_DISCOVERY_PROTOCOL
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: jgroups-discovery-protocol
+        - name: JGROUPS_DISCOVERY_PROPERTIES
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: jgroups-discovery-properties
+        - name: PROXY_ADDRESS_FORWARDING
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: proxy-address-forwarding
+        - name: KEYCLOAK_LOGLEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: keycloak-loglevel
+        command:
+        - "/opt/keycloak/bin/kc.sh"
+        - "start"
+        - "--optimized"
+        - "--https-port=8443"
+        - "--db-pool-max-size=20"
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: keycloak-config
+          mountPath: /opt/keycloak/conf/keycloak.conf
+          subPath: keycloak.conf
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1024Mi"
+          requests:
+            cpu: "0.25"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 5
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: keycloak-config
+        configMap:
+          name: keycloak-config
+          items:
+          - key: keycloak.conf
+            path: keycloak.conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8443
+    targetPort: 8443
+    protocol: TCP
+    name: https
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: keycloak
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      containers:
+      - name: traefik
+        image: docker.io/traefik:latest
+        args:
+        - "--configfile=/etc/traefik/traefik.yml"
+        ports:
+        - name: web
+          containerPort: 80
+        - name: websecure
+          containerPort: 443
+        - name: ping
+          containerPort: 8082
+        volumeMounts:
+        - name: traefik-config
+          mountPath: /etc/traefik/traefik.yml
+          subPath: traefik.yml
+        - name: traefik-certificates
+          mountPath: /etc/traefik/acme
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+            # NET_BIND_SERVICE: binding ports 80/443 requires this capability when not running as root
+            add: ["NET_BIND_SERVICE"]
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 5
+      volumes:
+      - name: traefik-config
+        configMap:
+          name: keycloak-config
+          items:
+          - key: traefik.yml
+            path: traefik.yml
+      - name: traefik-certificates
+        persistentVolumeClaim:
+          claimName: traefik-certificates
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: keycloak
+spec:
+  selector:
+    app: traefik
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: web
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: websecure
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+    name: ping
+  type: LoadBalancer
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`keycloak.io`)
+    kind: Rule
+    services:
+    - name: keycloak
+      port: 8080
+    middlewares:
+    - name: compress
+  tls:
+    secretName: keycloak-tls
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik
+  namespace: keycloak
+spec:
+  entryPoints:
+  - web
+  - websecure
+  routes:
+  - match: Host(`traefik.io`)
+    kind: Rule
+    services:
+    - kind: TraefikService
+      name: api@internal
+    middlewares:
+    - name: redirect-to-https
+  - match: Host(`traefik.io`)
+    kind: Rule
+    services:
+    - kind: TraefikService
+      name: api@internal
+    middlewares:
+    - name: authtraefik
+  tls:
+    secretName: keycloak-tls
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: keycloak
+spec:
+  compress: {}
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-https
+  namespace: keycloak
+spec:
+  redirectScheme:
+    scheme: https
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: authtraefik
+  namespace: keycloak
+spec:
+  basicAuth:
+    secret: keycloak-secrets
+    usersKey: traefik-auth-users
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: keycloak
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            fsGroup: 1001
+          containers:
+          - name: backup
+            image: docker.io/bitnami/postgresql:latest
+            command:
+            - sh
+            - -c
+            - |
+              pg_dump -h postgres.keycloak.svc.cluster.local -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/keycloak-postgres/backups/keycloak-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz
+              find /srv/keycloak-postgres/backups -type f -mtime +7 -delete
+            env:
+            - name: POSTGRESQL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: postgresql-username
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: postgresql-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: postgresql-database
+            volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: keycloak-postgres-backups
+              mountPath: /srv/keycloak-postgres/backups
+            resources:
+              limits:
+                cpu: "0.5"
+                memory: "512Mi"
+              requests:
+                cpu: "0.1"
+                memory: "128Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+          restartPolicy: OnFailure
+          volumes:
+          - name: localtime
+            hostPath:
+              path: /etc/localtime
+          - name: keycloak-postgres-backups
+            persistentVolumeClaim:
+              claimName: keycloak-postgres-backups

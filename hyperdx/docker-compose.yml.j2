@@ -1,0 +1,155 @@
+---
+networks:
+  hyperdx:
+
+volumes:
+  db-data:
+  ch-data:
+  ch-logs:
+  nginx-logs:
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  env_file:
+    - .env
+  networks:
+    - hyperdx
+  restart: unless-stopped
+
+name: hdx-oss
+services:
+{% if use_all_in_one %}
+  hyperdx-all-in-one:
+    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one:{{ hyperdx_version }}
+    ports:
+      - 4317:4317
+      - 4318:4318
+      - ${HYPERDX_APP_PORT}:${HYPERDX_APP_PORT}
+      - 8123:8123
+    environment:
+      HYPERDX_API_KEY: ${HYPERDX_API_KEY}
+      HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL}
+      BETA_CH_OTEL_JSON_SCHEMA_ENABLED: {{ 'true' if enable_json_schema else 'false' }}
+    volumes:
+      - ch-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${HYPERDX_APP_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    resources:
+      limits:
+        memory: 2G
+        cpus: 1.5
+{% else %}
+  nginx:
+    <<: *common-vars-apps
+    image: nginx:1.27.3
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: mongo:5.0.14-focal
+    <<: *common-vars-apps
+    volumes:
+      - db-data:/data/db
+    command: {% if mongo_password %}--auth{% endif %}
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  otel-collector:
+    <<: *common-vars-apps
+    image: docker.hyperdx.io/hyperdx/hyperdx-otel-collector:{{ hyperdx_version }}
+    environment:
+      CLICKHOUSE_ENDPOINT: 'tcp://ch-server:9000?dial_timeout=10s'
+      HYPERDX_OTEL_EXPORTER_CLICKHOUSE_DATABASE: ${HYPERDX_OTEL_EXPORTER_CLICKHOUSE_DATABASE}
+      HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL}
+      OPAMP_SERVER_URL: 'http://app:${HYPERDX_OPAMP_PORT}'
+      BETA_CH_OTEL_JSON_SCHEMA_ENABLED: {{ 'true' if enable_json_schema else 'false' }}
+    depends_on:
+      ch-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:13133"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    resources:
+      limits:
+        memory: 1G
+        cpus: 1.0
+
+  app:
+    <<: *common-vars-apps
+    image: docker.hyperdx.io/hyperdx/hyperdx:{{ hyperdx_version }}
+    ports:
+      - ${HYPERDX_API_PORT}:${HYPERDX_API_PORT}
+      - ${HYPERDX_APP_PORT}:${HYPERDX_APP_PORT}
+    environment:
+      FRONTEND_URL: ${HYPERDX_APP_URL}:${HYPERDX_APP_PORT}
+      HYPERDX_API_KEY: ${HYPERDX_API_KEY}
+      HYPERDX_API_PORT: ${HYPERDX_API_PORT}
+      HYPERDX_APP_PORT: ${HYPERDX_APP_PORT}
+      HYPERDX_APP_URL: ${HYPERDX_APP_URL}
+      HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL}
+      MINER_API_URL: 'http://miner:5123'
+      MONGO_URI: 'mongodb://db:27017/hyperdx{% if mongo_password %}?authSource=admin{% endif %}'
+      SERVER_URL: http://127.0.0.1:${HYPERDX_API_PORT}
+      OPAMP_PORT: ${HYPERDX_OPAMP_PORT}
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4318'
+      OTEL_SERVICE_NAME: 'hdx-oss-app'
+      USAGE_STATS_ENABLED: ${USAGE_STATS_ENABLED}
+      DEFAULT_CONNECTIONS: '[{"name":"Local ClickHouse","host":"http://ch-server:8123","username":"default","password":"${CLICKHOUSE_API_PASSWORD}"}]'
+      DEFAULT_SOURCES: '[...] '  # Use original truncated JSON
+      BETA_CH_OTEL_JSON_SCHEMA_ENABLED: {{ 'true' if enable_json_schema else 'false' }}
+    depends_on:
+      ch-server:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${HYPERDX_APP_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ch-server:
+    image: clickhouse/clickhouse-server:25.6-alpine
+    <<: *common-vars-apps
+    ports:
+      - 8123:8123
+      - 9000:9000
+    environment:
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - ./docker/clickhouse/local/config.xml:/etc/clickhouse-server/config.xml:ro
+      - ./docker/clickhouse/local/users.xml:/etc/clickhouse-server/users.xml:ro
+      - ch-data:/var/lib/clickhouse
+      - ch-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    resources:
+      limits:
+        memory: 4G
+        cpus: 2.0
+{% endif %}

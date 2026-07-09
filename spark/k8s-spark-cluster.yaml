@@ -1,0 +1,130 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: spark
+spec:
+  selector:
+    app: spark-master
+  ports:
+    - {name: web-ui, port: 8080, targetPort: 8080}
+    - {name: master, port: 7077, targetPort: 7077}
+    - {name: master-rest, port: 6066, targetPort: 6066}
+  clusterIP: None            # headless: workers resolve spark-master directly
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: spark
+  labels: {app: spark-master}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: spark-master}
+  template:
+    metadata:
+      labels: {app: spark-master}
+    spec:
+      containers:
+        - name: spark-master
+          image: spark-master:4.1.2-hadoop3
+          ports: [{containerPort: 8080}, {containerPort: 7077}, {containerPort: 6066}]
+          resources:
+            requests: {cpu: "500m", memory: "1Gi"}
+            limits: {cpu: "2", memory: "2Gi"}
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: spark
+  labels: {app: spark-worker}
+spec:
+  # Worker replicas ARE the cluster's compute capacity; scale via the HPA below
+  # or `kubectl scale deployment/spark-worker --replicas=N`.
+  replicas: 3
+  selector:
+    matchLabels: {app: spark-worker}
+  template:
+    metadata:
+      labels: {app: spark-worker}
+    spec:
+      containers:
+        - name: spark-worker
+          image: spark-worker:4.1.2-hadoop3
+          ports: [{containerPort: 8081}]
+          env:
+            # This was missing before — without it the worker can't find the master.
+            - name: SPARK_MASTER
+              value: "spark://spark-master:7077"
+            - name: SPARK_WORKER_CORES
+              value: "2"
+            - name: SPARK_WORKER_MEMORY
+              value: "2g"
+          resources:
+            requests: {cpu: "1", memory: "2Gi"}
+            limits: {cpu: "2", memory: "3Gi"}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: spark-worker
+  namespace: spark
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: spark-worker
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300   # drain gracefully before removing workers
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history
+  namespace: spark
+spec:
+  selector: {app: spark-history}
+  ports:
+    - {name: history, port: 18080, targetPort: 18080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history
+  namespace: spark
+  labels: {app: spark-history}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: spark-history}
+  template:
+    metadata:
+      labels: {app: spark-history}
+    spec:
+      containers:
+        - name: spark-history
+          image: spark-history-server:4.1.2-hadoop3
+          ports: [{containerPort: 18080}]
+          resources:
+            requests: {cpu: "250m", memory: "512Mi"}
+            limits: {cpu: "1", memory: "1Gi"}

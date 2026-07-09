@@ -1,0 +1,24 @@
+[Unit]
+Description=Nomad
+Documentation=https://www.nomadproject.io/docs
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart={{ nomad_install_dir }}/nomad agent -config={{ nomad_config_dir }}/nomad.hcl
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=5
+User={{ nomad_user }}
+Group={{ nomad_group }}
+LimitNOFILE={{ nomad_ulimits_nofile }}
+LimitNPROC={{ nomad_ulimits_nproc }}
+StandardOutput=append:{{ nomad_log_dir }}/nomad.log
+StandardError=append:{{ nomad_log_dir }}/nomad.log
+Environment="NOMAD_ADDR=https://{{ nomad_bind_addr }}:4646"
+Environment="NOMAD_CACERT={{ nomad_tls_ca_file }}"
+PIDFile=/run/nomad.pid
+
+[Install]
+WantedBy=multi-user.target

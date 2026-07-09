@@ -1,0 +1,34 @@
+---
+# Converges the spark_node role on one instance running BOTH a master and a
+# worker (single-host mode of the multi-host role) and verifies a Spark job runs
+# end to end. Requires the spark-master/spark-worker/spark-submit images to be
+# loadable inside the instance — prepare.yml loads them from the host's podman.
+driver:
+  name: podman
+
+platforms:
+  - name: spark-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - spark_master
+      - spark_workers
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      spark-molecule:
+        spark_advertise_host: "127.0.0.1"
+        spark_worker_cores: 2
+        spark_worker_memory: "2g"
+        spark_registry: ""
+
+verifier:
+  name: ansible

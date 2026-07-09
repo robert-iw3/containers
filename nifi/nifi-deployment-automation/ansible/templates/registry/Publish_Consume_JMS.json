@@ -1,0 +1,1470 @@
+{
+   "template":{
+      "description":"This template is an example of how to configure and use the Publish and Consume JMS processors.",
+      "name":"Publish Consume JMS",
+      "snippet":{
+         "connections":[
+            {
+               "id":"3f9285d4-52a1-4596-b96b-779012ea4b70",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"3115f1fa-4562-425d-b677-6cec1e47a520",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"74d8bb8d-83e2-4230-a419-286faa7f4e06",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"0ee25fd9-3d03-4fe0-91ab-fbdfb87a6957",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"67fdf167-354a-475e-8019-00080c0d4ca3",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"3115f1fa-4562-425d-b677-6cec1e47a520",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"321b545d-0cc3-4cb7-9cb6-bbdbf4cf4c4b",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"da8a88d7-ea32-421b-a0c8-3f4e000af524",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"cedca257-dfad-4f15-a6fc-e9e69e2f41f0",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"25207230-2aa8-4dde-85d3-fb9fe87e212b",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"dba59a3c-cd92-4905-843a-027e68694431",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"failure",
+               "source":{
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"3115f1fa-4562-425d-b677-6cec1e47a520",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "controllerServices":{
+            "id":"5d66db13-6a4b-443d-9abe-acd7e1bce46d",
+            "comments":"",
+            "descriptors":{
+               "entry":[
+                  {
+                     "key":"cf",
+                     "value":{
+                        "description":"A fully qualified name of the JMS ConnectionFactory implementation class (i.e., org.apache.activemq.ActiveMQConnectionFactory)",
+                        "displayName":"MQ ConnectionFactory Implementation",
+                        "dynamic":"false",
+                        "name":"cf",
+                        "required":"true",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  },
+                  {
+                     "key":"cflib",
+                     "value":{
+                        "description":"Path to the directory with additional resources (i.e., JARs, configuration files etc.) to be added to the classpath. Such resources typically represent target MQ client libraries for the ConnectionFactory implementation.",
+                        "displayName":"MQ Client Libraries path (i.e., /usr/jms/lib)",
+                        "dynamic":"false",
+                        "name":"cflib",
+                        "required":"true",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  },
+                  {
+                     "key":"broker",
+                     "value":{
+                        "description":"URI pointing to the network location of the JMS Message broker. For example, 'tcp://myhost:61616' for ActiveMQ or 'myhost:1414' for IBM MQ",
+                        "displayName":"Broker URI",
+                        "dynamic":"false",
+                        "name":"broker",
+                        "required":"true",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  },
+                  {
+                     "key":"SSL Context Service",
+                     "value":{
+                        "description":"The SSL Context Service used to provide client certificate information for TLS/SSL connections.",
+                        "displayName":"SSL Context Service",
+                        "dynamic":"false",
+                        "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                        "name":"SSL Context Service",
+                        "required":"false",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  }
+               ]
+            },
+            "name":"JMSConnectionFactoryProvider",
+            "properties":{
+               "entry":[
+                  {
+                     "key":"cf",
+                     "value":"org.apache.activemq.ActiveMQConnectionFactory"
+                  },
+                  {
+                     "key":"cflib",
+                     "value":"/Users/jpercivall/Downloads/apache-activemq-5.13.0/lib/"
+                  },
+                  {
+                     "key":"broker",
+                     "value":"tcp://localhost:61616"
+                  },
+                  {
+                     "key":"SSL Context Service"
+                  }
+               ]
+            },
+            "referencingComponents":[
+               {
+                  "activeThreadCount":"0",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":{
+                              "description":"User Name used for authentication and authorization.",
+                              "displayName":"User Name",
+                              "dynamic":"false",
+                              "name":"User Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Password",
+                           "value":{
+                              "description":"Password used for authentication and authorization.",
+                              "displayName":"Password",
+                              "dynamic":"false",
+                              "name":"Password",
+                              "required":"false",
+                              "sensitive":"true",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":{
+                              "description":"The name of the JMS Destination. Usually provided by the administrator (e.g., 'topic://myTopic').",
+                              "displayName":"Destination Name",
+                              "dynamic":"false",
+                              "name":"Destination Name",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Type",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"QUEUE",
+                                    "value":"QUEUE"
+                                 },
+                                 {
+                                    "displayName":"TOPIC",
+                                    "value":"TOPIC"
+                                 }
+                              ],
+                              "defaultValue":"QUEUE",
+                              "description":"The type of the JMS Destination. Could be one of 'QUEUE' or 'TOPIC'. Usually provided by the administrator. Defaults to 'TOPIC",
+                              "displayName":"Destination Type",
+                              "dynamic":"false",
+                              "name":"Destination Type",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Session Cache size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The maximum limit for the number of cached Sessions.",
+                              "displayName":"Session Cache size",
+                              "dynamic":"false",
+                              "name":"Session Cache size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"JMSConnectionFactoryProvider",
+                                 "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                              },
+                              "description":"The Controller Service that is used to obtain ConnectionFactory",
+                              "displayName":"Connection Factory Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition",
+                              "name":"Connection Factory Service",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"cedca257-dfad-4f15-a6fc-e9e69e2f41f0",
+                  "name":"ConsumeJMS",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":"admin"
+                        },
+                        {
+                           "key":"Password",
+                           "value":"********"
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":"test"
+                        },
+                        {
+                           "key":"Destination Type"
+                        },
+                        {
+                           "key":"Session Cache size"
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                        }
+                     ]
+                  },
+                  "referenceType":"Processor",
+                  "state":"RUNNING",
+                  "type":"org.apache.nifi.jms.processors.ConsumeJMS"
+               },
+               {
+                  "activeThreadCount":"0",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":{
+                              "description":"User Name used for authentication and authorization.",
+                              "displayName":"User Name",
+                              "dynamic":"false",
+                              "name":"User Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Password",
+                           "value":{
+                              "description":"Password used for authentication and authorization.",
+                              "displayName":"Password",
+                              "dynamic":"false",
+                              "name":"Password",
+                              "required":"false",
+                              "sensitive":"true",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":{
+                              "description":"The name of the JMS Destination. Usually provided by the administrator (e.g., 'topic://myTopic').",
+                              "displayName":"Destination Name",
+                              "dynamic":"false",
+                              "name":"Destination Name",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Type",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"QUEUE",
+                                    "value":"QUEUE"
+                                 },
+                                 {
+                                    "displayName":"TOPIC",
+                                    "value":"TOPIC"
+                                 }
+                              ],
+                              "defaultValue":"QUEUE",
+                              "description":"The type of the JMS Destination. Could be one of 'QUEUE' or 'TOPIC'. Usually provided by the administrator. Defaults to 'TOPIC",
+                              "displayName":"Destination Type",
+                              "dynamic":"false",
+                              "name":"Destination Type",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Session Cache size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The maximum limit for the number of cached Sessions.",
+                              "displayName":"Session Cache size",
+                              "dynamic":"false",
+                              "name":"Session Cache size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"JMSConnectionFactoryProvider",
+                                 "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                              },
+                              "description":"The Controller Service that is used to obtain ConnectionFactory",
+                              "displayName":"Connection Factory Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition",
+                              "name":"Connection Factory Service",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "groupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+                  "id":"3115f1fa-4562-425d-b677-6cec1e47a520",
+                  "name":"PublishJMS",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":"admin"
+                        },
+                        {
+                           "key":"Password",
+                           "value":"********"
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":"test"
+                        },
+                        {
+                           "key":"Destination Type"
+                        },
+                        {
+                           "key":"Session Cache size"
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                        }
+                     ]
+                  },
+                  "referenceType":"Processor",
+                  "state":"RUNNING",
+                  "type":"org.apache.nifi.jms.processors.PublishJMS"
+               }
+            ],
+            "state":"ENABLED",
+            "type":"org.apache.nifi.jms.cf.JMSConnectionFactoryProvider"
+         },
+         "processors":[
+            {
+               "id":"cedca257-dfad-4f15-a6fc-e9e69e2f41f0",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"303.0",
+                  "y":"354.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":{
+                              "description":"User Name used for authentication and authorization.",
+                              "displayName":"User Name",
+                              "dynamic":"false",
+                              "name":"User Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Password",
+                           "value":{
+                              "description":"Password used for authentication and authorization.",
+                              "displayName":"Password",
+                              "dynamic":"false",
+                              "name":"Password",
+                              "required":"false",
+                              "sensitive":"true",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":{
+                              "description":"The name of the JMS Destination. Usually provided by the administrator (e.g., 'topic://myTopic').",
+                              "displayName":"Destination Name",
+                              "dynamic":"false",
+                              "name":"Destination Name",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Type",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"QUEUE",
+                                    "value":"QUEUE"
+                                 },
+                                 {
+                                    "displayName":"TOPIC",
+                                    "value":"TOPIC"
+                                 }
+                              ],
+                              "defaultValue":"QUEUE",
+                              "description":"The type of the JMS Destination. Could be one of 'QUEUE' or 'TOPIC'. Usually provided by the administrator. Defaults to 'TOPIC",
+                              "displayName":"Destination Type",
+                              "dynamic":"false",
+                              "name":"Destination Type",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Session Cache size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The maximum limit for the number of cached Sessions.",
+                              "displayName":"Session Cache size",
+                              "dynamic":"false",
+                              "name":"Session Cache size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"JMSConnectionFactoryProvider",
+                                 "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                              },
+                              "description":"The Controller Service that is used to obtain ConnectionFactory",
+                              "displayName":"Connection Factory Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition",
+                              "name":"Connection Factory Service",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":"admin"
+                        },
+                        {
+                           "key":"Password"
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":"test"
+                        },
+                        {
+                           "key":"Destination Type"
+                        },
+                        {
+                           "key":"Session Cache size"
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"1 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ConsumeJMS",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All FlowFiles that are received from the JMS Destination are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.jms.processors.ConsumeJMS"
+            },
+            {
+               "id":"74d8bb8d-83e2-4230-a419-286faa7f4e06",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"769.0",
+                  "y":"109.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":{
+                              "description":"The size of the file that will be used",
+                              "displayName":"File Size",
+                              "dynamic":"false",
+                              "name":"File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The number of FlowFiles to be transferred in each invocation",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Data Format",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Binary",
+                                    "value":"Binary"
+                                 },
+                                 {
+                                    "displayName":"Text",
+                                    "value":"Text"
+                                 }
+                              ],
+                              "defaultValue":"Binary",
+                              "description":"Specifies whether the data should be Text or Binary",
+                              "displayName":"Data Format",
+                              "dynamic":"false",
+                              "name":"Data Format",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Unique FlowFiles",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles will get the same content but this offers much higher throughput",
+                              "displayName":"Unique FlowFiles",
+                              "dynamic":"false",
+                              "name":"Unique FlowFiles",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":"10 B"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Data Format",
+                           "value":"Text"
+                        },
+                        {
+                           "key":"Unique FlowFiles",
+                           "value":"true"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"1 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"GenerateFlowFile",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"",
+                  "name":"success"
+               },
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GenerateFlowFile"
+            },
+            {
+               "id":"3115f1fa-4562-425d-b677-6cec1e47a520",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"788.0",
+                  "y":"357.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":{
+                              "description":"User Name used for authentication and authorization.",
+                              "displayName":"User Name",
+                              "dynamic":"false",
+                              "name":"User Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Password",
+                           "value":{
+                              "description":"Password used for authentication and authorization.",
+                              "displayName":"Password",
+                              "dynamic":"false",
+                              "name":"Password",
+                              "required":"false",
+                              "sensitive":"true",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":{
+                              "description":"The name of the JMS Destination. Usually provided by the administrator (e.g., 'topic://myTopic').",
+                              "displayName":"Destination Name",
+                              "dynamic":"false",
+                              "name":"Destination Name",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Destination Type",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"QUEUE",
+                                    "value":"QUEUE"
+                                 },
+                                 {
+                                    "displayName":"TOPIC",
+                                    "value":"TOPIC"
+                                 }
+                              ],
+                              "defaultValue":"QUEUE",
+                              "description":"The type of the JMS Destination. Could be one of 'QUEUE' or 'TOPIC'. Usually provided by the administrator. Defaults to 'TOPIC",
+                              "displayName":"Destination Type",
+                              "dynamic":"false",
+                              "name":"Destination Type",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Session Cache size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The maximum limit for the number of cached Sessions.",
+                              "displayName":"Session Cache size",
+                              "dynamic":"false",
+                              "name":"Session Cache size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"JMSConnectionFactoryProvider",
+                                 "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                              },
+                              "description":"The Controller Service that is used to obtain ConnectionFactory",
+                              "displayName":"Connection Factory Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition",
+                              "name":"Connection Factory Service",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"User Name",
+                           "value":"admin"
+                        },
+                        {
+                           "key":"Password"
+                        },
+                        {
+                           "key":"Destination Name",
+                           "value":"test"
+                        },
+                        {
+                           "key":"Destination Type"
+                        },
+                        {
+                           "key":"Session Cache size"
+                        },
+                        {
+                           "key":"Connection Factory Service",
+                           "value":"5d66db13-6a4b-443d-9abe-acd7e1bce46d"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"PublishJMS",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"All FlowFiles that cannot be sent to JMS destination are routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"All FlowFiles that are sent to the JMS destination are routed to this relationship",
+                     "name":"success"
+                  }
+               ],
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.jms.processors.PublishJMS"
+            },
+            {
+               "id":"67fdf167-354a-475e-8019-00080c0d4ca3",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"647.0",
+                  "y":"593.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Log Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"trace",
+                                    "value":"trace"
+                                 },
+                                 {
+                                    "displayName":"debug",
+                                    "value":"debug"
+                                 },
+                                 {
+                                    "displayName":"info",
+                                    "value":"info"
+                                 },
+                                 {
+                                    "displayName":"warn",
+                                    "value":"warn"
+                                 },
+                                 {
+                                    "displayName":"error",
+                                    "value":"error"
+                                 }
+                              ],
+                              "defaultValue":"info",
+                              "description":"The Log Level to use when logging the Attributes",
+                              "displayName":"Log Level",
+                              "dynamic":"false",
+                              "name":"Log Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log Payload",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+                              "displayName":"Log Payload",
+                              "dynamic":"false",
+                              "name":"Log Payload",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Log",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+                              "displayName":"Attributes to Log",
+                              "dynamic":"false",
+                              "name":"Attributes to Log",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Ignore",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+                              "displayName":"Attributes to Ignore",
+                              "dynamic":"false",
+                              "name":"Attributes to Ignore",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log prefix",
+                           "value":{
+                              "description":"Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+                              "displayName":"Log prefix",
+                              "dynamic":"false",
+                              "name":"Log prefix",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Log Level"
+                        },
+                        {
+                           "key":"Log Payload"
+                        },
+                        {
+                           "key":"Attributes to Log"
+                        },
+                        {
+                           "key":"Attributes to Ignore"
+                        },
+                        {
+                           "key":"Log prefix"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"LogAttribute",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.LogAttribute"
+            },
+            {
+               "id":"dba59a3c-cd92-4905-843a-027e68694431",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"1045.0",
+                  "y":"593.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Log Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"trace",
+                                    "value":"trace"
+                                 },
+                                 {
+                                    "displayName":"debug",
+                                    "value":"debug"
+                                 },
+                                 {
+                                    "displayName":"info",
+                                    "value":"info"
+                                 },
+                                 {
+                                    "displayName":"warn",
+                                    "value":"warn"
+                                 },
+                                 {
+                                    "displayName":"error",
+                                    "value":"error"
+                                 }
+                              ],
+                              "defaultValue":"info",
+                              "description":"The Log Level to use when logging the Attributes",
+                              "displayName":"Log Level",
+                              "dynamic":"false",
+                              "name":"Log Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log Payload",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+                              "displayName":"Log Payload",
+                              "dynamic":"false",
+                              "name":"Log Payload",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Log",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+                              "displayName":"Attributes to Log",
+                              "dynamic":"false",
+                              "name":"Attributes to Log",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Ignore",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+                              "displayName":"Attributes to Ignore",
+                              "dynamic":"false",
+                              "name":"Attributes to Ignore",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log prefix",
+                           "value":{
+                              "description":"Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+                              "displayName":"Log prefix",
+                              "dynamic":"false",
+                              "name":"Log prefix",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Log Level"
+                        },
+                        {
+                           "key":"Log Payload"
+                        },
+                        {
+                           "key":"Attributes to Log"
+                        },
+                        {
+                           "key":"Attributes to Ignore"
+                        },
+                        {
+                           "key":"Log prefix"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"LogAttribute",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.LogAttribute"
+            },
+            {
+               "id":"da8a88d7-ea32-421b-a0c8-3f4e000af524",
+               "parentGroupId":"0a366dc7-4e1e-4d55-98c1-8a7e51c8ab08",
+               "position":{
+                  "x":"299.0",
+                  "y":"592.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Log Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"trace",
+                                    "value":"trace"
+                                 },
+                                 {
+                                    "displayName":"debug",
+                                    "value":"debug"
+                                 },
+                                 {
+                                    "displayName":"info",
+                                    "value":"info"
+                                 },
+                                 {
+                                    "displayName":"warn",
+                                    "value":"warn"
+                                 },
+                                 {
+                                    "displayName":"error",
+                                    "value":"error"
+                                 }
+                              ],
+                              "defaultValue":"info",
+                              "description":"The Log Level to use when logging the Attributes",
+                              "displayName":"Log Level",
+                              "dynamic":"false",
+                              "name":"Log Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log Payload",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+                              "displayName":"Log Payload",
+                              "dynamic":"false",
+                              "name":"Log Payload",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Log",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+                              "displayName":"Attributes to Log",
+                              "dynamic":"false",
+                              "name":"Attributes to Log",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Ignore",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+                              "displayName":"Attributes to Ignore",
+                              "dynamic":"false",
+                              "name":"Attributes to Ignore",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log prefix",
+                           "value":{
+                              "description":"Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+                              "displayName":"Log prefix",
+                              "dynamic":"false",
+                              "name":"Log prefix",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Log Level"
+                        },
+                        {
+                           "key":"Log Payload"
+                        },
+                        {
+                           "key":"Attributes to Log"
+                        },
+                        {
+                           "key":"Attributes to Ignore"
+                        },
+                        {
+                           "key":"Log prefix"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"LogAttribute",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"RUNNING",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.LogAttribute"
+            }
+         ]
+      },
+      "timestamp":"03/15/2020 14:51:13 EDT"
+   }
+}

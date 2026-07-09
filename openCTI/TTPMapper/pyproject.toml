@@ -1,0 +1,38 @@
+[project]
+name = "TTPMapper"
+version = "1.0.0"
+description = "MITRE ATT&CK Threat Report Parser and Mapper using DeepSeek"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+  { name="Rahmat Nurfauzi (@infosecn1nja)", email="rahmat.nf42@gmail.com" }
+]
+keywords = ["MITRE", "ATT&CK", "STIX", "Threat Intelligence", "DeepSeek", "CTI"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+  "requests>=2.28.0",
+  "beautifulsoup4>=4.11.0",
+  "html2text>=2020.1.16",
+  "PyPDF2>=3.0.0",
+  "colorama>=0.4.6",
+  "pycryptodome>=3.0"
+]
+
+[project.scripts]
+ttpmapper = "main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["core*"]
+
+[tool.setuptools]
+py-modules = ["main"]

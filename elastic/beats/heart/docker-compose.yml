@@ -1,0 +1,27 @@
+x-common-vars-apps: &common-vars-apps
+  networks:
+    - elastic
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+
+services:
+  heartbeat:
+    <<: *common-vars-apps
+    build:
+      context: .
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    command:
+      - -e
+      - --strict.perms=false
+    volumes:
+      - ./config/heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro,Z
+    environment:
+      HEARTBEAT_INTERNAL_PASSWORD: ${HEARTBEAT_INTERNAL_PASSWORD:-}
+      BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy

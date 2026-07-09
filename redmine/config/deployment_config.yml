@@ -1,0 +1,41 @@
+# Deployment configuration for Redmine
+deployment:
+  target: docker  # Options: docker, podman, kubernetes
+  ansible_inventory: ansible/inventory/hosts.yml
+  ansible_playbook_dir: ansible/playbooks
+
+redmine:
+  version: 6.1.2
+  port: 10445
+  http_port: 10083
+  secret_token: "generate_a_secure_token_here"
+  timezone: America/Denver
+
+postgres:
+  user: redmine
+  password: securepassword
+  db: redmine_production
+  port: 5432
+
+smtp:
+  enabled: false
+  domain: www.example.com
+  host: smtp.gmail.com
+  port: 587
+  user: mailer@example.com
+  password: securepassword
+  starttls: true
+
+haproxy:
+  http_port: 80
+  https_port: 443
+
+paths:
+  certs: ./certs
+  errors: ./errors
+  haproxy_config: ./haproxy.cfg
+  docker_socket: /var/run/docker.sock  # Update for Podman if needed
+
+kubernetes:
+  namespace: redmine
+  replicas: 2

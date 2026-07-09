@@ -1,0 +1,151 @@
+---
+# mTLS requires every node's leaf cert to be signed by the same CA, so it's generated
+# once on the first server and distributed before any leaf cert is issued.
+- name: Determine the CA authority host for this play
+  set_fact:
+    nomad_ca_authority_host: "{{ groups['nomad_servers'][0] }}"
+
+- name: Create local temp directory for CA material
+  become: false
+  delegate_to: localhost
+  run_once: true
+  file:
+    path: "{{ nomad_ca_local_tmp_dir }}"
+    state: directory
+    mode: "0700"
+  vars:
+    nomad_ca_local_tmp_dir: "{{ lookup('env', 'HOME') }}/.cache/nomad-ansible-ca"
+
+- name: Generate CA private key on the CA authority host
+  command: openssl genrsa -out {{ nomad_config_dir }}/ca-key.pem 4096
+  args:
+    creates: "{{ nomad_config_dir }}/ca-key.pem"
+  become: yes
+  when: inventory_hostname == nomad_ca_authority_host
+
+- name: Generate CA certificate on the CA authority host
+  command: >
+    openssl req -x509 -new -nodes -key {{ nomad_config_dir }}/ca-key.pem
+    -sha256 -days {{ nomad_tls_days }} -out {{ nomad_tls_ca_file }}
+    -subj "/CN=Nomad Cluster CA/O={{ nomad_datacenter }}"
+  args:
+    creates: "{{ nomad_tls_ca_file }}"
+  become: yes
+  when: inventory_hostname == nomad_ca_authority_host
+
+- name: Fetch CA cert and key from the authority host
+  fetch:
+    src: "{{ item }}"
+    dest: "{{ lookup('env', 'HOME') }}/.cache/nomad-ansible-ca/{{ item | basename }}"
+    flat: yes
+  become: yes
+  when: inventory_hostname == nomad_ca_authority_host
+  loop:
+    - "{{ nomad_tls_ca_file }}"
+    - "{{ nomad_config_dir }}/ca-key.pem"
+
+- name: Distribute CA cert to every node
+  copy:
+    src: "{{ lookup('env', 'HOME') }}/.cache/nomad-ansible-ca/ca.pem"
+    dest: "{{ nomad_tls_ca_file }}"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  when: inventory_hostname != nomad_ca_authority_host
+
+- name: Check whether this node's leaf certificate already exists
+  stat:
+    path: "{{ nomad_tls_cert_file }}"
+  register: nomad_leaf_cert
+  become: yes
+
+- name: Distribute CA key to nodes that still need to sign a certificate
+  copy:
+    src: "{{ lookup('env', 'HOME') }}/.cache/nomad-ansible-ca/ca-key.pem"
+    dest: "{{ nomad_config_dir }}/ca-key.pem"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  when: inventory_hostname != nomad_ca_authority_host and not nomad_leaf_cert.stat.exists
+
+- name: Compute typed subjectAltName entries for this node's certificate
+  set_fact:
+    nomad_tls_sans_typed: >-
+      {{
+        ([nomad_bind_addr, nomad_tls_common_name, 'localhost', '127.0.0.1']
+          + (groups['nomad_servers'] | default([]) | map('extract', hostvars, ['nomad_bind_addr']) | list)
+          + (groups['nomad_clients'] | default([]) | map('extract', hostvars, ['nomad_bind_addr']) | list)
+          + nomad_tls_extra_sans)
+        | unique
+        | map('regex_replace', '^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$', 'IP:\1')
+        | map('regex_replace', '^(?!IP:)(.*)$', 'DNS:\1')
+        | list
+      }}
+
+- name: Generate this node's private key
+  command: openssl genrsa -out {{ nomad_tls_key_file }} 4096
+  args:
+    creates: "{{ nomad_tls_key_file }}"
+  become: yes
+  tags: [tls]
+
+- name: Write OpenSSL SAN extension file for the CSR
+  copy:
+    content: |
+      subjectAltName={{ nomad_tls_sans_typed | join(',') }}
+    dest: "{{ nomad_config_dir }}/san.ext"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  tags: [tls]
+
+- name: Generate this node's certificate signing request
+  command: >
+    openssl req -new -key {{ nomad_tls_key_file }}
+    -out {{ nomad_config_dir }}/nomad.csr
+    -subj "/CN={{ nomad_tls_common_name }}/O={{ nomad_datacenter }}"
+    -addext "subjectAltName={{ nomad_tls_sans_typed | join(',') }}"
+  args:
+    creates: "{{ nomad_config_dir }}/nomad.csr"
+  become: yes
+  tags: [tls]
+
+- name: Sign this node's certificate against the shared CA
+  command: >
+    openssl x509 -req -in {{ nomad_config_dir }}/nomad.csr
+    -CA {{ nomad_tls_ca_file }} -CAkey {{ nomad_config_dir }}/ca-key.pem
+    -CAcreateserial -out {{ nomad_tls_cert_file }}
+    -days {{ nomad_tls_days }} -sha256
+    -extfile {{ nomad_config_dir }}/san.ext
+  args:
+    creates: "{{ nomad_tls_cert_file }}"
+  become: yes
+  tags: [tls]
+
+- name: Set permissions on TLS files
+  file:
+    path: "{{ item }}"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  loop:
+    - "{{ nomad_tls_ca_file }}"
+    - "{{ nomad_tls_cert_file }}"
+    - "{{ nomad_tls_key_file }}"
+    - "{{ nomad_config_dir }}/ca-key.pem"
+    - "{{ nomad_config_dir }}/nomad.csr"
+    - "{{ nomad_config_dir }}/san.ext"
+  become: yes
+  ignore_errors: yes
+  tags: [tls]
+
+- name: Remove the CA private key from non-authority nodes
+  file:
+    path: "{{ nomad_config_dir }}/ca-key.pem"
+    state: absent
+  become: yes
+  when: inventory_hostname != nomad_ca_authority_host
+  tags: [tls]

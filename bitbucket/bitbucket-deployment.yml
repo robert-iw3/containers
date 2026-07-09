@@ -1,0 +1,350 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bitbucket
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bitbucket
+  namespace: bitbucket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bitbucket
+  template:
+    metadata:
+      labels:
+        app: bitbucket
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      initContainers:
+      - name: vault-agent
+        image: vault:2.0.3
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+        - name: VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vault-token
+              key: token
+        args:
+        - "agent"
+        - "-config=/vault/config/vault.hcl"
+        volumeMounts:
+        - name: vault-config
+          mountPath: /vault/config
+        - name: vault-secrets
+          mountPath: /vault/secrets
+      containers:
+      - name: bitbucket
+        image: docker.io/atlassian/bitbucket:10.3.1
+        env:
+        - name: JVM_MINIMUM_MEMORY
+          valueFrom:
+            configMapKeyRef:
+              name: bitbucket-config
+              key: JVM_MINIMUM_MEMORY
+        - name: JVM_MAXIMUM_MEMORY
+          valueFrom:
+            configMapKeyRef:
+              name: bitbucket-config
+              key: JVM_MAXIMUM_MEMORY
+        - name: SERVER_PROXY_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: bitbucket-config
+              key: BITBUCKET_HOSTNAME
+        - name: SERVER_SECURE
+          value: "true"
+        - name: SERVER_SCHEME
+          value: "https"
+        - name: SERVER_PROXY_PORT
+          value: "443"
+        - name: SETUP_DISPLAYNAME
+          value: "Bitbucket"
+        - name: SETUP_BASEURL
+          valueFrom:
+            configMapKeyRef:
+              name: bitbucket-config
+              key: BITBUCKET_URL
+        - name: JDBC_DRIVER
+          value: "org.postgresql.Driver"
+        - name: JDBC_USER
+          valueFrom:
+            secretKeyRef:
+              name: bitbucket-secrets
+              key: POSTGRESQL_USERNAME
+        - name: JDBC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bitbucket-secrets
+              key: POSTGRESQL_PASSWORD
+        - name: JDBC_URL
+          value: "jdbc:postgresql://postgres-bitbucket:5432/bitbucket"
+        - name: PLUGIN_AUTH_OAUTH_JIRA_URL
+          valueFrom:
+            configMapKeyRef:
+              name: bitbucket-config
+              key: JIRA_URL
+        - name: JVM_SUPPORT_RECOMMENDED_ARGS
+          value: "-javaagent:/opt/atlassian/bitbucket/jmx_prometheus_javaagent.jar=7991:/opt/atlassian/bitbucket/prometheus.yml"
+        ports:
+        - containerPort: 7990
+          name: http
+        - containerPort: 443
+          name: https
+        - containerPort: 7991
+          name: metrics
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "0.5"
+            memory: "1Gi"
+        volumeMounts:
+        - name: bitbucket-data
+          mountPath: /var/atlassian/application-data/bitbucket
+        - name: vault-secrets
+          mountPath: /vault/secrets
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: http
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: http
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+      - name: bitbucket-exporter
+        image: python:3.13-slim
+        command:
+        - python
+        - /app/bitbucket-exporter.py
+        env:
+        - name: BITBUCKET_URL
+          value: "http://localhost:7990"
+        - name: BITBUCKET_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: bitbucket-secrets
+              key: BITBUCKET_ADMIN_USER
+        - name: BITBUCKET_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bitbucket-secrets
+              key: BITBUCKET_ADMIN_PASSWORD
+        ports:
+        - containerPort: 8000
+          name: exporter
+        resources:
+          limits:
+            cpu: "0.2"
+            memory: "128Mi"
+          requests:
+            cpu: "0.1"
+            memory: "64Mi"
+        volumeMounts:
+        - name: exporter-script
+          mountPath: /app/bitbucket-exporter.py
+          subPath: bitbucket-exporter.py
+      volumes:
+      - name: bitbucket-data
+        persistentVolumeClaim:
+          claimName: bitbucket-pvc
+      - name: vault-config
+        configMap:
+          name: vault-config
+      - name: vault-secrets
+        emptyDir: {}
+      - name: exporter-script
+        configMap:
+          name: bitbucket-exporter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bitbucket
+  namespace: bitbucket
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: bitbucket.global.dev.io
+spec:
+  selector:
+    app: bitbucket
+  ports:
+  - name: http
+    port: 7990
+    targetPort: http
+  - name: https
+    port: 443
+    targetPort: https
+  - name: metrics
+    port: 7991
+    targetPort: metrics
+  - name: exporter
+    port: 8000
+    targetPort: exporter
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bitbucket-config
+  namespace: bitbucket
+data:
+  JVM_MINIMUM_MEMORY: "1024m"
+  JVM_MAXIMUM_MEMORY: "4096m"
+  BITBUCKET_HOSTNAME: "bitbucket.dev.io"
+  BITBUCKET_URL: "https://bitbucket.dev.io"
+  JIRA_URL: "https://jira.dev.io"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: bitbucket
+data:
+  vault.hcl: |
+    auto_auth {
+      method {
+        type = "token"
+        config {
+          token = "{{ with secret "secret/bitbucket" }}{{ .Data.data.VAULT_TOKEN }}{{ end }}"
+        }
+      }
+      sink {
+        type = "file"
+        config {
+          path = "/vault/secrets/token"
+        }
+      }
+    }
+    template {
+      source      = "/vault/config/template.ctmpl"
+      destination = "/vault/secrets/credentials"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bitbucket-exporter-config
+  namespace: bitbucket
+data:
+  bitbucket-exporter.py: |
+    from prometheus_client import start_http_server, Counter, Gauge
+    import requests
+    import time
+    import os
+
+    repo_pushes = Counter('bitbucket_repo_pushes_total', 'Total repository pushes', ['repository'])
+    repo_pulls = Counter('bitbucket_repo_pulls_total', 'Total repository pulls', ['repository'])
+    repo_clones = Counter('bitbucket_repo_clones_total', 'Total repository clones', ['repository'])
+    repo_activity = Gauge('bitbucket_repo_activity_timestamp', 'Last activity timestamp', ['repository'])
+
+    def fetch_bitbucket_metrics(bitbucket_url, admin_user, admin_password):
+        try:
+            response = requests.get(f"{bitbucket_url}/rest/api/1.0/projects",
+                                   auth=(admin_user, admin_password), timeout=5)
+            response.raise_for_status()
+            projects = response.json()['values']
+            for project in projects:
+                project_key = project['key']
+                repos_response = requests.get(f"{bitbucket_url}/rest/api/1.0/projects/{project_key}/repos",
+                                            auth=(admin_user, admin_password), timeout=5)
+                repos_response.raise_for_status()
+                repos = repos_response.json()['values']
+                for repo in repos:
+                    repo_slug = repo['slug']
+                    activity_response = requests.get(f"{bitbucket_url}/rest/api/1.0/projects/{project_key}/repos/{repo_slug}/activity",
+                                                   auth=(admin_user, admin_password), timeout=5)
+                    if activity_response.status_code == 200:
+                        activities = activity_response.json()['values']
+                        for activity in activities:
+                            if activity['action'] == 'PUSHED':
+                                repo_pushes.labels(repository=f"{project_key}/{repo_slug}").inc()
+                            elif activity['action'] == 'PULLED':
+                                repo_pulls.labels(repository=f"{project_key}/{repo_slug}").inc()
+                            elif activity['action'] == 'CLONED':
+                                repo_clones.labels(repository=f"{project_key}/{repo_slug}").inc()
+                            repo_activity.labels(repository=f"{project_key}/{repo_slug}").set(time.time())
+        except requests.RequestException as e:
+            print(f"Error fetching Bitbucket metrics: {e}")
+
+    if __name__ == '__main__':
+        start_http_server(8000)
+        bitbucket_url = os.getenv('BITBUCKET_URL', 'http://bitbucket:7990')
+        admin_user = os.getenv('BITBUCKET_ADMIN_USER', 'admin')
+        admin_password = os.getenv('BITBUCKET_ADMIN_PASSWORD', 'admin_password')
+        while True:
+            fetch_bitbucket_metrics(bitbucket_url, admin_user, admin_password)
+            time.sleep(30)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bitbucket-pvc
+  namespace: bitbucket
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bitbucket-hpa
+  namespace: bitbucket
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bitbucket
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bitbucket-pdb
+  namespace: bitbucket
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: bitbucket
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bitbucket-monitor
+  namespace: bitbucket
+spec:
+  selector:
+    matchLabels:
+      app: bitbucket
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  - port: exporter
+    path: /metrics
+    interval: 30s

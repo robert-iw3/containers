@@ -1,0 +1,1240 @@
+{
+	"template": {
+		"description": "Inserts Syslog messages to HBase. Requires creating a table in HBase: create 'syslog', {NAME => 'msg'}",
+		"name": "Syslog_HBase",
+		"snippet": {
+			"connections": [
+				{
+					"id": "0d844895-b556-408e-9423-a82bb3f294d1",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": [
+						{
+							"x": "440.65724182128906",
+							"y": "389.0"
+						},
+						{
+							"x": "469.65724182128906",
+							"y": "422.0"
+						}
+					],
+					"destination": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "9bfc2ea1-57af-4c0c-8b76-81f81111a616",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "failure",
+					"source": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "9bfc2ea1-57af-4c0c-8b76-81f81111a616",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "3bf79fe5-69af-4804-8a6b-81925125e557",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "469.0",
+						"y": "196.0"
+					},
+					"destination": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "1e7c6a5c-0f07-4d57-a13e-04eb678234e4",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "c4683f1e-9fc4-4b92-9a88-62d8234e15b9",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "bc8b8ba2-476f-4dd9-afb5-489f576d8cbd",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "469.0",
+						"y": "81.0"
+					},
+					"destination": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "c4683f1e-9fc4-4b92-9a88-62d8234e15b9",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "ba00f48e-b5ac-4284-94c1-24c921791162",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "98dcdc9a-d7db-4d5d-8373-a44a4d54fa3d",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "472.6748962402344",
+						"y": "317.3123779296875"
+					},
+					"destination": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "9bfc2ea1-57af-4c0c-8b76-81f81111a616",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+						"id": "1e7c6a5c-0f07-4d57-a13e-04eb678234e4",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"controllerServices": {
+				"id": "9db66784-f13b-4674-91fe-7f4efea3bd17",
+				"comments": "",
+				"descriptors": {
+					"entry": [
+						{
+							"key": "Hadoop Configuration Files",
+							"value": {
+								"description": "Comma-separated list of Hadoop Configuration files, such as hbase-site.xml, including full paths to the files.",
+								"displayName": "Hadoop Configuration Files",
+								"dynamic": "false",
+								"name": "Hadoop Configuration Files",
+								"required": "false",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						},
+						{
+							"key": "ZooKeeper Quorum",
+							"value": {
+								"description": "Comma-separated list of ZooKeeper hosts for HBase. Required if Hadoop Configuration Files are not provided.",
+								"displayName": "ZooKeeper Quorum",
+								"dynamic": "false",
+								"name": "ZooKeeper Quorum",
+								"required": "false",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						},
+						{
+							"key": "ZooKeeper Client Port",
+							"value": {
+								"description": "The port on which ZooKeeper is accepting client connections. Required if Hadoop Configuration Files are not provided.",
+								"displayName": "ZooKeeper Client Port",
+								"dynamic": "false",
+								"name": "ZooKeeper Client Port",
+								"required": "false",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						},
+						{
+							"key": "ZooKeeper ZNode Parent",
+							"value": {
+								"description": "The ZooKeeper ZNode Parent value for HBase (example: /hbase). Required if Hadoop Configuration Files are not provided.",
+								"displayName": "ZooKeeper ZNode Parent",
+								"dynamic": "false",
+								"name": "ZooKeeper ZNode Parent",
+								"required": "false",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						},
+						{
+							"key": "HBase Client Retries",
+							"value": {
+								"defaultValue": "1",
+								"description": "The number of times the HBase client will retry connecting. Required if Hadoop Configuration Files are not provided.",
+								"displayName": "HBase Client Retries",
+								"dynamic": "false",
+								"name": "HBase Client Retries",
+								"required": "false",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						}
+					]
+				},
+				"name": "HBase_1_1_2_ClientService",
+				"properties": {
+					"entry": [
+						{
+							"key": "Hadoop Configuration Files"
+						},
+						{
+							"key": "ZooKeeper Quorum",
+							"value": "localhost"
+						},
+						{
+							"key": "ZooKeeper Client Port",
+							"value": "2181"
+						},
+						{
+							"key": "ZooKeeper ZNode Parent",
+							"value": "/hbase-unsecure"
+						},
+						{
+							"key": "HBase Client Retries",
+							"value": "1"
+						}
+					]
+				},
+				"referencingComponents": {
+					"activeThreadCount": "0",
+					"descriptors": {
+						"entry": [
+							{
+								"key": "HBase Client Service",
+								"value": {
+									"allowableValues": {
+										"displayName": "HBase_1_1_2_ClientService",
+										"value": "9db66784-f13b-4674-91fe-7f4efea3bd17"
+									},
+									"description": "Specifies the Controller Service to use for accessing HBase.",
+									"displayName": "HBase Client Service",
+									"dynamic": "false",
+									"identifiesControllerService": "org.apache.nifi.hbase.HBaseClientService",
+									"name": "HBase Client Service",
+									"required": "true",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							},
+							{
+								"key": "Table Name",
+								"value": {
+									"description": "The name of the HBase Table to put data into",
+									"displayName": "Table Name",
+									"dynamic": "false",
+									"name": "Table Name",
+									"required": "true",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							},
+							{
+								"key": "Row Identifier",
+								"value": {
+									"description": "Specifies the Row ID to use when inserting data into HBase",
+									"displayName": "Row Identifier",
+									"dynamic": "false",
+									"name": "Row Identifier",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							},
+							{
+								"key": "Row Identifier Field Name",
+								"value": {
+									"description": "Specifies the name of a JSON element whose value should be used as the row id for the given JSON document.",
+									"displayName": "Row Identifier Field Name",
+									"dynamic": "false",
+									"name": "Row Identifier Field Name",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							},
+							{
+								"key": "Column Family",
+								"value": {
+									"description": "The Column Family to use when inserting data into HBase",
+									"displayName": "Column Family",
+									"dynamic": "false",
+									"name": "Column Family",
+									"required": "true",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							},
+							{
+								"key": "Batch Size",
+								"value": {
+									"defaultValue": "25",
+									"description": "The maximum number of FlowFiles to process in a single execution. The FlowFiles will be grouped by table, and a single Put per table will be performed.",
+									"displayName": "Batch Size",
+									"dynamic": "false",
+									"name": "Batch Size",
+									"required": "true",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							},
+							{
+								"key": "Complex Field Strategy",
+								"value": {
+									"allowableValues": [
+										{
+											"description": "Route entire FlowFile to failure if any elements contain complex values.",
+											"displayName": "Fail",
+											"value": "Fail"
+										},
+										{
+											"description": "Provide a warning and do not include field in row sent to HBase.",
+											"displayName": "Warn",
+											"value": "Warn"
+										},
+										{
+											"description": "Silently ignore and do not include in row sent to HBase.",
+											"displayName": "Ignore",
+											"value": "Ignore"
+										},
+										{
+											"description": "Use the string representation of the complex field as the value of the given column.",
+											"displayName": "Text",
+											"value": "Text"
+										}
+									],
+									"defaultValue": "Text",
+									"description": "Indicates how to handle complex fields, i.e. fields that do not have a single text value.",
+									"displayName": "Complex Field Strategy",
+									"dynamic": "false",
+									"name": "Complex Field Strategy",
+									"required": "true",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						]
+					},
+					"groupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"id": "9bfc2ea1-57af-4c0c-8b76-81f81111a616",
+					"name": "PutHBaseJSON",
+					"properties": {
+						"entry": [
+							{
+								"key": "HBase Client Service",
+								"value": "9db66784-f13b-4674-91fe-7f4efea3bd17"
+							},
+							{
+								"key": "Table Name",
+								"value": "syslog"
+							},
+							{
+								"key": "Row Identifier"
+							},
+							{
+								"key": "Row Identifier Field Name",
+								"value": "id"
+							},
+							{
+								"key": "Column Family",
+								"value": "msg"
+							},
+							{
+								"key": "Batch Size",
+								"value": "25"
+							},
+							{
+								"key": "Complex Field Strategy",
+								"value": "Text"
+							}
+						]
+					},
+					"referenceType": "Processor",
+					"state": "RUNNING",
+					"type": "org.apache.nifi.hbase.PutHBaseJSON"
+				},
+				"state": "ENABLED",
+				"type": "org.apache.nifi.hbase.HBase_1_1_2_ClientService"
+			},
+			"processors": [
+				{
+					"id": "1e7c6a5c-0f07-4d57-a13e-04eb678234e4",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"position": {
+						"x": "30.0",
+						"y": "245.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Attributes List",
+									"value": {
+										"description": "Comma separated list of attributes to be included in the resulting JSON. If this value is left empty then all existing Attributes will be included. This list of attributes is case sensitive. If an attribute specified in the list is not found it will be be emitted to the resulting JSON with an empty string or NULL value.",
+										"displayName": "Attributes List",
+										"dynamic": "false",
+										"name": "Attributes List",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Destination",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "flowfile-attribute",
+												"value": "flowfile-attribute"
+											},
+											{
+												"displayName": "flowfile-content",
+												"value": "flowfile-content"
+											}
+										],
+										"defaultValue": "flowfile-attribute",
+										"description": "Control if JSON value is written as a new flowfile attribute 'JSONAttributes' or written in the flowfile content. Writing to flowfile content will overwrite any existing flowfile content.",
+										"displayName": "Destination",
+										"dynamic": "false",
+										"name": "Destination",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Include Core Attributes",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Determines if the FlowFile org.apache.nifi.flowfile.attributes.CoreAttributes which are contained in every FlowFile should be included in the final JSON value generated.",
+										"displayName": "Include Core Attributes",
+										"dynamic": "false",
+										"name": "Include Core Attributes",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Null Value",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true a non existing or empty attribute will be NULL in the resulting JSON. If false an empty string will be placed in the JSON",
+										"displayName": "Null Value",
+										"dynamic": "false",
+										"name": "Null Value",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Attributes List"
+								},
+								{
+									"key": "Destination",
+									"value": "flowfile-content"
+								},
+								{
+									"key": "Include Core Attributes",
+									"value": "false"
+								},
+								{
+									"key": "Null Value",
+									"value": "false"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "AttributesToJSON",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Failed to convert attributes to JSON",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Successfully converted attributes to JSON",
+							"name": "success"
+						}
+					],
+					"state": "RUNNING",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.AttributesToJSON"
+				},
+				{
+					"id": "c4683f1e-9fc4-4b92-9a88-62d8234e15b9",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"position": {
+						"x": "31.0",
+						"y": "126.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression",
+									"value": {
+										"description": "Regular expression for attributes to be deleted from flowfiles.",
+										"displayName": "Delete Attributes Expression",
+										"dynamic": "false",
+										"name": "Delete Attributes Expression",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "body",
+									"value": {
+										"description": "",
+										"displayName": "body",
+										"dynamic": "true",
+										"name": "body",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "hostname",
+									"value": {
+										"description": "",
+										"displayName": "hostname",
+										"dynamic": "true",
+										"name": "hostname",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "id",
+									"value": {
+										"description": "",
+										"displayName": "id",
+										"dynamic": "true",
+										"name": "id",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "port",
+									"value": {
+										"description": "",
+										"displayName": "port",
+										"dynamic": "true",
+										"name": "port",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "priority",
+									"value": {
+										"description": "",
+										"displayName": "priority",
+										"dynamic": "true",
+										"name": "priority",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "protocol",
+									"value": {
+										"description": "",
+										"displayName": "protocol",
+										"dynamic": "true",
+										"name": "protocol",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "sender",
+									"value": {
+										"description": "",
+										"displayName": "sender",
+										"dynamic": "true",
+										"name": "sender",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "timestamp",
+									"value": {
+										"description": "",
+										"displayName": "timestamp",
+										"dynamic": "true",
+										"name": "timestamp",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "version",
+									"value": {
+										"description": "",
+										"displayName": "version",
+										"dynamic": "true",
+										"name": "version",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression",
+									"value": "syslog.*"
+								},
+								{
+									"key": "body",
+									"value": "${syslog.body}"
+								},
+								{
+									"key": "hostname",
+									"value": "${syslog.hostname}"
+								},
+								{
+									"key": "id",
+									"value": "${syslog.timestamp:toDate('MMM d HH:mm:ss'):toNumber()}_${uuid}"
+								},
+								{
+									"key": "port",
+									"value": "${syslog.port}"
+								},
+								{
+									"key": "priority",
+									"value": "${syslog.priority}"
+								},
+								{
+									"key": "protocol",
+									"value": "${syslog.protocol}"
+								},
+								{
+									"key": "sender",
+									"value": "${syslog.sender}"
+								},
+								{
+									"key": "timestamp",
+									"value": "${syslog.timestamp}"
+								},
+								{
+									"key": "version",
+									"value": "${syslog.version}"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "RUNNING",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "9bfc2ea1-57af-4c0c-8b76-81f81111a616",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"position": {
+						"x": "31.657241821289062",
+						"y": "364.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "HBase Client Service",
+									"value": {
+										"allowableValues": {
+											"displayName": "HBase_1_1_2_ClientService",
+											"value": "9db66784-f13b-4674-91fe-7f4efea3bd17"
+										},
+										"description": "Specifies the Controller Service to use for accessing HBase.",
+										"displayName": "HBase Client Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.hbase.HBaseClientService",
+										"name": "HBase Client Service",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Table Name",
+									"value": {
+										"description": "The name of the HBase Table to put data into",
+										"displayName": "Table Name",
+										"dynamic": "false",
+										"name": "Table Name",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Row Identifier",
+									"value": {
+										"description": "Specifies the Row ID to use when inserting data into HBase",
+										"displayName": "Row Identifier",
+										"dynamic": "false",
+										"name": "Row Identifier",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Row Identifier Field Name",
+									"value": {
+										"description": "Specifies the name of a JSON element whose value should be used as the row id for the given JSON document.",
+										"displayName": "Row Identifier Field Name",
+										"dynamic": "false",
+										"name": "Row Identifier Field Name",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Column Family",
+									"value": {
+										"description": "The Column Family to use when inserting data into HBase",
+										"displayName": "Column Family",
+										"dynamic": "false",
+										"name": "Column Family",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "25",
+										"description": "The maximum number of FlowFiles to process in a single execution. The FlowFiles will be grouped by table, and a single Put per table will be performed.",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Complex Field Strategy",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Route entire FlowFile to failure if any elements contain complex values.",
+												"displayName": "Fail",
+												"value": "Fail"
+											},
+											{
+												"description": "Provide a warning and do not include field in row sent to HBase.",
+												"displayName": "Warn",
+												"value": "Warn"
+											},
+											{
+												"description": "Silently ignore and do not include in row sent to HBase.",
+												"displayName": "Ignore",
+												"value": "Ignore"
+											},
+											{
+												"description": "Use the string representation of the complex field as the value of the given column.",
+												"displayName": "Text",
+												"value": "Text"
+											}
+										],
+										"defaultValue": "Text",
+										"description": "Indicates how to handle complex fields, i.e. fields that do not have a single text value.",
+										"displayName": "Complex Field Strategy",
+										"dynamic": "false",
+										"name": "Complex Field Strategy",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "HBase Client Service",
+									"value": "9db66784-f13b-4674-91fe-7f4efea3bd17"
+								},
+								{
+									"key": "Table Name",
+									"value": "syslog"
+								},
+								{
+									"key": "Row Identifier"
+								},
+								{
+									"key": "Row Identifier Field Name",
+									"value": "id"
+								},
+								{
+									"key": "Column Family",
+									"value": "msg"
+								},
+								{
+									"key": "Batch Size",
+									"value": "25"
+								},
+								{
+									"key": "Complex Field Strategy",
+									"value": "Text"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutHBaseJSON",
+					"relationships": [
+						{
+							"autoTerminate": "false",
+							"description": "A FlowFile is routed to this relationship if it cannot be sent to HBase",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "A FlowFile is routed to this relationship after it has been successfully stored in HBase",
+							"name": "success"
+						}
+					],
+					"state": "RUNNING",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.hbase.PutHBaseJSON"
+				},
+				{
+					"id": "ba00f48e-b5ac-4284-94c1-24c921791162",
+					"parentGroupId": "04a63160-94e7-45c1-8700-67bdc30afef3",
+					"position": {
+						"x": "31.0",
+						"y": "9.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Protocol",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "TCP",
+												"value": "TCP"
+											},
+											{
+												"displayName": "UDP",
+												"value": "UDP"
+											}
+										],
+										"defaultValue": "UDP",
+										"description": "The protocol for Syslog communication, either TCP or UDP.",
+										"displayName": "Protocol",
+										"dynamic": "false",
+										"name": "Protocol",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Port",
+									"value": {
+										"description": "The port for Syslog communication.",
+										"displayName": "Port",
+										"dynamic": "false",
+										"name": "Port",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"description": "The Controller Service to use in order to obtain an SSL Context. If this property is set, syslog messages will be received over a secure connection.",
+										"displayName": "SSL Context Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Receive Buffer Size",
+									"value": {
+										"defaultValue": "65507 B",
+										"description": "The size of each buffer used to receive Syslog messages. Adjust this value appropriately based on the expected size of the incoming Syslog messages. When UDP is selected each buffer will hold one Syslog message. When TCP is selected messages are read from an incoming connection until the buffer is full, or the connection is closed.",
+										"displayName": "Receive Buffer Size",
+										"dynamic": "false",
+										"name": "Receive Buffer Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Size of Socket Buffer",
+									"value": {
+										"defaultValue": "1 MB",
+										"description": "The maximum size of the socket buffer that should be used. This is a suggestion to the Operating System to indicate how big the socket buffer should be. If this value is set too low, the buffer may fill up before the data can be read, and incoming data will be dropped.",
+										"displayName": "Max Size of Socket Buffer",
+										"dynamic": "false",
+										"name": "Max Size of Socket Buffer",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Number of TCP Connections",
+									"value": {
+										"defaultValue": "2",
+										"description": "The maximum number of concurrent connections to accept Syslog messages in TCP mode.",
+										"displayName": "Max Number of TCP Connections",
+										"dynamic": "false",
+										"name": "Max Number of TCP Connections",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Batch Size",
+									"value": {
+										"defaultValue": "1",
+										"description": "The maximum number of Syslog events to add to a single FlowFile. If multiple events are available, they will be concatenated along with the <Message Delimiter> up to this configured maximum number of messages",
+										"displayName": "Max Batch Size",
+										"dynamic": "false",
+										"name": "Max Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Message Delimiter",
+									"value": {
+										"defaultValue": "\\n",
+										"description": "Specifies the delimiter to place between Syslog messages when multiple messages are bundled together (see <Max Batch Size> property).",
+										"displayName": "Message Delimiter",
+										"dynamic": "false",
+										"name": "Message Delimiter",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Parse Messages",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Indicates if the processor should parse the Syslog messages. If set to false, each outgoing FlowFile will only contain the sender, protocol, and port, and no additional attributes.",
+										"displayName": "Parse Messages",
+										"dynamic": "false",
+										"name": "Parse Messages",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "Specifies which character set of the Syslog messages",
+										"displayName": "Character Set",
+										"dynamic": "false",
+										"name": "Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Protocol",
+									"value": "UDP"
+								},
+								{
+									"key": "Port",
+									"value": "7780"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Receive Buffer Size",
+									"value": "65507 B"
+								},
+								{
+									"key": "Max Size of Socket Buffer",
+									"value": "1 MB"
+								},
+								{
+									"key": "Max Number of TCP Connections",
+									"value": "2"
+								},
+								{
+									"key": "Max Batch Size",
+									"value": "1"
+								},
+								{
+									"key": "Message Delimiter",
+									"value": "\\n"
+								},
+								{
+									"key": "Parse Messages",
+									"value": "true"
+								},
+								{
+									"key": "Character Set",
+									"value": "UTF-8"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ListenSyslog",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Syslog messages that do not match one of the expected formats will be sent out this relationship as a FlowFile per message.",
+							"name": "invalid"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Syslog messages that match one of the expected formats will be sent out this relationship as a FlowFile per message.",
+							"name": "success"
+						}
+					],
+					"state": "RUNNING",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.ListenSyslog"
+				}
+			]
+		},
+		"timestamp": "12/10/2022 19:48:25 UTC"
+	}
+}

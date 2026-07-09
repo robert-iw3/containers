@@ -1,0 +1,25 @@
+---
+- name: Seal secrets
+  command: bash {{ project_dir }}/seal-secret.sh
+  args:
+    chdir: "{{ project_dir }}"
+
+- name: Apply RBAC
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ project_dir }}/kubernetes/rbac.yaml"
+
+- name: Apply NetworkPolicy
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ project_dir }}/kubernetes/networkpolicy.yaml"
+
+- name: Apply main manifest
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ project_dir }}/kubernetes/elastic-k8s.yaml"
+
+- name: Apply Ingress
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ project_dir }}/kubernetes/ingress.yaml"

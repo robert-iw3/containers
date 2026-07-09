@@ -1,0 +1,159 @@
+<form version="1.1">
+  <label>Linux Metrics (chart)</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 60 minutes</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats min(_value) AS minValue WHERE index="linux-metrics" metric_name="cpu_metric.pctIdle" CPU="all" BY host span=1s
+| eval CPU=floor(100-minValue)
+| timechart span=5m avg(CPU) AS CPU BY host
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Memory</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="linux-metrics" metric_name="vmstat_metric.memUsedPct" BY host span=1s
+| eval Memory_Util=floor(maxValue)
+| timechart span=5m avg(Memory_Util) AS Memory_Util BY host
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Disk Utilisation %</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="linux-metrics" metric_name="df_metric.Use" BY host, Filesystem span=1s
+| eval Host=host." (\"".Filesystem."\")"
+| timechart span=1d max(maxValue) AS Disk_Util BY Host
+            ]]>
+          </query>
+          <earliest>-7d</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Disk Queue</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="linux-metrics" metric_name="iostat_metric.aqu_sz" Device!="loop*" BY host, Device span=1s
+| eval Host=host." (".Device.")"
+| timechart span=5m max(maxValue) AS Disk_Queue BY Host
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Uplink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS TXbytes WHERE index="linux-metrics" metric_name="interfaces_metric.TXbytes" BY host span=1s
+| streamstats current=f last(_time) AS last_time, last(TXbytes) AS lastTXbytes BY host
+| eval interval=_time-last_time, Bps=round((TXbytes-lastTXbytes)/interval)
+| eval KBps=round(Bps/pow(1024,1))
+| timechart avg(KBps) BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">KBps</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Downlink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS RXbytes WHERE index="linux-metrics" metric_name="interfaces_metric.RXbytes" BY host span=1s
+| streamstats current=f last(_time) AS last_time, last(RXbytes) AS lastRXbytes BY host
+| eval interval=_time-last_time, Bps=round((RXbytes-lastRXbytes)/interval)
+| eval KBps=round(Bps/pow(1024,1))
+| timechart avg(KBps) BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">KBps</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>

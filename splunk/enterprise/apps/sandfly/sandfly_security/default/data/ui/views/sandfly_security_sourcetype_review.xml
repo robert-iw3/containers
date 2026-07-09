@@ -1,0 +1,171 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security SourceType Review</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>All Sandfly Indexes</title>
+      <chart>
+        <search>
+          <query>| tstats count WHERE index=* sourcetype="sandfly:*" by _time index
+| timechart sum(count) by index</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>All Sandfly SourceTypes</title>
+      <chart>
+        <search>
+          <query>| tstats count WHERE index=* sourcetype="sandfly:*" by _time sourcetype
+| timechart sum(count) by sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:alarms - alert or pass or error</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_alarms`
+| eval t_sourcetype = sourcetype + " (" + 'data.status' + ")"
+| timechart count by t_sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:logs:audit - info or error</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit`
+| eval t_sourcetype = sourcetype + " (" + 'audit_log.level' + ")"
+| timechart count by t_sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:logs:error - detailed or summary</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_errors`
+| eval t_sourcetype = sourcetype + " (" + log_mode + ")"
+| timechart count by t_sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:hosts - host_details or host_summary</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_hosts`
+| eval t_sourcetype = sourcetype + " (" + event_type + ")"
+| timechart count by t_sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:sandflies</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_sandflies`
+| timechart count by sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:ssh:keys - host_details or key_details or user_details or zone_details</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_sshkeys`
+| eval t_sourcetype = sourcetype + " (" + event_type + ")"
+| timechart count by t_sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>sandfly:whitelist</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_whitelist`
+| timechart count by sourcetype</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+</form>

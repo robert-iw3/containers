@@ -1,0 +1,14 @@
+flink_version: "2.0.0"
+namespace: "flink"
+container_engine: "docker"  # or "podman"
+flink_properties:
+  - jobmanager.memory.process.size: 2048m
+  - taskmanager.memory.process.size: 4096m
+  - taskmanager.numberOfTaskSlots: 4
+  - parallelism.default: 4
+security:
+  enable_tls: true
+  cert_path: "/path/to/certs"  # Update with actual path to certificates
+monitoring:
+  prometheus_enabled: true
+  metrics_port: 9249

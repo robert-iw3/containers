@@ -1,0 +1,334 @@
+{
+	"template": {
+		"description": "Template for a solution on Cloudera Community.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "Replace Text Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "95bbd662-2206-3f14-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "2369ade4-39de-3dd9-0000-000000000000",
+							"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "f85c054a-cb69-3cfa-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "43fcb555-f0d3-3022-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "77639140-e10f-35ec-0000-000000000000",
+							"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "460.0",
+								"y": "494.0"
+							},
+							"destination": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "d5e32791-bcbd-3778-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "0",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "f85c054a-cb69-3cfa-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "d06857b1-47a2-32dd-0000-000000000000",
+							"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "233.31068234991199",
+								"y": "495.196171551112"
+							},
+							"destination": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "d5e32791-bcbd-3778-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "95bbd662-2206-3f14-0000-000000000000",
+								"id": "f85c054a-cb69-3cfa-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"outputPorts": {
+						"id": "d5e32791-bcbd-3778-0000-000000000000",
+						"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+						"position": {
+							"x": "223.00001340459949",
+							"y": "532.0000045589245"
+						},
+						"concurrentlySchedulableTaskCount": "1",
+						"name": "output",
+						"state": "STOPPED",
+						"type": "OUTPUT_PORT",
+						"validationErrors": "'Port 'output'' is invalid because Output connection for port 'output' is not defined."
+					},
+					"processors": [
+						{
+							"id": "43fcb555-f0d3-3022-0000-000000000000",
+							"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+							"position": {
+								"x": "156.00001340459949",
+								"y": "105.0000045589245"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "Year,Day,Hour,Minute,ID_for_SW_Plasma_spacecraft,Percent_of_interpolation,Timeshift,RMS_Timeshift,RMS_Min_var,Time_btwn_observation_sec,Field_magnutude_average_nT,BY_nT(GSM),BZ_nT_(GSM),RMS_SD_B_scalar_nT,RMS_SD_field_vector_nT,Speed_km/s,Alfven_mach_number,Magnetosonic_Mach_number,BSN_location_Xgse_Re,2019 1 0 0 51 100 2788 164 0.12 999999 5.11 2.00 2.73 0.08 1.03 451.0 9.8 6.5 13.15\n2019 1 0 1 51 100 2810 159 0.12 37 5.10 2.33 2.58 0.11 1.04 451.3 9.8 6.5 13.10\n2019 1 0 2 51 80 2852 109 0.09 18 4.86 2.37 2.56 0.12 0.56 454.7 10.3 6.7 13.07\n2019 1 0 3 51 67 2951 66 0.06 -39 4.78 2.21 2.55 0.03 0.33 452.3 11.0 6.8 13.00\n2019 1 0 4 51 100 3025 7 0.00 -13 4.80 2.17 2.37 0.03 0.14 451.4 11.2 6.8 13.00\n2019 1 0 5 99 80 2973 111 0.09 111 4.94 2.68 2.39 0.13 0.55 99999.9 999.9 99.9 13.19\n2019 1 0 6 51 67 3074 20 0.02 -40 4.88 2.54 2.01 0.02 0.28 451.0 9.8 6.5 13.27\n2019 1 0 7 51 50 3114 9 0.00 19 4.82 2.37 2.93 0.02 0.14 451.0 9.9 6.5 13.29\n2019 1 0 8 99 999 999999 999999 99.99 999999 9999.99 9999.99 9999.99 9999.99 9999.99 99999.9 999.9 99.9 9999.99\n2019 1 0 9 99 100 3036 0 0.00 999999 5.16 3.34 2.44 0.00 0.00 99999.9 999.9 99.9 13.24\n2019 1 0 10 99 100 3036 0 0.00 60 5.16 3.34 2.43 0.00 0.00 99999.9 999.9 99.9 13.24",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": "Year,Day,Hour,Minute,ID_for_SW_Plasma_spacecraft,Percent_of_interpolation,Timeshift,RMS_Timeshift,RMS_Min_var,Time_btwn_observation_sec,Field_magnutude_average_nT,BY_nT(GSM),BZ_nT_(GSM),RMS_SD_B_scalar_nT,RMS_SD_field_vector_nT,Speed_km/s,Alfven_mach_number,Magnetosonic_Mach_number,BSN_location_Xgse_Re,2019 1 0 0 51 100 2788 164 0.12 999999 5.11 2.00 2.73 0.08 1.03 451.0 9.8 6.5 13.15\n2019 1 0 1 51 100 2810 159 0.12 37 5.10 2.33 2.58 0.11 1.04 451.3 9.8 6.5 13.10\n2019 1 0 2 51 80 2852 109 0.09 18 4.86 2.37 2.56 0.12 0.56 454.7 10.3 6.7 13.07\n2019 1 0 3 51 67 2951 66 0.06 -39 4.78 2.21 2.55 0.03 0.33 452.3 11.0 6.8 13.00\n2019 1 0 4 51 100 3025 7 0.00 -13 4.80 2.17 2.37 0.03 0.14 451.4 11.2 6.8 13.00\n2019 1 0 5 99 80 2973 111 0.09 111 4.94 2.68 2.39 0.13 0.55 99999.9 999.9 99.9 13.19\n2019 1 0 6 51 67 3074 20 0.02 -40 4.88 2.54 2.01 0.02 0.28 451.0 9.8 6.5 13.27\n2019 1 0 7 51 50 3114 9 0.00 19 4.82 2.37 2.93 0.02 0.14 451.0 9.9 6.5 13.29\n2019 1 0 8 99 999 999999 999999 99.99 999999 9999.99 9999.99 9999.99 9999.99 9999.99 99999.9 999.9 99.9 9999.99\n2019 1 0 9 99 100 3036 0 0.00 999999 5.16 3.34 2.44 0.00 0.00 99999.9 999.9 99.9 13.24\n2019 1 0 10 99 100 3036 0 0.00 60 5.16 3.34 2.43 0.00 0.00 99999.9 999.9 99.9 13.24"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "15 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						},
+						{
+							"id": "f85c054a-cb69-3cfa-0000-000000000000",
+							"parentGroupId": "95bbd662-2206-3f14-0000-000000000000",
+							"position": {
+								"x": "158.62135129522449",
+								"y": "316.3923385432995"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Regular Expression",
+											"value": {
+												"name": "Regular Expression"
+											}
+										},
+										{
+											"key": "Replacement Value",
+											"value": {
+												"name": "Replacement Value"
+											}
+										},
+										{
+											"key": "Character Set",
+											"value": {
+												"name": "Character Set"
+											}
+										},
+										{
+											"key": "Maximum Buffer Size",
+											"value": {
+												"name": "Maximum Buffer Size"
+											}
+										},
+										{
+											"key": "Replacement Strategy",
+											"value": {
+												"name": "Replacement Strategy"
+											}
+										},
+										{
+											"key": "Evaluation Mode",
+											"value": {
+												"name": "Evaluation Mode"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Regular Expression",
+											"value": "(?s)(^.*$)"
+										},
+										{
+											"key": "Replacement Value",
+											"value": "${'$1':replace(' ',',')}"
+										},
+										{
+											"key": "Character Set",
+											"value": "UTF-8"
+										},
+										{
+											"key": "Maximum Buffer Size",
+											"value": "10 MB"
+										},
+										{
+											"key": "Replacement Strategy",
+											"value": "Regex Replace"
+										},
+										{
+											"key": "Evaluation Mode",
+											"value": "Entire text"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "ReplaceText",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "RUNNING",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.ReplaceText"
+						}
+					]
+				},
+				"name": "Replace Text Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "04/08/2020 20:22:43 UTC",
+		"_encoding-version": "1.2"
+	}
+}

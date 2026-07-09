@@ -1,0 +1,83 @@
+pipeline {
+  agent {
+    docker {
+      image 'node:24'
+      args '-u root' // Required for npm in some Jenkins setups
+    }
+  }
+  environment {
+    DOCKER_REGISTRY = 'your-registry'
+    DOCKER_CREDENTIALS = 'docker-credentials-id'
+    NESSUS_API_URL = 'https://api-fw.testing.io:8088'
+    NESSUS_API_KEYS = credentials('nessus-api-keys')
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/your-repo/nessus-stack.git'
+      }
+    }
+    stage('Install Dependencies') {
+      steps {
+        sh 'npm install'
+      }
+    }
+    stage('Lint and Format') {
+      steps {
+        sh 'npm run lint'
+        sh 'npm run format'
+      }
+    }
+    stage('Test') {
+      steps {
+        sh 'npm test'
+      }
+    }
+    stage('Build React App') {
+      steps {
+        sh 'docker build -t ${DOCKER_REGISTRY}/nessus-plugin-management:latest -f Dockerfile-react .'
+      }
+    }
+    stage('Scan Image') {
+      steps {
+        sh 'trivy image --severity HIGH,CRITICAL ${DOCKER_REGISTRY}/nessus-plugin-management:latest'
+      }
+    }
+    stage('Push Image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin ${DOCKER_REGISTRY}'
+          sh 'docker push ${DOCKER_REGISTRY}/nessus-plugin-management:latest'
+        }
+      }
+    }
+    stage('Validate Plugin with Nessus') {
+      steps {
+        sh '''
+          curl -X POST -H "X-ApiKeys: ${NESSUS_API_KEYS}" -F "plugin=@dist/plugin.nasl" \
+          ${NESSUS_API_URL}/plugins/upload
+        '''
+      }
+    }
+    stage('Deploy Stack') {
+      when {
+        branch 'main'
+      }
+      steps {
+        input message: 'Approve stack deployment?', ok: 'Deploy'
+        sh 'podman-compose -f docker-compose.yml up -d --force-recreate'
+      }
+    }
+  }
+  post {
+    always {
+      cleanWs()
+    }
+    success {
+      slackSend(channel: '#deployments', message: "Nessus stack deployment succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+    }
+    failure {
+      slackSend(channel: '#deployments', message: "Nessus stack deployment failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+    }
+  }
+}

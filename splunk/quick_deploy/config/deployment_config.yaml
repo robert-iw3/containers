@@ -1,0 +1,81 @@
+---
+splunk_version: "9.3.1"
+splunk_build: "49b72f7d9745"
+splunk_download_url: "https://download.splunk.com/products/splunk/releases/{{ splunk_version }}/linux/splunk-{{ splunk_version }}-{{ splunk_build }}-Linux-x86_64.tgz"
+splunk_uf_version: "9.3.1"
+splunk_uf_build: "49b72f7d9745"
+splunk_uf_download_url: "https://download.splunk.com/products/universalforwarder/releases/{{ splunk_uf_version }}/linux/splunkforwarder-{{ splunk_uf_version }}-{{ splunk_uf_build }}-Linux-x86_64.tgz"
+splunk_home: "/opt/splunk"
+splunk_uf_home: "/opt/splunkforwarder"
+splunk_admin_user: "admin"
+splunk_bind_ip: "0.0.0.0"
+splunk_port: "8089"
+splunk_web_port: "8000"
+splunk_hec_port: "8088"
+timezone: "UTC"
+splunk_index: "main"
+splunk_instance_size: "medium"  # Options: small, medium, large
+indexing_volume: 100  # GB
+allowed_cidr: "0.0.0.0/0"  # Restrict to specific CIDR for security
+vault_splunk_admin_password: "{{ vault_splunk_admin_password }}"
+vault_splunk_hec_token: "{{ vault_splunk_hec_token }}"
+vault_sec_analyst_password: "{{ vault_sec_analyst_password }}"
+vault_sec_admin_password: "{{ vault_sec_admin_password }}"
+vault_splunk_symm_key: "{{ vault_splunk_symm_key }}"
+vendor_inputs:
+  - name: "syslog_cisco"
+    protocol: "tcp"
+    port: 5140
+    sourcetype: "cisco:asa"
+    cim_model: "Network_Traffic"
+    index: "network"
+    fields:
+      - dest_ip
+      - src_ip
+      - dest_port
+      - src_port
+      - action
+  - name: "syslog_paloalto"
+    protocol: "udp"
+    port: 5141
+    sourcetype: "pan:threat"
+    cim_model: "Intrusion_Detection"
+    index: "security"
+    fields:
+      - src_ip
+      - dest_ip
+      - threat_id
+      - severity
+  - name: "windows_events"
+    protocol: "wineventlog"
+    sourcetype: "WinEventLog:Security"
+    cim_model: "Authentication"
+    index: "windows"
+    fields:
+      - user
+      - src_ip
+      - action
+  - name: "crowdstrike"
+    protocol: "http"
+    port: 8088
+    sourcetype: "crowdstrike:falcon"
+    cim_model: "Endpoint"
+    index: "endpoint"
+    fields:
+      - process_name
+      - file_path
+      - user
+firewall_ports:
+  - "{{ splunk_web_port }}/tcp"
+  - "{{ splunk_port }}/tcp"
+  - "{{ splunk_hec_port }}/tcp"
+  - "5140/tcp"
+  - "5141/udp"
+  - "514/tcp"
+splunk_users:
+  - username: "sec_analyst"
+    role: "user"
+    password: "{{ vault_sec_analyst_password }}"
+  - username: "sec_admin"
+    role: "admin"
+    password: "{{ vault_sec_admin_password }}"

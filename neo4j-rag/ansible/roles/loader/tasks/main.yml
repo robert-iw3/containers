@@ -1,0 +1,30 @@
+---
+- name: Ensure loader Dockerfile exists
+  copy:
+    src: "{{ project_dir }}/loader.Dockerfile"
+    dest: "{{ project_dir }}/loader.Dockerfile"
+    mode: "0644"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure loader files exist
+  copy:
+    src: "{{ project_dir }}/{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+    mode: "0644"
+  loop: "{{ python_services | selectattr('name', 'equalto', 'loader') | first | attr('service_files') }}"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure images directory exists
+  file:
+    path: "{{ project_dir }}/images"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure images are copied
+  copy:
+    src: "{{ project_dir }}/{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+    mode: "0644"
+  loop: "{{ python_services | selectattr('name', 'equalto', 'loader') | first | attr('extra_copy') | default([]) | regex_findall('(\\S+)') }}"
+  when: orchestrator in ['docker', 'podman']

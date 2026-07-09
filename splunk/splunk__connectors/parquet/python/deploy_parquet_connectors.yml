@@ -1,0 +1,245 @@
+---
+- name: Deploy Parquet Connectors
+  hosts: all
+  vars_files:
+    - "{{ config_file | default('deploy_config.yaml') }}"
+  vars:
+    cleanup: "{{ cleanup | default(false) | bool }}"
+    docker_compose_file: "docker-compose.yml"
+    kubernetes_manifests:
+      - "parquet-splunk-deployment.yaml"
+    backup_dir: "backup/{{ ansible_date_time.iso8601 | regex_replace('[^0-9]', '') }}"
+    project_dir: "{{ ansible_user_dir }}/parquet-connector"
+  tasks:
+    - name: Check for required tools
+      ansible.builtin.command: "{{ item }} --version"
+      loop:
+        - docker
+        - docker-compose
+        - kubectl
+        - python3
+        - ansible-lint
+      register: tool_check
+      failed_when: false
+      changed_when: false
+      when: not cleanup
+
+    - name: Fail if critical tools are missing
+      ansible.builtin.fail:
+        msg: "{{ item }} not found"
+      when: not cleanup and tool_check.results[loop_index].rc != 0 and (deployment.method in ['docker', 'podman'] and item in ['docker', 'docker-compose'] or deployment.method == 'kubernetes' and item == 'kubectl')
+      loop: "{{ tool_check.results | map(attribute='item') | list }}"
+      loop_control:
+        loop_var: item
+        index_var: loop_index
+
+    - name: Validate Ansible playbook
+      ansible.builtin.command: ansible-lint deploy_parquet_connectors.yml
+      when: not cleanup
+      changed_when: false
+      failed_when: ansible_lint.rc != 0
+      register: ansible_lint
+
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+      when: not cleanup
+
+    - name: Backup configuration files
+      ansible.builtin.copy:
+        src: "{{ project_dir }}/{{ item }}"
+        dest: "{{ backup_dir }}/{{ item | basename }}"
+        mode: '0644'
+      loop:
+        - "{{ config_file }}"
+        - "{{ docker_compose_file }}"
+        - Dockerfile
+        - schemas.yaml
+        - parquet-splunk-deployment.yaml
+        - deploy_parquet_connectors.yml
+      when: not cleanup and (item is file)
+
+    - name: Validate system resources
+      ansible.builtin.shell: |
+        free -g | grep Mem | awk '{print $2}' && df -h / | tail -1 | awk '{print $4}' && nproc
+      register: resource_check
+      changed_when: false
+      when: not cleanup
+      failed_when: false
+
+    - name: Warn on low resources
+      ansible.builtin.debug:
+        msg: |
+          Warning: Low resources detected.
+          Memory: {{ resource_check.stdout_lines[0] }}GB,
+          Disk: {{ resource_check.stdout_lines[1] }},
+          CPUs: {{ resource_check.stdout_lines[2] }}
+      when: not cleanup and (resource_check.stdout_lines[0] | int < 2 or resource_check.stdout_lines[2] | int < 2)
+
+    - name: Ensure project directory exists
+      ansible.builtin.file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: '0755'
+      when: not cleanup
+
+    - name: Ensure data directory exists
+      ansible.builtin.file:
+        path: "{{ parquet.data_dir }}"
+        state: directory
+        mode: '0755'
+      when: not cleanup
+
+    - name: Install Python dependencies
+      ansible.builtin.pip:
+        requirements: "{{ project_dir }}/requirements.txt"
+        state: present
+      when: not cleanup
+
+    - name: Deploy with Docker
+      community.docker.docker_compose:
+        project_src: "{{ project_dir }}"
+        state: present
+        build: true
+      environment:
+        SCHEMAS_FILE: "{{ parquet_connectors.schemas_file }}"
+        STATE_PATH: "{{ parquet_connectors.state_path }}"
+        SPLUNK_HEC_URL: "{{ splunk.hec_url }}"
+        SPLUNK_TOKEN: "{{ splunk.hec_token }}"
+        DATA_DIR: "{{ parquet.data_dir }}"
+        BATCH_SIZE: "{{ batch_size }}"
+        BUFFER_TIMEOUT: "{{ buffer_timeout }}"
+        WORKER_COUNT: "{{ worker_count }}"
+        POLL_INTERVAL: "{{ poll_interval }}"
+        INCREMENTAL_ENABLED: "{{ incremental_enabled }}"
+        MAX_FILES_CONCURRENT: "{{ max_files_concurrent }}"
+        MAX_MEMORY_MB: "{{ parquet.max_memory_mb }}"
+        METRICS_PORT: "{{ metrics_port }}"
+        SQLCIPHER_KEY: "{{ sqlcipher_key }}"
+        ENABLE_SPLUNK: "{{ splunk.enabled | string }}"
+        PYTHON_LOGGING_LEVEL: "INFO"
+      when: not cleanup and deployment.method == 'docker'
+
+    - name: Deploy with Podman
+      ansible.builtin.command: podman-compose up -d --build
+      args:
+        chdir: "{{ project_dir }}"
+      environment:
+        SCHEMAS_FILE: "{{ parquet_connectors.schemas_file }}"
+        STATE_PATH: "{{ parquet_connectors.state_path }}"
+        SPLUNK_HEC_URL: "{{ splunk.hec_url }}"
+        SPLUNK_TOKEN: "{{ splunk.hec_token }}"
+        DATA_DIR: "{{ parquet.data_dir }}"
+        BATCH_SIZE: "{{ batch_size }}"
+        BUFFER_TIMEOUT: "{{ buffer_timeout }}"
+        WORKER_COUNT: "{{ worker_count }}"
+        POLL_INTERVAL: "{{ poll_interval }}"
+        INCREMENTAL_ENABLED: "{{ incremental_enabled }}"
+        MAX_FILES_CONCURRENT: "{{ max_files_concurrent }}"
+        MAX_MEMORY_MB: "{{ parquet.max_memory_mb }}"
+        METRICS_PORT: "{{ metrics_port }}"
+        SQLCIPHER_KEY: "{{ sqlcipher_key }}"
+        ENABLE_SPLUNK: "{{ splunk.enabled | string }}"
+        PYTHON_LOGGING_LEVEL: "INFO"
+      when: not cleanup and deployment.method == 'podman'
+
+    - name: Render Kubernetes manifests
+      ansible.builtin.template:
+        src: "{{ project_dir }}/{{ item }}"
+        dest: "/tmp/{{ item | basename }}"
+        mode: '0644'
+      loop: "{{ kubernetes_manifests }}"
+      when: not cleanup and deployment.method == 'kubernetes'
+      vars:
+        namespace: "{{ deployment.namespace }}"
+        replicas: "{{ deployment.kubernetes.replicas }}"
+        splunk_hec_url: "{{ splunk.hec_url }}"
+        splunk_token: "{{ splunk.hec_token }}"
+        batch_size: "{{ batch_size }}"
+        buffer_timeout: "{{ buffer_timeout }}"
+        worker_count: "{{ worker_count }}"
+        poll_interval: "{{ poll_interval }}"
+        data_dir: "{{ parquet.data_dir }}"
+        incremental_enabled: "{{ incremental_enabled }}"
+        max_files_concurrent: "{{ max_files_concurrent }}"
+        max_memory_mb: "{{ parquet.max_memory_mb }}"
+        metrics_port: "{{ metrics_port }}"
+        sqlcipher_key: "{{ sqlcipher_key }}"
+
+    - name: Validate rendered Kubernetes manifests
+      ansible.builtin.command: kubectl apply -f "/tmp/{{ item | basename }}" --dry-run=client
+      loop: "{{ kubernetes_manifests }}"
+      when: not cleanup and deployment.method == 'kubernetes'
+      changed_when: false
+
+    - name: Apply Kubernetes manifests
+      ansible.builtin.command: kubectl apply -f "/tmp/{{ item | basename }}"
+      loop: "{{ kubernetes_manifests }}"
+      when: not cleanup and deployment.method == 'kubernetes'
+
+    - name: Clean up temporary Kubernetes manifests
+      ansible.builtin.file:
+        path: "/tmp/{{ item | basename }}"
+        state: absent
+      loop: "{{ kubernetes_manifests }}"
+      when: not cleanup and deployment.method == 'kubernetes'
+
+    - name: Cleanup Docker deployment
+      community.docker.docker_compose:
+        project_src: "{{ project_dir }}"
+        state: absent
+        remove_volumes: true
+      when: cleanup and deployment.method == 'docker'
+
+    - name: Cleanup Podman deployment
+      ansible.builtin.command: podman-compose down -v
+      args:
+        chdir: "{{ project_dir }}"
+      when: cleanup and deployment.method == 'podman'
+
+    - name: Cleanup Kubernetes deployment
+      ansible.builtin.command: kubectl delete -f "{{ project_dir }}/{{ item }}" -n "{{ deployment.namespace }}"
+      loop: "{{ kubernetes_manifests }}"
+      when: cleanup and deployment.method == 'kubernetes'
+      ignore_errors: true
+
+    - name: Verify deployment (Docker)
+      ansible.builtin.command: docker ps
+      register: container_status
+      when: not cleanup and deployment.method == 'docker'
+      changed_when: false
+
+    - name: Verify deployment (Podman)
+      ansible.builtin.command: podman ps
+      register: container_status
+      when: not cleanup and deployment.method == 'podman'
+      changed_when: false
+
+    - name: Verify deployment (Kubernetes)
+      ansible.builtin.command: kubectl get pods -n "{{ deployment.namespace }}"
+      register: pod_status
+      when: not cleanup and deployment.method == 'kubernetes'
+      changed_when: false
+
+    - name: Verify metrics endpoint
+      ansible.builtin.uri:
+        url: "http://localhost:{{ metrics_port }}/metrics"
+        return_content: true
+      register: metrics_response
+      when: not cleanup
+      failed_when: metrics_response.status != 200
+      changed_when: false
+
+    - name: Output deployment status
+      ansible.builtin.debug:
+        msg: |
+          Deployment completed.
+          {% if deployment.method in ['docker', 'podman'] %}
+          Containers: {{ container_status.stdout }}
+          {% elif deployment.method == 'kubernetes' %}
+          Pods: {{ pod_status.stdout }}
+          {% endif %}
+          Metrics endpoint: {{ metrics_response.content | default('Not checked') }}
+      when: not cleanup

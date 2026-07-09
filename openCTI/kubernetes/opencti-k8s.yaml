@@ -1,0 +1,1242 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: opencti
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opencti-secrets
+  namespace: opencti
+type: Opaque
+stringData:
+  # Populate these from your .env file or secrets manager
+  MINIO_ROOT_USER: "minioadmin"  # Example; replace with actual
+  MINIO_ROOT_PASSWORD: "minioadmin"  # Example; replace with actual
+  RABBITMQ_DEFAULT_USER: "guest"  # Example
+  RABBITMQ_DEFAULT_PASS: "guest"  # Example
+  OPENCTI_BASE_URL: "http://localhost:8080"  # Example
+  OPENCTI_ADMIN_EMAIL: "admin@opencti.io"  # Example
+  OPENCTI_ADMIN_PASSWORD: "admin"  # Example
+  OPENCTI_ADMIN_TOKEN: "your-token"  # Example
+  OPENCTI_HEALTHCHECK_ACCESS_KEY: "your-key"  # Example
+  SMTP_HOSTNAME: "smtp.example.com"  # Example
+  CONNECTOR_EXPORT_FILE_STIX_ID: "uuid"  # Valid UUIDv4
+  CONNECTOR_EXPORT_FILE_CSV_ID: "uuid"
+  CONNECTOR_EXPORT_FILE_TXT_ID: "uuid"
+  CONNECTOR_IMPORT_FILE_STIX_ID: "uuid"
+  CONNECTOR_IMPORT_DOCUMENT_ID: "uuid"
+  CONNECTOR_ANALYSIS_ID: "uuid"
+  CONNECTOR_OTX_ID: "uuid"
+  ALIENVAULT_API_KEY: "your-key"
+  CONNECTOR_GREYNOISE_ID: "uuid"
+  GREYNOISE_API_KEY: "your-key"
+  ELASTIC_MEMORY_SIZE: "-Xms2g -Xmx2g"  # Adjusted format for ES_JAVA_OPTS; adjust based on needs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: opencti
+data:
+  rabbitmq.conf: |  # Replace with actual content from ./rabbitmq.conf
+    # Your rabbitmq.conf content here
+    loopback_users.guest = false
+    listeners.tcp.default = 5672
+    management.tcp.port = 15672
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redisdata
+  namespace: opencti
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  # Adjust based on needs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: esdata
+  namespace: opencti
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # Adjust for Elasticsearch data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3data
+  namespace: opencti
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # Adjust for MinIO
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: amqpdata
+  namespace: opencti
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi  # Adjust for RabbitMQ
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: opencti
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        runAsUser: 1000  # Optimization: Non-root user
+        fsGroup: 1000
+      containers:
+      - name: redis
+        image: docker.io/redis:7.4.4
+        resources:
+          requests:
+            cpu: "100m"  # Optimization: Set resource requests/limits
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        volumeMounts:
+        - mountPath: /data
+          name: redisdata
+        livenessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+  volumeClaimTemplates:
+  - metadata:
+      name: redisdata
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: opencti
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: opencti
+spec:
+  serviceName: elasticsearch
+  replicas: 1  # For single-node; scale for cluster
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      initContainers:  # Optimization: Fix permissions for volume
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"]
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: esdata
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "2Gi"  # Based on ELASTIC_MEMORY_SIZE
+          limits:
+            cpu: "1"
+            memory: "4Gi"
+        env:
+        - name: discovery.type
+          value: "single-node"
+        - name: xpack.ml.enabled
+          value: "false"
+        - name: xpack.security.enabled
+          value: "false"
+        - name: thread_pool.search.queue_size
+          value: "5000"
+        - name: logger.org.elasticsearch.discovery
+          value: "ERROR"
+        - name: ES_JAVA_OPTS
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: ELASTIC_MEMORY_SIZE
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: esdata
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 50
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 50
+  volumeClaimTemplates:
+  - metadata:
+      name: esdata
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: opencti
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+  - port: 9200
+    targetPort: 9200
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  namespace: opencti
+spec:
+  serviceName: minio
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: minio
+        image: docker.io/minio/minio:RELEASE.2024-05-28T17-19-04Z
+        args: ["server", "/data"]
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: MINIO_ROOT_USER
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: MINIO_ROOT_PASSWORD
+        volumeMounts:
+        - mountPath: /data
+          name: s3data
+        livenessProbe:
+          exec:
+            command: ["mc", "ready", "local"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command: ["mc", "ready", "local"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+  volumeClaimTemplates:
+  - metadata:
+      name: s3data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: opencti
+spec:
+  selector:
+    app: minio
+  ports:
+  - port: 9000
+    targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: opencti
+spec:
+  serviceName: rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: rabbitmq
+        image: docker.io/rabbitmq:4.1-management
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: RABBITMQ_DEFAULT_PASS
+        - name: RABBITMQ_NODENAME
+          value: "rabbit01@localhost"
+        volumeMounts:
+        - mountPath: /etc/rabbitmq/rabbitmq.conf
+          name: config
+          subPath: rabbitmq.conf
+        - mountPath: /var/lib/rabbitmq
+          name: amqpdata
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "-q", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "-q", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 3
+      volumes:
+      - name: config
+        configMap:
+          name: rabbitmq-config
+  volumeClaimTemplates:
+  - metadata:
+      name: amqpdata
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: opencti
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+  - name: management
+    port: 15672
+    targetPort: 15672
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencti
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opencti
+  template:
+    metadata:
+      labels:
+        app: opencti
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: opencti
+        image: docker.io/opencti/platform:6.7.0
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "2Gi"
+          limits:
+            cpu: "1"
+            memory: "4Gi"
+        env:
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=8096"
+        - name: APP__PORT
+          value: "8080"
+        - name: APP__BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_BASE_URL
+        - name: APP__ADMIN__EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_EMAIL
+        - name: APP__ADMIN__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_PASSWORD
+        - name: APP__ADMIN__TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: APP__APP_LOGS__LOGS_LEVEL
+          value: "error"
+        - name: REDIS__HOSTNAME
+          value: "redis"
+        - name: REDIS__PORT
+          value: "6379"
+        - name: ELASTICSEARCH__URL
+          value: "http://elasticsearch:9200"
+        - name: ELASTICSEARCH__NUMBER_OF_REPLICAS
+          value: "0"
+        - name: MINIO__ENDPOINT
+          value: "minio"
+        - name: MINIO__PORT
+          value: "9000"
+        - name: MINIO__USE_SSL
+          value: "false"
+        - name: MINIO__ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: MINIO_ROOT_USER
+        - name: MINIO__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: MINIO_ROOT_PASSWORD
+        - name: RABBITMQ__HOSTNAME
+          value: "rabbitmq"
+        - name: RABBITMQ__PORT
+          value: "5672"
+        - name: RABBITMQ__PORT_MANAGEMENT
+          value: "15672"
+        - name: RABBITMQ__MANAGEMENT_SSL
+          value: "false"
+        - name: RABBITMQ__USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: RABBITMQ_DEFAULT_PASS
+        - name: SMTP__HOSTNAME
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: SMTP_HOSTNAME
+        - name: SMTP__PORT
+          value: "25"
+        - name: PROVIDERS__LOCAL__STRATEGY
+          value: "LocalStrategy"
+        - name: APP__HEALTH_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_HEALTHCHECK_ACCESS_KEY
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          httpHeaders:
+          - name: health_access_key
+            valueFrom:
+              secretKeyRef:
+                name: opencti-secrets
+                key: OPENCTI_HEALTHCHECK_ACCESS_KEY
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          httpHeaders:
+          - name: health_access_key
+            valueFrom:
+              secretKeyRef:
+                name: opencti-secrets
+                key: OPENCTI_HEALTHCHECK_ACCESS_KEY
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 20
+      initContainers:  # Wait for dependencies
+      - name: wait-for-redis
+        image: busybox
+        command: ['sh', '-c', 'until nc -z redis 6379; do sleep 1; done']
+      - name: wait-for-elasticsearch
+        image: busybox
+        command: ['sh', '-c', 'until nc -z elasticsearch 9200; do sleep 1; done']
+      - name: wait-for-minio
+        image: busybox
+        command: ['sh', '-c', 'until nc -z minio 9000; do sleep 1; done']
+      - name: wait-for-rabbitmq
+        image: busybox
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencti
+  namespace: opencti
+spec:
+  selector:
+    app: opencti
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080  # Example for NodePort; use LoadBalancer or Ingress in production
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: opencti
+spec:
+  replicas: 3  # As in compose
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: worker
+        image: docker.io/opencti/worker:6.7.0
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: WORKER_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-hpa
+  namespace: opencti
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: AverageValue
+        averageValue: 800Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-export-file-stix
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-export-file-stix
+  template:
+    metadata:
+      labels:
+        app: connector-export-file-stix
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-export-file-stix:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_EXPORT_FILE_STIX_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_EXPORT_FILE"
+        - name: CONNECTOR_NAME
+          value: "ExportFileStix2"
+        - name: CONNECTOR_SCOPE
+          value: "application/json"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-export-file-csv
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-export-file-csv
+  template:
+    metadata:
+      labels:
+        app: connector-export-file-csv
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-export-file-csv:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_EXPORT_FILE_CSV_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_EXPORT_FILE"
+        - name: CONNECTOR_NAME
+          value: "ExportFileCsv"
+        - name: CONNECTOR_SCOPE
+          value: "text/csv"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-export-file-txt
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-export-file-txt
+  template:
+    metadata:
+      labels:
+        app: connector-export-file-txt
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-export-file-txt:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_EXPORT_FILE_TXT_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_EXPORT_FILE"
+        - name: CONNECTOR_NAME
+          value: "ExportFileTxt"
+        - name: CONNECTOR_SCOPE
+          value: "text/plain"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-import-file-stix
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-import-file-stix
+  template:
+    metadata:
+      labels:
+        app: connector-import-file-stix
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-import-file-stix:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_IMPORT_FILE_STIX_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_IMPORT_FILE"
+        - name: CONNECTOR_NAME
+          value: "ImportFileStix"
+        - name: CONNECTOR_VALIDATE_BEFORE_IMPORT
+          value: "true"
+        - name: CONNECTOR_SCOPE
+          value: "application/json,text/xml"
+        - name: CONNECTOR_AUTO
+          value: "true"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-import-document
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-import-document
+  template:
+    metadata:
+      labels:
+        app: connector-import-document
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-import-document:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_IMPORT_DOCUMENT_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_IMPORT_FILE"
+        - name: CONNECTOR_NAME
+          value: "ImportDocument"
+        - name: CONNECTOR_VALIDATE_BEFORE_IMPORT
+          value: "true"
+        - name: CONNECTOR_SCOPE
+          value: "application/pdf,text/plain,text/html"
+        - name: CONNECTOR_AUTO
+          value: "true"
+        - name: CONNECTOR_ONLY_CONTEXTUAL
+          value: "false"
+        - name: CONNECTOR_CONFIDENCE_LEVEL
+          value: "15"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+        - name: IMPORT_DOCUMENT_CREATE_INDICATOR
+          value: "true"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-analysis
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-analysis
+  template:
+    metadata:
+      labels:
+        app: connector-analysis
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-import-document:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_ANALYSIS_ID
+        - name: CONNECTOR_TYPE
+          value: "INTERNAL_ANALYSIS"
+        - name: CONNECTOR_NAME
+          value: "ImportDocumentAnalysis"
+        - name: CONNECTOR_VALIDATE_BEFORE_IMPORT
+          value: "false"
+        - name: CONNECTOR_SCOPE
+          value: "application/pdf,text/plain,text/html"
+        - name: CONNECTOR_AUTO
+          value: "true"
+        - name: CONNECTOR_ONLY_CONTEXTUAL
+          value: "false"
+        - name: CONNECTOR_CONFIDENCE_LEVEL
+          value: "15"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "info"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-alienvault
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-alienvault
+  template:
+    metadata:
+      labels:
+        app: connector-alienvault
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-alienvault:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_OTX_ID
+        - name: CONNECTOR_NAME
+          value: "AlienVault"
+        - name: CONNECTOR_SCOPE
+          value: "alienvault"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "error"
+        - name: CONNECTOR_DURATION_PERIOD
+          value: "PT30M"
+        - name: ALIENVAULT_BASE_URL
+          value: "https://otx.alienvault.com"
+        - name: ALIENVAULT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: ALIENVAULT_API_KEY
+        - name: ALIENVAULT_TLP
+          value: "White"
+        - name: ALIENVAULT_CREATE_OBSERVABLES
+          value: "true"
+        - name: ALIENVAULT_CREATE_INDICATORS
+          value: "true"
+        - name: ALIENVAULT_PULSE_START_TIMESTAMP
+          value: "2025-05-01T00:00:00"  # Note: Date is in the future as per original; adjust if needed
+        - name: ALIENVAULT_REPORT_TYPE
+          value: "threat-report"
+        - name: ALIENVAULT_REPORT_STATUS
+          value: "New"
+        - name: ALIENVAULT_GUESS_MALWARE
+          value: "false"
+        - name: ALIENVAULT_GUESS_CVE
+          value: "false"
+        - name: ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES
+          value: "FileHash-MD5,FileHash-SHA1"
+        - name: ALIENVAULT_ENABLE_RELATIONSHIPS
+          value: "true"
+        - name: ALIENVAULT_ENABLE_ATTACK_PATTERNS_INDICATES
+          value: "false"
+        - name: ALIENVAULT_INTERVAL_SEC
+          value: "1800"
+        - name: ALIENVAULT_DEFAULT_X_OPENCTI_SCORE
+          value: "50"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_IP
+          value: "60"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_DOMAIN
+          value: "70"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_HOSTNAME
+          value: "75"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_EMAIL
+          value: "70"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_FILE
+          value: "85"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_URL
+          value: "80"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_MUTEX
+          value: "60"
+        - name: ALIENVAULT_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET
+          value: "80"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-greynoise-feed
+  namespace: opencti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector-greynoise-feed
+  template:
+    metadata:
+      labels:
+        app: connector-greynoise-feed
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: connector
+        image: docker.io/opencti/connector-greynoise-feed:6.7.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: OPENCTI_URL
+          value: "http://opencti:8080"
+        - name: OPENCTI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: OPENCTI_ADMIN_TOKEN
+        - name: CONNECTOR_ID
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: CONNECTOR_GREYNOISE_ID
+        - name: CONNECTOR_TYPE
+          value: "EXTERNAL_IMPORT"
+        - name: CONNECTOR_NAME
+          value: "GreyNoiseFeed"
+        - name: CONNECTOR_SCOPE
+          value: "greynoisefeed"
+        - name: CONNECTOR_LOG_LEVEL
+          value: "error"
+        - name: GREYNOISE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: opencti-secrets
+              key: GREYNOISE_API_KEY
+        - name: GREYNOISE_FEED_TYPE
+          value: "malicious"
+      initContainers:
+      - name: wait-for-opencti
+        image: busybox
+        command: ['sh', '-c', 'until nc -z opencti 8080; do sleep 1; done']
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: opencti-network-policy
+  namespace: opencti
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: opencti
+    - podSelector:
+        matchLabels:
+          app: worker
+    - podSelector:
+        matchLabels:
+          app: connector-export-file-stix  # Add all connectors as needed
+    ports:
+    - protocol: TCP
+      port: 8080  # Adjust ports as needed
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    - podSelector:
+        matchLabels:
+          app: elasticsearch
+    - podSelector:
+        matchLabels:
+          app: minio
+    - podSelector:
+        matchLabels:
+          app: rabbitmq
+    ports:
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9200
+    - protocol: TCP
+      port: 9000
+    - protocol: TCP
+      port: 5672
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opencti-ingress
+  namespace: opencti
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: opencti.example.com  # Replace with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: opencti
+            port:
+              number: 8080
+  tls:
+  - hosts:
+    - opencti.example.com
+    secretName: opencti-tls  # Assume a TLS secret is created

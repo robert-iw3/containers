@@ -1,0 +1,42 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: {{ timezone }}
+  identity:
+    hostname: {{ hostname }}
+    username: {{ ssh_user }}
+    password: "$6$rounds=4096${{ ssh_password }}"
+  ssh:
+    install-server: yes
+  network:
+    version: 2
+    ethernets:
+      ens192:
+        dhcp4: no
+        addresses: [{{ ip }}/24]
+        gateway4: {{ gateway }}
+        nameservers:
+          addresses: [{{ nameservers }}]
+  storage:
+    layout:
+      name: lvm
+  packages:
+    - {{ packages }}
+  late-commands:
+    - curtin in-target --target=/target -- dnf update -y
+    - curtin in-target --target=/target -- dnf install -y podman docker firewalld
+    - curtin in-target --target=/target -- usermod -aG docker {{ ssh_user }}
+    - curtin in-target --target=/target -- usermod -aG wheel {{ ssh_user }}
+    - curtin in-target --target=/target -- systemctl enable podman.socket
+    - curtin in-target --target=/target -- systemctl enable firewalld
+    - curtin in-target --target=/target -- systemctl start firewalld
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-service=ssh --permanent
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-source={{ allowed_subnet }} --permanent
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-port=9200/tcp --permanent
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-port=9300/tcp --permanent
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-port=5601/tcp --permanent
+    - curtin in-target --target=/target -- firewall-cmd --zone=public --add-port=8220/tcp --permanent
+    - curtin in-target --target=/target -- firewall-cmd --reload

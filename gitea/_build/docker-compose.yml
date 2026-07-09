@@ -1,0 +1,170 @@
+version: "3"
+
+volumes:
+  gitea-postgres:
+    driver: local
+  gitea-data:
+    driver: local
+  gitea-postgres-backups:
+    driver: local
+
+networks:
+  gitea-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${GITEA_SUBNET}
+          gateway: ${GITEA_GATEWAY}
+
+x-common-vars-apps: &common-vars-apps
+  networks:
+    - gitea-net
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  postgresql:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-gitea
+    hostname: postgres-gitea.dev.io
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - gitea-postgres:/bitnami/postgresql:z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - 5432:5432
+    networks:
+      gitea-net:
+        ipv4_address: ${POSTGRESQL_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  gitea:
+    build:
+      context: ./
+    <<: *common-vars-apps
+    container_name: gitea
+    hostname: gitea.dev.io
+    volumes:
+      - gitea-data:/data:Z
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      GITEA_DATABASE_HOST: postgresql
+      GITEA_DATABASE_NAME: ${POSTGRESQL_DATABASE}
+      GITEA_DATABASE_USERNAME: ${POSTGRESQL_USERNAME}
+      GITEA_DATABASE_PASSWORD: ${POSTGRESQL_PASSWORD}
+      GITEA_ADMIN_USER: ${GITEA_ADMIN_USERNAME}
+      GITEA_ADMIN_PASSWORD: ${GITEA_ADMIN_PASSWORD}
+      GITEA_ADMIN_EMAIL: ${GITEA_ADMIN_EMAIL}
+      GITEA_RUN_MODE: prod
+      GITEA_DOMAIN: ${GITEA_HOSTNAME}
+      GITEA_SSH_DOMAIN: ${GITEA_HOSTNAME}
+      GITEA_ROOT_URL: ${GITEA_URL}
+      GITEA_HTTP_PORT: 3000
+      GITEA_SSH_PORT: ${GITEA_SHELL_SSH_PORT}
+      GITEA_SSH_LISTEN_PORT: 22
+    ports:
+      - ${GITEA_SHELL_SSH_PORT}:22
+      - 3000:3000
+    networks:
+      gitea-net:
+        ipv4_address: ${GITEA_IPv4}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backups:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres2-gitea
+    hostname: postgres2-gitea.dev.io
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        while true; do
+          pg_dump -h postgres-gitea.dev.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/gitea-postgres/backups/gitea-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+            echo "Backup failed at $(date)"; exit 1;
+          }
+          find /srv/gitea-postgres/backups -type f -mtime +7 -delete
+          sleep 24h
+        done
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - gitea-postgres:/bitnami/postgresql:z
+      - gitea-postgres-backups:/srv/gitea-postgres/backups:Z
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-gitea.dev.io
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      gitea:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    ports:
+      - 5432:5432
+    networks:
+      gitea-net:
+        ipv4_address: ${BACKUP_POSTGRESQL_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

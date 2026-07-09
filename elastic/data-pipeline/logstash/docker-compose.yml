@@ -1,0 +1,40 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+  networks:
+    - elastic
+
+services:
+  logstash:
+    <<: *common-vars-apps
+    build:
+      context: .
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:Z
+      - certs:/usr/share/logstash/config/certs/:z
+    ports:
+     #add ports here if sending logs this way from external sources
+      - "50000:50000"
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: -Xms512m -Xmx512m
+      LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --cacert /usr/share/logstash/config/certificates/ca/ca.crt --max-time 120 --retry 120 --retry-delay 1 --show-error --silent https://localhost:9600",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    depends_on:
+      elasticsearch:
+        condition: service_healthy

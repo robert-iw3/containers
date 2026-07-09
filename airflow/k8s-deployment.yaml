@@ -1,0 +1,469 @@
+---
+# Airflow 3.x on Kubernetes (CeleryExecutor).
+#
+# Planes: api-server (UI + execution API), scheduler, dag-processor, triggerer,
+# and an autoscaled celery worker pool, backed by postgres + redis. A one-shot
+# db-init Job migrates the metadata DB and creates the admin user.
+#
+# Shared config lives in the airflow-config ConfigMap; secrets (Fernet/JWT keys,
+# DB URIs with passwords) in the airflow-secret Secret. Every airflow pod pulls
+# both via envFrom, so there is exactly one place to change each setting.
+#
+# Before applying: replace the Fernet key, JWT secret, and passwords in the
+# Secret below, and point the DAGs source at git-sync or a baked image for real
+# multi-node use (the demo uses a shared ReadWriteMany PVC).
+#
+# TLS: the api-server serves HTTPS (UI/login + execution API). Create the cert
+# Secret before applying (or supply one from cert-manager):
+#   bash scripts/gen_tls_cert.sh
+#   kubectl create secret tls airflow-tls -n airflow \
+#     --cert=certs/tls.crt --key=certs/tls.key
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airflow
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-config
+  namespace: airflow
+data:
+  AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
+  # Airflow 3.x serves the UI/API from api-server and authorises via the FAB manager.
+  AIRFLOW__CORE__AUTH_MANAGER: "airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
+  AIRFLOW__CELERY__BROKER_URL: "redis://redis.airflow.svc.cluster.local:6379/0"
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__CORE__LAZY_LOAD_PLUGINS: "false"
+  AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+  # Workers/dag-processor/triggerer reach the api-server over the execution API (HTTPS).
+  AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "https://airflow-apiserver.airflow.svc.cluster.local:8080/execution/"
+  # api-server TLS (cert+key from the airflow-tls Secret, mounted at /opt/airflow/certs).
+  AIRFLOW__API__SSL_CERT: "/opt/airflow/certs/tls.crt"
+  AIRFLOW__API__SSL_KEY: "/opt/airflow/certs/tls.key"
+  # Let every component trust the self-signed api-server cert over the execution API.
+  SSL_CERT_FILE: "/opt/airflow/certs/tls.crt"
+  REQUESTS_CA_BUNDLE: "/opt/airflow/certs/tls.crt"
+  # airflow is a user-site venv; pin PYTHONPATH so `import airflow` works for any UID
+  # (the entrypoint only rewrites HOME for root). Matches the compose deployment.
+  PYTHONPATH: "/home/airflow/.local/lib/python3.13/site-packages"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: airflow-secret
+  namespace: airflow
+type: Opaque
+stringData:
+  # !!! REPLACE ALL OF THESE BEFORE PRODUCTION USE !!!
+  POSTGRES_PASSWORD: "airflow123"
+  # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+  AIRFLOW__CORE__FERNET_KEY: "REPLACE_WITH_GENERATED_FERNET_KEY_44_CHARS_AA="
+  # `openssl rand -hex 32`
+  AIRFLOW__API_AUTH__JWT_SECRET: "REPLACE_WITH_A_LONG_RANDOM_JWT_SECRET"
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow123@postgres.airflow.svc.cluster.local:5432/airflow"
+  AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://airflow:airflow123@postgres.airflow.svc.cluster.local:5432/airflow"
+  # Warehouse connection used by the telemetry_etl DAG (own schema in the same DB here).
+  AIRFLOW_CONN_TELEMETRY_WAREHOUSE: "postgresql://airflow:airflow123@postgres.airflow.svc.cluster.local:5432/airflow"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-dags-pvc
+  namespace: airflow
+spec:
+  # ReadWriteMany so every plane shares one DAGs view. In production prefer a
+  # git-sync sidecar or DAGs baked into the image instead of a shared volume.
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-logs-pvc
+  namespace: airflow
+spec:
+  # ReadWriteMany so workers/scheduler share task logs. In production prefer
+  # remote logging (S3/GCS) and drop this volume.
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: airflow
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+    spec:
+      containers:
+      - name: postgres
+        image: docker.io/postgres:18
+        env:
+        - name: POSTGRES_USER
+          value: airflow
+        - name: POSTGRES_DB
+          value: airflow
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: airflow-secret, key: POSTGRES_PASSWORD}
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        readinessProbe:
+          exec: {command: ["pg_isready", "-U", "airflow"]}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests: {memory: "512Mi", cpu: "250m"}
+          limits: {memory: "2Gi", cpu: "1000m"}
+      volumes:
+      - name: data
+        persistentVolumeClaim: {claimName: postgres-pvc}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: airflow
+spec:
+  selector: {app: postgres}
+  ports:
+  - {protocol: TCP, port: 5432, targetPort: 5432}
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: redis}
+  template:
+    metadata:
+      labels: {app: redis}
+    spec:
+      containers:
+      - name: redis
+        image: docker.io/redis:latest
+        ports:
+        - containerPort: 6379
+        readinessProbe:
+          exec: {command: ["redis-cli", "ping"]}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests: {memory: "128Mi", cpu: "100m"}
+          limits: {memory: "512Mi", cpu: "500m"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: airflow
+spec:
+  selector: {app: redis}
+  ports:
+  - {protocol: TCP, port: 6379, targetPort: 6379}
+  type: ClusterIP
+---
+# One-shot: migrate the metadata DB and create the admin user (idempotent).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: airflow-db-init
+  namespace: airflow
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels: {app: airflow, component: db-init}
+    spec:
+      restartPolicy: OnFailure
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      containers:
+      - name: init
+        image: docker.io/apache/airflow:3.3.0
+        args: ["airflow", "version"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        env:
+        - name: _AIRFLOW_DB_MIGRATE
+          value: "true"
+        - name: _AIRFLOW_WWW_USER_CREATE
+          value: "true"
+        - name: _AIRFLOW_WWW_USER_USERNAME
+          value: "airflow"
+        - name: _AIRFLOW_WWW_USER_PASSWORD
+          value: "airflow"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-apiserver
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: airflow, component: apiserver}
+  template:
+    metadata:
+      labels: {app: airflow, component: apiserver}
+    spec:
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      containers:
+      - name: apiserver
+        image: docker.io/apache/airflow:3.3.0
+        args: ["api-server"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - {name: dags, mountPath: /opt/airflow/dags}
+        - {name: logs, mountPath: /opt/airflow/logs}
+        - {name: certs, mountPath: /opt/airflow/certs, readOnly: true}
+        livenessProbe:
+          httpGet: {path: /api/v2/monitor/health, port: 8080, scheme: HTTPS}
+          initialDelaySeconds: 45
+          periodSeconds: 15
+        readinessProbe:
+          httpGet: {path: /api/v2/monitor/health, port: 8080, scheme: HTTPS}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests: {memory: "1Gi", cpu: "500m"}
+          limits: {memory: "2Gi", cpu: "1000m"}
+      volumes:
+      - {name: dags, persistentVolumeClaim: {claimName: airflow-dags-pvc}}
+      - {name: logs, persistentVolumeClaim: {claimName: airflow-logs-pvc}}
+      - {name: certs, secret: {secretName: airflow-tls}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-apiserver
+  namespace: airflow
+spec:
+  selector: {app: airflow, component: apiserver}
+  ports:
+  - {protocol: TCP, port: 8080, targetPort: 8080}
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: airflow, component: scheduler}
+  template:
+    metadata:
+      labels: {app: airflow, component: scheduler}
+    spec:
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      containers:
+      - name: scheduler
+        image: docker.io/apache/airflow:3.3.0
+        args: ["scheduler"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        volumeMounts:
+        - {name: dags, mountPath: /opt/airflow/dags}
+        - {name: logs, mountPath: /opt/airflow/logs}
+        - {name: certs, mountPath: /opt/airflow/certs, readOnly: true}
+        livenessProbe:
+          httpGet: {path: /health, port: 8974}
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        resources:
+          requests: {memory: "1Gi", cpu: "500m"}
+          limits: {memory: "2Gi", cpu: "1000m"}
+      volumes:
+      - {name: dags, persistentVolumeClaim: {claimName: airflow-dags-pvc}}
+      - {name: logs, persistentVolumeClaim: {claimName: airflow-logs-pvc}}
+      - {name: certs, secret: {secretName: airflow-tls}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-dag-processor
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: airflow, component: dag-processor}
+  template:
+    metadata:
+      labels: {app: airflow, component: dag-processor}
+    spec:
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      containers:
+      - name: dag-processor
+        image: docker.io/apache/airflow:3.3.0
+        args: ["dag-processor"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        volumeMounts:
+        - {name: dags, mountPath: /opt/airflow/dags}
+        - {name: logs, mountPath: /opt/airflow/logs}
+        - {name: certs, mountPath: /opt/airflow/certs, readOnly: true}
+        livenessProbe:
+          exec: {command: ["airflow", "jobs", "check", "--job-type", "DagProcessorJob", "--local"]}
+          initialDelaySeconds: 45
+          periodSeconds: 30
+        resources:
+          requests: {memory: "512Mi", cpu: "250m"}
+          limits: {memory: "1Gi", cpu: "1000m"}
+      volumes:
+      - {name: dags, persistentVolumeClaim: {claimName: airflow-dags-pvc}}
+      - {name: logs, persistentVolumeClaim: {claimName: airflow-logs-pvc}}
+      - {name: certs, secret: {secretName: airflow-tls}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-triggerer
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: airflow, component: triggerer}
+  template:
+    metadata:
+      labels: {app: airflow, component: triggerer}
+    spec:
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      containers:
+      - name: triggerer
+        image: docker.io/apache/airflow:3.3.0
+        args: ["triggerer"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        volumeMounts:
+        - {name: dags, mountPath: /opt/airflow/dags}
+        - {name: logs, mountPath: /opt/airflow/logs}
+        - {name: certs, mountPath: /opt/airflow/certs, readOnly: true}
+        livenessProbe:
+          exec: {command: ["airflow", "jobs", "check", "--job-type", "TriggererJob", "--local"]}
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        resources:
+          requests: {memory: "512Mi", cpu: "250m"}
+          limits: {memory: "1Gi", cpu: "1000m"}
+      volumes:
+      - {name: dags, persistentVolumeClaim: {claimName: airflow-dags-pvc}}
+      - {name: logs, persistentVolumeClaim: {claimName: airflow-logs-pvc}}
+      - {name: certs, secret: {secretName: airflow-tls}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-worker
+  namespace: airflow
+spec:
+  # Baseline; the HPA below scales this between 2 and 10 on CPU.
+  replicas: 2
+  selector:
+    matchLabels: {app: airflow, component: worker}
+  template:
+    metadata:
+      labels: {app: airflow, component: worker}
+    spec:
+      securityContext: {runAsUser: 50000, runAsGroup: 0, fsGroup: 0}
+      # Give in-flight tasks time to finish before a scale-down/rollout kills the pod.
+      terminationGracePeriodSeconds: 120
+      containers:
+      - name: worker
+        image: docker.io/apache/airflow:3.3.0
+        args: ["celery", "worker"]
+        envFrom:
+        - configMapRef: {name: airflow-config}
+        - secretRef: {name: airflow-secret}
+        env:
+        - name: DUMB_INIT_SETSID
+          value: "0"
+        volumeMounts:
+        - {name: dags, mountPath: /opt/airflow/dags}
+        - {name: logs, mountPath: /opt/airflow/logs}
+        - {name: certs, mountPath: /opt/airflow/certs, readOnly: true}
+        livenessProbe:
+          exec:
+            command: ["bash", "-c", "celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d celery@$(hostname)"]
+          initialDelaySeconds: 45
+          periodSeconds: 30
+          timeoutSeconds: 30
+        resources:
+          requests: {memory: "1Gi", cpu: "500m"}
+          limits: {memory: "3Gi", cpu: "2000m"}
+      volumes:
+      - {name: dags, persistentVolumeClaim: {claimName: airflow-dags-pvc}}
+      - {name: logs, persistentVolumeClaim: {claimName: airflow-logs-pvc}}
+      - {name: certs, secret: {secretName: airflow-tls}}
+---
+# CPU-based worker autoscaling. For queue-aware scaling (scale on actual pending
+# Celery tasks, and to zero) install KEDA and use a ScaledObject with the
+# redis/postgres trigger instead of this HPA -- see the readme.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: airflow-worker
+  namespace: airflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: airflow-worker
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  behavior:
+    scaleDown:
+      # Drain slowly so we don't kill workers mid-task.
+      stabilizationWindowSeconds: 300
+      policies:
+      - {type: Pods, value: 1, periodSeconds: 120}
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - {type: Pods, value: 2, periodSeconds: 60}

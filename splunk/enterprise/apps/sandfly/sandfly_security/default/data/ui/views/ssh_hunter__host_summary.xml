@@ -1,0 +1,278 @@
+<form version="1.1">
+  <label>SSH Hunter - Host Summary</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_host_id" searchWhenChanged="true">
+      <label>Hostname (Target Address)</label>
+      <fieldForLabel>target_name</fieldForLabel>
+      <fieldForValue>target_id</fieldForValue>
+      <search>
+        <query>`sandfly_search_sshkeys` event_type=ssh_host_details earliest=$tok_time1.earliest$ latest=$tok_time1.latest$
+| dedup ssh_host_details.host_id
+| eval target_id = 'ssh_host_details.host_id'
+| eval target_name = 'ssh_host_details.node_name' + " (" + 'ssh_host_details.target_address' + ")"
+| table target_id target_name
+| sort target_name</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Active Keys</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| table ssh_host_details.keys_current</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">How many keys can access this host.</option>
+        <option name="unit">Key(s)</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>All-Time Keys</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| table ssh_host_details.keys_total</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">How many keys have ever had access to this host.</option>
+        <option name="unit">Key(s)</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Active Users</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| table ssh_host_details.users_current</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">How many users have keys on this host.</option>
+        <option name="unit">User(s)</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>All-Time Users</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| table ssh_host_details.users_total</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">How many users have ever had keys on this host.</option>
+        <option name="unit">User(s)</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Security Zones</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| spath output=aaa_zones path=ssh_host_details.zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| table aaa_zones_count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Number of Security Zones for this host.</option>
+        <option name="unit">Zone(s)</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Duplicates</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| eval has_duplicates = if(match('ssh_host_details.has_duplicate_keys',"true"), "Yes", "No")
+| table has_duplicates</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Duplicate key entries found.</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Key Last Seen</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| rename ssh_host_details.key_last_seen as date_last_seen
+| eval last_seen_epoch = strptime(date_last_seen, "%Y-%m-%dT%H:%M:%S%Z")
+| eval local_last_seen = strftime(last_seen_epoch, "%Y-%m-%dT%H:%M:%S %Z")
+| eval time_diff = ceiling(now() - last_seen_epoch)
+| eval temp_duration = tostring(time_diff, "duration")
+| eval key_last_seen=replace(temp_duration,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes")
+| table date_last_seen local_last_seen key_last_seen
+| rename date_last_seen as "Date Last Seen (UTC)"
+| rename local_last_seen as "Date Last Seen (Local Time)"
+| rename key_last_seen as "Key Last Seen"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Security Zones</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| spath output=aaa_zones path=ssh_host_details.zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| search aaa_zones_count &gt; 0
+| fields ssh_key_details.friendly_name aaa_zones
+| mvexpand aaa_zones
+| spath input=aaa_zones
+| eval description=if(isnull(description) OR len(description)==0, "&lt;none&gt;", description)
+| table name description hosts_count permitted_keys_count violation_host_count
+| rename name as "Zone"
+| rename description as "Description"
+| rename hosts_count as "Zone Hosts"
+| rename permitted_keys_count as "Permitted Keys"
+| rename violation_host_count as "Violation Hosts"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Users With Keys</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| spath output=aaa_users path=ssh_host_details.users{}
+| fields ssh_host_details.node_name aaa_users
+| mvexpand aaa_users
+| eval _raw = aaa_users
+| spath
+| spath output=aaa_keys path=key_entries{}
+| eval aaa_count = mvcount(aaa_keys)
+| table username aaa_count first_seen last_seen has_duplicate_keys
+| rename username as "Username"
+| rename aaa_count as "Key Entries"
+| rename first_seen as "First Seen"
+| rename last_seen as "Last Seen"
+| rename has_duplicate_keys as "Duplicate Keys"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Duplicate Keys">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <drilldown>
+          <set token="tok_user">$click.value$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Key Entries ($tok_user$)</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id
+| spath output=aaa_users path=ssh_host_details.users{}
+| fields ssh_host_details.node_name aaa_users
+| mvexpand aaa_users
+| eval _raw = aaa_users
+| spath
+| search username="$tok_user$"
+| spath output=aaa_keys path=key_entries{}
+| fields aaa_keys
+| mvexpand aaa_keys
+| eval _raw = aaa_keys
+| spath
+| table friendly_name active is_duplicate key_file comment key_type entry_num first_seen last_seen key_file_created key_file_modified hash.sha512
+| rename friendly_name as "Friendly Name"
+| rename active as "Active"
+| rename is_duplicate as "Duplicate Key"
+| rename key_file as "File Name"
+| rename comment as "Comment"
+| rename key_type as "Key Type"
+| rename entry_num as "Entry"
+| rename first_seen as "First Seen"
+| rename last_seen as "Last Seen"
+| rename key_file_created as "File Created"
+| rename key_file_modified as "File Modified"
+| rename hash.sha512 as "sha512 Hash"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Duplicate Key">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Raw Event Details</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details ssh_host_details.host_id="$tok_host_id$"
+| dedup ssh_host_details.host_id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

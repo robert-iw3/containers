@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextchat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextchat
+  template:
+    metadata:
+      labels:
+        app: nextchat
+    spec:
+      containers:
+        - name: nextchat
+          image: yidadaa/chatgpt-next-web:v2.16.1
+          ports:
+            - containerPort: 3000
+          env:
+            - name: OPENAI_API_KEY
+              value: any
+            - name: BASE_URL
+              value: http://litellm:4000/
+            - name: HIDE_USER_API_KEY
+              value: "1"
+            - name: CUSTOM_MODELS
+              value: -all,openai-gpt-4o,openai-gpt-4-turbo,openai-gpt-3.5-turbo,openai-o3,google-gemini-2.5-pro,anthropic-claude-4-sonnet,anthropic-claude-3-opus
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "512Mi"
+            requests:
+              cpu: "0.1"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextchat
+spec:
+  selector:
+    app: nextchat
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000

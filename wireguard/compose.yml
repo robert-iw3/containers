@@ -1,0 +1,83 @@
+---
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.42.0/24
+        - subnet: fdcc:ad94:bacf:61a3::/64
+
+volumes:
+  etc_wireguard:
+
+services:
+
+  traefik:
+    image: docker.io/traefik:v3
+    container_name: "traefik"
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      # (Optional) Expose Dashboard
+      # - "8080:8080"  # Don't do this in production!
+    volumes:
+      - ./traefik:/etc/traefik
+      # systemctl --user enable --now podman.socket
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+      # sudo systemctl enable --now podman.socket
+      #- /var/run/podman/podman.sock:/var/run/docker.sock:ro
+      #- /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      wg:
+        ipv4_address: 10.42.42.43
+        ipv6_address: fdcc:ad94:bacf:61a3::2b
+
+  wireguard-tunnel-server:
+    build: .
+    container_name: wireguard-tunnel-server
+    environment:
+      # Update to your domain
+      - DOMAIN=wireguard-tunnel.example.com
+      # Number of peers to auto generate config for
+      - PEERS=1
+      # Services to expose format (comma-separated)
+      # SERVICES=peer-id:peer-container-name:peer-container-port:expose-port-as
+      - SERVICES=peer1:nginx:80:8080,peer1:nginx-demo:80:8081
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      - NET_RAW
+    volumes:
+      - etc_wireguard:/etc/wireguard:Z
+      - /lib/modules:/lib/modules:ro
+    restart: unless-stopped
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    networks:
+      wg:
+        ipv4_address: 10.42.42.254
+        ipv6_address: fdcc:ad94:bacf:61a3::2a
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
+    labels:
+      traefik.enable: true
+
+      traefik.http.routers.nginx.entrypoints: web,websecure
+      traefik.http.routers.nginx.rule: Host(`nginx.example.com`) # Update to your domain
+      traefik.http.routers.nginx.tls: true
+      traefik.http.routers.nginx.tls.certresolver: production
+      traefik.http.services.nginx.loadbalancer.server.port: 8080
+
+      traefik.http.routers.nginx-demo.entrypoints: web,websecure
+      traefik.http.routers.nginx-demo.rule: Host(`nginx-demo.example.com`) # Update to your domain
+      traefik.http.routers.nginx-demo.tls: true
+      traefik.http.routers.nginx-demo.tls.certresolver: production
+      traefik.http.services.nginx-demo.loadbalancer.server.port: 8081

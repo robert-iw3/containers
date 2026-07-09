@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mw-agent
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: mw-agent
+  template:
+    metadata:
+      labels:
+        app: mw-agent
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: mw-agent
+        image: mw-agent:1.20.3
+        envFrom:
+        - secretRef:
+            name: mw-agent-secret
+        env:
+        - name: MW_HOST_TAGS
+          value: "env:prod,cluster:your-cluster-name"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/mw-agent/otel-config.yaml
+          subPath: otel-config.yaml
+          readOnly: true
+        - name: host-root
+          mountPath: /host/root
+          readOnly: true
+        - name: var-log
+          mountPath: /var/log
+          readOnly: true
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          runAsUser: 1001
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+        livenessProbe:
+          exec:
+            command: ["/opt/mw-host-agent/mw-agent", "health"]
+          initialDelaySeconds: 30
+          periodSeconds: 60
+      volumes:
+      - name: config
+        configMap:
+          name: mw-agent-config
+      - name: host-root
+        hostPath:
+          path: /
+      - name: var-log
+        hostPath:
+          path: /var/log
+      tolerations:
+      - operator: Exists

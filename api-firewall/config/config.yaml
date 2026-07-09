@@ -1,0 +1,47 @@
+# Project output directory (relative to script)
+output_dir: .
+# Configuration directory (relative to output_dir)
+config_dir: config
+# OpenAPI JSON specification filename(s) (relative to output_dir)
+openapi_specs:
+  - openapi_spec.json
+# Fallback single OpenAPI spec (for backward compatibility)
+openapi_spec: openapi_spec.json
+# Directory for SSL certificates (relative to output_dir)
+certs_dir: certs
+# Directory for OWASP Core Rule Set (relative to output_dir)
+crs_dir: crs
+# URL for downloading OWASP Core Rule Set
+crs_url: https://github.com/coreruleset/coreruleset/archive/refs/tags/v4.18.0.tar.gz
+# Filename for downloaded CRS archive
+crs_file: v4.18.0.tar.gz
+# Docker Compose configuration file (relative to config_dir)
+docker_compose_file: docker-compose.yaml
+# Allowed IP list file (relative to config_dir)
+allowed_iplist_file: allowed.iplist.db
+# Coraza configuration file (relative to config_dir)
+coraza_conf_file: coraza.conf
+# Additional ModSecurity rules directory (relative to config_dir, optional)
+modsec_rules_dir: modsec_rules
+# Entrypoint script for Docker container (relative to config_dir)
+entrypoint_file: entrypoint.sh
+# Dockerfile for building API Firewall (relative to config_dir)
+dockerfile: Dockerfile
+# Server CSR configuration file (relative to config_dir)
+csr_conf_file: api-fw-csr.conf
+# CA CSR configuration file (relative to config_dir)
+ca_csr_conf_file: ca-csr.conf
+# Ansible playbook for deployment (relative to config_dir)
+ansible_playbook: deploy.yml
+# API Firewall URL (e.g., https://0.0.0.0:8080)
+api_fw_url: https://0.0.0.0:8080
+# Protected API server URL (e.g., http://your-api:port)
+server_url: http://qdrant:6333
+# Container path for OpenAPI specification(s)
+api_spec_path: /opt/resources/openapi_spec.json
+# Log level for API Firewall (DEBUG, INFO, WARN, ERROR)
+log_level: INFO
+# Timeout for HTTP requests (seconds)
+request_timeout: 30
+# Maximum connections per host
+max_conns_per_host: 512

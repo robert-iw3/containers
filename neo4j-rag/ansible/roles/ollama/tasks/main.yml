@@ -1,0 +1,13 @@
+---
+- name: Run Ollama installation script
+  command: python {{ project_dir }}/install_ollama.py
+  register: ollama_install
+  changed_when: "'Install complete' in ollama_install.stderr"
+  failed_when: "'ERROR' in ollama_install.stderr"
+
+- name: Ensure Ollama data directory exists
+  file:
+    path: "{{ project_dir }}/data/ollama"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']

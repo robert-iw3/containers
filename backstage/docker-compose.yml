@@ -1,0 +1,137 @@
+---
+volumes:
+  backstage-postgres:
+    driver: local
+  backstage-postgres-backups:
+    driver: local
+
+networks:
+  backstage-net:
+    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - backstage-net
+  env_file:
+    - .env
+  restart: unless-stopped
+
+services:
+  postgresql:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-backstage
+    hostname: postgres-backstage.dev.io
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - backstage-postgres:/bitnami/postgresql:z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    ports:
+      - 5432:5432
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backstage:
+    <<: *common-vars-apps
+    build: .
+    container_name: backstage
+    hostname: backstage.dev.io
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./app-config.yaml:/backstage/app-config.yaml:ro
+      - ./app-config.local.yaml:/backstage/app-config.local.yaml:ro
+    environment:
+      POSTGRES_HOST: postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRESQL_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    ports:
+      - 3000:3000
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:3000/", "--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backups:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres2-backstage
+    hostname: postgres2-backstage.dev.io
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        while true; do
+          pg_dump -h postgres-backstage.dev.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/backstage-postgres/backups/backstage-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+            echo "Backup failed at $(date)"; exit 1;
+          }
+          find /srv/backstage-postgres/backups -type f -mtime +7 -delete
+          sleep 24h
+        done
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - backstage-postgres:/bitnami/postgresql:z
+      - backstage-postgres-backups:/srv/backstage-postgres/backups:Z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-backstage.dev.io
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      backstage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    ports:
+      - 5432:5432
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

@@ -1,0 +1,15 @@
+---
+## Default Logstash configuration from Logstash base image.
+## https://github.com/elastic/logstash/blob/master/docker/data/logstash/config/logstash-full.yml
+#
+http.host: "0.0.0.0"
+node.name: "logstash"
+ssl.enabled: true
+ssl.certificate: "config/certs/logstash/logstash.crt"
+ssl.key: "config/certs/logstash/logstash.key"
+
+output.elasticsearch:
+  hosts: [ "https://elasticsearch:9200" ]
+  username: elastic
+  password: "${ELASTIC_PASSWORD}"
+  ssl.certificate_authorities: [ "config/certs/ca/ca.crt" ]

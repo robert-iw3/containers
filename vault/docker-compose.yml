@@ -1,0 +1,53 @@
+---
+services:
+  vault:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vault
+    hostname: vault.local
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - vault
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    volumes:
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
+      - vault-policies:/vault/policies
+      - vault-config:/vault/config
+      - vault-certs:/certs
+    environment:
+      - VAULT_ADDR=https://127.0.0.1:8200
+      - VAULT_API_ADDR=https://127.0.0.1:8200
+      - VAULT_NODE_ID=0
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:8200/v1/sys/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    init:
+      image: python:3.9-slim
+      command: ["python", "/vault/config/generate_certs.py"]
+      environment:
+        - VAULT_NODE_ID=0
+      volumes:
+        - vault-certs:/certs
+        - vault-config:/vault/config
+      user: "65535:65535"
+
+networks:
+  vault:
+    driver: bridge
+
+volumes:
+  vault-data:
+  vault-logs:
+  vault-policies:
+  vault-config:
+  vault-certs:

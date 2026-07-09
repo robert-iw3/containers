@@ -1,0 +1,46 @@
+# Copy into .github/workflows/ and adjust APP_DIR/APP_NAME. Repository secrets:
+#   NOMAD_ADDR        https://<nomad-server-or-lb>:4646
+#   NOMAD_TOKEN       ACL token allowed to submit jobs
+#   NOMAD_CACERT_B64  base64 of the cluster CA (base64 -w0 ca.pem)
+name: Build & Deploy to Nomad
+
+on:
+  push:
+    branches: [main]
+    paths: ["myapp/**"]
+
+env:
+  APP_DIR: myapp
+  APP_NAME: myapp
+  IMAGE: ghcr.io/${{ github.repository }}/myapp:${{ github.sha }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: python3 nomad/pipeline/ship.py build "$APP_DIR" --image "$IMAGE"
+
+      - name: Push
+        run: python3 nomad/pipeline/ship.py push --image "$IMAGE"
+
+      - name: Deploy to Nomad
+        env:
+          NOMAD_ADDR: ${{ secrets.NOMAD_ADDR }}
+          NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
+        run: |
+          echo "${{ secrets.NOMAD_CACERT_B64 }}" | base64 -d > /tmp/nomad-ca.pem
+          export NOMAD_CACERT=/tmp/nomad-ca.pem
+          python3 nomad/pipeline/ship.py deploy --image "$IMAGE" --name "$APP_NAME" --port 8080

@@ -1,0 +1,173 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app: falco-stack
+  name: falco-pod
+spec:
+  containers:
+    - command:
+        - --entrypoints.web.address=:80
+        - --entrypoints.web.http.redirections.entrypoint.to=websecure
+        - --entrypoints.web.http.redirections.entrypoint.scheme=https
+        - --entrypoints.web.http.redirections.entrypoint.permanent=true
+        - --entrypoints.websecure.address=:443
+        - --entrypoints.websecure.http.tls=true
+        - --providers.file.filename=/dynamic/tls.yaml
+        - --providers.podman=true  # Adapted for Podman
+        - --providers.podman.exposedbydefault=false
+        - --providers.podman.network=backend
+        - --api.dashboard=true
+        - --api.insecure=false
+        - --log.level=INFO
+        - --accesslog=true
+        - --metrics.prometheus=true
+      image: docker.io/traefik:v3.7.6
+      name: traefik
+      ports:
+        - containerPort: 80
+        - containerPort: 443
+        - containerPort: 8080
+      volumeMounts:
+        - mountPath: /var/run/podman/podman.sock
+          name: podman-sock
+        - mountPath: /secrets
+          name: secrets
+        - mountPath: /dynamic
+          name: dynamic
+      securityContext:
+        privileged: false
+    - image: ghcr.io/steveiliop56/tinyauth:latest
+      name: tinyauth
+      env:
+        - name: SECRET
+          value: your_generated_secret
+        - name: APP_URL
+          value: https://tinyauth.local
+        - name: USERS
+          value: tinyauth:$2y$10$your_hash
+        - name: COOKIE_SECURE
+          value: "true"
+      ports:
+        - containerPort: 3000
+      securityContext:
+        privileged: false
+    - image: docker.io/falcosecurity/falco:latest
+      name: falco
+      volumeMounts:
+        - mountPath: /host/var/run/docker.sock
+          name: podman-sock
+        - mountPath: /host/proc
+          name: host-proc
+          readOnly: true
+        - mountPath: /host/etc
+          name: host-etc
+          readOnly: true
+        - mountPath: /host/dev
+          name: host-dev
+        - mountPath: /host/boot
+          name: host-boot
+          readOnly: true
+        - mountPath: /host/lib/modules
+          name: host-lib-modules
+          readOnly: true
+        - mountPath: /host/usr
+          name: host-usr
+          readOnly: true
+        - mountPath: /etc/falco/config.d/http_output.yml
+          name: http-output
+        - mountPath: /logs
+          name: logs
+        - mountPath: /etc/falco/falco.pem
+          name: falco-pem
+      securityContext:
+        privileged: true
+    - image: docker.io/falcosecurity/falcosidekick:latest
+      name: sidekick
+      env:
+        - name: WEBUI_URL
+          value: http://webui:2802
+        - name: TLSSERVER_DEPLOY
+          value: "true"
+        - name: TLSSERVER_CERTFILE
+          value: /etc/certs/server/server.crt
+        - name: TLSSERVER_KEYFILE
+          value: /etc/certs/server/server.key
+        - name: TLSSERVER_CACERTFILE
+          value: /etc/certs/server/ca.crt
+      volumeMounts:
+        - mountPath: /etc/certs/server/ca.crt
+          name: sidekick-ca
+        - mountPath: /etc/certs/server/server.crt
+          name: sidekick-cert
+        - mountPath: /etc/certs/server/server.key
+          name: sidekick-key
+      securityContext:
+        privileged: false
+    - image: docker.io/falcosecurity/falcosidekick-ui:latest
+      name: webui
+      command:
+        - -r
+        - redis:6379
+        - -d
+      ports:
+        - containerPort: 2802
+      securityContext:
+        privileged: false
+    - image: docker.io/redis/redis-stack:7.4.0-v8
+      name: redis
+      ports:
+        - containerPort: 6379
+      volumeMounts:
+        - mountPath: /data
+          name: redis-data
+      securityContext:
+        privileged: false
+  volumes:
+    - hostPath:
+        path: /run/podman/podman.sock
+      name: podman-sock
+    - hostPath:
+        path: /proc
+      name: host-proc
+    - hostPath:
+        path: /etc
+      name: host-etc
+    - hostPath:
+        path: /dev
+      name: host-dev
+    - hostPath:
+        path: /boot
+      name: host-boot
+    - hostPath:
+        path: /lib/modules
+      name: host-lib-modules
+    - hostPath:
+        path: /usr
+      name: host-usr
+    - hostPath:
+        path: /path/to/secrets  # Adjust
+      name: secrets
+    - hostPath:
+        path: /path/to/dynamic
+      name: dynamic
+    - hostPath:
+        path: /path/to/http_output.yml
+      name: http-output
+    - emptyDir: {}
+      name: logs
+    - hostPath:
+        path: /path/to/falco.pem
+      name: falco-pem
+    - hostPath:
+        path: /path/to/sidekick.ca
+      name: sidekick-ca
+    - hostPath:
+        path: /path/to/sidekick.cert
+      name: sidekick-cert
+    - hostPath:
+        path: /path/to/sidekick.key
+      name: sidekick-key
+    - emptyDir: {}
+      name: redis-data

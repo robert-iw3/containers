@@ -1,0 +1,134 @@
+http:
+  routers:
+    nessus:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`nessus.testing.io`, `www.nessus.testing.io`)"
+      middlewares:
+        - secured
+#        - log4shell-plugin
+#        - crowdsec
+#        - fail2ban
+      tls: {}
+      service: nessus
+  services:
+    nessus:
+      loadBalancer:
+        servers:
+          - url: "https://nessus.testing.io:8834"
+        passHostHeader: true
+        healthCheck:
+          path: /status
+          interval: 10s
+          timeout: 3s
+#Example failover if running multiple containers for HA
+#  services:
+#    nessus:
+#      failover:
+#        service: main
+#        fallback: backup
+#    main:
+#      loadBalancer:
+#        servers:
+#          - url: "https://<Main IP>:8834"
+#        passHostHeader: true
+#        healthCheck:
+#          path: /status
+#          interval: 10s
+#          timeout: 3s
+#    backup:
+#      loadBalancer:
+#        servers:
+#          - url: "https://<Secondary IP>:8834"
+#        passHostHeader: true
+#        healthCheck:
+#          path: /status
+#          interval: 10s
+#          timeout: 3s
+  middlewares:
+    443-redirect:
+      redirectScheme:
+        scheme: https
+        port: "8834"
+        permanent: true
+    nessus-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+        accessControlMaxAge: 100
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+    nessus-whitelist:
+      ipWhiteList:
+        sourceRange:
+        #configure only to accept from certain subnets, more acl's
+        - "192.168.0.0/16"
+    secured:
+      chain:
+        middlewares:
+        - nessus-whitelist
+        - nessus-headers
+        - 443-redirect
+#    log4shell-plugin:
+#      plugin:
+#        log4shell:
+#          errorCode: 200
+#https://plugins.traefik.io/plugins/6335346ca4caa9ddeffda116/crowdsec-bouncer-traefik-plugin
+#    crowdsec:
+#      plugin:
+#        bouncer:
+#          enabled: false
+#          updateIntervalSeconds: 60
+#          defaultDecisionSeconds: 60
+#          crowdsecMode: live
+#          crowdsecLapiKey: privateKey
+#          crowdsecLapiHost: crowdsec:8080
+#          crowdsecLapiScheme: http
+#          forwardedHeadersTrustedIPs:
+#            - 10.0.10.23/32
+#            - 10.0.20.0/24
+#          forwardedHeadersCustomName: X-Custom-Header
+#          redisCacheEnabled: false
+#          redisCacheHost: "redis:6379"
+#    fail2ban:
+#       plugin:
+#         fail2ban:
+#           blacklist:
+#             ip:
+#               - put a subnet here
+#           rules:
+#             action: ""
+#             actionAbuseipdb: ""
+#             backend: ""
+#             banaction: ""
+#             banactionAllports: ""
+#             bantime: 3h
+#             chain: ""
+#             destemail: ""
+#             enabled: "true"
+#             fail2banAgent: ""
+#             filter: ""
+#             findtime: 10m
+#             ignorecommand: ""
+#             logencoding: UTF-8
+#             maxretry: "4"
+#             mode: ""
+#             mta: ""
+#             ports: 0:8000
+#             protocol: ""
+#             sender: ""
+#             urlregexp: ""
+#             usedns: ""
+#           whitelist:
+#              ip:
+#                - ::1
+#                - 127.0.0.1

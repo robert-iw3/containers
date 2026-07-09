@@ -1,0 +1,21 @@
+---
+spark_image_tag: "4.1.2-hadoop3"
+spark_master_image: "spark-master:{{ spark_image_tag }}"
+spark_worker_image: "spark-worker:{{ spark_image_tag }}"
+spark_history_image: "spark-history-server:{{ spark_image_tag }}"
+
+# Registry to pull the locally-built images from (push them there first, or set
+# to '' and pre-load images on each host with `podman load`).
+spark_registry: ""
+
+spark_master_port: 7077
+spark_master_webui_port: 8080
+spark_master_rest_port: 6066
+spark_worker_webui_port: 8081
+
+# Per-worker capacity. Set to the host's usable cores/memory.
+spark_worker_cores: 4
+spark_worker_memory: "8g"
+
+container_runtime: podman   # podman (primary) or docker
+spark_events_dir: /opt/spark/events

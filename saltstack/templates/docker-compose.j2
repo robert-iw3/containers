@@ -1,0 +1,63 @@
+---
+services:
+  salt-master:
+    image: {{ image_registry }}/saltstack/salt:{{ salt_version }}
+    container_name: salt-master
+    environment:
+      - SALT_LOG_LEVEL=info
+      - SALT_MASTER_KEY={{ master_key }}
+    ports:
+      - "4505:4505"
+      - "4506:4506"
+    volumes:
+      - salt-master-data:/etc/salt
+    healthcheck:
+      test: ["CMD", "salt-call", "--local", "test.ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    {% if enable_logging %}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "salt.master"
+    {% endif %}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=8000"
+    networks:
+      - salt-network
+  {% for i in range(minion_count) %}
+  salt-minion-{{ i }}:
+    image: {{ image_registry }}/saltstack/salt:{{ salt_version }}
+    container_name: salt-minion-{{ i }}
+    environment:
+      - SALT_MASTER=salt-master
+      - SALT_LOG_LEVEL=info
+    depends_on:
+      salt-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "salt-call", "--local", "test.ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    {% if enable_logging %}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "salt.minion.{{ i }}"
+    {% endif %}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=8000"
+    networks:
+      - salt-network
+  {% endfor %}
+volumes:
+  salt-master-data:
+networks:
+  salt-network:
+    driver: bridge

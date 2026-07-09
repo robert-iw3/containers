@@ -1,0 +1,18 @@
+[ipaserver]
+ipa.example.test ansible_user=root ansible_host=192.168.1.100
+
+[ipareplicas]
+ipareplica1.example.test ansible_user=root ansible_host=192.168.1.101
+ipareplica2.example.test ansible_user=root ansible_host=192.168.1.102 ipareplica_servers=ipareplica1.example.test
+
+[ipaclients]
+ipaclient1.example.test ansible_user=root ansible_host=192.168.1.103 ipaclient_servers=ipareplica1.example.test
+ipaclient2.example.test ansible_user=root ansible_host=192.168.1.104 ipaclient_servers=ipareplica2.example.test
+
+[ipacluster:children]
+ipaserver
+ipareplicas
+ipaclients
+
+[ipacluster:vars]
+ansible_python_interpreter=/usr/bin/python3

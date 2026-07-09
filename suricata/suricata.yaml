@@ -1,0 +1,133 @@
+%YAML 1.1
+---
+
+# Suricata configuration for inline IPS mode with active blocking
+# - Suricata User Guide: https://suricata.readthedocs.io/en/latest/
+
+# Basic Suricata configuration
+default-log-dir: /var/log/suricata/
+default-rule-path: /etc/suricata/rules/
+
+# Define address groups
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"  # Adjust to your internal network
+    EXTERNAL_NET: "!$HOME_NET"
+    SALT_TYPH00N_IPS: "/etc/suricata/data/salt_typhoon_ips.txt"  # Salt Typhoon/UNC4841 IPs
+
+# Rule files to load
+rule-files:
+  - salt_typhoon_unc4841.rules  # Salt Typhoon/UNC4841 rules
+  - docker_malware.rules        # Docker API malware rules
+
+# File store and hash checking
+file-store:
+  enabled: yes
+  dir: /var/log/suricata/files
+  filestore: yes
+filemd5: /etc/suricata/data/docker_malware_hashes.txt  # Docker malware hashes
+
+# Enable DNS, HTTP, and TLS protocol inspection
+app-layer:
+  protocols:
+    dns:
+      enabled: yes
+      detection-ports:
+        dp: 53
+    http:
+      enabled: yes
+      libhtp:
+        default-config:
+          personality: IDS
+          request-body-limit: 0
+          response-body-limit: 0
+    tls:
+      enabled: yes
+
+# Output configuration for alerts, drops, and logs
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            packet: yes
+            metadata: yes
+        - drop:
+            payload: yes
+            packet: yes
+            metadata: yes
+        - dns:
+            query: yes
+            answer: yes
+        - http:
+            extended: yes
+        - file:
+            enabled: yes
+
+# Inline IPS configuration with af-packet
+af-packet:
+  - interface: eth0  # Adjust to your network interface
+    threads: auto
+    defrag: yes
+    cluster-type: cluster_flow
+    cluster-id: 99
+    buffer-size: 32768
+    use-mmap: yes
+    ring-size: 65536
+    checksum-checks: auto
+    copy-mode: ips
+    copy-iface: eth1  # Adjust to your second interface for IPS bridge
+    tpacket-v3: yes
+
+# Logging settings
+logging:
+  default-log-level: info
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        filename: /var/log/suricata/suricata.log
+
+# Host OS settings
+host-os-policy:
+  linux: 0.0.0.0/0
+
+# Detection engine tuning for IPS
+detect-engine:
+  - profile: high
+  - custom-values:
+      toclient-groups: 400
+      toserver-groups: 400
+  - sgh-mpm-context: auto
+  - inspection-recursion-limit: 0
+
+# Threading configuration for performance
+threading:
+  set-cpu-affinity: yes
+  cpu-affinity:
+    - management-cpu-set:
+        cpu: [ "0" ]
+    - worker-cpu-set:
+        cpu: [ "0-7" ]  # Adjust based on CPU cores
+    - verdict-cpu-set:
+        cpu: [ "0" ]
+  detect-thread-ratio: 1.0
+
+# IPS-specific settings
+ips:
+  enabled: yes
+  drop-on-alert: yes  # Enable dropping for rules with 'drop' action
+
+# Notes:
+# - Configured for inline IPS mode using af-packet with 'copy-mode: ips' for bridge setup (eth0 -> eth1).
+# - Requires two network interfaces (e.g., eth0, eth1) for inline bridging; adjust as needed.
+# - Loads example salt_typhoon_unc4841.rules, docker_malware.rules, and docker_malware_hashes.txt.
+# - Adjust HOME_NET to your internal network CIDR blocks.
+# - EVE JSON logs include alerts, drops, DNS, HTTP, TLS, and file events for analysis.
+# - Use the accompanying Python script to toggle 'alert' to 'drop' for user-selected rules.
+# - Test with tcpreplay or curl to simulate traffic to IOCs (e.g., Tor domains, port 2375).
+# - Follow Suricata best practices: https://suricata.readthedocs.io/en/latest/performance/index.html

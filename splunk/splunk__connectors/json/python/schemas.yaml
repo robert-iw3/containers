@@ -1,0 +1,228 @@
+schemas:
+  - name: simple_event
+    schema_key: event_type
+    schema_value: network_event
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: id
+        event_category: category
+        source_ip: source.ip
+        source_port: source.port
+        dest_ip: destination.ip
+        dest_port: destination.port
+        protocol: protocol
+        bytes_sent: bytes_sent
+        bytes_received: bytes_received
+        action: action
+      cim:
+        time: timestamp
+        event_id: id
+        source: source.ip
+        src_port: source.port
+        dest: destination.ip
+        dest_port: destination.port
+        protocol: protocol
+        bytes_in: bytes_received
+        bytes_out: bytes_sent
+        action: action
+  - name: scada_modbus
+    schema_key: event_type
+    schema_value: modbus_event
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: transaction_id
+        event_category: ["network", "industrial"]
+        source_ip: client.ip
+        source_port: client.port
+        dest_ip: server.ip
+        dest_port: server.port
+        protocol: "modbus"
+        function_code: function_code
+      cim:
+        time: timestamp
+        event_id: transaction_id
+        source: client.ip
+        src_port: client.port
+        dest: server.ip
+        dest_port: server.port
+        protocol: "modbus"
+        app: "modbus"
+        function_code: function_code
+  - name: network_flow
+    schema_key: event_type
+    schema_value: flow
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: flow_id
+        event_category: "network"
+        source_ip: src.ip
+        source_port: src.port
+        dest_ip: dst.ip
+        dest_port: dst.port
+        protocol: proto
+        bytes_sent: bytes_out
+        bytes_received: bytes_in
+        duration: duration_ms
+        packets_sent: packets_out
+        packets_received: packets_in
+      cim:
+        time: timestamp
+        event_id: flow_id
+        source: src.ip
+        src_port: src.port
+        dest: dst.ip
+        dest_port: dst.port
+        protocol: proto
+        bytes_in: bytes_in
+        bytes_out: bytes_out
+        duration: duration_ms
+        packets: packets_out
+  - name: syslog
+    schema_key: log_type
+    schema_value: syslog
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: message_id
+        event_category: "system"
+        host: hostname
+        log_level: severity
+        message: message
+        facility: facility
+      cim:
+        time: timestamp
+        event_id: message_id
+        host: hostname
+        severity: severity
+        message: message
+        facility: facility
+        sourcetype: syslog
+  - name: windows_event
+    schema_key: log_type
+    schema_value: windows_event
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: event_id
+        event_category: ["system", "security"]
+        host: computer_name
+        user_name: user
+        logon_type: logon_type
+        event_code: event_code
+        message: message
+      cim:
+        time: timestamp
+        event_id: event_id
+        host: computer_name
+        user: user
+        logon_type: logon_type
+        event_code: event_code
+        message: message
+        sourcetype: wineventlog
+  - name: web_access
+    schema_key: event_type
+    schema_value: web_access
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: request_id
+        event_category: "web"
+        client_ip: client.ip
+        http_method: method
+        url: url
+        http_status: status_code
+        user_agent: user_agent
+        bytes_sent: bytes_out
+        bytes_received: bytes_in
+        response_time: response_time_ms
+      cim:
+        time: timestamp
+        event_id: request_id
+        source: client.ip
+        http_method: method
+        url: url
+        status: status_code
+        user_agent: user_agent
+        bytes_in: bytes_in
+        bytes_out: bytes_out
+        response_time: response_time_ms
+        sourcetype: access_combined
+  - name: authentication
+    schema_key: event_type
+    schema_value: auth
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: auth_id
+        event_category: "authentication"
+        user_name: user
+        source_ip: src.ip
+        outcome: outcome
+        auth_type: auth_type
+        message: message
+      cim:
+        time: timestamp
+        event_id: auth_id
+        user: user
+        source: src.ip
+        action: outcome
+        auth_type: auth_type
+        message: message
+        sourcetype: auth
+  - name: ids_alert
+    schema_key: event_type
+    schema_value: ids_alert
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: alert_id
+        event_category: ["intrusion_detection", "security"]
+        source_ip: src.ip
+        source_port: src.port
+        dest_ip: dst.ip
+        dest_port: dst.port
+        protocol: proto
+        signature: signature
+        alert_category: category
+        severity: severity
+      cim:
+        time: timestamp
+        event_id: alert_id
+        source: src.ip
+        src_port: src.port
+        dest: dst.ip
+        dest_port: dst.port
+        protocol: proto
+        signature: signature
+        category: category
+        severity: severity
+        sourcetype: ids
+  - name: scada_dnp3
+    schema_key: event_type
+    schema_value: dnp3_event
+    mappings:
+      ecs:
+        timestamp: timestamp
+        event_id: transaction_id
+        event_category: ["network", "industrial"]
+        source_ip: client.ip
+        source_port: client.port
+        dest_ip: server.ip
+        dest_port: server.port
+        protocol: "dnp3"
+        function_code: function_code
+        point_address: point_address
+      cim:
+        time: timestamp
+        event_id: transaction_id
+        source: client.ip
+        src_port: client.port
+        dest: server.ip
+        dest_port: server.port
+        protocol: "dnp3"
+        app: "dnp3"
+        function_code: function_code
+        point_address: point_address

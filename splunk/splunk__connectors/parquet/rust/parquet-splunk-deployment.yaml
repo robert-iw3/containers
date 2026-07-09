@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parquet-splunk
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parquet-splunk
+  template:
+    metadata:
+      labels:
+        app: parquet-splunk
+    spec:
+      containers:
+      - name: parquet-splunk
+        image: parquet-connector:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SCHEMAS_FILE
+          value: "/app/schemas.yaml"
+        - name: STATE_PATH
+          value: "/app/state.db"
+        - name: SPLUNK_HEC_URL
+          value: "https://splunk:8088/services/collector"
+        - name: SPLUNK_TOKEN
+          value: "your-splunk-hec-token"
+        - name: BATCH_SIZE
+          value: "100"
+        - name: BUFFER_TIMEOUT
+          value: "30"
+        - name: WORKER_COUNT
+          value: "4"
+        - name: POLL_INTERVAL
+          value: "30"
+        - name: DATA_DIR
+          value: "/data"
+        - name: INCREMENTAL_ENABLED
+          value: "true"
+        - name: MAX_FILES_CONCURRENT
+          value: "5"
+        - name: MAX_MEMORY_MB
+          value: "512"
+        - name: METRICS_PORT
+          value: "9090"
+        - name: SQLCIPHER_KEY
+          value: "your-sqlcipher-key"
+        - name: ENABLE_SPLUNK
+          value: "true"
+        - name: RUST_LOG
+          value: "info"
+        ports:
+        - containerPort: 9090
+          name: metrics
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "0.5"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: data
+        hostPath:
+          path: /data

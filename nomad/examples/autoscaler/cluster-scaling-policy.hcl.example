@@ -1,0 +1,30 @@
+# AWS ASG cluster scaling policy (terraform avenue only). Add as a template
+# block rendering to /local/policies/cluster.hcl in nomad-autoscaler.nomad.hcl,
+# substituting your client ASG name. Requires autoscaler_enabled = true in the
+# terraform tfvars so the client instance role may call the autoscaling API.
+scaling "cluster" {
+  enabled = true
+  min     = 3
+  max     = 10
+
+  policy {
+    cooldown            = "5m"
+    evaluation_interval = "1m"
+
+    check "cpu_allocated" {
+      source = "prometheus"
+      query  = "sum(nomad_client_allocated_cpu)/(sum(nomad_client_allocated_cpu)+sum(nomad_client_unallocated_cpu))*100"
+
+      strategy "target-value" {
+        target = 70
+      }
+    }
+
+    target "aws-asg" {
+      dry-run             = "false"
+      aws_asg_name        = "<cluster_name>-client-primary-client-asg"
+      node_class          = ""
+      node_drain_deadline = "10m"
+    }
+  }
+}

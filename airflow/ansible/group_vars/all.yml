@@ -1,0 +1,25 @@
+---
+# Image the whole cluster runs. Use the stock image or your custom build (Dockerfile).
+airflow_image: "docker.io/apache/airflow:3.3.0"
+postgres_image: "docker.io/postgres:18"
+redis_image: "docker.io/redis:7"
+
+container_runtime: podman   # podman (primary) or docker
+
+# Where node state lives on each host.
+airflow_base_dir: /opt/airflow-node
+
+# Admin login created by the init step.
+airflow_admin_user: airflow
+airflow_admin_password: airflow
+
+# !!! REPLACE THESE SECRETS BEFORE PRODUCTION !!!
+postgres_password: "airflow123"
+# python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+fernet_key: "REPLACE_WITH_GENERATED_FERNET_KEY"
+# openssl rand -hex 32
+jwt_secret: "REPLACE_WITH_RANDOM_JWT_SECRET"
+
+apiserver_port: 8080
+postgres_port: 5432
+redis_port: 6379

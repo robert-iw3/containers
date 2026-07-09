@@ -1,0 +1,538 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mongodb
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secret
+  namespace: mongodb
+type: Opaque
+data:
+  keyfile: <base64-encoded-keyfile-content>  # e.g., `base64 ./keyfile`
+  root-password: <base64-encoded-password>   # e.g., `echo -n 'changeme' | base64`
+  tls-cert: <base64-encoded-mongodb.pem>     # CIS 2.1
+  tls-ca: <base64-encoded-ca.pem>
+  tls-cluster: <base64-encoded-mongodb-cluster.pem>  # X.509
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-tenant-init
+  namespace: mongodb
+data:
+  tenant-init.js: |
+    var numTenants = 100;
+    var prefix = 'tenant_';
+    var role = 'readWrite';
+    for (var i = 1; i <= numTenants; i++) {
+      var dbName = prefix + i;
+      var user = 'app_user_' + i;
+      var pwd = 'tenant_pass_' + i;
+      db.getSiblingDB('admin').createRole({
+        role: 'tenantRole_' + i,
+        privileges: [{ resource: { db: dbName, collection: '' }, actions: [role] }],
+        roles: []
+      });
+      db.getSiblingDB(dbName).createUser({
+        user: user,
+        pwd: pwd,
+        roles: [{ role: 'tenantRole_' + i, db: 'admin' }]
+      });
+      print('Tenant ' + dbName + ' provisioned with user ' + user);
+      db = db.getSiblingDB(dbName);
+      db.createCollection('data', {"timeseries":{"timeField":"timestamp"}});
+      db.data.createIndex({"tenant_id":"hashed"});
+      db.data.insertOne({"tenant_id":"tenant_" + i,"status":"active","created_at":{"$date":"2025-09-07T00:00:00Z"}});
+      db.createCollection('logs', {});
+      db.logs.createIndex({"event_time":1});
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-configsvr-config
+  namespace: mongodb
+data:
+  mongod.conf: |
+    storage:
+      dbPath: /data/configdb
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 9.1  # 60% of 16GB - 0.5
+          encryption:
+            enabled: true
+    systemLog:
+      destination: file
+      path: /var/log/mongodb/mongod.log
+      logAppend: true
+      verbosity: 0
+      timeStampFormat: iso8601-utc
+      logRotation:
+        rotateEveryKB: 1000
+    net:
+      port: 27019
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 10000
+      wireObjectCheck: true
+      http:
+        enabled: false
+      tls:
+        mode: requireTLS
+        certificateKeyFile: /etc/ssl/mongodb.pem
+        CAFile: /etc/ssl/ca.pem
+        clusterFile: /etc/ssl/mongodb-cluster.pem
+        allowConnectionsWithoutCertificates: false
+        FIPSMode: true
+    security:
+      authorization: enabled
+      clusterAuthMode: x509
+      javascriptEnabled: false
+      transitionToAuth: true
+    processManagement:
+      pidFilePath: /var/run/mongodb/mongod.pid
+      timeZoneInfo: /usr/share/zoneinfo
+      fork: false
+    operationProfiling:
+      slowOpThresholdMs: 100
+      mode: slowOp
+      slowOpSampleRate: 10
+    auditLog:
+      destination: file
+      format: JSON
+      path: /var/log/mongodb/auditLog.json
+      filter: '{ atype: { $in: ["createCollection", "dropCollection", "authCheck"] }, param: { command: { $exists: true } } }'
+      logRotation:
+        timeInHours: 24
+        sizeInBytes: 104857600
+    sharding:
+      clusterRole: configsvr
+    replication:
+      replSetName: configReplSet
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-configsvr
+  namespace: mongodb
+spec:
+  serviceName: mongodb-configsvr
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb-configsvr
+  template:
+    metadata:
+      labels:
+        app: mongodb-configsvr
+    spec:
+      containers:
+      - name: mongodb
+        image: mongodb:8.0-enterprise
+        ports:
+        - containerPort: 27019
+        volumeMounts:
+        - name: data
+          mountPath: /data/configdb
+        - name: config
+          mountPath: /etc/mongod.conf
+          subPath: mongod.conf
+          readOnly: true
+        - name: keyfile
+          mountPath: /etc/mongod-keyfile
+          readOnly: true
+        - name: tls
+          mountPath: /etc/ssl
+          readOnly: true
+        - name: initdb
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: admin
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: root-password
+        - name: MONGO_INITDB_REPLSET
+          value: configReplSet
+        command: ["/usr/local/bin/docker-entrypoint.sh", "mongod", "--config", "/etc/mongod.conf", "--configsvr"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          runAsUser: 999
+          runAsGroup: 999
+      volumes:
+      - name: config
+        configMap:
+          name: mongodb-configsvr-config
+          items:
+          - key: mongod.conf
+            path: mongod.conf
+      - name: keyfile
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: keyfile
+            path: mongod-keyfile
+      - name: tls
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: tls-cert
+            path: mongodb.pem
+          - key: tls-ca
+            path: ca.pem
+          - key: tls-cluster
+            path: mongodb-cluster.pem
+      - name: initdb
+        configMap:
+          name: mongodb-tenant-init
+          items:
+          - key: tenant-init.js
+            path: tenant-init.js
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-configsvr
+  namespace: mongodb
+spec:
+  clusterIP: None
+  ports:
+  - port: 27019
+    targetPort: 27019
+  selector:
+    app: mongodb-configsvr
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-shard0-config
+  namespace: mongodb
+data:
+  mongod.conf: |
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 9.1
+          encryption:
+            enabled: true
+    systemLog:
+      destination: file
+      path: /var/log/mongodb/mongod.log
+      logAppend: true
+      verbosity: 0
+      timeStampFormat: iso8601-utc
+      logRotation:
+        rotateEveryKB: 1000
+    net:
+      port: 27017
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 10000
+      wireObjectCheck: true
+      http:
+        enabled: false
+      tls:
+        mode: requireTLS
+        certificateKeyFile: /etc/ssl/mongodb.pem
+        CAFile: /etc/ssl/ca.pem
+        clusterFile: /etc/ssl/mongodb-cluster.pem
+        allowConnectionsWithoutCertificates: false
+        FIPSMode: true
+    security:
+      authorization: enabled
+      clusterAuthMode: x509
+      javascriptEnabled: false
+      transitionToAuth: true
+    processManagement:
+      pidFilePath: /var/run/mongodb/mongod.pid
+      timeZoneInfo: /usr/share/zoneinfo
+      fork: false
+    operationProfiling:
+      slowOpThresholdMs: 100
+      mode: slowOp
+      slowOpSampleRate: 10
+    auditLog:
+      destination: file
+      format: JSON
+      path: /var/log/mongodb/auditLog.json
+      filter: '{ atype: { $in: ["createCollection", "dropCollection", "authCheck"] }, param: { command: { $exists: true } } }'
+      logRotation:
+        timeInHours: 24
+        sizeInBytes: 104857600
+    sharding:
+      clusterRole: shardsvr
+    replication:
+      replSetName: shard0
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-shard0
+  namespace: mongodb
+spec:
+  serviceName: mongodb-shard0
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb-shard0
+  template:
+    metadata:
+      labels:
+        app: mongodb-shard0
+    spec:
+      containers:
+      - name: mongodb
+        image: mongodb:8.0-enterprise
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+        - name: config
+          mountPath: /etc/mongod.conf
+          subPath: mongod.conf
+          readOnly: true
+        - name: keyfile
+          mountPath: /etc/mongod-keyfile
+          readOnly: true
+        - name: tls
+          mountPath: /etc/ssl
+          readOnly: true
+        - name: initdb
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: admin
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: root-password
+        - name: MONGO_INITDB_REPLSET
+          value: shard0
+        command: ["/usr/local/bin/docker-entrypoint.sh", "mongod", "--config", "/etc/mongod.conf", "--shardsvr"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          runAsUser: 999
+          runAsGroup: 999
+      volumes:
+      - name: config
+        configMap:
+          name: mongodb-shard0-config
+          items:
+          - key: mongod.conf
+            path: mongod.conf
+      - name: keyfile
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: keyfile
+            path: mongod-keyfile
+      - name: tls
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: tls-cert
+            path: mongodb.pem
+          - key: tls-ca
+            path: ca.pem
+          - key: tls-cluster
+            path: mongodb-cluster.pem
+      - name: initdb
+        configMap:
+          name: mongodb-tenant-init
+          items:
+          - key: tenant-init.js
+            path: tenant-init.js
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-shard0
+  namespace: mongodb
+spec:
+  clusterIP: None
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    app: mongodb-shard0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-mongos-config
+  namespace: mongodb
+data:
+  mongod.conf: |
+    net:
+      port: 27017
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 10000
+      wireObjectCheck: true
+      http:
+        enabled: false
+      tls:
+        mode: requireTLS
+        certificateKeyFile: /etc/ssl/mongodb.pem
+        CAFile: /etc/ssl/ca.pem
+        clusterFile: /etc/ssl/mongodb-cluster.pem
+        allowConnectionsWithoutCertificates: false
+        FIPSMode: true
+    security:
+      authorization: enabled
+      clusterAuthMode: x509
+      javascriptEnabled: false
+    systemLog:
+      destination: file
+      path: /var/log/mongodb/mongos.log
+      logAppend: true
+      logRotation:
+        rotateEveryKB: 1000
+    sharding:
+      clusterRole: mongos
+      configDB: configReplSet/mongodb-configsvr-0.mongodb-configsvr.mongodb.svc.cluster.local:27019,mongodb-configsvr-1.mongodb-configsvr.mongodb.svc.cluster.local:27019,mongodb-configsvr-2.mongodb-configsvr.mongodb.svc.cluster.local:27019
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-mongos
+  namespace: mongodb
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongos
+  template:
+    metadata:
+      labels:
+        app: mongos
+    spec:
+      containers:
+      - name: mongos
+        image: mongodb:8.0-enterprise
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: config
+          mountPath: /etc/mongod.conf
+          subPath: mongod.conf
+          readOnly: true
+        - name: keyfile
+          mountPath: /etc/mongod-keyfile
+          readOnly: true
+        - name: tls
+          mountPath: /etc/ssl
+          readOnly: true
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: admin
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: root-password
+        command: ["/usr/local/bin/docker-entrypoint.sh", "mongos", "--config", "/etc/mongod.conf"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          runAsUser: 999
+          runAsGroup: 999
+      volumes:
+      - name: config
+        configMap:
+          name: mongodb-mongos-config
+          items:
+          - key: mongod.conf
+            path: mongod.conf
+      - name: keyfile
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: keyfile
+            path: mongod-keyfile
+      - name: tls
+        secret:
+          secretName: mongodb-secret
+          items:
+          - key: tls-cert
+            path: mongodb.pem
+          - key: tls-ca
+            path: ca.pem
+          - key: tls-cluster
+            path: mongodb-cluster.pem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-mongos
+  namespace: mongodb
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    app: mongos
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mongodb-mongos-hpa
+  namespace: mongodb
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mongodb-mongos
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

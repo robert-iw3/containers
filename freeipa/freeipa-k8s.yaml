@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: freeipa-server
+  namespace: freeipa
+spec:
+  hostUsers: false
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: freeipa
+          topologyKey: kubernetes.io/hostname
+  containers:
+  - name: freeipa
+    image: quay.io/freeipa/freeipa-server:almalinux-10
+    securityContext:
+      privileged: false
+      runAsUser: 0
+      runAsGroup: 0
+      readOnlyRootFilesystem: true
+    volumeMounts:
+    - name: ipa-data
+      mountPath: /data
+      readOnly: true
+    ports:
+    - containerPort: 53
+      protocol: UDP
+    - containerPort: 53
+      protocol: TCP
+    - containerPort: 80
+      protocol: TCP
+    - containerPort: 443
+      protocol: TCP
+    - containerPort: 389
+      protocol: TCP
+    - containerPort: 636
+      protocol: TCP
+    - containerPort: 88
+      protocol: TCP
+    - containerPort: 464
+      protocol: TCP
+    - containerPort: 88
+      protocol: UDP
+    - containerPort: 464
+      protocol: UDP
+    - containerPort: 123
+      protocol: UDP
+    env:
+    - name: IPA_SERVER_IP
+      value: "no-update"
+    - name: DEBUG_TRACE
+      value: "1"
+    livenessProbe:
+      exec:
+        command: ["systemctl", "is-active", "ipa"]
+      initialDelaySeconds: 60
+      periodSeconds: 10
+    readinessProbe:
+      tcpSocket:
+        port: 443
+      initialDelaySeconds: 60
+      periodSeconds: 10
+    resources:
+      limits:
+        memory: "2Gi"
+        cpu: "2"
+      requests:
+        memory: "1Gi"
+        cpu: "1"
+  volumes:
+  - name: ipa-data
+    hostPath:
+      path: /var/lib/ipa-data
+      type: Directory

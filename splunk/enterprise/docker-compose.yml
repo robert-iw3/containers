@@ -1,0 +1,44 @@
+---
+
+volumes:
+  opt-splunk-etc:
+  opt-splunk-var:
+
+networks:
+  splunk:
+    driver: bridge
+
+services:
+  splunkenterprise:
+    build: .
+    hostname: splunkenterprise
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_ENABLE_LISTEN: 9997
+      SPLUNK_ADD: "tcp 1514"
+      #SPLUNK_LICENSE_URI:
+      #SPLUNK_ROLE: {splunk_standalone, splunk_indexer, splunk_deployer, splunk_search_head}
+      #SPLUNK_STANDALONE_URL:
+      #SPLUNK_SEARCH_HEAD_URL:
+      #SPLUNK_INDEXER_URL:
+      #SPLUNK_DEPLOYER_URL:
+      #SPLUNK_CLUSTER_MASTER_URL:
+      #SPLUNK_SEARCH_HEAD_CAPTAIN_URL:
+    command: >
+      bash -c '
+      sed -i 's/enableSplunkWebSSL = false/enableSplunkWebSSL = true/g' /opt/splunk/etc/system/local/web.conf;
+      /opt/splunk/bin/splunk restart splunkd;
+      '
+    volumes:
+      - opt-splunk-etc:/opt/splunk/etc:Z
+      - opt-splunk-var:/opt/splunk/var:Z
+      - ./apps:/opt/splunk/etc/apps:Z
+    ports:
+      - "8000:8000"
+      - "9997:9997"
+      - "8089:8089"
+      - "8088:8088"
+      - "1514:1514"
+    networks: ['splunk']
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped

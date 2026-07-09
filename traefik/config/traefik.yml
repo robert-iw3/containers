@@ -1,0 +1,72 @@
+#global:
+#  checkNewVersion: true
+#  sendAnonymousUsage: false
+# load dashboard localhost:8080, recommend using it for testing and once proxy passing works, disable.
+api:
+  dashboard: true
+  insecure: true
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+providers:
+  docker:
+    endpoint: unix:///var/run/docker.sock
+    watch: true
+    exposedByDefault: false
+    swarmMode: false
+    network: <docker service network name>
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+#serversTransport:
+#  maxIdleConnsPerHost: 8
+#  forwardingTimeouts:
+#    responseHeaderTimeout: "15s"
+#    idleConnTimeout: "15s"
+#    dialTimeout: "30s"
+#certificatesResolvers:
+#  le-staging:
+#    acme:
+      # certificates will be generate with the staging ACME premium account
+#      email: enter.your@email.com
+#      httpChallenge:
+        # used during the challenge
+#        entryPoint: web
+#  le-prod:
+#    acme:
+      # certificates will be generate with the production ACME premium account
+#      email: enter.your@email.com
+#      httpChallenge:
+        # used during the challenge
+#        entryPoint: web
+#      tlsChallenge: {}
+log:
+  filePath: "/var/log/traefik/traefik.log"
+  format: json
+  level: INFO
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  filters:
+    statusCodes:
+      - "204-299"
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+experimental:
+  plugins:
+    plugin-log4shell:
+      moduleName: "github.com/traefik/plugin-log4shell"
+      version: "v0.1.2"
+    ldapAuth:
+      moduleName: "github.com/wiltonsr/ldapAuth"
+      version: "v0.1.5"
+    cloudflarewarp:
+      moduleName: "github.com/BetterCorp/cloudflarewarp"
+      version: "v1.3.3"
+    traefik-jwt-plugin:
+      moduleName: "github.com/team-carepay/traefik-jwt-plugin"
+      version: "v0.6.0"

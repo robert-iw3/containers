@@ -1,0 +1,93 @@
+volumes:
+  qdrant_storage:
+    driver: local
+  qdrant1_storage:
+    driver: local
+  qdrant2_storage:
+    driver: local
+  grafana_data:
+    driver: local
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  environment:
+      QDRANT__CLUSTER__ENABLED: "true"
+  env_file:
+    - ../.env
+  networks:
+    - n8n
+
+services:
+  qdrant:
+    <<: *common-vars-apps
+    image: docker.io/qdrant/qdrant
+    container_name: qdrant
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT__SERVICE__API_KEY}
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage:z
+    command: "./qdrant --uri http://qdrant:6335"
+
+  qdrant1:
+    <<: *common-vars-apps
+    image: qdrant/qdrant
+    container_name: qdrant1
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT__SERVICE__API_KEY1}
+    volumes:
+      - qdrant1_storage:/qdrant/storage:z
+    command: "./qdrant --bootstrap http://qdrant:6335 --uri http://qdrant1:6335"
+
+  qdrant2:
+    <<: *common-vars-apps
+    image: qdrant/qdrant
+    container_name: qdrant2
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT__SERVICE__API_KEY2}
+    volumes:
+      - qdrant2_storage:/qdrant/storage:z
+    command: "./qdrant --bootstrap http://qdrant:6335 --uri http://qdrant2:6335"
+
+  prometheus:
+    <<: *common-vars-apps
+    image: prom/prometheus
+    container_name: prometheus
+    depends_on:
+      - qdrant
+      - qdrant1
+      - qdrant2
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    <<: *common-vars-apps
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: 'admin'
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: 'true'
+    volumes:
+      - grafana_data:/var/lib/grafana:Z
+    depends_on:
+      - prometheus
+
+  bootstrap:
+    <<: *common-vars-apps
+    build:
+      context: bootstrap-vector/
+    container_name: bootstrap
+    depends_on:
+      - qdrant
+      - qdrant1
+      - qdrant2

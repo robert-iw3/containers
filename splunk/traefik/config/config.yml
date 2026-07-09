@@ -1,0 +1,150 @@
+# example config, modify to your environment
+http:
+  routers:
+    splunk:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`splunkenterprise`)"
+      middlewares:
+        - splunk-whitelist
+        - splunk-redirect
+      tls: {}
+      service: splunk
+
+  services:
+    splunk:
+      loadBalancer:
+        servers:
+          - url: "https://splunkenterprise:8000"
+
+  middlewares:
+    plugin-log4shell:
+      plugin:
+        plugin-log4shell:
+          errorCode: "200"
+    splunk-redirect:
+      redirectScheme:
+        scheme: https
+        port: "8000"
+        permanent: true
+#    my-ldapAuth:
+#      plugin:
+#        ldapAuth:
+#          Attribute: uid
+#          BaseDn: dc=example,dc=org
+#          Enabled: "true"
+#          LogLevel: DEBUG
+#          Port: "389"
+#          Url: ldap://example.com
+#    cloudflarewarp:
+#      plugin:
+#        cloudflarewarp:
+#          disableDefault: "false"
+#          trustip:
+#          - 2400:cb00::/32
+#    traefik-jwt-plugin:
+#      JwtHeaders:
+#        X-Subject: sub
+#      Keys:
+#        - |
+#        -----BEGIN PUBLIC KEY-----
+#        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnzyis1ZjfNB0bBgKFMSv
+#        vkTtwlvBsaJq7S5wA+kzeVOVpVWwkWdVha4s38XM/pa/yr47av7+z3VTmvDRyAHc
+#        aT92whREFpLv9cj5lTeJSibyr/Mrm/YtjCZVWgaOYIhwrXwKLqPr/11inWsAkfIy
+#        tvHWTxZYEcXLgAXFuUuaS3uF9gEiNQwzGTU1v0FqkqTBr4B8nW3HCN47XUu0t8Y0
+#        e+lf4s4OxQawWD79J9/5d3Ry0vbV3Am1FtGJiJvOwRsIfVChDpYStTcHTCMqtvWb
+#        V6L11BWkpzGXSW4Hv43qa+GSYOD2QU68Mb59oSk2OB+BtOLpJofmbGEGgvmwyCI9
+#        MwIDAQAB
+#        -----END PUBLIC KEY-----
+#      OpaAllowField: allow
+#      OpaBody: "true"
+#      OpaHeaders:
+#        X-Allowed: allow
+#      OpaHttpStatusField: allow_status_code
+#      OpaResponseHeaders:
+#        X-Allowed: allow
+#      OpaUrl: http://localhost:8181/v1/data/example
+#      PayloadFields:
+#        - exp
+#      Required: "true"
+
+    default-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+        accessControlMaxAge: 100
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+    splunk-whitelist:
+      ipWhiteList:
+        sourceRange:
+        #restrict access to specific subnets example:
+        - "192.168.99.0/24"
+        - "192.168.88.0/24"
+
+    secured:
+      chain:
+        middlewares:
+        - splunk-whitelist
+        - default-headers
+
+#https://plugins.traefik.io/plugins/6335346ca4caa9ddeffda116/crowdsec-bouncer-traefik-plugin
+#    crowdsec:
+#      plugin:
+#        bouncer:
+#          enabled: false
+#          updateIntervalSeconds: 60
+#          defaultDecisionSeconds: 60
+#          crowdsecMode: live
+#          crowdsecLapiKey: privateKey
+#          crowdsecLapiHost: crowdsec:8080
+#          crowdsecLapiScheme: http
+#          forwardedHeadersTrustedIPs:
+#            - 10.0.10.23/32
+#            - 10.0.20.0/24
+#          forwardedHeadersCustomName: X-Custom-Header
+#          redisCacheEnabled: false
+#          redisCacheHost: "redis:6379"
+#    fail2ban:
+#       plugin:
+#         fail2ban:
+#           blacklist:
+#             ip:
+#               - put a subnet here
+#           rules:
+#             action: ""
+#             actionAbuseipdb: ""
+#             backend: ""
+#             banaction: ""
+#             banactionAllports: ""
+#             bantime: 3h
+#             chain: ""
+#             destemail: ""
+#             enabled: "true"
+#             fail2banAgent: ""
+#             filter: ""
+#             findtime: 10m
+#             ignorecommand: ""
+#             logencoding: UTF-8
+#             maxretry: "4"
+#             mode: ""
+#             mta: ""
+#             ports: 0:8000
+#             protocol: ""
+#             sender: ""
+#             urlregexp: ""
+#             usedns: ""
+#           whitelist:
+#              ip:
+#                - ::1
+#                - 127.0.0.1

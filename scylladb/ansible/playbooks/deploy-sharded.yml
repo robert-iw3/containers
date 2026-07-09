@@ -1,0 +1,200 @@
+---
+- name: Deploy Enterprise Sharded ScyllaDB
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    scylla_image: "{{ image | default('scylladb/scylla-enterprise:5.4') }}"
+    data_path: "{{ data_path | default('/host/data') }}"
+    cert_path: "{{ cert_path | default('./certs') }}"
+    num_racks: "{{ num_racks | default(2) }}"
+    nodes_per_rack: "{{ nodes_per_rack | default(3) }}"
+    num_tenants: "{{ num_tenants | default(1) }}"
+    root_username: "{{ root_username | default('admin') }}"
+    db_type: "{{ db_type | default('enterprise-sharded') }}"
+    ca_cn: "{{ ca_cn | default('ScyllaDB CA') }}"
+    node_cn: "{{ node_cn | default('ScyllaDB Node') }}"
+    cluster_cn: "{{ cluster_cn | default('ScyllaDB Cluster') }}"
+    san: "{{ san | default('dns:localhost,ip:127.0.0.1') }}"
+    cert_days: "{{ cert_days | default(365) }}"
+    tls_enabled: "{{ tls_enabled | default(true) }}"
+    enable_firewall: true
+  vars_prompt:
+    - name: vault_scylla_password
+      prompt: Enter ScyllaDB root password (use Vault in prod)
+      private: yes
+      when: not ansible_vault_password_file is defined
+  collections:
+    - community.docker
+  tasks:
+    - name: Install OpenSSL
+      package:
+        name: openssl
+        state: present
+        update_cache: yes
+      when: tls_enabled
+
+    - name: Create certificate directory
+      file:
+        path: "{{ cert_path }}"
+        state: directory
+        mode: '0750'
+        owner: scylla
+        group: scylla
+      when: tls_enabled
+
+    - name: Generate CA configuration
+      ansible.builtin.template:
+        src: ca.cnf.j2
+        dest: "{{ cert_path }}/ca.cnf"
+        mode: '0644'
+      when: tls_enabled
+
+    - name: Generate server certificate configuration
+      ansible.builtin.template:
+        src: scylla.cnf.j2
+        dest: "{{ cert_path }}/scylla.cnf"
+        mode: '0644'
+      when: tls_enabled
+
+    - name: Generate cluster certificate configuration
+      ansible.builtin.template:
+        src: scylla-cluster.cnf.j2
+        dest: "{{ cert_path }}/scylla-cluster.cnf"
+        mode: '0644'
+      when: tls_enabled
+
+    - name: Generate CA key and certificate
+      ansible.builtin.command: "{{ item }}"
+      args:
+        chdir: "{{ cert_path }}"
+        creates: "{{ cert_path }}/ca.pem"
+      loop:
+        - openssl genrsa -out ca.key 4096
+        - openssl req -x509 -new -nodes -key ca.key -sha256 -days {{ cert_days }} -out ca.pem -config ca.cnf
+      when: tls_enabled
+
+    - name: Generate server certificate
+      ansible.builtin.command: "{{ item }}"
+      args:
+        chdir: "{{ cert_path }}"
+        creates: "{{ cert_path }}/scylla.pem"
+      loop:
+        - openssl genrsa -out scylla.key 2048
+        - openssl req -new -key scylla.key -out scylla.csr -config scylla.cnf
+        - openssl x509 -req -in scylla.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out scylla.pem -days {{ cert_days }} -sha256 -extfile scylla.cnf -extensions v3_req
+      when: tls_enabled
+
+    - name: Generate cluster certificate
+      ansible.builtin.command: "{{ item }}"
+      args:
+        chdir: "{{ cert_path }}"
+        creates: "{{ cert_path }}/scylla-cluster.pem"
+      loop:
+        - openssl genrsa -out scylla-cluster.key 2048
+        - openssl req -new -key scylla-cluster.key -out scylla-cluster.csr -config scylla-cluster.cnf
+        - openssl x509 -req -in scylla-cluster.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out scylla-cluster.pem -days {{ cert_days }} -sha256 -extfile scylla-cluster.cnf -extensions v3_req
+      when: tls_enabled
+
+    - name: Set certificate permissions
+      file:
+        path: "{{ cert_path }}/{{ item }}"
+        mode: '0400'
+        owner: scylla
+        group: scylla
+      loop:
+        - ca.pem
+        - scylla.pem
+        - scylla-cluster.pem
+        - ca.key
+        - scylla.key
+        - scylla-cluster.key
+      when: tls_enabled
+
+    - name: Install Docker or Podman
+      package:
+        name: "{{ ansible_pkg_mgr == 'apt' ? 'docker.io' : 'podman' }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install docker-compose or podman-compose
+      package:
+        name: "{{ ansible_pkg_mgr == 'apt' ? 'docker-compose' : 'podman-compose' }}"
+        state: present
+
+    - name: Create data directories
+      file:
+        path: "{{ data_path }}/rack{{ rack_idx }}/node{{ node_idx }}"
+        state: directory
+        mode: '0750'
+        owner: scylla
+        group: scylla
+      loop: "{{ query('nested', range(0, num_racks | int), range(0, nodes_per_rack | int)) }}"
+      loop_control:
+        loop_var: item
+        label: "rack{{ item[0] }}-node{{ item[1] }}"
+      vars:
+        rack_idx: "{{ item[0] }}"
+        node_idx: "{{ item[1] }}"
+
+    - name: Copy tenant-init.cql
+      copy:
+        src: "{{ playbook_dir }}/../tenant-init.cql"
+        dest: /docker-entrypoint-initdb.d/tenant-init.cql
+        mode: '0644'
+        owner: scylla
+        group: scylla
+
+    - name: Allow ScyllaDB ports in firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '9042'  # CQL
+        - '9142'  # CQL SSL
+        - '7001'  # Internode
+        - '10001' # Manager
+      when: enable_firewall
+      notify: Reload ufw
+
+    - name: Generate docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ playbook_dir }}/../docker-compose.yml"
+        mode: '0644'
+
+    - name: Run ScyllaDB cluster with Docker or Podman
+      community.docker.docker_compose_v2:
+        project_name: scylla
+        compose_file: "{{ playbook_dir }}/../docker-compose.yml"
+        state: present
+      register: compose_result
+
+    - name: Wait for ScyllaDB nodes to be ready
+      wait_for:
+        port: "{{ 9042 + (item | int) * 100 }}"
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      loop: "{{ range(0, num_racks | int) | list }}"
+      when: compose_result.changed
+
+    - name: Initialize tenant keyspaces
+      command: "{{ ansible_pkg_mgr == 'apt' ? 'docker' : 'podman' }} exec scylla-rack0-node0-{{ inventory_hostname_short }} cqlsh --ssl -u {{ root_username }} -p {{ vault_scylla_password }} -f /docker-entrypoint-initdb.d/tenant-init.cql"
+      when: num_tenants > 0 and compose_result.changed and tls_enabled
+      register: tenant_check
+      failed_when: tenant_check.rc != 0
+
+    - name: Initialize tenant keyspaces (non-TLS)
+      command: "{{ ansible_pkg_mgr == 'apt' ? 'docker' : 'podman' }} exec scylla-rack0-node0-{{ inventory_hostname_short }} cqlsh -u {{ root_username }} -p {{ vault_scylla_password }} -f /docker-entrypoint-initdb.d/tenant-init.cql"
+      when: num_tenants > 0 and compose_result.changed and not tls_enabled
+      register: tenant_check
+      failed_when: tenant_check.rc != 0
+
+  handlers:
+    - name: Reload ufw
+      ufw:
+        state: reloaded
+      when: enable_firewall

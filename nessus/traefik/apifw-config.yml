@@ -1,0 +1,53 @@
+http:
+  routers:
+    api-fw:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`apifw.testing.io`, `www.apifw.testing.io`)"
+      middlewares:
+        - secured
+      tls: {}
+      service: api-fw
+  services:
+    api-fw:
+      loadBalancer:
+        servers:
+          - url: "https://apifw.testing.io:8088"
+        passHostHeader: true
+        healthCheck:
+          path: /status
+          interval: 10s
+          timeout: 3s
+  middlewares:
+    apifw-redirect:
+      redirectScheme:
+        scheme: https
+        port: "8088"
+        permanent: true
+    apifw-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+        accessControlMaxAge: 100
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+    apifw-whitelist:
+      ipWhiteList:
+        sourceRange:
+        #configure only to accept from certain subnets, more acl's
+        - "192.168.0.0/16"
+    secured:
+      chain:
+        middlewares:
+        - apifw-whitelist
+        - apifw-headers
+        - apifw-redirect

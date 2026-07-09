@@ -1,0 +1,161 @@
+version: "3"
+
+volumes:
+  jira-postgres:
+    driver: local
+  jira-data:
+    driver: local
+
+networks:
+  jira-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${JIRA_SUBNET}
+          gateway: ${JIRA_GATEWAY}
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  postgresql:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-jira
+    hostname: postgres-jira.dev.io
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - jira-postgres:/bitnami/postgresql:z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - 5432:5432
+    networks:
+      jira-net:
+        ipv4_address: ${POSTGRESQL_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  jira:
+    <<: *common-vars-apps
+    image: docker.io/atlassian/atlassian/jira-software:latest
+    container_name: jira
+    hostname: ${JIRA_HOSTNAME}
+    volumes:
+      - jira-data:/var/atlassian/application-data/jira:Z
+    environment:
+      JVM_MINIMUM_MEMORY: ${JIRA_JVM_MINIMUM_MEMORY}
+      JVM_MAXIMUM_MEMORY: ${JIRA_JVM_MAXIMUM_MEMORY}
+      ATL_PROXY_NAME: ${JIRA_HOSTNAME}
+      ATL_TOMCAT_SECURE: 'true'
+      ATL_TOMCAT_SCHEME: https
+      ATL_PROXY_PORT: 443
+      ATL_DB_TYPE: postgres72
+      ATL_DB_DRIVER: org.postgresql.Driver
+      ATL_JDBC_USER: ${POSTGRESQL_USERNAME}
+      ATL_JDBC_PASSWORD: ${POSTGRESQL_PASSWORD}
+      ATL_JDBC_URL: jdbc:postgresql://postgres-jira.dev.io:5432/${POSTGRESQL_DATABASE}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://$(echo $JIRA_IPv4):8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    env_file:
+      - .env
+    ports:
+      - 443:443
+      - 8080:8080
+    networks:
+      jira-net:
+        ipv4_address: ${JIRA_IPv4}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backups:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres2-jira
+    hostname: postgres2-jira.dev.io
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        && while true; do
+        pg_dump
+        -h postgres-jira.dev.io
+        -p 5432
+        -d "${POSTGRESQL_DATABASE}"
+        -U "${POSTGRESQL_USERNAME} | gzip > /srv/jira-postgres/backups/jira-postgres-backup-$$(date "+%Y-%m-%d_%H-%M").gz
+        && find /srv/jira-postgres/backups -type f -mtime +7 | xargs rm -f;
+        sleep 24h; done
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - jira-postgres:/bitnami/postgresql:z
+      - jira-postgres-backups:/srv/jira-postgres/backups:Z
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-jira.dev.io
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      jira:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    ports:
+      - 5432:5432
+    networks:
+      jira-net:
+        ipv4_address: ${BACKUP_POSTGRESQL_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

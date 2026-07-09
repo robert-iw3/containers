@@ -1,0 +1,27 @@
+name: GuardDog Supply-Chain Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  guarddog-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Podman
+        run: sudo apt-get update && sudo apt-get install -y podman
+
+      - name: GuardDog Scan (fails on malicious packages)
+        run: |
+          python3 ci_guarddog_scan.py
+
+      # Optional: Upload SARIF for GitHub Code Scanning alerts
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: guarddog-results/*.sarif

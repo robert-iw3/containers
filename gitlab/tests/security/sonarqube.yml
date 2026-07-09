@@ -1,0 +1,27 @@
+sast-sonarqube:
+  stage: test
+  image: docker.io/docker:latest
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+    SONARQUBE_URL:
+    YOUR_PROJECT_KEY:
+    SONAR_TOKEN:
+    YOUR_REPO:
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - docker run --rm -it
+        --env SONAR_HOST_URL="http://${SONARQUBE_URL}"
+        --env SONAR_SCANNER_OPTS="-Dsonar.projectKey=${YOUR_PROJECT_KEY} -Dsonar.qualitygate.wait=true"
+        --env SONAR_TOKEN="${SONAR_TOKEN}"
+        --volume "${YOUR_REPO}:/usr/src"
+        registry.hub.docker.com/sonarsource/sonar-scanner-cli:latest

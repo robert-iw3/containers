@@ -1,0 +1,22 @@
+policy_module(kube_bench, 1.0.0)
+
+# Declare a custom type for kube-bench
+type kube_bench_t;
+type kube_bench_exec_t;
+domain_type(kube_bench_t)
+domain_entry_file(kube_bench_t, kube_bench_exec_t)
+
+# Allow kube-bench to run in a container
+container_domain(kube_bench_t, kube_bench_exec_t)
+
+# Allow access to necessary files
+allow kube_bench_t self:process { execmem execstack };
+allow kube_bench_t etc_t:dir read;
+allow kube_bench_t etc_t:file { open read };
+allow kube_bench_t var_t:dir read;
+allow kube_bench_t var_t:file { open read };
+allow kube_bench_t bin_t:file { execute open read };
+
+# Allow network access for kubectl
+allow kube_bench_t self:tcp_socket { create connect read write };
+allow kube_bench_t self:udp_socket { create connect read write };

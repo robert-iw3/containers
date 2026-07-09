@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: burp-suite
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: burp-suite
+  namespace: burp-suite
+  labels:
+    app: burp-suite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: burp-suite
+  template:
+    metadata:
+      labels:
+        app: burp-suite
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: burp-suite
+        image: burp-suite-pro:latest
+        env:
+        - name: BURP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: burp-secrets
+              key: burp-key
+        - name: JAVA_OPTS
+          value: "-Xmx2G -Djava.awt.headless=false"
+        ports:
+        - containerPort: 8080
+          name: burp-proxy
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "0.5"
+            memory: "1Gi"
+        volumeMounts:
+        - name: burp-data
+          mountPath: /home/burp/.java
+        - name: burp-config
+          mountPath: /home/burp/config
+          readOnly: true
+      volumes:
+      - name: burp-data
+        persistentVolumeClaim:
+          claimName: burp-data-pvc
+      - name: burp-config
+        configMap:
+          name: burp-config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: burp-data-pvc
+  namespace: burp-suite
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: burp-config
+  namespace: burp-suite
+data:
+  project_options.json: |
+    {
+      "proxy": {
+        "proxy_listeners": [
+          {
+            "bind_to_address": "all interfaces",
+            "port": 8080,
+            "running": true
+          }
+        ]
+      }
+    }
+  user_options.json: |
+    {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: burp-secrets
+  namespace: burp-suite
+type: Opaque
+data:
+  burp-key: "" # Base64-encoded BURP_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: burp-suite
+  namespace: burp-suite
+spec:
+  selector:
+    app: burp-suite
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: burp-suite-policy
+  namespace: burp-suite
+spec:
+  podSelector:
+    matchLabels:
+      app: burp-suite
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

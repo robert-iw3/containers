@@ -1,0 +1,100 @@
+# LLM Service (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm
+spec:
+  selector:
+    app: llm
+  ports:
+  - protocol: TCP
+    port: 11434
+    targetPort: 11434
+  type: ClusterIP
+---
+# Database Service (external for browser)
+apiVersion: v1
+kind: Service
+metadata:
+  name: database
+spec:
+  selector:
+    app: database
+  ports:
+  - protocol: TCP
+    port: 7474
+    targetPort: 7474
+  - protocol: TCP
+    port: 7687
+    targetPort: 7687
+  type: LoadBalancer
+---
+# Bot Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bot
+spec:
+  selector:
+    app: bot
+  ports:
+  - protocol: TCP
+    port: 8501
+    targetPort: 8501
+  type: LoadBalancer
+---
+# PDF Bot Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pdf-bot
+spec:
+  selector:
+    app: pdf-bot
+  ports:
+  - protocol: TCP
+    port: 8503
+    targetPort: 8503
+  type: LoadBalancer
+---
+# Loader Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: loader
+spec:
+  selector:
+    app: loader
+  ports:
+  - protocol: TCP
+    port: 8502
+    targetPort: 8502
+  type: LoadBalancer
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector:
+    app: api
+  ports:
+  - protocol: TCP
+    port: 8504
+    targetPort: 8504
+  type: LoadBalancer
+---
+# Front-end Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-end
+spec:
+  selector:
+    app: front-end
+  ports:
+  - protocol: TCP
+    port: 8505
+    targetPort: 8505
+  type: LoadBalancer

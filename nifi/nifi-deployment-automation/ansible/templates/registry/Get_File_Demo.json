@@ -1,0 +1,710 @@
+{
+	"template": {
+		"description": "GetFile->SplitText->ExtractText->RouteOnAttribute",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "Get File Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "52f7da90-75d2-31c8-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "4c767b59-bda8-3a93-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "32ec0452-a9cb-3f92-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "a797d10c-cf80-343d-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "6e4f3ccb-7fa2-33e5-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "5dc6ee62-692e-3658-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "good",
+							"source": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "248c6288-4f3e-37b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "768caf9c-e51d-31e7-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "dff4e08a-986b-3db1-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "unmatched",
+							"source": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "248c6288-4f3e-37b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "86abc63a-e7b1-3cf3-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "439bfb22-c5b8-3685-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "splits",
+							"source": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "32ec0452-a9cb-3f92-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "d63249e7-b5c7-39ec-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "248c6288-4f3e-37b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "52f7da90-75d2-31c8-0000-000000000000",
+								"id": "439bfb22-c5b8-3685-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"outputPorts": [
+						{
+							"id": "5dc6ee62-692e-3658-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "1780.0000086448383",
+								"y": "633.999999082519"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Good Lines",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Good Lines'' is invalid because Output connection for port 'Good Lines' is not defined."
+						},
+						{
+							"id": "dff4e08a-986b-3db1-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "1399.0000086448383",
+								"y": "641.999999082519"
+							},
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Bad Lines",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Bad Lines'' is invalid because Output connection for port 'Bad Lines' is not defined."
+						}
+					],
+					"processors": [
+						{
+							"id": "248c6288-4f3e-37b6-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "1474.0000086448383",
+								"y": "415.999999082519"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Routing Strategy",
+											"value": {
+												"name": "Routing Strategy"
+											}
+										},
+										{
+											"key": "good",
+											"value": {
+												"name": "good"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Routing Strategy",
+											"value": "Route to Property name"
+										},
+										{
+											"key": "good",
+											"value": "${line:contains('string_to_match')}"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "RouteOnAttribute",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "good"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "unmatched"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.RouteOnAttribute"
+						},
+						{
+							"id": "32ec0452-a9cb-3f92-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "1017.6342091604693",
+								"y": "220.85057607841517"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Line Split Count",
+											"value": {
+												"name": "Line Split Count"
+											}
+										},
+										{
+											"key": "Maximum Fragment Size",
+											"value": {
+												"name": "Maximum Fragment Size"
+											}
+										},
+										{
+											"key": "Header Line Count",
+											"value": {
+												"name": "Header Line Count"
+											}
+										},
+										{
+											"key": "Header Line Marker Characters",
+											"value": {
+												"name": "Header Line Marker Characters"
+											}
+										},
+										{
+											"key": "Remove Trailing Newlines",
+											"value": {
+												"name": "Remove Trailing Newlines"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Line Split Count",
+											"value": "1"
+										},
+										{
+											"key": "Maximum Fragment Size"
+										},
+										{
+											"key": "Header Line Count",
+											"value": "0"
+										},
+										{
+											"key": "Header Line Marker Characters"
+										},
+										{
+											"key": "Remove Trailing Newlines",
+											"value": "true"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "SplitText",
+							"relationships": [
+								{
+									"autoTerminate": "true",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "true",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "splits"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.SplitText"
+						},
+						{
+							"id": "439bfb22-c5b8-3685-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "1477.4455206935686",
+								"y": "222.01428035685885"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Character Set",
+											"value": {
+												"name": "Character Set"
+											}
+										},
+										{
+											"key": "Maximum Buffer Size",
+											"value": {
+												"name": "Maximum Buffer Size"
+											}
+										},
+										{
+											"key": "Maximum Capture Group Length",
+											"value": {
+												"name": "Maximum Capture Group Length"
+											}
+										},
+										{
+											"key": "Enable Canonical Equivalence",
+											"value": {
+												"name": "Enable Canonical Equivalence"
+											}
+										},
+										{
+											"key": "Enable Case-insensitive Matching",
+											"value": {
+												"name": "Enable Case-insensitive Matching"
+											}
+										},
+										{
+											"key": "Permit Whitespace and Comments in Pattern",
+											"value": {
+												"name": "Permit Whitespace and Comments in Pattern"
+											}
+										},
+										{
+											"key": "Enable DOTALL Mode",
+											"value": {
+												"name": "Enable DOTALL Mode"
+											}
+										},
+										{
+											"key": "Enable Literal Parsing of the Pattern",
+											"value": {
+												"name": "Enable Literal Parsing of the Pattern"
+											}
+										},
+										{
+											"key": "Enable Multiline Mode",
+											"value": {
+												"name": "Enable Multiline Mode"
+											}
+										},
+										{
+											"key": "Enable Unicode-aware Case Folding",
+											"value": {
+												"name": "Enable Unicode-aware Case Folding"
+											}
+										},
+										{
+											"key": "Enable Unicode Predefined Character Classes",
+											"value": {
+												"name": "Enable Unicode Predefined Character Classes"
+											}
+										},
+										{
+											"key": "Enable Unix Lines Mode",
+											"value": {
+												"name": "Enable Unix Lines Mode"
+											}
+										},
+										{
+											"key": "Include Capture Group 0",
+											"value": {
+												"name": "Include Capture Group 0"
+											}
+										},
+										{
+											"key": "extract-text-enable-repeating-capture-group",
+											"value": {
+												"name": "extract-text-enable-repeating-capture-group"
+											}
+										},
+										{
+											"key": "line",
+											"value": {
+												"name": "line"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Character Set",
+											"value": "UTF-8"
+										},
+										{
+											"key": "Maximum Buffer Size",
+											"value": "1 MB"
+										},
+										{
+											"key": "Maximum Capture Group Length",
+											"value": "1024"
+										},
+										{
+											"key": "Enable Canonical Equivalence",
+											"value": "false"
+										},
+										{
+											"key": "Enable Case-insensitive Matching",
+											"value": "false"
+										},
+										{
+											"key": "Permit Whitespace and Comments in Pattern",
+											"value": "false"
+										},
+										{
+											"key": "Enable DOTALL Mode",
+											"value": "false"
+										},
+										{
+											"key": "Enable Literal Parsing of the Pattern",
+											"value": "false"
+										},
+										{
+											"key": "Enable Multiline Mode",
+											"value": "false"
+										},
+										{
+											"key": "Enable Unicode-aware Case Folding",
+											"value": "false"
+										},
+										{
+											"key": "Enable Unicode Predefined Character Classes",
+											"value": "false"
+										},
+										{
+											"key": "Enable Unix Lines Mode",
+											"value": "false"
+										},
+										{
+											"key": "Include Capture Group 0",
+											"value": "true"
+										},
+										{
+											"key": "extract-text-enable-repeating-capture-group",
+											"value": "false"
+										},
+										{
+											"key": "line",
+											"value": "(.*)"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "ExtractText",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "true",
+									"name": "unmatched"
+								}
+							],
+							"state": "STOPPED",
+							"style": {
+								"entry": {
+									"key": "background-color",
+									"value": "#38fa03"
+								}
+							},
+							"type": "org.apache.nifi.processors.standard.ExtractText"
+						},
+						{
+							"id": "a797d10c-cf80-343d-0000-000000000000",
+							"parentGroupId": "52f7da90-75d2-31c8-0000-000000000000",
+							"position": {
+								"x": "539.0000086448383",
+								"y": "216.9999990825191"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "sku,upc,title,description,short description,image url,price,msrp,qty",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Input Directory",
+											"value": {
+												"name": "Input Directory"
+											}
+										},
+										{
+											"key": "File Filter",
+											"value": {
+												"name": "File Filter"
+											}
+										},
+										{
+											"key": "Path Filter",
+											"value": {
+												"name": "Path Filter"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Keep Source File",
+											"value": {
+												"name": "Keep Source File"
+											}
+										},
+										{
+											"key": "Recurse Subdirectories",
+											"value": {
+												"name": "Recurse Subdirectories"
+											}
+										},
+										{
+											"key": "Polling Interval",
+											"value": {
+												"name": "Polling Interval"
+											}
+										},
+										{
+											"key": "Ignore Hidden Files",
+											"value": {
+												"name": "Ignore Hidden Files"
+											}
+										},
+										{
+											"key": "Minimum File Age",
+											"value": {
+												"name": "Minimum File Age"
+											}
+										},
+										{
+											"key": "Maximum File Age",
+											"value": {
+												"name": "Maximum File Age"
+											}
+										},
+										{
+											"key": "Minimum File Size",
+											"value": {
+												"name": "Minimum File Size"
+											}
+										},
+										{
+											"key": "Maximum File Size",
+											"value": {
+												"name": "Maximum File Size"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Input Directory",
+											"value": "/var/log/nifi/"
+										},
+										{
+											"key": "File Filter",
+											"value": "nifi-app.log"
+										},
+										{
+											"key": "Path Filter"
+										},
+										{
+											"key": "Batch Size",
+											"value": "10"
+										},
+										{
+											"key": "Keep Source File",
+											"value": "false"
+										},
+										{
+											"key": "Recurse Subdirectories",
+											"value": "true"
+										},
+										{
+											"key": "Polling Interval",
+											"value": "0 sec"
+										},
+										{
+											"key": "Ignore Hidden Files",
+											"value": "true"
+										},
+										{
+											"key": "Minimum File Age",
+											"value": "0 sec"
+										},
+										{
+											"key": "Maximum File Age"
+										},
+										{
+											"key": "Minimum File Size",
+											"value": "0 B"
+										},
+										{
+											"key": "Maximum File Size"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GetFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GetFile"
+						}
+					]
+				},
+				"name": "Get File Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "12/24/2019 12:41:41 UTC",
+		"_encoding-version": "1.2"
+	}
+}

@@ -1,0 +1,172 @@
+<form version="1.1" theme="light">
+  <label>Audit Logs - System Changes</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Added License Key</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="added license key*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="added license key*"
+| rex field=audit_log.message "\(\s*(?&lt;t_license_info&gt;[^\)]+?)\s*\)"
+| rename t_license_info as LicenseInfo
+| eval AddedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp LicenseInfo AddedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>User Accounts Created</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created user*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created user*"
+| rex field=audit_log.message "'\s*(?&lt;t_username&gt;[^']+?)\s*'"
+| rename t_username as NewUserName
+| eval CreatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp NewUserName CreatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>Custom Sandflies Created</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created custom sandfly*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created custom sandfly*"
+| rex field=audit_log.message "\s*(?&lt;t_custom_sandfly&gt;[\S]+)$"
+| rename t_custom_sandfly as CustomSandfly
+| eval CreatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp CustomSandfly CreatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>Schedules Created</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created schedule*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created schedule*"
+| rex field=audit_log.message "\s*(?&lt;t_custom_schedule&gt;[\S]+)$"
+| rename t_custom_schedule as CustomSchedule
+| eval CreatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp CustomSchedule CreatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>SSH Security Zones Created</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="SSH security zone * created"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="SSH security zone * created"
+| eval SSHSecurityZone='audit_log.message'
+| eval CreatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp SSHSecurityZone CreatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

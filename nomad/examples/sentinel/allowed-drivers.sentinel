@@ -1,0 +1,9 @@
+allowed_drivers = ["podman", "docker"]
+
+main = rule {
+  all job.task_groups as tg {
+    all tg.tasks as task {
+      task.driver in allowed_drivers
+    }
+  }
+}

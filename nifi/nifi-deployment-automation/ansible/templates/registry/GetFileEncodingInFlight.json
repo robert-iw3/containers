@@ -1,0 +1,703 @@
+{
+   "template":{
+      "description":"Uses the \"uchardet\" command to find the encoding of a file without reading it in twice.",
+      "name":"GetFileEncodingInFlight",
+      "snippet":{
+         "connections":[
+            {
+               "id":"0a170da3-b4e2-4634-bcd3-c30956c1b561",
+               "parentGroupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+                  "id":"9f7531c8-4c97-42f2-b680-3bcfd5d4a85e",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"original",
+               "source":{
+                  "groupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+                  "id":"f5cfb3b8-a4ad-408c-a34d-5c4ab46d65f7",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"9ebfba0f-d963-4374-b96e-18dc26eea8ae",
+               "parentGroupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+                  "id":"f5cfb3b8-a4ad-408c-a34d-5c4ab46d65f7",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+                  "id":"7f45c5a9-8445-438c-b89f-ac63d1957f2d",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "processors":[
+            {
+               "id":"7f45c5a9-8445-438c-b89f-ac63d1957f2d",
+               "parentGroupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+               "position":{
+                  "x":"-555.0",
+                  "y":"-142.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":{
+                              "description":"The input directory from which to pull files",
+                              "displayName":"Input Directory",
+                              "dynamic":"false",
+                              "name":"Input Directory",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"File Filter",
+                           "value":{
+                              "defaultValue":"[^\\.].*",
+                              "description":"Only files whose names match the given regular expression will be picked up",
+                              "displayName":"File Filter",
+                              "dynamic":"false",
+                              "name":"File Filter",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Path Filter",
+                           "value":{
+                              "description":"When Recurse Subdirectories is true, then only subdirectories whose path matches the given regular expression will be scanned",
+                              "displayName":"Path Filter",
+                              "dynamic":"false",
+                              "name":"Path Filter",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"10",
+                              "description":"The maximum number of files to pull in each iteration",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Keep Source File",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the file is not deleted after it has been copied to the Content Repository; this causes the file to be picked up continually and is useful for testing purposes.  If not keeping original NiFi will need write permissions on the directory it is pulling from otherwise it will ignore the file.",
+                              "displayName":"Keep Source File",
+                              "dynamic":"false",
+                              "name":"Keep Source File",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Recurse Subdirectories",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not to pull files from subdirectories",
+                              "displayName":"Recurse Subdirectories",
+                              "dynamic":"false",
+                              "name":"Recurse Subdirectories",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Polling Interval",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"Indicates how long to wait before performing a directory listing",
+                              "displayName":"Polling Interval",
+                              "dynamic":"false",
+                              "name":"Polling Interval",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Ignore Hidden Files",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates whether or not hidden files should be ignored",
+                              "displayName":"Ignore Hidden Files",
+                              "dynamic":"false",
+                              "name":"Ignore Hidden Files",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Age",
+                           "value":{
+                              "defaultValue":"0 sec",
+                              "description":"The minimum age that a file must be in order to be pulled; any file younger than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Minimum File Age",
+                              "dynamic":"false",
+                              "name":"Minimum File Age",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Age",
+                           "value":{
+                              "description":"The maximum age that a file must be in order to be pulled; any file older than this amount of time (according to last modification date) will be ignored",
+                              "displayName":"Maximum File Age",
+                              "dynamic":"false",
+                              "name":"Maximum File Age",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum File Size",
+                           "value":{
+                              "defaultValue":"0 B",
+                              "description":"The minimum size that a file must be in order to be pulled",
+                              "displayName":"Minimum File Size",
+                              "dynamic":"false",
+                              "name":"Minimum File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Size",
+                           "value":{
+                              "description":"The maximum size that a file can be in order to be pulled",
+                              "displayName":"Maximum File Size",
+                              "dynamic":"false",
+                              "name":"Maximum File Size",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Input Directory",
+                           "value":"/Users/jpercivall/Downloads/PopularIndicators"
+                        },
+                        {
+                           "key":"File Filter"
+                        },
+                        {
+                           "key":"Path Filter"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Keep Source File"
+                        },
+                        {
+                           "key":"Recurse Subdirectories"
+                        },
+                        {
+                           "key":"Polling Interval"
+                        },
+                        {
+                           "key":"Ignore Hidden Files"
+                        },
+                        {
+                           "key":"Minimum File Age"
+                        },
+                        {
+                           "key":"Maximum File Age"
+                        },
+                        {
+                           "key":"Minimum File Size"
+                        },
+                        {
+                           "key":"Maximum File Size"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"GetFile",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All files are routed to success",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GetFile"
+            },
+            {
+               "id":"9f7531c8-4c97-42f2-b680-3bcfd5d4a85e",
+               "parentGroupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+               "position":{
+                  "x":"-550.0",
+                  "y":"303.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Log Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"trace",
+                                    "value":"trace"
+                                 },
+                                 {
+                                    "displayName":"debug",
+                                    "value":"debug"
+                                 },
+                                 {
+                                    "displayName":"info",
+                                    "value":"info"
+                                 },
+                                 {
+                                    "displayName":"warn",
+                                    "value":"warn"
+                                 },
+                                 {
+                                    "displayName":"error",
+                                    "value":"error"
+                                 }
+                              ],
+                              "defaultValue":"info",
+                              "description":"The Log Level to use when logging the Attributes",
+                              "displayName":"Log Level",
+                              "dynamic":"false",
+                              "name":"Log Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log Payload",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+                              "displayName":"Log Payload",
+                              "dynamic":"false",
+                              "name":"Log Payload",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Log",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+                              "displayName":"Attributes to Log",
+                              "dynamic":"false",
+                              "name":"Attributes to Log",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Ignore",
+                           "value":{
+                              "description":"A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+                              "displayName":"Attributes to Ignore",
+                              "dynamic":"false",
+                              "name":"Attributes to Ignore",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Log prefix",
+                           "value":{
+                              "description":"Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+                              "displayName":"Log prefix",
+                              "dynamic":"false",
+                              "name":"Log prefix",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Log Level"
+                        },
+                        {
+                           "key":"Log Payload"
+                        },
+                        {
+                           "key":"Attributes to Log"
+                        },
+                        {
+                           "key":"Attributes to Ignore"
+                        },
+                        {
+                           "key":"Log prefix"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"LogAttribute",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.LogAttribute"
+            },
+            {
+               "id":"f5cfb3b8-a4ad-408c-a34d-5c4ab46d65f7",
+               "parentGroupId":"06dede9b-01b0-4511-9529-3ce36bb4ac25",
+               "position":{
+                  "x":"-551.0",
+                  "y":"62.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Command Arguments",
+                           "value":{
+                              "description":"The arguments to supply to the executable delimited by the ';' character.",
+                              "displayName":"Command Arguments",
+                              "dynamic":"false",
+                              "name":"Command Arguments",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Command Path",
+                           "value":{
+                              "description":"Specifies the command to be executed; if just the name of an executable is provided, it must be in the user's environment PATH.",
+                              "displayName":"Command Path",
+                              "dynamic":"false",
+                              "name":"Command Path",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Ignore STDIN",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the contents of the incoming flowfile will not be passed to the executing command",
+                              "displayName":"Ignore STDIN",
+                              "dynamic":"false",
+                              "name":"Ignore STDIN",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Working Directory",
+                           "value":{
+                              "description":"The directory to use as the current working directory when executing the command",
+                              "displayName":"Working Directory",
+                              "dynamic":"false",
+                              "name":"Working Directory",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Argument Delimiter",
+                           "value":{
+                              "defaultValue":";",
+                              "description":"Delimiter to use to separate arguments for a command [default: ;]. Must be a single character",
+                              "displayName":"Argument Delimiter",
+                              "dynamic":"false",
+                              "name":"Argument Delimiter",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Output Destination Attribute",
+                           "value":{
+                              "description":"If set, the output of the stream command will be put into an attribute of the original FlowFile instead of a separate FlowFile. There will no longer be a relationship for 'output stream'. The value of this property will be the key for the output attribute.",
+                              "displayName":"Output Destination Attribute",
+                              "dynamic":"false",
+                              "name":"Output Destination Attribute",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Max Attribute Length",
+                           "value":{
+                              "defaultValue":"256",
+                              "description":"If routing the output of the stream command to an attribute, the number of characters put to the attribute value will be at most this amount. This is important because attributes are held in memory and large attributes will quickly cause out of memory issues. If the output goes longer than this value, it will truncated to fit. Consider making this smaller if able.",
+                              "displayName":"Max Attribute Length",
+                              "dynamic":"false",
+                              "name":"Max Attribute Length",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Command Arguments"
+                        },
+                        {
+                           "key":"Command Path",
+                           "value":"uchardet"
+                        },
+                        {
+                           "key":"Ignore STDIN",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Working Directory",
+                           "value":"${absolute.path}"
+                        },
+                        {
+                           "key":"Argument Delimiter"
+                        },
+                        {
+                           "key":"Output Destination Attribute",
+                           "value":"encoding"
+                        },
+                        {
+                           "key":"Max Attribute Length"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ExecuteStreamCommand",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"FlowFiles that were successfully processed",
+                  "name":"original"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ExecuteStreamCommand"
+            }
+         ]
+      },
+      "timestamp":"11/24/2019 10:56:49 EST"
+   }
+}

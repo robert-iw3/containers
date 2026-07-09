@@ -1,0 +1,127 @@
+---
+services:
+  consul-server1-init:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server1-init
+    command: ["/bin/sh", "-c", "cd /consul/certs && consul tls ca create -domain=consul -out=consul-agent-ca.pem && consul tls cert create -server -dc=dc1 -domain=consul -out=dc1-server-consul-0.pem"]
+    volumes:
+      - consul-certs:/consul/certs
+    user: consul
+
+  consul-server1:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server1
+    hostname: consul-server1
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+      - "8300:8300"
+      - "8301:8301/tcp"
+      - "8301:8301/udp"
+      - "8302:8302/udp"
+    environment:
+      - CONSUL_LOCAL_CONFIG={"node_name":"consul-server1","server":true,"bootstrap_expect":3,"datacenter":"dc1","data_dir":"/consul/data","log_level":"INFO","ui_config":{"enabled":true},"addresses":{"https":"0.0.0.0","dns":"127.0.0.1"},"ports":{"https":8501,"grpc":-1,"grpc_tls":8503,"http":-1},"retry_join":["consul-server1","consul-server2","consul-server3"],"encrypt":"aPuGh+5UDskRAbkLaXRzFoSOcSM+5vAK+NEYOWHJH7w=","encrypt_verify_incoming":true,"encrypt_verify_outgoing":true,"tls":{"defaults":{"verify_incoming":true,"verify_outgoing":true,"ca_file":"/consul/certs/consul-agent-ca.pem","cert_file":"/consul/certs/dc1-server-consul-0.pem","key_file":"/consul/certs/dc1-server-consul-0-key.pem"},"internal_rpc":{"verify_server_hostname":true}},"auto_encrypt":{"allow_tls":true},"acl":{"enabled":true,"default_policy":"deny","down_policy":"extend-cache","enable_token_persistence":true}}
+    volumes:
+      - consul-data1:/consul/data
+      - consul-certs:/consul/certs
+      - ./config:/consul/config:ro
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - consul-mesh
+    depends_on:
+      consul-server1-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:8501/v1/health/service/consul"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  consul-server2-init:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server2-init
+    command: ["/bin/sh", "-c", "cd /consul/certs && consul tls cert create -server -dc=dc1 -domain=consul -out=dc1-server-consul-1.pem"]
+    volumes:
+      - consul-certs:/consul/certs
+    user: consul
+    depends_on:
+      consul-server1-init:
+        condition: service_completed_successfully
+
+  consul-server2:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server2
+    hostname: consul-server2
+    environment:
+      - CONSUL_LOCAL_CONFIG={"node_name":"consul-server2","server":true,"bootstrap_expect":3,"datacenter":"dc1","data_dir":"/consul/data","log_level":"INFO","ui_config":{"enabled":true},"addresses":{"https":"0.0.0.0","dns":"127.0.0.1"},"ports":{"https":8501,"grpc":-1,"grpc_tls":8503,"http":-1},"retry_join":["consul-server1","consul-server2","consul-server3"],"encrypt":"aPuGh+5UDskRAbkLaXRzFoSOcSM+5vAK+NEYOWHJH7w=","encrypt_verify_incoming":true,"encrypt_verify_outgoing":true,"tls":{"defaults":{"verify_incoming":true,"verify_outgoing":true,"ca_file":"/consul/certs/consul-agent-ca.pem","cert_file":"/consul/certs/dc1-server-consul-1.pem","key_file":"/consul/certs/dc1-server-consul-1-key.pem"},"internal_rpc":{"verify_server_hostname":true}},"auto_encrypt":{"allow_tls":true},"acl":{"enabled":true,"default_policy":"deny","down_policy":"extend-cache","enable_token_persistence":true}}
+    volumes:
+      - consul-data2:/consul/data
+      - consul-certs:/consul/certs
+      - ./config:/consul/config:ro
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - consul-mesh
+    depends_on:
+      consul-server1:
+        condition: service_started
+      consul-server2-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:8501/v1/health/service/consul"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  consul-server3-init:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server3-init
+    command: ["/bin/sh", "-c", "cd /consul/certs && consul tls cert create -server -dc=dc1 -domain=consul -out=dc1-server-consul-2.pem"]
+    volumes:
+      - consul-certs:/consul/certs
+    user: consul
+    depends_on:
+      consul-server1-init:
+        condition: service_completed_successfully
+
+  consul-server3:
+    image: hashicorp/consul:2.0.1
+    container_name: consul-server3
+    hostname: consul-server3
+    environment:
+      - CONSUL_LOCAL_CONFIG={"node_name":"consul-server3","server":true,"bootstrap_expect":3,"datacenter":"dc1","data_dir":"/consul/data","log_level":"INFO","ui_config":{"enabled":true},"addresses":{"https":"0.0.0.0","dns":"127.0.0.1"},"ports":{"https":8501,"grpc":-1,"grpc_tls":8503,"http":-1},"retry_join":["consul-server1","consul-server2","consul-server3"],"encrypt":"aPuGh+5UDskRAbkLaXRzFoSOcSM+5vAK+NEYOWHJH7w=","encrypt_verify_incoming":true,"encrypt_verify_outgoing":true,"tls":{"defaults":{"verify_incoming":true,"verify_outgoing":true,"ca_file":"/consul/certs/consul-agent-ca.pem","cert_file":"/consul/certs/dc1-server-consul-2.pem","key_file":"/consul/certs/dc1-server-consul-2-key.pem"},"internal_rpc":{"verify_server_hostname":true}},"auto_encrypt":{"allow_tls":true},"acl":{"enabled":true,"default_policy":"deny","down_policy":"extend-cache","enable_token_persistence":true}}
+    volumes:
+      - consul-data3:/consul/data
+      - consul-certs:/consul/certs
+      - ./config:/consul/config:ro
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - consul-mesh
+    depends_on:
+      consul-server1:
+        condition: service_started
+      consul-server2:
+        condition: service_started
+      consul-server3-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:8501/v1/health/service/consul"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  consul-mesh:
+    driver: bridge
+
+volumes:
+  consul-data1:
+  consul-data2:
+  consul-data3:
+  consul-certs:

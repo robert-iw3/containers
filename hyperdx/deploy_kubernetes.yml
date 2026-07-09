@@ -1,0 +1,38 @@
+---
+- name: Deploy HyperDX on Kubernetes
+  hosts: localhost
+  vars_files:
+    - ansible_vars.yaml
+  tasks:
+    - name: Install Helm
+      package:
+        name: helm
+        state: present
+
+    - name: Add HyperDX Helm repo
+      kubernetes.core.helm_repository:
+        name: hyperdx
+        repo_url: https://hyperdxio.github.io/helm-charts
+
+    - name: Generate secrets if empty
+      set_fact:
+        clickhouse_agg_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_agg_password == '' else clickhouse_agg_password }}"
+        clickhouse_wrk_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_wrk_password == '' else clickhouse_wrk_password }}"
+        clickhouse_api_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_api_password == '' else clickhouse_api_password }}"
+        mongo_password: "{{ lookup('password', '/dev/null length=32') if mongo_password == '' else mongo_password }}"
+        api_key: "{{ lookup('password', '/dev/null length=64') if api_key == '' else api_key }}"
+
+    - name: Template values.yaml
+      template:
+        src: helm/values.yaml.j2
+        dest: /tmp/hyperdx_values.yaml
+
+    - name: Deploy with Helm
+      kubernetes.core.helm:
+        name: "{{ k8s_release_name }}"
+        chart_ref: hyperdx/hdx-oss-v2
+        release_namespace: "{{ k8s_namespace }}"
+        values_files:
+          - /tmp/hyperdx_values.yaml
+        state: present
+        update_repo_cache: true

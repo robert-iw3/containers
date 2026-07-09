@@ -1,0 +1,12 @@
+---
+hosts:
+  - name: qdrant-node1
+    ip: 192.168.1.100
+    user: ansible
+    ssh_key: ~/.ssh/id_rsa
+
+qdrant_version: latest
+kafka_version: latest-ubi8
+data_dir: /opt/qdrant
+tls_enabled: true
+api_key: "{{ lookup('env', 'QDRANT_API_KEY') | default('secure_random_key', true) }}"

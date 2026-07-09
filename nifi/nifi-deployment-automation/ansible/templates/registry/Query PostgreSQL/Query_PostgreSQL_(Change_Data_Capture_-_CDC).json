@@ -1,0 +1,1764 @@
+{
+	"template": {
+		"description": "",
+		"groupId": "1f2c98fd-016a-1000-6ea6-64d34129d170",
+		"name": "Query PostgreSQL (Change Data Capture - CDC)",
+		"snippet": {
+			"processGroups": {
+				"id": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+				"parentGroupId": "5ec22fd0-fa07-3774-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "5556e909-5544-3e03-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "50ba7ef4-f86f-3de1-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "non-duplicate",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "5005d648-06b2-3dd4-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "8fd2680e-9cfc-3bf4-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "740a3126-01e0-30ce-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "5005d648-06b2-3dd4-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "92b9a92e-f984-33ca-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "5005d648-06b2-3dd4-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "837a6982-5237-365f-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "cfd12f7e-7469-36ab-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "3802f7a3-86db-392c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "duplicate",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "5005d648-06b2-3dd4-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "de292798-66a7-3d36-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "90284564-67fa-3b96-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "splits",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "f5918d98-132a-37b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "e08b2452-b029-328d-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "f5918d98-132a-37b6-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+								"id": "2425b075-199a-38a7-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"controllerServices": [
+						{
+							"id": "28bfecbc-cbc5-380c-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-registry-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "avro-reg-validated-field-names",
+										"value": {
+											"name": "avro-reg-validated-field-names"
+										}
+									},
+									{
+										"key": "users",
+										"value": {
+											"name": "users"
+										}
+									}
+								]
+							},
+							"name": "Avro Schema Registry for Users",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "avro-reg-validated-field-names",
+										"value": "true"
+									},
+									{
+										"key": "users",
+										"value": "{\n\t\"name\":\"users\",\n\t\"namespace\":\"usersdata\",\n\t\"type\":\"record\",\n\t\"fields\":[\n\t\t{\"name\": \"user_id\", \"type\" :\"int\"},\n\t\t{\"name\": \"title\", \"type\" :\"string\"},\t\t\n\t\t{\"name\": \"author\", \"type\" :\"string\"},\n\t\t{\"name\": \"author_image\", \"type\" :\"string\"},\n\t\t{\"name\": \"release_date\", \"type\" :\"string\"},\n\t\t{\"name\": \"image\", \"type\" :\"string\"},\n\t\t{\"name\": \"price\", \"type\" :\"string\"},\n\t\t{\"name\": \"short_description\", \"type\" :\"string\"},\n\t\t{\"name\": \"long_description\", \"type\" :\"string\"}\n\t]\n}"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.schemaregistry.services.AvroSchemaRegistry"
+						},
+						{
+							"id": "342a753d-91c5-32ff-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-record-serialization-services-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "Schema Write Strategy",
+										"value": {
+											"name": "Schema Write Strategy"
+										}
+									},
+									{
+										"key": "schema-access-strategy",
+										"value": {
+											"name": "schema-access-strategy"
+										}
+									},
+									{
+										"key": "schema-registry",
+										"value": {
+											"identifiesControllerService": "org.apache.nifi.schemaregistry.services.SchemaRegistry",
+											"name": "schema-registry"
+										}
+									},
+									{
+										"key": "schema-name",
+										"value": {
+											"name": "schema-name"
+										}
+									},
+									{
+										"key": "schema-version",
+										"value": {
+											"name": "schema-version"
+										}
+									},
+									{
+										"key": "schema-branch",
+										"value": {
+											"name": "schema-branch"
+										}
+									},
+									{
+										"key": "schema-text",
+										"value": {
+											"name": "schema-text"
+										}
+									},
+									{
+										"key": "Date Format",
+										"value": {
+											"name": "Date Format"
+										}
+									},
+									{
+										"key": "Time Format",
+										"value": {
+											"name": "Time Format"
+										}
+									},
+									{
+										"key": "Timestamp Format",
+										"value": {
+											"name": "Timestamp Format"
+										}
+									},
+									{
+										"key": "Pretty Print JSON",
+										"value": {
+											"name": "Pretty Print JSON"
+										}
+									},
+									{
+										"key": "suppress-nulls",
+										"value": {
+											"name": "suppress-nulls"
+										}
+									},
+									{
+										"key": "output-grouping",
+										"value": {
+											"name": "output-grouping"
+										}
+									}
+								]
+							},
+							"name": "Json Record Set Writer for Users",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "Schema Write Strategy",
+										"value": "schema-name"
+									},
+									{
+										"key": "schema-access-strategy",
+										"value": "inherit-record-schema"
+									},
+									{
+										"key": "schema-registry",
+										"value": "28bfecbc-cbc5-380c-0000-000000000000"
+									},
+									{
+										"key": "schema-name",
+										"value": "${schema.name}"
+									},
+									{
+										"key": "schema-version"
+									},
+									{
+										"key": "schema-branch"
+									},
+									{
+										"key": "schema-text",
+										"value": "${avro.schema}"
+									},
+									{
+										"key": "Date Format"
+									},
+									{
+										"key": "Time Format"
+									},
+									{
+										"key": "Timestamp Format"
+									},
+									{
+										"key": "Pretty Print JSON",
+										"value": "false"
+									},
+									{
+										"key": "suppress-nulls",
+										"value": "never-suppress"
+									},
+									{
+										"key": "output-grouping",
+										"value": "output-array"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.json.JsonRecordSetWriter"
+						},
+						{
+							"id": "3f173b3f-5aa1-3caf-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-redis-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "Redis Mode",
+										"value": {
+											"name": "Redis Mode"
+										}
+									},
+									{
+										"key": "Connection String",
+										"value": {
+											"name": "Connection String"
+										}
+									},
+									{
+										"key": "Database Index",
+										"value": {
+											"name": "Database Index"
+										}
+									},
+									{
+										"key": "Communication Timeout",
+										"value": {
+											"name": "Communication Timeout"
+										}
+									},
+									{
+										"key": "Cluster Max Redirects",
+										"value": {
+											"name": "Cluster Max Redirects"
+										}
+									},
+									{
+										"key": "Sentinel Master",
+										"value": {
+											"name": "Sentinel Master"
+										}
+									},
+									{
+										"key": "Password",
+										"value": {
+											"name": "Password"
+										}
+									},
+									{
+										"key": "Pool - Max Total",
+										"value": {
+											"name": "Pool - Max Total"
+										}
+									},
+									{
+										"key": "Pool - Max Idle",
+										"value": {
+											"name": "Pool - Max Idle"
+										}
+									},
+									{
+										"key": "Pool - Min Idle",
+										"value": {
+											"name": "Pool - Min Idle"
+										}
+									},
+									{
+										"key": "Pool - Block When Exhausted",
+										"value": {
+											"name": "Pool - Block When Exhausted"
+										}
+									},
+									{
+										"key": "Pool - Max Wait Time",
+										"value": {
+											"name": "Pool - Max Wait Time"
+										}
+									},
+									{
+										"key": "Pool - Min Evictable Idle Time",
+										"value": {
+											"name": "Pool - Min Evictable Idle Time"
+										}
+									},
+									{
+										"key": "Pool - Time Between Eviction Runs",
+										"value": {
+											"name": "Pool - Time Between Eviction Runs"
+										}
+									},
+									{
+										"key": "Pool - Num Tests Per Eviction Run",
+										"value": {
+											"name": "Pool - Num Tests Per Eviction Run"
+										}
+									},
+									{
+										"key": "Pool - Test On Create",
+										"value": {
+											"name": "Pool - Test On Create"
+										}
+									},
+									{
+										"key": "Pool - Test On Borrow",
+										"value": {
+											"name": "Pool - Test On Borrow"
+										}
+									},
+									{
+										"key": "Pool - Test On Return",
+										"value": {
+											"name": "Pool - Test On Return"
+										}
+									},
+									{
+										"key": "Pool - Test While Idle",
+										"value": {
+											"name": "Pool - Test While Idle"
+										}
+									}
+								]
+							},
+							"name": "RedisConnectionPoolService",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "Redis Mode",
+										"value": "Standalone"
+									},
+									{
+										"key": "Connection String",
+										"value": "127.0.0.1:6379"
+									},
+									{
+										"key": "Database Index",
+										"value": "0"
+									},
+									{
+										"key": "Communication Timeout",
+										"value": "10 seconds"
+									},
+									{
+										"key": "Cluster Max Redirects",
+										"value": "5"
+									},
+									{
+										"key": "Sentinel Master"
+									},
+									{
+										"key": "Password"
+									},
+									{
+										"key": "Pool - Max Total",
+										"value": "8"
+									},
+									{
+										"key": "Pool - Max Idle",
+										"value": "8"
+									},
+									{
+										"key": "Pool - Min Idle",
+										"value": "0"
+									},
+									{
+										"key": "Pool - Block When Exhausted",
+										"value": "true"
+									},
+									{
+										"key": "Pool - Max Wait Time",
+										"value": "10 seconds"
+									},
+									{
+										"key": "Pool - Min Evictable Idle Time",
+										"value": "60 seconds"
+									},
+									{
+										"key": "Pool - Time Between Eviction Runs",
+										"value": "30 seconds"
+									},
+									{
+										"key": "Pool - Num Tests Per Eviction Run",
+										"value": "-1"
+									},
+									{
+										"key": "Pool - Test On Create",
+										"value": "false"
+									},
+									{
+										"key": "Pool - Test On Borrow",
+										"value": "false"
+									},
+									{
+										"key": "Pool - Test On Return",
+										"value": "false"
+									},
+									{
+										"key": "Pool - Test While Idle",
+										"value": "true"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.redis.service.RedisConnectionPoolService"
+						},
+						{
+							"id": "78b8234d-587b-381a-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-redis-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "redis-connection-pool",
+										"value": {
+											"identifiesControllerService": "org.apache.nifi.redis.RedisConnectionPool",
+											"name": "redis-connection-pool"
+										}
+									},
+									{
+										"key": "redis-cache-ttl",
+										"value": {
+											"name": "redis-cache-ttl"
+										}
+									}
+								]
+							},
+							"name": "RedisDistributedMapCacheClientService",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "redis-connection-pool",
+										"value": "3f173b3f-5aa1-3caf-0000-000000000000"
+									},
+									{
+										"key": "redis-cache-ttl",
+										"value": "0 secs"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.redis.service.RedisDistributedMapCacheClientService"
+						},
+						{
+							"id": "c5864fcc-8cab-3f70-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-record-serialization-services-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "schema-access-strategy",
+										"value": {
+											"name": "schema-access-strategy"
+										}
+									},
+									{
+										"key": "schema-registry",
+										"value": {
+											"identifiesControllerService": "org.apache.nifi.schemaregistry.services.SchemaRegistry",
+											"name": "schema-registry"
+										}
+									},
+									{
+										"key": "schema-name",
+										"value": {
+											"name": "schema-name"
+										}
+									},
+									{
+										"key": "schema-version",
+										"value": {
+											"name": "schema-version"
+										}
+									},
+									{
+										"key": "schema-branch",
+										"value": {
+											"name": "schema-branch"
+										}
+									},
+									{
+										"key": "schema-text",
+										"value": {
+											"name": "schema-text"
+										}
+									}
+								]
+							},
+							"name": "Avro Reader for Users",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "schema-access-strategy",
+										"value": "embedded-avro-schema"
+									},
+									{
+										"key": "schema-registry",
+										"value": "28bfecbc-cbc5-380c-0000-000000000000"
+									},
+									{
+										"key": "schema-name",
+										"value": "${schema.name}"
+									},
+									{
+										"key": "schema-version"
+									},
+									{
+										"key": "schema-branch"
+									},
+									{
+										"key": "schema-text",
+										"value": "${avro.schema}"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.avro.AvroReader"
+						},
+						{
+							"id": "d0d2efed-d39e-36dc-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"bundle": {
+								"artifact": "nifi-dbcp-service-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"comments": "",
+							"descriptors": {
+								"entry": [
+									{
+										"key": "Database Connection URL",
+										"value": {
+											"name": "Database Connection URL"
+										}
+									},
+									{
+										"key": "Database Driver Class Name",
+										"value": {
+											"name": "Database Driver Class Name"
+										}
+									},
+									{
+										"key": "database-driver-locations",
+										"value": {
+											"name": "database-driver-locations"
+										}
+									},
+									{
+										"key": "Database User",
+										"value": {
+											"name": "Database User"
+										}
+									},
+									{
+										"key": "Password",
+										"value": {
+											"name": "Password"
+										}
+									},
+									{
+										"key": "Max Wait Time",
+										"value": {
+											"name": "Max Wait Time"
+										}
+									},
+									{
+										"key": "Max Total Connections",
+										"value": {
+											"name": "Max Total Connections"
+										}
+									},
+									{
+										"key": "Validation-query",
+										"value": {
+											"name": "Validation-query"
+										}
+									}
+								]
+							},
+							"name": "DBCP Connection Pool for PostgresSQL",
+							"persistsState": "false",
+							"properties": {
+								"entry": [
+									{
+										"key": "Database Connection URL",
+										"value": "${postgresuri}"
+									},
+									{
+										"key": "Database Driver Class Name",
+										"value": "${postgresdriverclassname}"
+									},
+									{
+										"key": "database-driver-locations",
+										"value": "${postgresdriverpath}"
+									},
+									{
+										"key": "Database User",
+										"value": "${postgresusername}"
+									},
+									{
+										"key": "Password"
+									},
+									{
+										"key": "Max Wait Time",
+										"value": "500 millis"
+									},
+									{
+										"key": "Max Total Connections",
+										"value": "8"
+									},
+									{
+										"key": "Validation-query"
+									}
+								]
+							},
+							"state": "DISABLED",
+							"type": "org.apache.nifi.dbcp.DBCPConnectionPool"
+						}
+					],
+					"processors": [
+						{
+							"id": "2425b075-199a-38a7-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "350.3886832777125",
+								"y": "-79.78359009120865"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Database Connection Pooling Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.dbcp.DBCPService",
+												"name": "Database Connection Pooling Service"
+											}
+										},
+										{
+											"key": "db-fetch-db-type",
+											"value": {
+												"name": "db-fetch-db-type"
+											}
+										},
+										{
+											"key": "Table Name",
+											"value": {
+												"name": "Table Name"
+											}
+										},
+										{
+											"key": "Columns to Return",
+											"value": {
+												"name": "Columns to Return"
+											}
+										},
+										{
+											"key": "db-fetch-where-clause",
+											"value": {
+												"name": "db-fetch-where-clause"
+											}
+										},
+										{
+											"key": "db-fetch-sql-query",
+											"value": {
+												"name": "db-fetch-sql-query"
+											}
+										},
+										{
+											"key": "Maximum-value Columns",
+											"value": {
+												"name": "Maximum-value Columns"
+											}
+										},
+										{
+											"key": "Max Wait Time",
+											"value": {
+												"name": "Max Wait Time"
+											}
+										},
+										{
+											"key": "Fetch Size",
+											"value": {
+												"name": "Fetch Size"
+											}
+										},
+										{
+											"key": "qdbt-max-rows",
+											"value": {
+												"name": "qdbt-max-rows"
+											}
+										},
+										{
+											"key": "qdbt-output-batch-size",
+											"value": {
+												"name": "qdbt-output-batch-size"
+											}
+										},
+										{
+											"key": "qdbt-max-frags",
+											"value": {
+												"name": "qdbt-max-frags"
+											}
+										},
+										{
+											"key": "dbf-normalize",
+											"value": {
+												"name": "dbf-normalize"
+											}
+										},
+										{
+											"key": "dbf-user-logical-types",
+											"value": {
+												"name": "dbf-user-logical-types"
+											}
+										},
+										{
+											"key": "dbf-default-precision",
+											"value": {
+												"name": "dbf-default-precision"
+											}
+										},
+										{
+											"key": "dbf-default-scale",
+											"value": {
+												"name": "dbf-default-scale"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Database Connection Pooling Service",
+											"value": "d0d2efed-d39e-36dc-0000-000000000000"
+										},
+										{
+											"key": "db-fetch-db-type",
+											"value": "Generic"
+										},
+										{
+											"key": "Table Name",
+											"value": "users"
+										},
+										{
+											"key": "Columns to Return"
+										},
+										{
+											"key": "db-fetch-where-clause"
+										},
+										{
+											"key": "db-fetch-sql-query"
+										},
+										{
+											"key": "Maximum-value Columns",
+											"value": "release_date"
+										},
+										{
+											"key": "Max Wait Time",
+											"value": "0 seconds"
+										},
+										{
+											"key": "Fetch Size",
+											"value": "0"
+										},
+										{
+											"key": "qdbt-max-rows",
+											"value": "0"
+										},
+										{
+											"key": "qdbt-output-batch-size",
+											"value": "0"
+										},
+										{
+											"key": "qdbt-max-frags",
+											"value": "0"
+										},
+										{
+											"key": "dbf-normalize",
+											"value": "false"
+										},
+										{
+											"key": "dbf-user-logical-types",
+											"value": "false"
+										},
+										{
+											"key": "dbf-default-precision",
+											"value": "10"
+										},
+										{
+											"key": "dbf-default-scale",
+											"value": "0"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "QueryDatabaseTable",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.QueryDatabaseTable"
+						},
+						{
+							"id": "3802f7a3-86db-392c-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "1262.2901890374796",
+								"y": "369.42071984160566"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "true",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "5005d648-06b2-3dd4-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "1260.2901890374796",
+								"y": "150.42071984160566"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Cache Entry Identifier",
+											"value": {
+												"name": "Cache Entry Identifier"
+											}
+										},
+										{
+											"key": "FlowFile Description",
+											"value": {
+												"name": "FlowFile Description"
+											}
+										},
+										{
+											"key": "Age Off Duration",
+											"value": {
+												"name": "Age Off Duration"
+											}
+										},
+										{
+											"key": "Distributed Cache Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.distributed.cache.client.DistributedMapCacheClient",
+												"name": "Distributed Cache Service"
+											}
+										},
+										{
+											"key": "Cache The Entry Identifier",
+											"value": {
+												"name": "Cache The Entry Identifier"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Cache Entry Identifier",
+											"value": "${unique_id}"
+										},
+										{
+											"key": "FlowFile Description",
+											"value": ""
+										},
+										{
+											"key": "Age Off Duration"
+										},
+										{
+											"key": "Distributed Cache Service",
+											"value": "78b8234d-587b-381a-0000-000000000000"
+										},
+										{
+											"key": "Cache The Entry Identifier",
+											"value": "true"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "DetectDuplicate",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "duplicate"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "non-duplicate"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.DetectDuplicate"
+						},
+						{
+							"id": "50ba7ef4-f86f-3de1-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "1704.2901890374796",
+								"y": "146.42071984160566"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "true",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "740a3126-01e0-30ce-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "1261.2901890374796",
+								"y": "-70.57928015839434"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "true",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "837a6982-5237-365f-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "767.3905143324",
+								"y": "150.78995727207257"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": {
+												"name": "Destination"
+											}
+										},
+										{
+											"key": "Return Type",
+											"value": {
+												"name": "Return Type"
+											}
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": {
+												"name": "Path Not Found Behavior"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										},
+										{
+											"key": "unique_id",
+											"value": {
+												"name": "unique_id"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": "flowfile-attribute"
+										},
+										{
+											"key": "Return Type",
+											"value": "auto-detect"
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": "ignore"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										},
+										{
+											"key": "unique_id",
+											"value": "$.author"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "EvaluateJsonPath",
+							"relationships": [
+								{
+									"autoTerminate": "true",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "true",
+									"name": "unmatched"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+						},
+						{
+							"id": "90284564-67fa-3b96-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "353.3886832777125",
+								"y": "357.2164099087913"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "true",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "f5918d98-132a-37b6-0000-000000000000",
+							"parentGroupId": "d1d9d8f7-ee94-3c2d-0000-000000000000",
+							"position": {
+								"x": "352.01492048279215",
+								"y": "151.7075240408244"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Record Reader",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.serialization.RecordReaderFactory",
+												"name": "Record Reader"
+											}
+										},
+										{
+											"key": "Record Writer",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.serialization.RecordSetWriterFactory",
+												"name": "Record Writer"
+											}
+										},
+										{
+											"key": "Records Per Split",
+											"value": {
+												"name": "Records Per Split"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Record Reader",
+											"value": "c5864fcc-8cab-3f70-0000-000000000000"
+										},
+										{
+											"key": "Record Writer",
+											"value": "342a753d-91c5-32ff-0000-000000000000"
+										},
+										{
+											"key": "Records Per Split",
+											"value": "1"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "SplitRecord",
+							"relationships": [
+								{
+									"autoTerminate": "true",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "true",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "splits"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.SplitRecord"
+						}
+					]
+				},
+				"name": "Query PostgreSQL",
+				"variables": ""
+			}
+		},
+		"timestamp": "04/17/2022 09:20:28 IST",
+		"_encoding-version": "1.2"
+	}
+}

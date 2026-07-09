@@ -1,0 +1,33 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-service
+  annotations: {}
+spec:
+  selector:
+    k8s-app: traefik-controller
+  ports:
+  - protocol: TCP
+    port: 80
+    name: http
+  - protocol: TCP
+    port: 443
+    name: https
+  type: NodePort
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-dashboard-service
+spec:
+  selector:
+    k8s-app: traefik-controller
+  ports:
+  - port: 8080
+    name: dashboard
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ingress-serviceaccount

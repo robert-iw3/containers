@@ -1,0 +1,72 @@
+---
+- name: Deploy HashiCorp Boundary with Docker
+  hosts: boundary
+  become: true
+  vars_files:
+    - vars/boundary.yml
+    - vars/vault.yml
+  tasks:
+    - name: Install required packages
+      package:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Boundary configuration directory
+      file:
+        path: "{{ boundary_config_dir }}"
+        state: directory
+        owner: "{{ boundary_user }}"
+        group: "{{ boundary_user }}"
+        mode: '0750'
+
+    - name: Copy Boundary configuration files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ boundary_config_dir }}/{{ item.dest }}"
+        owner: "{{ boundary_user }}"
+        group: "{{ boundary_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: 'Dockerfile', dest: 'Dockerfile', mode: '0644' }
+        - { src: 'docker-compose.yml', dest: 'docker-compose.yml', mode: '0644' }
+        - { src: 'config.hcl', dest: 'config.hcl', mode: '0640' }
+        - { src: 'entrypoint.sh', dest: 'entrypoint.sh', mode: '0755' }
+
+    - name: Create .env file with secrets
+      template:
+        src: env.j2
+        dest: "{{ boundary_config_dir }}/.env"
+        owner: "{{ boundary_user }}"
+        group: "{{ boundary_user }}"
+        mode: '0600'
+
+    - name: Ensure Boundary user exists
+      user:
+        name: "{{ boundary_user }}"
+        uid: 65535
+        shell: /sbin/nologin
+        home: /home/boundary
+        create_home: true
+
+    - name: Deploy Boundary with Docker Compose
+      command:
+        cmd: docker-compose -f {{ boundary_config_dir }}/docker-compose.yml up -d --build
+        chdir: "{{ boundary_config_dir }}"
+      changed_when: true
+      environment:
+        POSTGRESQL_USERNAME: "{{ postgresql_username }}"
+        POSTGRESQL_PASSWORD: "{{ postgresql_password }}"
+        POSTGRESQL_DATABASE: "{{ postgresql_database }}"
+        POSTGRESQL_REPLICATION_USER: "{{ postgresql_replication_user }}"
+        POSTGRESQL_REPLICATION_PASSWORD: "{{ postgresql_replication_password }}"
+        BOUNDARY_ROOT_KEY: "{{ boundary_root_key }}"
+        BOUNDARY_WORKER_AUTH_KEY: "{{ boundary_worker_auth_key }}"
+        BOUNDARY_RECOVERY_KEY: "{{ boundary_recovery_key }}"

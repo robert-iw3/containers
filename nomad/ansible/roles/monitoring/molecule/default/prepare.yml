@@ -1,0 +1,19 @@
+---
+- name: Prepare nested-podman storage
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install podman and fuse-overlayfs for podman-in-podman
+      package:
+        name: [podman, fuse-overlayfs]
+        state: present
+
+    - name: Configure overlay mount program
+      copy:
+        content: |
+          [storage]
+          driver = "overlay"
+          [storage.options.overlay]
+          mount_program = "/usr/bin/fuse-overlayfs"
+        dest: /etc/containers/storage.conf
+        mode: "0644"

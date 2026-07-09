@@ -1,0 +1,76 @@
+---
+services:
+  zeek:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ZEEK_VERSION: ${ZEEK_VERSION:-8.0.4}
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    network_mode: host
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: '4g'
+    healthcheck:
+      test: ["CMD", "zeekctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+      - type: bind
+        source: /var/log/zeek
+        target: /usr/local/zeek/logs
+      - type: bind
+        source: ./etc/node.cfg
+        target: /usr/local/zeek/etc/node.cfg
+      - type: bind
+        source: ./etc/networks.cfg
+        target: /usr/local/zeek/etc/networks.cfg
+  zeek-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "/usr/local/zeek/bin/zeek_exporter.py"]
+    ports:
+      - "9911:9911"
+    volumes:
+      - type: bind
+        source: /var/log/zeek
+        target: /usr/local/zeek/logs
+    depends_on:
+      - zeek
+  zeek-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile.connector
+    environment:
+      - ZEEK_LOG_DIR=/usr/local/zeek/logs
+      - SPLUNK_ENABLED=${SPLUNK_ENABLED:-false}
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - ES_ENABLED=${ES_ENABLED:-false}
+      - ES_HOST=${ES_HOST:-http://localhost:9200}
+      - ES_INDEX=${ES_INDEX:-zeek-logs}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-5.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+    volumes:
+      - type: bind
+        source: /var/log/zeek
+        target: /usr/local/zeek/logs
+    depends_on:
+      - zeek
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"

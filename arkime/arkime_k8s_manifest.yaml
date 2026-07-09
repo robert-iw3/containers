@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arkime
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: os01-data
+  namespace: arkime
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arkime-config
+  namespace: arkime
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arkime-logs
+  namespace: arkime
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arkime-pcap
+  namespace: arkime
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: os01
+  namespace: arkime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: os01
+  template:
+    metadata:
+      labels:
+        app: os01
+    spec:
+      containers:
+      - name: os01
+        image: docker.io/opensearchproject/opensearch:${OS_VERSION}
+        env:
+        - name: OS_VERSION
+          value: "3"
+        - name: node.name
+          value: os01
+        - name: bootstrap.memory_lock
+          value: "true"
+        - name: OPENSEARCH_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
+        - name: DISABLE_SECURITY_PLUGIN
+          value: "true"
+        - name: DISABLE_INSTALL_DEMO_CONFIG
+          value: "true"
+        - name: discovery.type
+          value: "single-node"
+        volumeMounts:
+        - name: os01-data
+          mountPath: /usr/share/opensearch/data
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        securityContext:
+          capabilities:
+            add:
+            - SYS_NICE
+      volumes:
+      - name: os01-data
+        persistentVolumeClaim:
+          claimName: os01-data
+      nodeSelector:
+        nvidia.com/gpu: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arkime
+  namespace: arkime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arkime
+  template:
+    metadata:
+      labels:
+        app: arkime
+    spec:
+      containers:
+      - name: arkime
+        image: arkime:latest
+        env:
+        - name: OS_HOST
+          value: os01
+        - name: OS_PORT
+          value: "9200"
+        ports:
+        - containerPort: 8005
+        volumeMounts:
+        - name: arkime-config
+          mountPath: /data/config
+        - name: arkime-logs
+          mountPath: /data/logs
+        - name: arkime-pcap
+          mountPath: /data/pcap
+      volumes:
+      - name: arkime-config
+        persistentVolumeClaim:
+          claimName: arkime-config
+      - name: arkime-logs
+        persistentVolumeClaim:
+          claimName: arkime-logs
+      - name: arkime-pcap
+        persistentVolumeClaim:
+          claimName: arkime-pcap
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arkime
+  namespace: arkime
+spec:
+  selector:
+    app: arkime
+  ports:
+  - protocol: TCP
+    port: 8005
+    targetPort: 8005
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: os01
+  namespace: arkime
+spec:
+  selector:
+    app: os01
+  ports:
+  - protocol: TCP
+    port: 9200
+    targetPort: 9200
+  type: ClusterIP

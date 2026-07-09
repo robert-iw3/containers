@@ -1,0 +1,31 @@
+#!/bin/bash
+
+echo "I'm starting cassandra"
+ENVIRONMENT_FILE=/opt/cassandra/conf/cassandra-env.sh
+CONFIGURATION_FILE=/opt/cassandra/conf/cassandra.yaml
+
+# Get container IP
+ADDR=$(/sbin/ifconfig eth0 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+
+# Seed is provided?
+SEED=${SEED:=$ADDR}
+
+if [ ! -f /opt/cassandra/.cassconfdone ]; then
+    echo "Filling in the blanks inside cassandra.yaml"
+    # Add heap settings
+    echo MAX_HEAP_SIZE="\"$MAX_HEAP_SIZE\"" >> $ENVIRONMENT_FILE
+    echo HEAP_NEWSIZE="\"$HEAP_NEWSIZE\"" >> $ENVIRONMENT_FILE
+    # Add broadcast IPs
+    echo "listen_address: $ADDR" >> $CONFIGURATION_FILE
+    echo "broadcast_rpc_address: $ADDR" >> $CONFIGURATION_FILE
+    echo "rpc_address: 0.0.0.0" >> $CONFIGURATION_FILE
+    echo "seed_provider:" >> $CONFIGURATION_FILE
+    echo "  - class_name: org.apache.cassandra.locator.SimpleSeedProvider" >> $CONFIGURATION_FILE
+    echo "    parameters:" >> $CONFIGURATION_FILE
+    echo "      - seeds: \"$SEED\"" >> $CONFIGURATION_FILE
+    touch /opt/cassandra/.cassconfdone
+fi
+
+# Start server
+cd /opt/cassandra
+bin/cassandra -Rf

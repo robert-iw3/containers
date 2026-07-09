@@ -1,0 +1,28 @@
+services:
+  xml-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - XML_LOG_DIR=/var/log/xml_data
+      - SCHEMAS_FILE=/app/schemas.yaml
+      - SPLUNK_ENABLED=${SPLUNK_ENABLED:-false}
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - ES_ENABLED=${ES_ENABLED:-false}
+      - ES_HOST=${ES_HOST:-http://localhost:9200}
+      - ES_INDEX=${ES_INDEX:-xml-logs}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - CONFIG_FILE=/app/deploy_config.yaml
+    volumes:
+      - xml-logs:/var/log/xml_data:Z
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '1G'
+    restart: unless-stopped
+volumes:
+  xml-logs:

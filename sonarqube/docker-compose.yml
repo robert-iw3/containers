@@ -1,0 +1,49 @@
+version: '3'
+
+volumes:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
+  sonarqube-temp:
+
+networks:
+  sonarnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${SONARQUBE_SUBNET}
+          gateway: ${SONARQUBE_GATEWAY}
+
+services:
+  sonarqube:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${SONARQUBE_CONTAINER_NAME}
+    hostname: ${SONARQUBE_HOSTNAME}
+    ports:
+      - 9000:9000
+    environment:
+      SONAR_JDBC_URL: "jdbc:postgresql://$(echo $POSTGRES_IPv4)/$(echo $POSTGRESQL_DATABASE)"
+      SONAR_JDBC_USERNAME: ${POSTGRESQL_USERNAME}
+      SONAR_JDBC_PASSWORD: ${POSTGRESQL_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - sonarqube-data:/opt/sonarqube/data:Z
+      - sonarqube-extensions:/opt/sonarqube/extensions:Z
+      - sonarqube-logs:/opt/sonarqube/logs:Z
+      - sonarqube-temp:/opt/sonarqube/temp:Z
+    healthcheck:
+      test: ["CMD", "wget", "http://$(echo $SONARQUBE_IPv4):9000/","--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    ulimits:
+      nproc: 8192
+      nofile:
+        soft: 65536
+        hard: 131072
+    networks:
+      sonarnet:
+        ipv4_address: ${SONARQUBE_IPv4}

@@ -1,0 +1,87 @@
+container_scan:
+  stage: test
+  image: docker.io/docker:latest
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    CI_APPLICATION_REPOSITORY: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG
+    CI_APPLICATION_TAG: $CI_COMMIT_SHA
+    CLAIR_HOST: http://localhost:6060/
+    CLAIR_MODE: combo
+    HTTP_PROXY:
+    HTTPS_PROXY:
+    SSL_CERT_DIR:
+  script:
+    - apk add -U wget ca-certificates
+    - docker pull ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}
+    - wget --progress=bar:force https://github.com/quay/clair/releases/download/v4.7.2/clairctl-linux-amd64
+    - mv clairctl-linux-amd64 clair-scanner
+    - chmod +x clair-scanner
+    # modify config
+    # https://pkg.go.dev/github.com/quay/clair/config#pkg-overview
+    - tee config.yaml <<\EOF
+      http_listen_addr: "<some ip to the clair http interface>"
+      introspection_addr: ""
+      log_level: "info"
+      tls: {}
+      indexer:
+          connstring: ""
+          scanlock_retry: 0
+          layer_scan_concurrency: 0
+          migrations: false
+          scanner: {}
+          airgap: false
+      matcher:
+          connstring: ""
+          indexer_addr: ""
+          migrations: false
+          period: ""
+          disable_updaters: false
+          update_retention: 2
+      matchers:
+          names: nil
+          config: nil
+      updaters:
+          sets: nil
+          config: nil
+      notifier:
+          connstring: ""
+          migrations: false
+          indexer_addr: ""
+          matcher_addr: ""
+          poll_interval: ""
+          delivery_interval: ""
+          disable_summary: false
+          webhook: null
+          amqp: null
+          stomp: null
+      auth:
+        psk: nil
+      trace:
+          name: ""
+          probability: null
+          jaeger:
+              agent:
+                  endpoint: ""
+              collector:
+                  endpoint: ""
+                  username: null
+                  password: null
+              service_name: ""
+              tags: nil
+              buffer_max: 0
+      metrics:
+          name: ""
+          prometheus:
+              endpoint: null
+      EOF
+    - ./clair-scanner report --config config.yaml --host ${CLAIR_HOST} -o json ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} >> /gl-container-scanning-report.json || true
+  artifacts:
+    paths:
+      - gl-sast-container-report.json
+    reports:
+      container_scanning: gl-sast-container-report.json

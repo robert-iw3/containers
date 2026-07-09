@@ -1,0 +1,12 @@
+---
+- name: Deploy Splunk Enterprise and Universal Forwarder
+  hosts: splunk_server
+  become: yes
+  strategy: free
+  vars_files:
+    - ../config/deployment_config.yaml
+  handlers:
+    - import_tasks: handlers/main.yml
+  roles:
+    - splunk_enterprise
+    - splunk_forwarder

@@ -1,0 +1,423 @@
+locals {
+  ############################ AWS configuration ############################
+  region = "us-east-1"
+
+  ############################ Core configuration ###########################
+  core_url            = "https://defguard.example.com"
+  core_grpc_port      = 50055
+  core_http_port      = 8000
+  core_cookie_insecure = false
+  core_package_version = "1.4.1"
+  core_arch           = "x86_64"
+  core_instance_type  = "t3.micro"
+
+  ########################### Proxy configuration ###########################
+  proxy_url            = "https://proxy.example.com"
+  proxy_grpc_port      = 50051
+  proxy_http_port      = 8000
+  proxy_package_version = "1.4.0"
+  proxy_arch           = "x86_64"
+  proxy_instance_type  = "t3.micro"
+
+  ###################### VPN and Gateway configuration ######################
+  vpn_networks = [
+    {
+      id      = 1
+      name    = "vpn1"
+      address = "10.10.10.1/24"
+      port    = 51820
+      nat     = true
+    }
+  ]
+  gateway_package_version = "1.4.0"
+  gateway_arch           = "x86_64"
+  gateway_instance_type  = "t3.micro"
+
+  ########################## Database configuration #########################
+  db_name           = "defguard"
+  db_username       = "defguard"
+  db_port           = 5432
+  db_storage        = 20
+  db_instance_class = "db.t3.micro"
+
+  ############################ VPC configuration ############################
+  vpc_name           = "defguard-vpc"
+  vpc_cidr           = "10.0.0.0/16"
+  vpc_tags = {
+    Name = local.vpc_name
+  }
+  vpc_private_subnets = ["10.0.2.0/24", "10.0.3.0/24"]
+  vpc_public_subnets = ["10.0.1.0/24"]
+  azs                = ["us-east-1a", "us-east-1b"]
+}
+
+variable "aws_access_key" {
+  description = "AWS access key"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS secret key"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_password" {
+  description = "Database password for Defguard Core"
+  type        = string
+  sensitive   = true
+}
+
+variable "default_admin_password" {
+  description = "Default admin password for Defguard Core"
+  type        = string
+  sensitive   = true
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+provider "aws" {
+  region     = local.region
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+}
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+  }
+}
+
+resource "random_password" "gateway_secret" {
+  length  = 64
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "defguard_secrets" {
+  name = "defguard-secrets-${random_id.secret_suffix.hex}"
+}
+
+resource "aws_secretsmanager_secret_version" "defguard_secrets_version" {
+  secret_id = aws_secretsmanager_secret.defguard_secrets.id
+  secret_string = jsonencode({
+    db_password            = var.db_password
+    gateway_secret         = random_password.gateway_secret.result
+    default_admin_password = var.default_admin_password
+  })
+}
+
+resource "random_id" "secret_suffix" {
+  byte_length = 8
+}
+
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name            = local.vpc_name
+  cidr            = local.vpc_cidr
+  azs             = local.azs
+  private_subnets = local.vpc_private_subnets
+  public_subnets  = local.vpc_public_subnets
+
+  enable_dns_hostnames = true
+  tags                 = local.vpc_tags
+}
+
+module "defguard_core" {
+  source          = "./core"
+  instance_type   = local.core_instance_type
+  package_version = local.core_package_version
+  arch            = local.core_arch
+  ami             = data.aws_ami.ubuntu.id
+
+  core_url        = local.core_url
+  proxy_grpc_port = local.proxy_grpc_port
+  proxy_url       = local.proxy_url
+  grpc_port       = local.core_grpc_port
+  http_port       = local.core_http_port
+  cookie_insecure = local.core_cookie_insecure
+  vpn_networks = [for network in local.vpn_networks : {
+    id       = network.id
+    name     = network.name
+    address  = network.address
+    port     = network.port
+    endpoint = aws_eip.defguard_gateway_endpoint[network.id - 1].public_ip
+  }]
+  db_details = {
+    name     = local.db_name
+    username = local.db_username
+    password = var.db_password
+    port     = local.db_port
+    address  = aws_db_instance.defguard_core_db.address
+  }
+  proxy_address        = module.defguard_proxy.proxy_private_address
+  gateway_secret       = random_password.gateway_secret.result
+  network_interface_id = aws_network_interface.defguard_core_network_interface.id
+  secrets_manager_arn  = aws_secretsmanager_secret.defguard_secrets.arn
+  secrets_manager_secret_version = aws_secretsmanager_secret_version.defguard_secrets_version
+}
+
+module "defguard_proxy" {
+  source          = "./proxy"
+  instance_type   = local.proxy_instance_type
+  package_version = local.proxy_package_version
+  arch            = local.proxy_arch
+  grpc_port       = local.proxy_grpc_port
+  http_port       = local.proxy_http_port
+  proxy_url       = local.proxy_url
+  ami             = data.aws_ami.ubuntu.id
+  network_interface_id = aws_network_interface.defguard_proxy_network_interface.id
+  secrets_manager_arn  = aws_secretsmanager_secret.defguard_secrets.arn
+  secrets_manager_secret_version = aws_secretsmanager_secret_version.defguard_secrets_version
+}
+
+module "defguard_gateway" {
+  count  = length(local.vpn_networks)
+  source = "./gateway"
+
+  ami             = data.aws_ami.ubuntu.id
+  instance_type   = local.gateway_instance_type
+  package_version = local.gateway_package_version
+  arch            = local.gateway_arch
+  gateway_port    = local.vpn_networks[count.index].port
+  network_id      = local.vpn_networks[count.index].id
+  gateway_secret  = random_password.gateway_secret.result
+  core_address    = aws_network_interface.defguard_core_network_interface.private_ip
+  core_grpc_port  = local.core_grpc_port
+  nat             = local.vpn_networks[count.index].nat
+  network_interface_id = aws_network_interface.defguard_gateway_network_interface[count.index].id
+  secrets_manager_arn  = aws_secretsmanager_secret.defguard_secrets.arn
+  secrets_manager_secret_version = aws_secretsmanager_secret_version.defguard_secrets_version
+}
+
+resource "aws_db_instance" "defguard_core_db" {
+  engine                 = "postgres"
+  instance_class         = local.db_instance_class
+  username               = local.db_username
+  password               = var.db_password
+  db_name                = local.db_name
+  port                   = local.db_port
+  skip_final_snapshot    = true
+  allocated_storage      = local.db_storage
+  db_subnet_group_name   = aws_db_subnet_group.defguard.name
+  vpc_security_group_ids = [aws_security_group.defguard_db_sg.id]
+  parameter_group_name   = aws_db_parameter_group.defguard_db_parameter_group.name
+}
+
+resource "aws_db_parameter_group" "defguard_db_parameter_group" {
+  name   = "defguard-db-parameter-group"
+  family = "postgres17"
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "0"
+  }
+}
+
+resource "aws_db_subnet_group" "defguard" {
+  name       = "defguard-db-subnet-group"
+  subnet_ids = module.vpc.private_subnets
+}
+
+resource "aws_eip" "defguard_core_endpoint" {
+  domain = "vpc"
+}
+
+resource "aws_eip_association" "defguard_core_endpoint_association" {
+  network_interface_id = aws_network_interface.defguard_core_network_interface.id
+  allocation_id        = aws_eip.defguard_core_endpoint.id
+}
+
+resource "aws_security_group" "defguard_core_sg" {
+  name        = "defguard-core-sg"
+  description = "Security group for Defguard Core"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = local.core_http_port
+    to_port     = local.core_http_port
+    protocol    = "tcp"
+    cidr_blocks = [for eip in aws_eip.defguard_gateway_endpoint : "${eip.public_ip}/32"]
+  }
+
+  ingress {
+    from_port       = local.core_grpc_port
+    to_port         = local.core_grpc_port
+    protocol        = "tcp"
+    security_groups = [for sg in aws_security_group.defguard_gateway_sg : sg.id]
+  }
+
+  ingress {
+    from_port       = local.core_grpc_port
+    to_port         = local.core_grpc_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.defguard_proxy_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_network_interface" "defguard_core_network_interface" {
+  subnet_id       = module.vpc.public_subnets[0]
+  security_groups = [aws_security_group.defguard_core_sg.id]
+
+  tags = {
+    Name = "defguard-core-network-interface"
+  }
+}
+
+resource "aws_eip" "defguard_gateway_endpoint" {
+  count  = length(local.vpn_networks)
+  domain = "vpc"
+}
+
+resource "aws_eip_association" "defguard_gateway_endpoint_association" {
+  count                = length(local.vpn_networks)
+  network_interface_id = aws_network_interface.defguard_gateway_network_interface[count.index].id
+  allocation_id        = aws_eip.defguard_gateway_endpoint[count.index].id
+}
+
+resource "aws_security_group" "defguard_gateway_sg" {
+  count       = length(local.vpn_networks)
+  name        = "defguard-gateway-sg-${count.index}"
+  description = "Security group for Defguard Gateway ${count.index}"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = local.vpn_networks[count.index].port
+    to_port     = local.vpn_networks[count.index].port
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]  # Consider restricting to specific client CIDRs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_network_interface" "defguard_gateway_network_interface" {
+  count           = length(local.vpn_networks)
+  subnet_id       = module.vpc.public_subnets[0]
+  security_groups = [aws_security_group.defguard_gateway_sg[count.index].id]
+
+  tags = {
+    Name = "defguard-gateway-network-interface-${count.index}"
+  }
+}
+
+resource "aws_eip" "defguard_proxy_endpoint" {
+  domain = "vpc"
+}
+
+resource "aws_eip_association" "defguard_proxy_endpoint_association" {
+  network_interface_id = aws_network_interface.defguard_proxy_network_interface.id
+  allocation_id        = aws_eip.defguard_proxy_endpoint.id
+}
+
+resource "aws_security_group" "defguard_proxy_sg" {
+  name        = "defguard-proxy-sg"
+  description = "Security group for Defguard Proxy"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = local.proxy_http_port
+    to_port     = local.proxy_http_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Consider restricting to specific client CIDRs
+  }
+
+  ingress {
+    from_port       = local.proxy_grpc_port
+    to_port         = local.proxy_grpc_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.defguard_core_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_network_interface" "defguard_proxy_network_interface" {
+  subnet_id       = module.vpc.public_subnets[0]
+  security_groups = [aws_security_group.defguard_proxy_sg.id]
+
+  tags = {
+    Name = "defguard-proxy-network-interface"
+  }
+}
+
+resource "aws_security_group" "defguard_db_sg" {
+  name        = "defguard-db-sg"
+  description = "Security group for Defguard database"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port       = local.db_port
+    to_port         = local.db_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.defguard_core_sg.id]
+  }
+
+  tags = {
+    Name = "defguard-db-sg"
+  }
+}
+
+output "defguard_core_private_address" {
+  description = "IP address of Defguard Core instance in the internal network"
+  value       = aws_network_interface.defguard_core_network_interface.private_ip
+}
+
+output "defguard_core_public_address" {
+  description = "Public IP address of Defguard Core instance"
+  value       = aws_eip.defguard_core_endpoint.public_ip
+}
+
+output "defguard_proxy_public_address" {
+  description = "Public IP address of Defguard Proxy instance"
+  value       = aws_eip.defguard_proxy_endpoint.public_ip
+}
+
+output "defguard_proxy_private_address" {
+  description = "Private IP address of Defguard Proxy instance"
+  value       = aws_network_interface.defguard_proxy_network_interface.private_ip
+}
+
+output "defguard_gateway_public_addresses" {
+  description = "Public IP addresses of Defguard Gateway instances"
+  value       = [for gw in aws_eip.defguard_gateway_endpoint : gw.public_ip]
+}
+
+output "defguard_gateway_private_addresses" {
+  description = "Private IP addresses of Defguard Gateway instances"
+  value       = [for gw in aws_network_interface.defguard_gateway_network_interface : gw.private_ip]
+}
+
+output "secrets_manager_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing sensitive data"
+  value       = aws_secretsmanager_secret.defguard_secrets.arn
+}

@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hanko-network-policy
+  namespace: hanko
+spec:
+  podSelector:
+    matchLabels:
+      app: hanko
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: hanko
+          podSelector:
+            matchLabels:
+              app: elements
+        - namespaceSelector:
+            matchLabels:
+              name: hanko
+          podSelector:
+            matchLabels:
+              app: postgresql
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 8001
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: hanko
+          podSelector:
+            matchLabels:
+              app: postgresql
+        - namespaceSelector:
+            matchLabels:
+              name: hanko
+          podSelector:
+            matchLabels:
+              app: mailslurper
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 2500
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80

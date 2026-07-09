@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+{% if nomad_tls_enabled %}
+export NOMAD_ADDR=https://{{ nomad_bind_addr }}:4646
+export NOMAD_CACERT={{ nomad_tls_ca_file }}
+{% else %}
+export NOMAD_ADDR=http://{{ nomad_bind_addr }}:4646
+{% endif %}
+if [ -f {{ nomad_config_dir }}/mgmt.token ]; then
+  NOMAD_TOKEN=$(cat {{ nomad_config_dir }}/mgmt.token)
+  export NOMAD_TOKEN
+fi
+
+leader=$(curl -s {% if nomad_tls_enabled %}--cacert {{ nomad_tls_ca_file }}{% endif %} "$NOMAD_ADDR/v1/status/leader" | tr -d '"' | cut -d: -f1)
+if [ "$leader" != "{{ nomad_bind_addr }}" ] && [ "$leader" != "127.0.0.1" ]; then
+  exit 0
+fi
+
+mkdir -p {{ nomad_snapshot_dir }}
+snap="{{ nomad_snapshot_dir }}/nomad-$(date +%Y%m%d%H%M%S).snap"
+{{ nomad_install_dir }}/nomad operator snapshot save "$snap"
+
+{% if nomad_snapshot_s3_bucket %}
+aws s3 cp "$snap" "s3://{{ nomad_snapshot_s3_bucket }}/{{ nomad_datacenter }}/"
+{% endif %}
+
+ls -1t {{ nomad_snapshot_dir }}/nomad-*.snap 2>/dev/null | tail -n +{{ nomad_snapshot_retention + 1 }} | xargs -r rm -f

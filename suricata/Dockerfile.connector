@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# suricata-connector: Sends Suricata logs to Splunk and Elasticsearch
+
+ARG repo="docker.io" \
+    base_image="python:3.11-alpine3.23" \
+    image_hash="4d426684e834f082010127608dd7d44f7be1ecf83ea671d581ea1fac66cfa4f7"
+
+FROM ${repo}/${base_image}
+
+LABEL org.opencontainers.image.name='Suricata-Connector' \
+    org.opencontainers.image.description='Connector for forwarding Suricata logs to Splunk and Elasticsearch' \
+    org.opencontainers.image.maintainer='RW'
+
+RUN pip install --no-cache-dir requests elasticsearch_async aiohttp orjson watchdog
+
+COPY suricata_connector.py /app/suricata_connector.py
+
+WORKDIR /app
+
+ENTRYPOINT ["python3", "suricata_connector.py"]

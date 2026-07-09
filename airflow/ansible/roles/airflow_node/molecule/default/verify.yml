@@ -1,0 +1,50 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: All expected airflow containers are running
+      ansible.builtin.command: podman ps --format '{{ "{{" }}.Names{{ "}}" }}'
+      register: ps
+      changed_when: false
+      become: true
+
+    - name: Assert the control plane + worker are up
+      ansible.builtin.assert:
+        that:
+          - "'airflow-postgres' in ps.stdout"
+          - "'airflow-redis' in ps.stdout"
+          - "'airflow-apiserver' in ps.stdout"
+          - "'airflow-scheduler' in ps.stdout"
+          - "'airflow-dag-processor' in ps.stdout"
+          - "'airflow-triggerer' in ps.stdout"
+          - "'airflow-worker' in ps.stdout"
+
+    - name: api-server serves HTTPS and reports healthy (retries while it boots)
+      ansible.builtin.uri:
+        url: "https://127.0.0.1:8080/api/v2/monitor/health"
+        validate_certs: false
+        return_content: true
+      register: health
+      until: health.status == 200 and 'healthy' in health.content
+      retries: 30
+      delay: 10
+
+    - name: Plain HTTP is refused (TLS-only)
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080/api/v2/monitor/health"
+        status_code: -1
+      register: plain
+      failed_when: plain.status == 200
+
+    - name: The celery worker registered with the broker
+      ansible.builtin.command: >-
+        podman exec airflow-worker
+        celery --app airflow.providers.celery.executors.celery_executor.app
+        inspect ping
+      register: ping
+      changed_when: false
+      become: true
+      until: "'pong' in ping.stdout"
+      retries: 20
+      delay: 10

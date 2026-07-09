@@ -1,0 +1,34 @@
+platform: kubernetes
+db_type: enterprise-sharded
+replicas_per_shard: 3
+storage_gb: 100
+ram_gb: 16
+num_shards: 10
+num_tenants: 100
+root_username: admin
+root_password: changeme
+keyfile_path: ./keyfile
+tls_cert_path: ./mongodb.pem
+tls_ca_path: ./ca.pem
+tls_cluster_path: ./mongodb-cluster.pem
+data_path: ./data
+image: mongodb:8.0-enterprise
+init_replset: configReplSet
+tenant_prefix: tenant_
+app_user_role: readWrite
+tenant_config:
+  collections:
+    - name: data
+      options:
+        timeseries:
+          timeField: timestamp
+      indexes:
+        - key: tenant_id
+          type: hashed
+      initial_data:
+        - document: { tenant_id: "tenant_{i}", status: "active", created_at: { $date: "2025-09-07T00:00:00Z" } }
+    - name: logs
+      indexes:
+        - key: event_time
+          type: 1  # Ascending
+      initial_data: []

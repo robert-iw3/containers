@@ -1,0 +1,37 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: bitbucket-pod-failure
+  namespace: bitbucket
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - bitbucket
+    labelSelectors:
+      app: bitbucket
+  duration: "30s"
+  scheduler:
+    cron: "@every 10m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: bitbucket-network-delay
+  namespace: bitbucket
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - bitbucket
+    labelSelectors:
+      app: bitbucket
+  delay:
+    latency: "200ms"
+    correlation: "0"
+    jitter: "50ms"
+  duration: "30s"
+  scheduler:
+    cron: "@every 10m"

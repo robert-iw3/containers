@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+# shellcheck disable=SC1091
+source /usr/local/lib/log.sh
+
+if [ -n "${KC_HTTPS_KEY_STORE_FILE}" ]; then
+    if [ ! -f "${KC_HTTPS_KEY_STORE_FILE}" ]; then
+        log_info "Generate self-signed certificate files"
+        keytool \
+            -genkeypair \
+            -validity 365 \
+            -storepass "${KC_HTTPS_KEY_STORE_PASSWORD:-password}" \
+            -storetype PKCS12 \
+            -keyalg RSA \
+            -keysize 4096 -dname "CN=keycloak.io-internal.dev" \
+            -keystore "${KC_HTTPS_KEY_STORE_FILE}"
+    fi
+fi
+
+if [ -n "$KC_DB_URL_HOST" ]; then
+    log_info "Wait for database server on '${KC_DB_URL_HOST:-postgres:5432}'"
+    /usr/local/bin/wait-for "${KC_DB_URL_HOST:-postgres:5432}"
+fi
+
+log_info "Start Keycloak\n"
+exec /opt/keycloak/bin/kc.sh "$@"

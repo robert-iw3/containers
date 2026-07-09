@@ -1,0 +1,98 @@
+---
+networks:
+  tenable:
+    name: tenable
+    driver: bridge
+
+volumes:
+  nessus_data:
+
+services:
+  api-firewall:
+    container_name: api-fw-ingress
+    image: docker.io/wallarm/api-firewall:0.9.6
+    hostname: api-fw.testing.io
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tenable
+    ports:
+      - 8088:8088
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./nessusapi/nessus-api-spec.json:/api-firewall/resources/nessus-api-spec.json:ro
+      - ./certs/apifw.testing.io.pem:/api-firewall/certs/apifw.testing.io.pem:ro
+      - ./certs/apifw.testing.io-key.pem:/api-firewall/certs/apifw.testing.io-key.pem:ro
+      - ./certs/nessus.testing.io.crt:/api-firewall/certs/nessus.testing.io.crt:ro
+      - ./exports:/home/nessus/artifacts:z
+    environment:
+      APIFW_URL: https://apifw.testing.io:8088
+      APIFW_TLS_CERT_FILE: /api-firewall/certs/apifw.testing.io.pem
+      APIFW_TLS_CERT_KEY: /api-firewall/certs/apifw.testing.io-key.pem
+      APIFW_SERVER_URL: https://nessus.testing.io:8834
+      APIFW_SERVER_INSECURE_CONNECTION: false
+      APIFW_SERVER_ROOT_CA: /api-firewall/certs/nessus.testing.io.crt
+      APIFW_API_SPECS: /api-firewall/resources/nessus-api-spec.json
+      APIFW_REQUEST_VALIDATION: BLOCK
+      APIFW_RESPONSE_VALIDATION: BLOCK
+      APIFW_LOG_FORMAT: JSON
+      APIFW_MODE: proxy
+    secrets:
+      - apifw_config
+    stop_grace_period: 1s
+    restart: on-failure
+    depends_on:
+      nessus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  nessus:
+    container_name: nessus
+    image: tenableofficial/nessus:10.8.4
+    hostname: nessus.testing.io
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      USERNAME_FILE: /run/secrets/nessus_username
+      PASSWORD_FILE: /run/secrets/nessus_password
+      ACTIVATION_CODE_FILE: /run/secrets/activation_code
+      AUTO_UPDATE: all
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_RESOURCE
+    networks:
+      - tenable
+    ports:
+      - 8834:8834
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./certs/nessus.testing.io.key:/certs/nessus.testing.io.key:ro
+      - ./certs/nessus.testing.io.crt:/certs/nessus.testing.io.crt:ro
+      - ./certs/ca.crt:/certs/ca.crt:ro
+      - nessus_data:/opt/nessus/var/nessus:Z
+      - ./exports:/home/nessus/artifacts:z
+    secrets:
+      - nessus_username
+      - nessus_password
+      - activation_code
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8834"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+secrets:
+  nessus_username:
+    file: ./secrets/nessus_username.txt
+  nessus_password:
+    file: ./secrets/nessus_password.txt
+  activation_code:
+    file: ./secrets/activation_code.txt
+  apifw_config:
+    file: ./secrets/apifw_config.txt

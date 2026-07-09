@@ -1,0 +1,31 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: Install podman and fuse-overlayfs for nested containers
+      ansible.builtin.package:
+        name:
+          - podman
+          - fuse-overlayfs
+        state: present
+
+    - name: Configure the overlay mount program (podman-in-podman)
+      ansible.builtin.copy:
+        dest: /etc/containers/storage.conf
+        mode: "0644"
+        content: |
+          [storage]
+          driver = "overlay"
+          [storage.options.overlay]
+          mount_program = "/usr/bin/fuse-overlayfs"
+
+    # In CI, pull the images from a registry instead. For local runs, the images
+    # are expected to be preloaded (e.g. `podman save spark-master:4.1.2-hadoop3 |
+    # podman --remote=false load` into the instance), or built first with build.sh
+    # and pushed to a registry set via spark_registry.
+    - name: Note image availability requirement
+      ansible.builtin.debug:
+        msg: >-
+          spark-master/spark-worker/spark-submit:4.1.2-hadoop3 must be resolvable
+          inside this instance (registry pull or preloaded).

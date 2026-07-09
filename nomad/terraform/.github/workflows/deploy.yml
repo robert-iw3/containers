@@ -1,0 +1,109 @@
+name: Deploy Nomad Cluster
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack
+        env:
+          SERVICES: ec2,secretsmanager,lambda,events
+          DEFAULT_REGION: us-east-1
+        ports:
+          - "4566:4566"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install Dependencies
+        run: |
+          pip install boto3 requests localstack moto[ec2,secretsmanager,lambda,events]
+          sudo apt-get update
+          sudo apt-get install -y terraform packer zip
+
+      - name: Configure LocalStack Environment
+        run: |
+          echo "AWS_ACCESS_KEY_ID=test" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=test" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+          echo "AWS_ENDPOINT_URL=http://localhost:4566" >> $GITHUB_ENV
+
+      - name: Package Lambda Function
+        run: |
+          cd lambda
+          zip grafana_password_rotation.zip grafana_password_rotation.py
+          cd ..
+
+      - name: Run Unit and Integration Tests
+        run: |
+          python -m unittest test_deploy_nomad.py
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install Dependencies
+        run: |
+          pip install boto3 requests
+          sudo apt-get update
+          sudo apt-get install -y terraform packer zip
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up SSH Key
+        run: |
+          echo "${{ secrets.SSH_KEY }}" | base64 -d > ssh_key
+          chmod 600 ssh_key
+          mv ssh_key ~/.ssh/id_rsa
+
+      - name: Package Lambda Function
+        run: |
+          cd lambda
+          zip grafana_password_rotation.zip grafana_password_rotation.py
+          cd ..
+
+      - name: Deploy Nomad Cluster
+        run: |
+          python deploy_nomad.py --config config.json
+        env:
+          SSL_CERT_ARN: ${{ secrets.SSL_CERT_ARN }}
+
+      - name: Clean Up on Failure
+        if: failure()
+        run: |
+          terraform destroy -var-file=variables.tfvars -auto-approve
+          ami_id=$(grep 'ami-' terraform.tfstate | head -1 | awk '{print $2}' | tr -d '"')
+          if [ -n "$ami_id" ]; then
+            aws ec2 deregister-image --image-id $ami_id
+            snapshot_id=$(aws ec2 describe-images --image-ids $ami_id --query 'Images[0].BlockDeviceMappings[0].Ebs.SnapshotId' --output text)
+            if [ -n "$snapshot_id" ]; then
+              aws ec2 delete-snapshot --snapshot-id $snapshot_id
+            fi
+          fi
+          secrets_arn=$(terraform output -raw secrets_arn)
+          if [ -n "$secrets_arn" ]; then
+            aws secretsmanager delete-secret --secret-id $secrets_arn --force-delete-without-recovery
+          fi

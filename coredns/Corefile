@@ -1,0 +1,57 @@
+(global_configurations) {
+    log {
+      class all
+    }
+    errors
+    cache {
+      success 4096
+      denial  1024
+      prefetch 512
+    }
+    prometheus :9153
+}
+
+example1.com:53 {
+    import global_configurations
+    file /root/coredns/zones/example1.com.zone
+}
+
+example2.com:53 {
+    import global_configurations
+    file /root/coredns/zones/example2.com.zone
+}
+
+amazonaws.com:53 {
+  forward . 9.9.9.9
+}
+
+local.domain.com:53 {
+  forward . /etc/resolv.conf
+}
+
+example.org {
+  whoami
+}
+
+.:53 {
+    import global_configurations
+    acl {
+      allow net 10.0.77.0/24
+      block
+    }
+    bufsize 1232
+    reload
+    ready
+    whoami
+    health
+    # kubernetes
+    forward . 8.8.8.8
+    chaos CustomVersion NormalAuthors
+    rewrite name foo.example.com amazon.com
+    # This replicates the behaviour of Amazons VPC DNS, which returns the ip address of an instance from the hostname in the query. Note: in this case the <az>.compute.internal component of the query is essentially ignored.
+    template IN A {
+      match ^ip-(?P<a>[0-9]*)-(?P<b>[0-9]*)-(?P<c>[0-9]*)-(?P<d>[0-9]*).*.$
+      answer "{{ .Name }} 60 IN A {{ .Group.a }}.{{ .Group.b }}.{{ .Group.c }}.{{ .Group.d }}"
+      fallthrough
+    }
+}

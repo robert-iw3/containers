@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Setting up logging
+exec 1>>/tmp/backup.log 2>&1
+echo "[$(date -u)] Starting backup process"
+
+# Validate environment variables
+: "${POSTGRESQL_USERNAME?Missing POSTGRESQL_USERNAME}"
+: "${POSTGRESQL_DATABASE?Missing POSTGRESQL_DATABASE}"
+: "${PGPASSWORD?Missing PGPASSWORD}"
+: "${AWS_ACCESS_KEY_ID?Missing AWS_ACCESS_KEY_ID}"
+: "${AWS_SECRET_ACCESS_KEY?Missing AWS_SECRET_ACCESS_KEY}"
+: "${BACKUP_ENCRYPTION_KEY?Missing BACKUP_ENCRYPTION_KEY}"
+
+BACKUP_DIR=/tmp/backups
+BACKUP_FILE="${BACKUP_DIR}/gitea-backup-$(date -u +%Y%m%d_%H%M%S).sql"
+ENCRYPTED_BACKUP="${BACKUP_FILE}.gpg"
+S3_ENDPOINT="http://minio.dev.io:9000"
+S3_BUCKET="gitea-backups"
+
+# Create backup directory
+mkdir -p "${BACKUP_DIR}"
+
+# Perform PostgreSQL backup
+echo "[$(date -u)] Creating PostgreSQL backup"
+if ! pg_dump -h patroni-gitea.dev.io -U "${POSTGRESQL_USERNAME}" -d "${POSTGRESQL_DATABASE}" > "${BACKUP_FILE}"; then
+    echo "[$(date -u)] ERROR: PostgreSQL backup failed"
+    exit 1
+fi
+
+# Encrypt the backup
+echo "[$(date -u)] Encrypting backup"
+if ! gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "${BACKUP_ENCRYPTION_KEY}" -o "${ENCRYPTED_BACKUP}" "${BACKUP_FILE}"; then
+    echo "[$(date -u)] ERROR: Encryption failed"
+    rm -f "${BACKUP_FILE}"
+    exit 1
+fi
+
+# Remove unencrypted backup
+rm -f "${BACKUP_FILE}"
+
+# Upload to MinIO
+echo "[$(date -u)] Uploading to MinIO"
+if ! AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" aws --endpoint-url "${S3_ENDPOINT}" s3 cp "${ENCRYPTED_BACKUP}" "s3://${S3_BUCKET}/"; then
+    echo "[$(date -u)] ERROR: Upload to MinIO failed"
+    rm -f "${ENCRYPTED_BACKUP}"
+    exit 1
+fi
+
+# Clean up
+rm -f "${ENCRYPTED_BACKUP}"
+echo "[$(date -u)] Backup completed successfully"

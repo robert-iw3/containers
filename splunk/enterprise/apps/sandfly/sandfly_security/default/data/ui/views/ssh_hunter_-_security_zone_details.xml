@@ -1,0 +1,202 @@
+<form version="1.1" theme="light">
+  <label>SSH Hunter - Security Zone Details</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_zone_id" searchWhenChanged="true">
+      <label>Security Zone</label>
+      <fieldForLabel>zone_name</fieldForLabel>
+      <fieldForValue>zone_id</fieldForValue>
+      <search>
+        <query>`sandfly_search_sshkeys` event_type=ssh_zone_details
+| dedup ssh_zone_details.id
+| table ssh_zone_details.id ssh_zone_details.name
+| rename ssh_zone_details.id as zone_id
+| rename ssh_zone_details.name as zone_name</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Zone ID</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| table ssh_zone_details.id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Zone Name</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| table ssh_zone_details.name</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Description</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| eval description='ssh_zone_details.description'
+| eval description=if(isnull(description) OR len(description)==0, "&lt;none&gt;", description)
+| table description</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| spath output=aaa_zone path=ssh_zone_details
+| mvexpand aaa_zone
+| spath input=aaa_zone
+| fields - ssh_zone_details
+| table create_date modification_date hosts_count permitted_keys_count violation_host_count
+| rename hosts_count as "Zone Hosts"
+| rename permitted_keys_count as "Permitted Keys"
+| rename violation_host_count as "Violation Hosts"
+| rename modification_date as "Last Modified"
+| rename create_date as "Created Date"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Zone Host Policies</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| spath output=aaa_host_policies path=ssh_zone_details.host_policies{}
+| mvexpand aaa_host_policies
+| fields - ssh_zone_details.*
+| spath input=aaa_host_policies
+| table mode tags{}
+| rename mode as "Host Policy Mode"
+| rename tags{} as "Tags"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Zone Key Policies</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| spath output=aaa_key_policies path=ssh_zone_details.key_policies{}
+| mvexpand aaa_key_policies
+| fields - ssh_zone_details.*
+| spath input=aaa_key_policies
+| table mode tags{}
+| rename mode as "Host Policy Mode"
+| rename tags{} as "Tags"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Hosts Included in Zone</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| spath output=aaa_hosts path=ssh_zone_details.included_hosts{}
+| mvexpand aaa_hosts
+| fields - ssh_zone_details.*
+| spath input=aaa_hosts
+| table hostname last_seen_ip_addr os_info_node active date_last_seen host_id
+| rename hostname as "Target Address"
+| rename last_seen_ip_addr as "IP Address"
+| rename os_info_node as "Hostname"
+| rename active as "Active Host"
+| rename date_last_seen as "Date Last Seen (UTC)"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <fields>["Target Address","IP Address","Hostname","Active Host","Date Last Seen (UTC)"]</fields>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__host_summary?form.tok_host_id=$row.host_id$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Keys Included in Zone</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id
+| spath output=aaa_keys path=ssh_zone_details.included_keys{}
+| mvexpand aaa_keys
+| fields - ssh_zone_details.*
+| spath input=aaa_keys
+| table key_friendly_name key_type bits num_hosts_current num_users_current last_seen
+| rename key_friendly_name as "Friendly Name"
+| rename key_type as "Key Type"
+| rename bits as "Key Bits"
+| rename num_hosts_current as "Hosts Count"
+| rename num_users_current as "Users Count"
+| rename last_seen as "Date Last Seen (UTC)"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__key_summary?form.tok_sshkey=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details ssh_zone_details.id=$tok_zone_id$
+| dedup ssh_zone_details.id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+      </event>
+    </panel>
+  </row>
+</form>

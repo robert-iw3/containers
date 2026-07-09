@@ -1,0 +1,159 @@
+---
+networks:
+  frontend:
+  backend:
+    internal: true
+
+secrets:
+  falco.pem:
+    file: ./secrets/certs/falco.pem
+  sidekick.ca:
+    file: ./secrets/certs/sidekick_chain.pem
+  sidekick.key:
+    file: ./secrets/certs/sidekick_rsa.key.pem
+  sidekick.cert:
+    file: ./secrets/certs/sidekick.pem
+
+services:
+  certs:
+    build: ./certs
+    container_name: certs
+    volumes:
+      - ./secrets/certs:/certs:rw
+
+  traefik:
+    container_name: traefik
+    image: docker.io/traefik:v3.7.6
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--providers.file.filename=/dynamic/tls.yaml"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=backend"
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./secrets:/secrets:ro
+      - ./dynamic:/dynamic:ro
+    networks:
+      - frontend
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.podman.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.middlewares=tinyauth"
+
+  tinyauth:
+    container_name: tinyauth
+    hostname: tinyauth.local
+    image: ghcr.io/steveiliop56/tinyauth:latest
+    environment:
+      - SECRET=your_generated_secret  # Replace with generated or from config
+      - APP_URL=https://tinyauth.local
+      - USERS=tinyauth:$2y$10$your_hash  # Replace with generated
+      - COOKIE_SECURE=true
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tinyauth.rule=Host(`tinyauth.local`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.service=tinyauth"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth/traefik"
+      - "traefik.http.middlewares.tinyauth.forwardauth.trustForwardedHeaders=true"
+
+  falco:
+    image: docker.io/falcosecurity/falco:latest
+    container_name: falco
+    privileged: true
+    cap_drop:
+      - all
+    cap_add:
+      - sys_admin
+      - sys_resource
+      - sys_ptrace
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - /dev:/host/dev
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+      - ./config/http_output.yml:/etc/falco/config.d/http_output.yml
+      - ./log:/logs:rw,Z
+    secrets:
+      - source: falco.pem
+        target: /etc/falco/falco.pem
+    networks:
+      - backend
+    depends_on:
+      - certs
+
+  sidekick:
+    container_name: sidekick
+    image: docker.io/falcosecurity/falcosidekick:latest
+    environment:
+      - WEBUI_URL=http://webui:2802
+      - TLSSERVER_DEPLOY=true
+      - TLSSERVER_CERTFILE=/etc/certs/server/server.crt
+      - TLSSERVER_KEYFILE=/etc/certs/server/server.key
+      - TLSSERVER_CACERTFILE=/etc/certs/server/ca.crt
+    secrets:
+      - source: sidekick.ca
+        target: /etc/certs/server/ca.crt
+      - source: sidekick.cert
+        target: /etc/certs/server/server.crt
+      - source: sidekick.key
+        target: /etc/certs/server/server.key
+    networks:
+      - backend
+
+  webui:
+    container_name: webui
+    image: docker.io/falcosecurity/falcosidekick-ui:latest
+    networks:
+      - backend
+    depends_on:
+      - redis
+    command:
+      - -r
+      - redis:6379
+      - -d
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.falco-webui.entrypoints=websecure"
+      - "traefik.http.routers.falco-webui.tls=true"
+      - "traefik.http.routers.falco-webui.middlewares=tinyauth"
+      - "traefik.http.routers.falco-webui.service=falco-webui"
+      - "traefik.http.services.falco-webui.loadbalancer.server.port=2802"
+      - "traefik.http.routers.falco-webui.rule=Host(`falco-webui.local`)"
+
+  redis:
+    container_name: redis
+    image: docker.io/redis/redis-stack:7.4.0-v8
+    networks:
+      - backend
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

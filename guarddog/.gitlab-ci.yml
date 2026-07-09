@@ -1,0 +1,7 @@
+guarddog_scan:
+  stage: test
+  image: python:3.12
+  before_script:
+    - apt-get update && apt-get install -y podman
+  script:
+    - python3 ci_guarddog_scan.py

@@ -1,0 +1,3325 @@
+{
+   "template":{
+      "description":"This flow takes in data from a random user generator using GetHTTP in two different formats, CSV and JSON. It then converts the data into Avro (JSON is massaged first) then split and converted to JSON. \nThis template is purely to showcase the different Avro related processors and isn't demonstrating one specific use-case.",
+      "name":"Convert To Avro From CSV and JSON",
+      "snippet":{
+         "connections":[
+            {
+               "id":"6fddeacb-32d8-41cf-8efd-7abf83139127",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"88501fbe-b6f8-479d-818c-4204332b71cc",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"split",
+               "source":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"75ad7a08-89be-4b1f-96ca-fe6fceafc1db",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"6171db91-6146-401a-8593-d020f1ec7f60",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"a16fa337-2f4e-4d1f-b9a1-330f63634e10",
+                  "type":"FUNNEL"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "source":{
+                  "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                  "id":"ab0ad152-71d3-4e22-a781-8b3c3a9f11af",
+                  "type":"OUTPUT_PORT"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"951e53ff-4c2d-4a95-9b13-6504408a3132",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"f2d05437-abe0-4ced-b12c-165b16faf095",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"failure",
+               "source":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"88501fbe-b6f8-479d-818c-4204332b71cc",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"dae0fcb2-c3a8-4a0d-bbef-9e0b89cb5d53",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"53c861bf-e829-4438-bfc4-ffbdd2503e70",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"88501fbe-b6f8-479d-818c-4204332b71cc",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"e2d3dde3-84a4-4dce-81fe-d7dee0cc4e88",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"75ad7a08-89be-4b1f-96ca-fe6fceafc1db",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "source":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"a16fa337-2f4e-4d1f-b9a1-330f63634e10",
+                  "type":"FUNNEL"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"33806dca-3798-403f-bd6d-2c3f96a87a5c",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "id":"a16fa337-2f4e-4d1f-b9a1-330f63634e10",
+                  "type":"FUNNEL"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "source":{
+                  "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                  "id":"f95418fe-e205-4fe5-b01f-3b240004a381",
+                  "type":"OUTPUT_PORT"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "funnels":{
+            "id":"a16fa337-2f4e-4d1f-b9a1-330f63634e10",
+            "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+            "position":{
+               "x":"2930.180351206281",
+               "y":"1586.119794054175"
+            }
+         },
+         "processGroups":[
+            {
+               "id":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"3068.5458703001677",
+                  "y":"1367.5755119426606"
+               },
+               "activeRemotePortCount":"0",
+               "comments":"",
+               "contents":{
+                  "connections":[
+                     {
+                        "id":"2e290b6b-ebd4-4849-b118-a40697df7573",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"042f32b7-3ba3-4e95-973b-98ceff348a12",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"01eb8d2d-2f9e-4ab8-b125-d84a9d9b99c1",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"478ef276-a092-4ca2-b05e-9c2104da8676",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"e4306087-f229-477e-893b-566339bdb669",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":[
+                           "failure",
+                           "unmatched"
+                        ],
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"042f32b7-3ba3-4e95-973b-98ceff348a12",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"6afd2f2f-6574-45a4-ac8b-772a8d1fb9f1",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"9e85437f-74c1-48ad-9e0e-6b846fa4b6aa",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"failure",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"a1b7fcc0-5bb9-4a88-8fcc-c250337c639d",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"7d5d2c55-e1d1-44e9-930e-538501286ed1",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"b7153ebf-1768-4494-9c49-1fde5ba366f6",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"a1b7fcc0-5bb9-4a88-8fcc-c250337c639d",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"2b4d1a9d-f52e-4147-8713-417446541e59",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"ab0ad152-71d3-4e22-a781-8b3c3a9f11af",
+                           "type":"OUTPUT_PORT"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"merged",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"b7153ebf-1768-4494-9c49-1fde5ba366f6",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"bf87cb39-4b18-409f-92eb-5ec4f0d719bd",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"bc6b933b-1886-46e3-a418-4d0e3d298e65",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"matched",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"042f32b7-3ba3-4e95-973b-98ceff348a12",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"25dc0b32-9322-4733-84b4-bcdd066b0ad5",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"a1b7fcc0-5bb9-4a88-8fcc-c250337c639d",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"be82ea27-0854-4a64-a19d-6a9d7180241e",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"e49ed4e4-5423-4473-b500-30e6f119dba7",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"22dc48e1-5736-426e-a47c-5e108a002ae7",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":[
+                           "failure",
+                           "incompatible"
+                        ],
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"be82ea27-0854-4a64-a19d-6a9d7180241e",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"5e93b627-a235-4e26-8c41-a4d28ec4357d",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"929d49a4-3cb8-43de-ab12-3135d49c913f",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"bc6b933b-1886-46e3-a418-4d0e3d298e65",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"17c69a9e-367b-4f53-b7f2-ff7c7be0e832",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"be82ea27-0854-4a64-a19d-6a9d7180241e",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"split",
+                        "source":{
+                           "groupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                           "id":"929d49a4-3cb8-43de-ab12-3135d49c913f",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     }
+                  ],
+                  "outputPorts":{
+                     "id":"ab0ad152-71d3-4e22-a781-8b3c3a9f11af",
+                     "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                     "position":{
+                        "x":"3312.163416632943",
+                        "y":"1636.2402488799673"
+                     },
+                     "concurrentlySchedulableTaskCount":"1",
+                     "name":"Merged Avro Files",
+                     "state":"STOPPED",
+                     "type":"OUTPUT_PORT"
+                  },
+                  "processors":[
+                     {
+                        "id":"be82ea27-0854-4a64-a19d-6a9d7180241e",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3240.865897047531",
+                           "y":"1126.0609415907707"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Hadoop configuration files",
+                                    "value":{
+                                       "description":"A comma-separated list of Hadoop configuration files",
+                                       "displayName":"Hadoop configuration files",
+                                       "dynamic":"false",
+                                       "name":"Hadoop configuration files",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Record schema",
+                                    "value":{
+                                       "description":"Outgoing Avro schema for each record created from a JSON object",
+                                       "displayName":"Record schema",
+                                       "dynamic":"false",
+                                       "name":"Record schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Hadoop configuration files"
+                                 },
+                                 {
+                                    "key":"Record schema",
+                                    "value":"{\n    \"name\": \"user\",\n    \"type\": \"record\",\n    \"fields\":[\n        {\n            \"name\":\"gender\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"email\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"username\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"password\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"salt\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"md5\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"sha1\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"sha256\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"registered\",\"type\": \"long\"\n        },\n        {\n            \"name\":\"dob\",\"type\": \"long\"\n        },\n        {\n            \"name\":\"phone\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"cell\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"SSN\",\"type\": \"string\"\n        },\n        {\n            \"name\": \"picture\",\n            \"type\": {\n                \"name\":\"pictureRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"large\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"medium\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"thumbnail\",\"type\": \"string\"\n                    }\n                ]\n            }\n        },\n        { \n            \"name\": \"location\",\n            \"type\": {\n                \"name\":\"locationRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"street\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"city\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"state\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"zip\",\"type\": \"int\"\n                    }\n                ]\n            }\n        },\n        { \n            \"name\": \"name\",\n            \"type\": {\n                \"name\":\"nameRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"title\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"first\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"last\",\"type\": \"string\"\n                    }\n                ]\n            }\n        }\n    ] \n}"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"ConvertJSONToAvro",
+                        "relationships":[
+                           {
+                              "autoTerminate":"false",
+                              "description":"JSON content that could not be processed",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"JSON content that could not be converted",
+                              "name":"incompatible"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that was converted successfully from JSON",
+                              "name":"success"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.kite.ConvertJSONToAvro"
+                     },
+                     {
+                        "id":"929d49a4-3cb8-43de-ab12-3135d49c913f",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3242.865897047531",
+                           "y":"949.3954600233878"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"JsonPath Expression",
+                                    "value":{
+                                       "description":"A JsonPath expression that indicates the array element to split into JSON/scalar fragments.",
+                                       "displayName":"JsonPath Expression",
+                                       "dynamic":"false",
+                                       "name":"JsonPath Expression",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Null Value Representation",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"empty string",
+                                             "value":"empty string"
+                                          },
+                                          {
+                                             "displayName":"the string 'null'",
+                                             "value":"the string 'null'"
+                                          }
+                                       ],
+                                       "defaultValue":"empty string",
+                                       "description":"Indicates the desired representation of JSON Path expressions resulting in a null value.",
+                                       "displayName":"Null Value Representation",
+                                       "dynamic":"false",
+                                       "name":"Null Value Representation",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"JsonPath Expression",
+                                    "value":"$.[*].user"
+                                 },
+                                 {
+                                    "key":"Null Value Representation"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Split On \"user\"",
+                        "relationships":[
+                           {
+                              "autoTerminate":"true",
+                              "description":"If a FlowFile fails processing for any reason (for example, the FlowFile is not valid JSON or the specified path does not exist), it will be routed to this relationship",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"true",
+                              "description":"The original FlowFile that was split into segments. If the FlowFile fails processing, nothing will be sent to this relationship",
+                              "name":"original"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"All segments of the original FlowFile will be routed to this relationship",
+                              "name":"split"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.standard.SplitJson"
+                     },
+                     {
+                        "id":"bc6b933b-1886-46e3-a418-4d0e3d298e65",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3236.865897047531",
+                           "y":"776.3954600233878"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Delete Attributes Expression",
+                                    "value":{
+                                       "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                       "displayName":"Delete Attributes Expression",
+                                       "dynamic":"false",
+                                       "name":"Delete Attributes Expression",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"mime.type",
+                                    "value":{
+                                       "description":"",
+                                       "displayName":"mime.type",
+                                       "dynamic":"true",
+                                       "name":"mime.type",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Delete Attributes Expression"
+                                 },
+                                 {
+                                    "key":"mime.type",
+                                    "value":"application/json"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Update Mime Type",
+                        "relationships":{
+                           "autoTerminate":"false",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     },
+                     {
+                        "id":"042f32b7-3ba3-4e95-973b-98ceff348a12",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3235.2351830478747",
+                           "y":"607.2823477730519"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Destination",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"flowfile-content",
+                                             "value":"flowfile-content"
+                                          },
+                                          {
+                                             "displayName":"flowfile-attribute",
+                                             "value":"flowfile-attribute"
+                                          }
+                                       ],
+                                       "defaultValue":"flowfile-content",
+                                       "description":"Indicates whether the results of the JsonPath evaluation are written to the FlowFile content or a FlowFile attribute; if using attribute, must specify the Attribute Name property. If set to flowfile-content, only one JsonPath may be specified, and the property name is ignored.",
+                                       "displayName":"Destination",
+                                       "dynamic":"false",
+                                       "name":"Destination",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Return Type",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"auto-detect",
+                                             "value":"auto-detect"
+                                          },
+                                          {
+                                             "displayName":"json",
+                                             "value":"json"
+                                          },
+                                          {
+                                             "displayName":"scalar",
+                                             "value":"scalar"
+                                          }
+                                       ],
+                                       "defaultValue":"auto-detect",
+                                       "description":"Indicates the desired return type of the JSON Path expressions.  Selecting 'auto-detect' will set the return type to 'json' for a Destination of 'flowfile-content', and 'scalar' for a Destination of 'flowfile-attribute'.",
+                                       "displayName":"Return Type",
+                                       "dynamic":"false",
+                                       "name":"Return Type",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Path Not Found Behavior",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"warn",
+                                             "value":"warn"
+                                          },
+                                          {
+                                             "displayName":"ignore",
+                                             "value":"ignore"
+                                          }
+                                       ],
+                                       "defaultValue":"ignore",
+                                       "description":"Indicates how to handle missing JSON path expressions when destination is set to 'flowfile-attribute'. Selecting 'warn' will generate a warning when a JSON path expression is not found.",
+                                       "displayName":"Path Not Found Behavior",
+                                       "dynamic":"false",
+                                       "name":"Path Not Found Behavior",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Null Value Representation",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"empty string",
+                                             "value":"empty string"
+                                          },
+                                          {
+                                             "displayName":"the string 'null'",
+                                             "value":"the string 'null'"
+                                          }
+                                       ],
+                                       "defaultValue":"empty string",
+                                       "description":"Indicates the desired representation of JSON Path expressions resulting in a null value.",
+                                       "displayName":"Null Value Representation",
+                                       "dynamic":"false",
+                                       "name":"Null Value Representation",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"flatten",
+                                    "value":{
+                                       "description":"",
+                                       "displayName":"flatten",
+                                       "dynamic":"true",
+                                       "name":"flatten",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Destination",
+                                    "value":"flowfile-content"
+                                 },
+                                 {
+                                    "key":"Return Type",
+                                    "value":"json"
+                                 },
+                                 {
+                                    "key":"Path Not Found Behavior",
+                                    "value":"ignore"
+                                 },
+                                 {
+                                    "key":"Null Value Representation",
+                                    "value":"empty string"
+                                 },
+                                 {
+                                    "key":"flatten",
+                                    "value":"$.results.*"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Flatten JSON",
+                        "relationships":[
+                           {
+                              "autoTerminate":"false",
+                              "description":"FlowFiles are routed to this relationship when the JsonPath cannot be evaluated against the content of the FlowFile; for instance, if the FlowFile is not valid JSON",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"FlowFiles are routed to this relationship when the JsonPath is successfully evaluated and the FlowFile is modified as a result",
+                              "name":"matched"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"FlowFiles are routed to this relationship when the JsonPath does not match the content of the FlowFile and the Destination is set to flowfile-content",
+                              "name":"unmatched"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.standard.EvaluateJsonPath"
+                     },
+                     {
+                        "id":"9e85437f-74c1-48ad-9e0e-6b846fa4b6aa",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3834.47560774089",
+                           "y":"1290.4000529188957"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression",
+                                 "value":{
+                                    "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                    "displayName":"Delete Attributes Expression",
+                                    "dynamic":"false",
+                                    "name":"Delete Attributes Expression",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression"
+                              }
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Converting Failed",
+                        "relationships":{
+                           "autoTerminate":"true",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     },
+                     {
+                        "id":"a1b7fcc0-5bb9-4a88-8fcc-c250337c639d",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3243.8005232149244",
+                           "y":"1293.781313184019"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Input Schema",
+                                    "value":{
+                                       "description":"Avro Schema of Input Flowfiles",
+                                       "displayName":"Input Schema",
+                                       "dynamic":"false",
+                                       "name":"Input Schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Output Schema",
+                                    "value":{
+                                       "description":"Avro Schema of Output Flowfiles",
+                                       "displayName":"Output Schema",
+                                       "dynamic":"false",
+                                       "name":"Output Schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Input Schema",
+                                    "value":"{\n    \"name\": \"user\",\n    \"type\": \"record\",\n    \"fields\":[\n        {\n            \"name\":\"gender\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"email\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"username\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"password\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"salt\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"md5\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"sha1\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"sha256\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"registered\",\"type\": \"long\"\n        },\n        {\n            \"name\":\"dob\",\"type\": \"long\"\n        },\n        {\n            \"name\":\"phone\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"cell\",\"type\": \"string\"\n        },\n        {\n            \"name\":\"SSN\",\"type\": \"string\"\n        },\n        {\n            \"name\": \"picture\",\n            \"type\": {\n                \"name\":\"pictureRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"large\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"medium\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"thumbnail\",\"type\": \"string\"\n                    }\n                ]\n            }\n        },\n        { \n            \"name\": \"location\",\n            \"type\": {\n                \"name\":\"locationRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"street\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"city\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"state\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"zip\",\"type\": \"int\"\n                    }\n                ]\n            }\n        },\n        { \n            \"name\": \"name\",\n            \"type\": {\n                \"name\":\"nameRecord\",\n                \"type\": \"record\",\n                \"fields\":[\n                    {\n                        \"name\":\"title\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"first\",\"type\": \"string\"\n                    },\n                    {\n                        \"name\":\"last\",\"type\": \"string\"\n                    }\n                ]\n            }\n        }\n    ] \n}"
+                                 },
+                                 {
+                                    "key":"Output Schema",
+                                    "value":"{\n                    \"name\": \"user\",\n                    \"type\": \"record\",\n                    \"fields\":[\n                        {\n                            \"name\":\"username\",\"type\": \"string\"\n                        },\n                        {\n                            \"name\":\"password\",\"type\": \"string\"\n                        }\n                    ] \n                }"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Simplify Record",
+                        "relationships":[
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that failed to convert",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that converted successfully",
+                              "name":"success"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.kite.ConvertAvroSchema"
+                     },
+                     {
+                        "id":"01eb8d2d-2f9e-4ab8-b125-d84a9d9b99c1",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3240.9717930436245",
+                           "y":"430.0676401991691"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"URL",
+                                    "value":{
+                                       "description":"The URL to pull from",
+                                       "displayName":"URL",
+                                       "dynamic":"false",
+                                       "name":"URL",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Filename",
+                                    "value":{
+                                       "description":"The filename to assign to the file when pulled",
+                                       "displayName":"Filename",
+                                       "dynamic":"false",
+                                       "name":"Filename",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"SSL Context Service",
+                                    "value":{
+                                       "description":"The Controller Service to use in order to obtain an SSL Context",
+                                       "displayName":"SSL Context Service",
+                                       "dynamic":"false",
+                                       "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                                       "name":"SSL Context Service",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Username",
+                                    "value":{
+                                       "description":"Username required to access the URL",
+                                       "displayName":"Username",
+                                       "dynamic":"false",
+                                       "name":"Username",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Password",
+                                    "value":{
+                                       "description":"Password required to access the URL",
+                                       "displayName":"Password",
+                                       "dynamic":"false",
+                                       "name":"Password",
+                                       "required":"false",
+                                       "sensitive":"true",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Connection Timeout",
+                                    "value":{
+                                       "defaultValue":"30 sec",
+                                       "description":"How long to wait when attempting to connect to the remote server before giving up",
+                                       "displayName":"Connection Timeout",
+                                       "dynamic":"false",
+                                       "name":"Connection Timeout",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Data Timeout",
+                                    "value":{
+                                       "defaultValue":"30 sec",
+                                       "description":"How long to wait between receiving segments of data from the remote server before giving up and discarding the partial file",
+                                       "displayName":"Data Timeout",
+                                       "dynamic":"false",
+                                       "name":"Data Timeout",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"User Agent",
+                                    "value":{
+                                       "description":"What to report as the User Agent when we connect to the remote server",
+                                       "displayName":"User Agent",
+                                       "dynamic":"false",
+                                       "name":"User Agent",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Accept Content-Type",
+                                    "value":{
+                                       "description":"If specified, requests will only accept the provided Content-Type",
+                                       "displayName":"Accept Content-Type",
+                                       "dynamic":"false",
+                                       "name":"Accept Content-Type",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Follow Redirects",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"true",
+                                             "value":"true"
+                                          },
+                                          {
+                                             "displayName":"false",
+                                             "value":"false"
+                                          }
+                                       ],
+                                       "defaultValue":"false",
+                                       "description":"If we receive a 3xx HTTP Status Code from the server, indicates whether or not we should follow the redirect that the server specifies",
+                                       "displayName":"Follow Redirects",
+                                       "dynamic":"false",
+                                       "name":"Follow Redirects",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Proxy Host",
+                                    "value":{
+                                       "description":"The fully qualified hostname or IP address of the proxy server",
+                                       "displayName":"Proxy Host",
+                                       "dynamic":"false",
+                                       "name":"Proxy Host",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Proxy Port",
+                                    "value":{
+                                       "description":"The port of the proxy server",
+                                       "displayName":"Proxy Port",
+                                       "dynamic":"false",
+                                       "name":"Proxy Port",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"URL",
+                                    "value":"http://api.randomuser.me/?nat=us&results=10"
+                                 },
+                                 {
+                                    "key":"Filename",
+                                    "value":"randomUserJSON_${nextInt()}"
+                                 },
+                                 {
+                                    "key":"SSL Context Service"
+                                 },
+                                 {
+                                    "key":"Username"
+                                 },
+                                 {
+                                    "key":"Password"
+                                 },
+                                 {
+                                    "key":"Connection Timeout",
+                                    "value":"30 sec"
+                                 },
+                                 {
+                                    "key":"Data Timeout",
+                                    "value":"30 sec"
+                                 },
+                                 {
+                                    "key":"User Agent"
+                                 },
+                                 {
+                                    "key":"Accept Content-Type"
+                                 },
+                                 {
+                                    "key":"Follow Redirects",
+                                    "value":"false"
+                                 },
+                                 {
+                                    "key":"Proxy Host"
+                                 },
+                                 {
+                                    "key":"Proxy Port"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"60 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Get 10 Random Users in JSON",
+                        "relationships":{
+                           "autoTerminate":"false",
+                           "description":"All files are transferred to the success relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.standard.GetHTTP"
+                     },
+                     {
+                        "id":"b7153ebf-1768-4494-9c49-1fde5ba366f6",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3247.666434156906",
+                           "y":"1451.6585215468253"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Merge Strategy",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "description":"Generates 'bins' of FlowFiles and fills each bin as full as possible. FlowFiles are placed into a bin based on their size and optionally their attributes (if the <Correlation Attribute> property is set)",
+                                             "displayName":"Bin-Packing Algorithm",
+                                             "value":"Bin-Packing Algorithm"
+                                          },
+                                          {
+                                             "description":"Combines fragments that are associated by attributes back into a single cohesive FlowFile. If using this strategy, all FlowFiles must have the attributes <fragment.identifier>, <fragment.count>, and <fragment.index> or alternatively (for backward compatibility purposes) <segment.identifier>, <segment.count>, and <segment.index>. All FlowFiles with the same value for \"fragment.identifier\" will be grouped together. All FlowFiles in this group must have the same value for the \"fragment.count\" attribute. All FlowFiles in this group must have a unique value for the \"fragment.index\" attribute between 0 and the value of the \"fragment.count\" attribute.",
+                                             "displayName":"Defragment",
+                                             "value":"Defragment"
+                                          }
+                                       ],
+                                       "defaultValue":"Bin-Packing Algorithm",
+                                       "description":"Specifies the algorithm used to merge content. The 'Defragment' algorithm combines fragments that are associated by attributes back into a single cohesive FlowFile. The 'Bin-Packing Algorithm' generates a FlowFile populated by arbitrarily chosen FlowFiles",
+                                       "displayName":"Merge Strategy",
+                                       "dynamic":"false",
+                                       "name":"Merge Strategy",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Merge Format",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "description":"A bin of FlowFiles will be combined into a single TAR file. The FlowFiles' <path> attribute will be used to create a directory in the TAR file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the TAR file. If a FlowFile has an attribute named <tar.permissions> that is 3 characters, each between 0-7, that attribute will be used as the TAR entry's 'mode'.",
+                                             "displayName":"TAR",
+                                             "value":"TAR"
+                                          },
+                                          {
+                                             "description":"A bin of FlowFiles will be combined into a single ZIP file. The FlowFiles' <path> attribute will be used to create a directory in the ZIP file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the ZIP file. The <Compression Level> property indicates the ZIP compression to use.",
+                                             "displayName":"ZIP",
+                                             "value":"ZIP"
+                                          },
+                                          {
+                                             "description":"A bin of FlowFiles will be combined into a single Version 3 FlowFile Stream",
+                                             "displayName":"FlowFile Stream, v3",
+                                             "value":"FlowFile Stream, v3"
+                                          },
+                                          {
+                                             "description":"A bin of FlowFiles will be combined into a single Version 2 FlowFile Stream",
+                                             "displayName":"FlowFile Stream, v2",
+                                             "value":"FlowFile Stream, v2"
+                                          },
+                                          {
+                                             "description":"A bin of FlowFiles will be combined into a single Version 1 FlowFile Package",
+                                             "displayName":"FlowFile Tar, v1",
+                                             "value":"FlowFile Tar, v1"
+                                          },
+                                          {
+                                             "description":"The contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                             "displayName":"Binary Concatenation",
+                                             "value":"Binary Concatenation"
+                                          },
+                                          {
+                                             "description":"The Avro contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                             "displayName":"Avro",
+                                             "value":"Avro"
+                                          }
+                                       ],
+                                       "defaultValue":"Binary Concatenation",
+                                       "description":"Determines the format that will be used to merge the content.",
+                                       "displayName":"Merge Format",
+                                       "dynamic":"false",
+                                       "name":"Merge Format",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Attribute Strategy",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"Keep Only Common Attributes",
+                                             "value":"Keep Only Common Attributes"
+                                          },
+                                          {
+                                             "displayName":"Keep All Unique Attributes",
+                                             "value":"Keep All Unique Attributes"
+                                          }
+                                       ],
+                                       "defaultValue":"Keep Only Common Attributes",
+                                       "description":"Determines which FlowFile attributes should be added to the bundle. If 'Keep All Unique Attributes' is selected, any attribute on any FlowFile that gets bundled will be kept unless its value conflicts with the value from another FlowFile. If 'Keep Only Common Attributes' is selected, only the attributes that exist on all FlowFiles in the bundle, with the same value, will be preserved.",
+                                       "displayName":"Attribute Strategy",
+                                       "dynamic":"false",
+                                       "name":"Attribute Strategy",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Correlation Attribute Name",
+                                    "value":{
+                                       "description":"If specified, like FlowFiles will be binned together, where 'like FlowFiles' means FlowFiles that have the same value for this Attribute. If not specified, FlowFiles are bundled by the order in which they are pulled from the queue.",
+                                       "displayName":"Correlation Attribute Name",
+                                       "dynamic":"false",
+                                       "name":"Correlation Attribute Name",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Minimum Number of Entries",
+                                    "value":{
+                                       "defaultValue":"1",
+                                       "description":"The minimum number of files to include in a bundle",
+                                       "displayName":"Minimum Number of Entries",
+                                       "dynamic":"false",
+                                       "name":"Minimum Number of Entries",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Maximum Number of Entries",
+                                    "value":{
+                                       "description":"The maximum number of files to include in a bundle. If not specified, there is no maximum.",
+                                       "displayName":"Maximum Number of Entries",
+                                       "dynamic":"false",
+                                       "name":"Maximum Number of Entries",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Minimum Group Size",
+                                    "value":{
+                                       "defaultValue":"0 B",
+                                       "description":"The minimum size of for the bundle",
+                                       "displayName":"Minimum Group Size",
+                                       "dynamic":"false",
+                                       "name":"Minimum Group Size",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Maximum Group Size",
+                                    "value":{
+                                       "description":"The maximum size for the bundle. If not specified, there is no maximum.",
+                                       "displayName":"Maximum Group Size",
+                                       "dynamic":"false",
+                                       "name":"Maximum Group Size",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Max Bin Age",
+                                    "value":{
+                                       "description":"The maximum age of a Bin that will trigger a Bin to be complete. Expected format is <duration> <time unit> where <duration> is a positive integer and time unit is one of seconds, minutes, hours",
+                                       "displayName":"Max Bin Age",
+                                       "dynamic":"false",
+                                       "name":"Max Bin Age",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Maximum number of Bins",
+                                    "value":{
+                                       "defaultValue":"100",
+                                       "description":"Specifies the maximum number of bins that can be held in memory at any one time",
+                                       "displayName":"Maximum number of Bins",
+                                       "dynamic":"false",
+                                       "name":"Maximum number of Bins",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Delimiter Strategy",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "description":"The values of Header, Footer, and Demarcator will be retrieved from the contents of a file",
+                                             "displayName":"Filename",
+                                             "value":"Filename"
+                                          },
+                                          {
+                                             "description":"The values of Header, Footer, and Demarcator will be specified as property values",
+                                             "displayName":"Text",
+                                             "value":"Text"
+                                          }
+                                       ],
+                                       "defaultValue":"Filename",
+                                       "description":"Determines if Header, Footer, and Demarcator should point to files containing the respective content, or if the values of the properties should be used as the content.",
+                                       "displayName":"Delimiter Strategy",
+                                       "dynamic":"false",
+                                       "name":"Delimiter Strategy",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Header File",
+                                    "value":{
+                                       "description":"Filename specifying the header to use. If not specified, no header is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                                       "displayName":"Header",
+                                       "dynamic":"false",
+                                       "name":"Header File",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Footer File",
+                                    "value":{
+                                       "description":"Filename specifying the footer to use. If not specified, no footer is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                                       "displayName":"Footer",
+                                       "dynamic":"false",
+                                       "name":"Footer File",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Demarcator File",
+                                    "value":{
+                                       "description":"Filename specifying the demarcator to use. If not specified, no demarcator is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                                       "displayName":"Demarcator",
+                                       "dynamic":"false",
+                                       "name":"Demarcator File",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Compression Level",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"0",
+                                             "value":"0"
+                                          },
+                                          {
+                                             "displayName":"1",
+                                             "value":"1"
+                                          },
+                                          {
+                                             "displayName":"2",
+                                             "value":"2"
+                                          },
+                                          {
+                                             "displayName":"3",
+                                             "value":"3"
+                                          },
+                                          {
+                                             "displayName":"4",
+                                             "value":"4"
+                                          },
+                                          {
+                                             "displayName":"5",
+                                             "value":"5"
+                                          },
+                                          {
+                                             "displayName":"6",
+                                             "value":"6"
+                                          },
+                                          {
+                                             "displayName":"7",
+                                             "value":"7"
+                                          },
+                                          {
+                                             "displayName":"8",
+                                             "value":"8"
+                                          },
+                                          {
+                                             "displayName":"9",
+                                             "value":"9"
+                                          }
+                                       ],
+                                       "defaultValue":"1",
+                                       "description":"Specifies the compression level to use when using the Zip Merge Format; if not using the Zip Merge Format, this value is ignored",
+                                       "displayName":"Compression Level",
+                                       "dynamic":"false",
+                                       "name":"Compression Level",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Keep Path",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"true",
+                                             "value":"true"
+                                          },
+                                          {
+                                             "displayName":"false",
+                                             "value":"false"
+                                          }
+                                       ],
+                                       "defaultValue":"false",
+                                       "description":"If using the Zip or Tar Merge Format, specifies whether or not the FlowFiles' paths should be included in their entry names; if using other merge strategy, this value is ignored",
+                                       "displayName":"Keep Path",
+                                       "dynamic":"false",
+                                       "name":"Keep Path",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Merge Strategy"
+                                 },
+                                 {
+                                    "key":"Merge Format",
+                                    "value":"Avro"
+                                 },
+                                 {
+                                    "key":"Attribute Strategy"
+                                 },
+                                 {
+                                    "key":"Correlation Attribute Name"
+                                 },
+                                 {
+                                    "key":"Minimum Number of Entries",
+                                    "value":"5"
+                                 },
+                                 {
+                                    "key":"Maximum Number of Entries",
+                                    "value":"10"
+                                 },
+                                 {
+                                    "key":"Minimum Group Size"
+                                 },
+                                 {
+                                    "key":"Maximum Group Size"
+                                 },
+                                 {
+                                    "key":"Max Bin Age"
+                                 },
+                                 {
+                                    "key":"Maximum number of Bins"
+                                 },
+                                 {
+                                    "key":"Delimiter Strategy"
+                                 },
+                                 {
+                                    "key":"Header File"
+                                 },
+                                 {
+                                    "key":"Footer File"
+                                 },
+                                 {
+                                    "key":"Demarcator File"
+                                 },
+                                 {
+                                    "key":"Compression Level"
+                                 },
+                                 {
+                                    "key":"Keep Path"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Merge Avro",
+                        "relationships":[
+                           {
+                              "autoTerminate":"true",
+                              "description":"If the bundle cannot be created, all FlowFiles that would have been used to created the bundle will be transferred to failure",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"The FlowFile containing the merged content",
+                              "name":"merged"
+                           },
+                           {
+                              "autoTerminate":"true",
+                              "description":"The FlowFiles that were used to create the bundle",
+                              "name":"original"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.standard.MergeContent"
+                     },
+                     {
+                        "id":"22dc48e1-5736-426e-a47c-5e108a002ae7",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3826.865897047531",
+                           "y":"1129.0609415907707"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression",
+                                 "value":{
+                                    "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                    "displayName":"Delete Attributes Expression",
+                                    "dynamic":"false",
+                                    "name":"Delete Attributes Expression",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression"
+                              }
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Converting Failed",
+                        "relationships":{
+                           "autoTerminate":"true",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     },
+                     {
+                        "id":"e4306087-f229-477e-893b-566339bdb669",
+                        "parentGroupId":"8ecdd0f9-1c49-4b9f-9a26-b6e588192505",
+                        "position":{
+                           "x":"3793.1711948990933",
+                           "y":"601.8165568251457"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression",
+                                 "value":{
+                                    "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                    "displayName":"Delete Attributes Expression",
+                                    "dynamic":"false",
+                                    "name":"Delete Attributes Expression",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression"
+                              }
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Evaluating Failed",
+                        "relationships":{
+                           "autoTerminate":"true",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     }
+                  ]
+               },
+               "disabledCount":"0",
+               "inactiveRemotePortCount":"0",
+               "inputPortCount":"0",
+               "invalidCount":"0",
+               "name":"JSON Data",
+               "outputPortCount":"1",
+               "parent":{
+                  "id":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "name":"NiFi Flow"
+               },
+               "runningCount":"0",
+               "stoppedCount":"11"
+            },
+            {
+               "id":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"2508.8334905467254",
+                  "y":"1368.4027561237654"
+               },
+               "activeRemotePortCount":"0",
+               "comments":"",
+               "contents":{
+                  "connections":[
+                     {
+                        "id":"e6a8644d-914b-402a-b2e2-ae111900741e",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"84fffda5-a059-4028-a562-61dd95e59221",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"91750b7d-21c8-43bd-b4ce-ff968f977297",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"044d8102-394c-4c41-ab92-7423cdf5d1f8",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"585026ac-0767-4482-bf52-258a1efa5821",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"failure",
+                        "source":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"d27bfbee-396e-4328-988b-a766dcf46df6",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"df5da22d-e4b8-4611-97ef-df4425e1ae81",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"d27bfbee-396e-4328-988b-a766dcf46df6",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"84fffda5-a059-4028-a562-61dd95e59221",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"2937acbe-02f8-437f-ba34-5e740cf24001",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"f95418fe-e205-4fe5-b01f-3b240004a381",
+                           "type":"OUTPUT_PORT"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":"success",
+                        "source":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"d27bfbee-396e-4328-988b-a766dcf46df6",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     },
+                     {
+                        "id":"bc7ac4b5-5631-4f16-b481-6deb965b5f6d",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "backPressureDataSizeThreshold":"0 MB",
+                        "backPressureObjectThreshold":"0",
+                        "destination":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"02dd4f84-b6ed-46e6-a2e6-30552173a253",
+                           "type":"PROCESSOR"
+                        },
+                        "flowFileExpiration":"0 sec",
+                        "labelIndex":"1",
+                        "name":"",
+                        "selectedRelationships":[
+                           "failure",
+                           "incompatible"
+                        ],
+                        "source":{
+                           "groupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                           "id":"84fffda5-a059-4028-a562-61dd95e59221",
+                           "type":"PROCESSOR"
+                        },
+                        "zIndex":"0"
+                     }
+                  ],
+                  "outputPorts":{
+                     "id":"f95418fe-e205-4fe5-b01f-3b240004a381",
+                     "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                     "position":{
+                        "x":"2600.7110440712813",
+                        "y":"1591.2380190766266"
+                     },
+                     "concurrentlySchedulableTaskCount":"1",
+                     "name":"Avro Record",
+                     "state":"STOPPED",
+                     "type":"OUTPUT_PORT"
+                  },
+                  "processors":[
+                     {
+                        "id":"585026ac-0767-4482-bf52-258a1efa5821",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "position":{
+                           "x":"1962.0578831315152",
+                           "y":"1394.8067912001457"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression",
+                                 "value":{
+                                    "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                    "displayName":"Delete Attributes Expression",
+                                    "dynamic":"false",
+                                    "name":"Delete Attributes Expression",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression"
+                              }
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Converting Failed",
+                        "relationships":{
+                           "autoTerminate":"true",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     },
+                     {
+                        "id":"d27bfbee-396e-4328-988b-a766dcf46df6",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "position":{
+                           "x":"2529.5278181368",
+                           "y":"1401.3392965824564"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Input Schema",
+                                    "value":{
+                                       "description":"Avro Schema of Input Flowfiles",
+                                       "displayName":"Input Schema",
+                                       "dynamic":"false",
+                                       "name":"Input Schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Output Schema",
+                                    "value":{
+                                       "description":"Avro Schema of Output Flowfiles",
+                                       "displayName":"Output Schema",
+                                       "dynamic":"false",
+                                       "name":"Output Schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Input Schema",
+                                    "value":"{   \n    \"type\" : \"record\",\n    \"name\" : \"person\", \n    \"fields\" : [\n        {\"name\" : \"username\",\"type\": \"string\"},\n        {\"name\" : \"password\",\"type\": \"string\"},      \n        {\"name\" : \"gender\", \"type\" : \"string\"},\n        {\"name\" : \"title\", \"type\" : \"string\"},\n        {\"name\" : \"first\", \"type\" : \"string\"},\n        {\"name\" : \"last\", \"type\" : \"string\"},\n\n        {\"name\" : \"street\", \"type\" : \"string\"},\n        {\"name\" : \"city\", \"type\" : \"string\"},\n\n        {\"name\" : \"state\", \"type\" : \"string\"},\n        {\"name\" : \"zip\", \"type\" : \"string\"} \n        ]\n }"
+                                 },
+                                 {
+                                    "key":"Output Schema",
+                                    "value":"{\n                    \"name\": \"user\",\n                    \"type\": \"record\",\n                    \"fields\":[\n                        {\n                            \"name\":\"username\",\"type\": \"string\"\n                        },\n                        {\n                            \"name\":\"password\",\"type\": \"string\"\n                        }\n                    ] \n                }"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Simplify Record",
+                        "relationships":[
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that failed to convert",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that converted successfully",
+                              "name":"success"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.kite.ConvertAvroSchema"
+                     },
+                     {
+                        "id":"91750b7d-21c8-43bd-b4ce-ff968f977297",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "position":{
+                           "x":"2519.743582594406",
+                           "y":"993.6474894423332"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"URL",
+                                    "value":{
+                                       "description":"The URL to pull from",
+                                       "displayName":"URL",
+                                       "dynamic":"false",
+                                       "name":"URL",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"Filename",
+                                    "value":{
+                                       "description":"The filename to assign to the file when pulled",
+                                       "displayName":"Filename",
+                                       "dynamic":"false",
+                                       "name":"Filename",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"SSL Context Service",
+                                    "value":{
+                                       "description":"The Controller Service to use in order to obtain an SSL Context",
+                                       "displayName":"SSL Context Service",
+                                       "dynamic":"false",
+                                       "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                                       "name":"SSL Context Service",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Username",
+                                    "value":{
+                                       "description":"Username required to access the URL",
+                                       "displayName":"Username",
+                                       "dynamic":"false",
+                                       "name":"Username",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Password",
+                                    "value":{
+                                       "description":"Password required to access the URL",
+                                       "displayName":"Password",
+                                       "dynamic":"false",
+                                       "name":"Password",
+                                       "required":"false",
+                                       "sensitive":"true",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Connection Timeout",
+                                    "value":{
+                                       "defaultValue":"30 sec",
+                                       "description":"How long to wait when attempting to connect to the remote server before giving up",
+                                       "displayName":"Connection Timeout",
+                                       "dynamic":"false",
+                                       "name":"Connection Timeout",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Data Timeout",
+                                    "value":{
+                                       "defaultValue":"30 sec",
+                                       "description":"How long to wait between receiving segments of data from the remote server before giving up and discarding the partial file",
+                                       "displayName":"Data Timeout",
+                                       "dynamic":"false",
+                                       "name":"Data Timeout",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"User Agent",
+                                    "value":{
+                                       "description":"What to report as the User Agent when we connect to the remote server",
+                                       "displayName":"User Agent",
+                                       "dynamic":"false",
+                                       "name":"User Agent",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Accept Content-Type",
+                                    "value":{
+                                       "description":"If specified, requests will only accept the provided Content-Type",
+                                       "displayName":"Accept Content-Type",
+                                       "dynamic":"false",
+                                       "name":"Accept Content-Type",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Follow Redirects",
+                                    "value":{
+                                       "allowableValues":[
+                                          {
+                                             "displayName":"true",
+                                             "value":"true"
+                                          },
+                                          {
+                                             "displayName":"false",
+                                             "value":"false"
+                                          }
+                                       ],
+                                       "defaultValue":"false",
+                                       "description":"If we receive a 3xx HTTP Status Code from the server, indicates whether or not we should follow the redirect that the server specifies",
+                                       "displayName":"Follow Redirects",
+                                       "dynamic":"false",
+                                       "name":"Follow Redirects",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Proxy Host",
+                                    "value":{
+                                       "description":"The fully qualified hostname or IP address of the proxy server",
+                                       "displayName":"Proxy Host",
+                                       "dynamic":"false",
+                                       "name":"Proxy Host",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Proxy Port",
+                                    "value":{
+                                       "description":"The port of the proxy server",
+                                       "displayName":"Proxy Port",
+                                       "dynamic":"false",
+                                       "name":"Proxy Port",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"URL",
+                                    "value":"http://api.randomuser.me/0.4.1/?format=csv"
+                                 },
+                                 {
+                                    "key":"Filename",
+                                    "value":"randomUserCSV_${nextInt()}"
+                                 },
+                                 {
+                                    "key":"SSL Context Service"
+                                 },
+                                 {
+                                    "key":"Username"
+                                 },
+                                 {
+                                    "key":"Password"
+                                 },
+                                 {
+                                    "key":"Connection Timeout",
+                                    "value":"30 sec"
+                                 },
+                                 {
+                                    "key":"Data Timeout",
+                                    "value":"30 sec"
+                                 },
+                                 {
+                                    "key":"User Agent"
+                                 },
+                                 {
+                                    "key":"Accept Content-Type"
+                                 },
+                                 {
+                                    "key":"Follow Redirects",
+                                    "value":"false"
+                                 },
+                                 {
+                                    "key":"Proxy Host"
+                                 },
+                                 {
+                                    "key":"Proxy Port"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"10 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Get One Random User In CSV",
+                        "relationships":{
+                           "autoTerminate":"false",
+                           "description":"All files are transferred to the success relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.standard.GetHTTP"
+                     },
+                     {
+                        "id":"84fffda5-a059-4028-a562-61dd95e59221",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "position":{
+                           "x":"2525.743582594406",
+                           "y":"1180.5875529188957"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":[
+                                 {
+                                    "key":"Hadoop configuration files",
+                                    "value":{
+                                       "description":"A comma-separated list of Hadoop configuration files",
+                                       "displayName":"Hadoop configuration files",
+                                       "dynamic":"false",
+                                       "name":"Hadoop configuration files",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Record schema",
+                                    "value":{
+                                       "description":"Outgoing Avro schema for each record created from a CSV row",
+                                       "displayName":"Record schema",
+                                       "dynamic":"false",
+                                       "name":"Record schema",
+                                       "required":"true",
+                                       "sensitive":"false",
+                                       "supportsEl":"true"
+                                    }
+                                 },
+                                 {
+                                    "key":"CSV charset",
+                                    "value":{
+                                       "defaultValue":"utf8",
+                                       "description":"Character set for CSV files",
+                                       "displayName":"CSV charset",
+                                       "dynamic":"false",
+                                       "name":"CSV charset",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"CSV delimiter",
+                                    "value":{
+                                       "defaultValue":",",
+                                       "description":"Delimiter character for CSV records",
+                                       "displayName":"CSV delimiter",
+                                       "dynamic":"false",
+                                       "name":"CSV delimiter",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"CSV quote character",
+                                    "value":{
+                                       "defaultValue":"\"",
+                                       "description":"Quote character for CSV values",
+                                       "displayName":"CSV quote character",
+                                       "dynamic":"false",
+                                       "name":"CSV quote character",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"CSV escape character",
+                                    "value":{
+                                       "defaultValue":"\\",
+                                       "description":"Escape character for CSV values",
+                                       "displayName":"CSV escape character",
+                                       "dynamic":"false",
+                                       "name":"CSV escape character",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Use CSV header line",
+                                    "value":{
+                                       "defaultValue":"false",
+                                       "description":"Whether to use the first line as a header",
+                                       "displayName":"Use CSV header line",
+                                       "dynamic":"false",
+                                       "name":"Use CSV header line",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 },
+                                 {
+                                    "key":"Lines to skip",
+                                    "value":{
+                                       "defaultValue":"0",
+                                       "description":"Number of lines to skip before reading header or data",
+                                       "displayName":"Lines to skip",
+                                       "dynamic":"false",
+                                       "name":"Lines to skip",
+                                       "required":"false",
+                                       "sensitive":"false",
+                                       "supportsEl":"false"
+                                    }
+                                 }
+                              ]
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":[
+                                 {
+                                    "key":"Hadoop configuration files"
+                                 },
+                                 {
+                                    "key":"Record schema",
+                                    "value":"{   \n    \"type\" : \"record\",\n    \"name\" : \"person\", \n    \"fields\" : [\n        {\"name\" : \"username\",\"type\": \"string\"},\n        {\"name\" : \"password\",\"type\": \"string\"},      \n        {\"name\" : \"gender\", \"type\" : \"string\"},\n        {\"name\" : \"title\", \"type\" : \"string\"},\n        {\"name\" : \"first\", \"type\" : \"string\"},\n        {\"name\" : \"last\", \"type\" : \"string\"},\n\n        {\"name\" : \"street\", \"type\" : \"string\"},\n        {\"name\" : \"city\", \"type\" : \"string\"},\n\n        {\"name\" : \"state\", \"type\" : \"string\"},\n        {\"name\" : \"zip\", \"type\" : \"string\"} \n        ]\n }"
+                                 },
+                                 {
+                                    "key":"CSV charset",
+                                    "value":"utf8"
+                                 },
+                                 {
+                                    "key":"CSV delimiter",
+                                    "value":","
+                                 },
+                                 {
+                                    "key":"CSV quote character",
+                                    "value":"\""
+                                 },
+                                 {
+                                    "key":"CSV escape character",
+                                    "value":"\\"
+                                 },
+                                 {
+                                    "key":"Use CSV header line",
+                                    "value":"false"
+                                 },
+                                 {
+                                    "key":"Lines to skip",
+                                    "value":"0"
+                                 }
+                              ]
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"ConvertCSVToAvro",
+                        "relationships":[
+                           {
+                              "autoTerminate":"false",
+                              "description":"CSV content that could not be processed",
+                              "name":"failure"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"CSV content that could not be converted",
+                              "name":"incompatible"
+                           },
+                           {
+                              "autoTerminate":"false",
+                              "description":"Avro content that was converted successfully from CSV",
+                              "name":"success"
+                           }
+                        ],
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"false",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.kite.ConvertCSVToAvro"
+                     },
+                     {
+                        "id":"02dd4f84-b6ed-46e6-a2e6-30552173a253",
+                        "parentGroupId":"24183819-b5e1-4db9-8fe7-af82c12cb1f1",
+                        "position":{
+                           "x":"1955.5343540787808",
+                           "y":"1187.0168742079582"
+                        },
+                        "config":{
+                           "bulletinLevel":"WARN",
+                           "comments":"",
+                           "concurrentlySchedulableTaskCount":"1",
+                           "defaultConcurrentTasks":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "key":"EVENT_DRIVEN",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"1"
+                                 }
+                              ]
+                           },
+                           "defaultSchedulingPeriod":{
+                              "entry":[
+                                 {
+                                    "key":"TIMER_DRIVEN",
+                                    "value":"0 sec"
+                                 },
+                                 {
+                                    "key":"CRON_DRIVEN",
+                                    "value":"* * * * * ?"
+                                 }
+                              ]
+                           },
+                           "descriptors":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression",
+                                 "value":{
+                                    "description":"Regular expression for attributes to be deleted from flowfiles.",
+                                    "displayName":"Delete Attributes Expression",
+                                    "dynamic":"false",
+                                    "name":"Delete Attributes Expression",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           },
+                           "lossTolerant":"false",
+                           "penaltyDuration":"30 sec",
+                           "properties":{
+                              "entry":{
+                                 "key":"Delete Attributes Expression"
+                              }
+                           },
+                           "runDurationMillis":"0",
+                           "schedulingPeriod":"0 sec",
+                           "schedulingStrategy":"TIMER_DRIVEN",
+                           "yieldDuration":"1 sec"
+                        },
+                        "name":"Converting Failed",
+                        "relationships":{
+                           "autoTerminate":"true",
+                           "description":"All FlowFiles are routed to this relationship",
+                           "name":"success"
+                        },
+                        "state":"STOPPED",
+                        "style":"",
+                        "supportsEventDriven":"true",
+                        "supportsParallelProcessing":"true",
+                        "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                     }
+                  ]
+               },
+               "disabledCount":"0",
+               "inactiveRemotePortCount":"0",
+               "inputPortCount":"0",
+               "invalidCount":"0",
+               "name":"CSV Data",
+               "outputPortCount":"1",
+               "parent":{
+                  "id":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+                  "name":"NiFi Flow"
+               },
+               "runningCount":"0",
+               "stoppedCount":"6"
+            }
+         ],
+         "processors":[
+            {
+               "id":"75ad7a08-89be-4b1f-96ca-fe6fceafc1db",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"2803.139334547531",
+                  "y":"1733.1307658095207"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Split Strategy",
+                           "value":{
+                              "allowableValues":{
+                                 "description":"Split at Record boundaries",
+                                 "displayName":"Record",
+                                 "value":"Record"
+                              },
+                              "defaultValue":"Record",
+                              "description":"The strategy for splitting the incoming datafile. The Record strategy will read the incoming datafile by de-serializing each record.",
+                              "displayName":"Split Strategy",
+                              "dynamic":"false",
+                              "name":"Split Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Output Size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The number of Avro records to include per split file. In cases where the incoming file has less records than the Output Size, or when the total number of records does not divide evenly by the Output Size, it is possible to get a split file with less records.",
+                              "displayName":"Output Size",
+                              "dynamic":"false",
+                              "name":"Output Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Output Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Avro's object container file format",
+                                    "displayName":"Datafile",
+                                    "value":"Datafile"
+                                 },
+                                 {
+                                    "description":"Bare Avro records",
+                                    "displayName":"Bare Record",
+                                    "value":"Bare Record"
+                                 }
+                              ],
+                              "defaultValue":"Datafile",
+                              "description":"Determines the format of the output. Either Avro Datafile, or bare record. Bare record output is only intended for use with systems that already require it, and shouldn't be needed for normal use.",
+                              "displayName":"Output Strategy",
+                              "dynamic":"false",
+                              "name":"Output Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Transfer Metadata",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Whether or not to transfer metadata from the parent datafile to the children. If the Output Strategy is Bare Record, then the metadata will be stored as FlowFile attributes, otherwise it will be in the Datafile header.",
+                              "displayName":"Transfer Metadata",
+                              "dynamic":"false",
+                              "name":"Transfer Metadata",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Split Strategy",
+                           "value":"Record"
+                        },
+                        {
+                           "key":"Output Size",
+                           "value":"1"
+                        },
+                        {
+                           "key":"Output Strategy",
+                           "value":"Datafile"
+                        },
+                        {
+                           "key":"Transfer Metadata",
+                           "value":"true"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"SplitAvro",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"If a FlowFile fails processing for any reason (for example, the FlowFile is not valid Avro), it will be routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The original FlowFile that was split. If the FlowFile fails processing, nothing will be sent to this relationship",
+                     "name":"original"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"All new files split from the original FlowFile will be routed to this relationship",
+                     "name":"split"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.avro.SplitAvro"
+            },
+            {
+               "id":"88501fbe-b6f8-479d-818c-4204332b71cc",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"2810.9409702897183",
+                  "y":"1904.4353312392082"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"JSON container options",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"none",
+                                    "value":"none"
+                                 },
+                                 {
+                                    "displayName":"array",
+                                    "value":"array"
+                                 }
+                              ],
+                              "defaultValue":"array",
+                              "description":"Determines how stream of records is exposed: either as a sequence of single Objects (none) (i.e. writing every Object to a new line), or as an array of Objects (array).",
+                              "displayName":"JSON container options",
+                              "dynamic":"false",
+                              "name":"JSON container options",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Wrap Single Record",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Determines if the resulting output for empty records or a single record should be wrapped in a container array as specified by 'JSON container options'",
+                              "displayName":"Wrap Single Record",
+                              "dynamic":"false",
+                              "name":"Wrap Single Record",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"JSON container options",
+                           "value":"array"
+                        },
+                        {
+                           "key":"Wrap Single Record",
+                           "value":"false"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ConvertAvroToJSON",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"A FlowFile is routed to this relationship if it cannot be parsed as Avro or cannot be converted to JSON for any reason",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"A FlowFile is routed to this relationship after it has been converted to JSON",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.avro.ConvertAvroToJSON"
+            },
+            {
+               "id":"f2d05437-abe0-4ced-b12c-165b16faf095",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"3351.46730695964",
+                  "y":"1905.0926798720207"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Converting Failed",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"53c861bf-e829-4438-bfc4-ffbdd2503e70",
+               "parentGroupId":"35105bb8-2c3f-415b-bf62-659c6c491ca2",
+               "position":{
+                  "x":"2811.6509312272183",
+                  "y":"2083.130094422802"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":{
+                        "key":"Delete Attributes Expression",
+                        "value":{
+                           "description":"Regular expression for attributes to be deleted from flowfiles.",
+                           "displayName":"Delete Attributes Expression",
+                           "dynamic":"false",
+                           "name":"Delete Attributes Expression",
+                           "required":"false",
+                           "sensitive":"false",
+                           "supportsEl":"true"
+                        }
+                     }
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":{
+                        "key":"Delete Attributes Expression"
+                     }
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Finish",
+               "relationships":{
+                  "autoTerminate":"true",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            }
+         ]
+      },
+      "timestamp":"01/06/2019 17:46:04 EST"
+   }
+}

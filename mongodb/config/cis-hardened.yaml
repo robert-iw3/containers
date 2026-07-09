@@ -1,0 +1,36 @@
+# CIS Hardened base for MongoDB 8.0 (merge with replica/sharded)
+# Auth (1.1): Enabled in base
+# TLS (1.2): RequireTLS in net
+# Network (2.1): Bind to specific (set via env or override)
+# Disable HTTP (2.3): No HTTP in 8.0, but explicit
+# Disable JS (4.2): --noscripting in CMD
+# Auditing (3.1): Enterprise; sample for perf (overhead ~10-20% I/O)
+# SNMP off (4.3): Default off
+# Wire check (4.5): Enabled
+
+net:
+  wireObjectCheck: true  # CIS 4.5: Validate BSON (minimal perf hit)
+  http:
+    enabled: false  # CIS 2.3: Disable REST/HTTP (if enabled; 8.0 default off)
+
+security:
+  enableJavaScript: false  # CIS 4.2 variant: Disable JS eval (perf gain, security)
+  clusterAuthMode: keyFile  # CIS 1.3: For repl/sharded
+
+auditLog:  # CIS 3.1-3.2: Enterprise only; filter to reduce perf impact
+  destination: file
+  format: JSON
+  path: /var/log/mongodb/auditLog.json
+  filter: '{ atype: { $in: ["authenticate", "authCheck"] } }'  # Sample auth only (low overhead)
+  auditDestination: file  # Not syslog for perf
+
+operationProfiling:  # Fallback for Community auditing
+  sampleRate: 0.1  # 10% sample for queries (balance audit/perf; full=1.0 high I/O)
+
+# Encryption at rest (MongoDB checklist): WiredTiger default; add filesystem if needed
+storage:
+  wiredTiger:
+    engineConfig:
+      encryption:  # Enterprise
+        enabled: true
+        keyId: "default"  # Manage keys externally

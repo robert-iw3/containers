@@ -1,0 +1,105 @@
+http:
+  routers:
+    sonar:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`sonarqube.domainname.io`)"
+      middlewares:
+        - sonar-whitelist
+        - sonar-redirect
+      tls: {}
+      service: sonar
+
+  services:
+    sonar:
+      loadBalancer:
+        servers:
+          - url: "http://sonarqube.domainname.io:9000"
+
+  middlewares:
+    sonar-redirect:
+      redirectScheme:
+        scheme: http
+        port: "9000"
+        permanent: true
+
+    default-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+        accessControlMaxAge: 100
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+    sonar-whitelist:
+      ipWhiteList:
+        sourceRange:
+        #restrict access to specific subnets example:
+        - "192.168.99.0/24"
+        - "192.168.88.0/24"
+
+    secured:
+      chain:
+        middlewares:
+        - sonar-whitelist
+        - default-headers
+
+#https://plugins.traefik.io/plugins/6335346ca4caa9ddeffda116/crowdsec-bouncer-traefik-plugin
+#    crowdsec:
+#      plugin:
+#        bouncer:
+#          enabled: false
+#          updateIntervalSeconds: 60
+#          defaultDecisionSeconds: 60
+#          crowdsecMode: live
+#          crowdsecLapiKey: privateKey
+#          crowdsecLapiHost: crowdsec:8080
+#          crowdsecLapiScheme: http
+#          forwardedHeadersTrustedIPs:
+#            - 10.0.10.23/32
+#            - 10.0.20.0/24
+#          forwardedHeadersCustomName: X-Custom-Header
+#          redisCacheEnabled: false
+#          redisCacheHost: "redis:6379"
+#    fail2ban:
+#       plugin:
+#         fail2ban:
+#           blacklist:
+#             ip:
+#               - put a subnet here
+#           rules:
+#             action: ""
+#             actionAbuseipdb: ""
+#             backend: ""
+#             banaction: ""
+#             banactionAllports: ""
+#             bantime: 3h
+#             chain: ""
+#             destemail: ""
+#             enabled: "true"
+#             fail2banAgent: ""
+#             filter: ""
+#             findtime: 10m
+#             ignorecommand: ""
+#             logencoding: UTF-8
+#             maxretry: "4"
+#             mode: ""
+#             mta: ""
+#             ports: 0:8000
+#             protocol: ""
+#             sender: ""
+#             urlregexp: ""
+#             usedns: ""
+#           whitelist:
+#              ip:
+#                - ::1
+#                - 127.0.0.1

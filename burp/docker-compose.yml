@@ -1,0 +1,38 @@
+---
+services:
+  burp:
+    image: burp-suite-pro:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PORTSWIGGER_EMAIL_ADDRESS=${PORTSWIGGER_EMAIL_ADDRESS}
+        - PORTSWIGGER_PASSWORD=${PORTSWIGGER_PASSWORD}
+        - BURP_SUITE_PRO_VERSION=${BURP_SUITE_PRO_VERSION}
+        - BURP_SUITE_PRO_CHECKSUM=${BURP_SUITE_PRO_CHECKSUM}
+    container_name: burp-suite
+    user: "1000:1000"
+    environment:
+      - BURP_KEY=${BURP_KEY}
+      - JAVA_OPTS=-Xmx2G -Djava.awt.headless=false
+      - DISPLAY=${DISPLAY:-host.docker.internal:0}
+    ports:
+      - "8080:8080"
+    volumes:
+      - burp-data:/home/burp/.java
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ./config:/home/burp/config:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    networks:
+      - burp-network
+volumes:
+  burp-data:
+    name: burp-data
+networks:
+  burp-network:
+    driver: bridge

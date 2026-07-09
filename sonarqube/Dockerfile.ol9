@@ -1,0 +1,113 @@
+FROM docker.io/oraclelinux:9
+
+LABEL org.opencontainers.image.name='SonarQube' \
+    org.opencontainers.image.description='Clean code for teams and enterprises.' \
+    org.opencontainers.image.usage='https://docs.sonarqube.org/latest/' \
+    org.opencontainers.image.url='https://www.sonarsource.com/products/sonarqube/' \
+    org.opencontainers.image.licenses='GNU Lesser General Public License v3.0' \
+    org.opencontainers.image.vendor='Sonar' \
+    org.opencontainers.image.schema-version='25.11.0.114957' \
+    MAINTAINER="@rw"
+
+ENV LANG='en_US.UTF-8' \
+    LANGUAGE='en_US:en' \
+    LC_ALL='en_US.UTF-8'
+ARG SONARQUBE_VERSION=25.11.0.114957
+ARG SONARQUBE_ZIP_URL=https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-${SONARQUBE_VERSION}.zip
+ENV JAVA_HOME=/usr/lib/jvm/jre-17-openjdk \
+    SONARQUBE_HOME=/opt/sonarqube \
+    SONAR_VERSION="${SONARQUBE_VERSION}" \
+    SQ_DATA_DIR="/opt/sonarqube/data" \
+    SQ_EXTENSIONS_DIR="/opt/sonarqube/extensions" \
+    SQ_LOGS_DIR="/opt/sonarqube/logs" \
+    SQ_TEMP_DIR="/opt/sonarqube/temp"
+# https://snyk.io/login?cta=sign-up&loc=nav&page=support_docs_page
+# To authenticate using your API token:
+#Go to your Snyk account (Account Settings > API Token section).
+#In the KEY field, click click to show; then select and copy your API token. A screenshot follows.
+#In the CLI, run snyk auth [<API_TOKEN>] or snyk config set api=<token>. The <API_TOKEN>is validated by the Snyk API.
+#ENV SNYK_API=
+
+RUN \
+    dnf config-manager --set-enabled ol9_codeready_builder; \
+    dnf install -y epel-release dnf-plugins-core; \
+    dnf update -y; \
+    dnf install -y java-17-openjdk bash bzip2 wget clamav \
+    openscap scap-security-guide clamav-update unzip
+
+#run SCA scan against source code
+#WORKDIR /tmp
+#RUN set -x; \
+#    dnf install -y npm; \
+#    wget https://github.com/SonarSource/sonarqube/archive/refs/heads/master.zip; \
+#    unzip master.zip; cd sonarqube-master; \
+#    npm install -g snyk; \
+#    npm install snyk-to-html -g; \
+#    snyk config set api=${SNYK_API}; \
+#    snyk code test --json | snyk-to-html -o /sonarqube-code-review.html; \
+#    snyk test --json | snyk-to-html -o /sonarqube-deps.html; \
+#    snyk monitor; \
+#    npm uninstall -g snyk; \
+#    npm uninstall -g snyk-to-html; \
+#    dnf remove -y npm
+
+WORKDIR /opt
+
+RUN \
+    groupadd -g 65535 sonarqube; \
+    useradd --system -u 65535 -r -g sonarqube sonarqube -m; \
+    dnf install -y dejavu-sans-fonts; \
+    for server in $(shuf -e hkps://keys.openpgp.org \
+                            hkps://keyserver.ubuntu.com) ; do \
+        gpg --batch --keyserver "${server}" --recv-keys 679F1EE92B19609DE816FDE81DB198F93525EC1A && break || : ; \
+    done; \
+    curl --fail --location --output sonarqube.zip --silent --show-error "${SONARQUBE_ZIP_URL}"; \
+    curl --fail --location --output sonarqube.zip.asc --silent --show-error "${SONARQUBE_ZIP_URL}.asc"; \
+    gpg --batch --verify sonarqube.zip.asc sonarqube.zip; \
+    unzip -q sonarqube.zip; \
+    mv "sonarqube-${SONARQUBE_VERSION}" sonarqube; \
+    rm -f sonarqube.zip*; \
+    rm -rf ${SONARQUBE_HOME}/bin/*; \
+    ln -s "${SONARQUBE_HOME}/lib/sonar-application-${SONARQUBE_VERSION}.jar" "${SONARQUBE_HOME}/lib/sonarqube.jar"; \
+    chmod -R 555 ${SONARQUBE_HOME}; \
+    chmod -R ugo+wrX "${SQ_DATA_DIR}" "${SQ_EXTENSIONS_DIR}" "${SQ_LOGS_DIR}" "${SQ_TEMP_DIR}"; \
+    echo "networkaddress.cache.ttl=5" >> "${JAVA_HOME}/conf/security/java.security"; \
+    sed --in-place --expression="s?securerandom.source=file:/dev/random?securerandom.source=file:/dev/urandom?g" "${JAVA_HOME}/conf/security/java.security"; \
+    chown -R sonarqube:sonarqube ${JAVA_HOME}/; \
+    chown -R sonarqube:sonarqube ${SONARQUBE_HOME}/
+
+# Run hardening script and collect build security artifacts, SCA/Compliance/CVE/AV
+WORKDIR /home/sonarqube/artifacts
+ARG SCAP_PROFILE=xccdf_org.ssgproject.content_profile_stig
+ARG SCAP_SNAME=STIG
+ARG BENCHMARK=ssg-ol9-ds.xml
+
+COPY --chmod=755 el9-container-hardening.sh .
+
+RUN \
+    bash -c "./el9-container-hardening.sh"; \
+    wget https://linux.oracle.com/security/oval/com.oracle.elsa-ol9.xml.bz2; \
+    bzip2 -d com.oracle.elsa-ol9.xml.bz2; \
+    oscap oval eval --report sonarqube-ol9-cve-report.html com.oracle.elsa-ol9.xml || :; \
+    oscap xccdf eval --profile ${SCAP_PROFILE} --results sonarqube_ol9-${SCAP_SNAME}-scap-report.xml \
+    --report sonarqube_ol9-${SCAP_SNAME}-scap-report.html /usr/share/xml/scap/ssg/content/${BENCHMARK} || :; \
+    freshclam; \
+    clamscan -rvi -l AV_scan.log --exclude-dir="^/sys" / || :; \
+    cp /tmp/*html ./; \
+    chown -R sonarqube:sonarqube /home/sonarqube; \
+    grep -Hrn FOUND AV_scan.log; \
+    dnf remove -y clamav clamav-update openscap scap-security-guide wget bzip2 unzip epel-release dnf-plugins-core; \
+    dnf config-manager --set-disabled ol9_codeready_builder; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf /tmp/* /var/tmp/*; \
+    truncate -s 0 /var/log/*log
+
+VOLUME ${SQ_DATA_DIR}
+VOLUME ${SQ_EXTENSIONS_DIR}
+VOLUME ${SQ_LOGS_DIR}
+VOLUME ${SQ_TEMP_DIR}
+WORKDIR ${SONARQUBE_HOME}
+EXPOSE 9000
+USER sonarqube
+STOPSIGNAL SIGINT
+ENTRYPOINT [ "/usr/lib/jvm/jre-17-openjdk/bin/java", "-jar", "lib/sonarqube.jar", "-Dsonar.log.console=true" ]

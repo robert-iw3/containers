@@ -1,0 +1,134 @@
+stages:
+  - test
+  - deploy
+  - chaos
+  - rollback
+
+unit_test:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - python -m unittest test_deploy_bitbucket.py
+  only:
+    - main
+
+integration_test:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - python -m unittest test_integration.py
+  only:
+    - main
+
+deploy_docker:
+  stage: deploy
+  image: docker:20.10
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}
+    - docker-compose -f docker-compose.yml up -d --no-build
+    - sleep 60
+    - curl -f http://${BITBUCKET_IPv4}:7990/status
+    - sleep 1800
+    - BACKUP=$(docker exec postgres2-bitbucket ls /srv/bitbucket-postgres/backups | grep bitbucket-postgres-backup | tail -1)
+    - docker exec -e PGPASSWORD=$(cat secrets/postgresql_password) postgres-bitbucket \
+        bash -c "zstd -d -c /srv/bitbucket-postgres/backups/$BACKUP | psql -d test_restore"
+    - if [ $? -eq 0 ]; then echo "Backup validated"; else echo "Backup validation failed"; exit 1; fi
+  environment:
+    name: production
+    url: https://bitbucket.dev.io
+  variables:
+    VAULT_ADDR: $VAULT_ADDR
+    VAULT_TOKEN: $VAULT_TOKEN
+    VAULT_SECRET_PATH: $VAULT_SECRET_PATH
+    USE_VAULT: "true"
+    BITBUCKET_IPv4: $BITBUCKET_IPv4
+  only:
+    - main
+
+deploy_kubernetes:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - echo "$KUBE_CONFIG" > kubeconfig.yaml
+    - export KUBECONFIG=kubeconfig.yaml
+    - export MANIFEST_TAG=${CI_COMMIT_SHORT_SHA}
+    - sed -i "s/:latest/:${MANIFEST_TAG}/g" bitbucket-deployment.yml
+    - sed -i "s/:latest/:${MANIFEST_TAG}/g" postgres-deployment.yml
+    - kubectl apply -f bitbucket-deployment.yml -f postgres-deployment.yml -f network-policy.yml -f multi-region.yml
+    - sleep 60
+    - kubectl -n bitbucket get pods -l app=bitbucket --no-headers | grep Running || exit 1
+  environment:
+    name: production
+    url: https://bitbucket.global.dev.io
+  variables:
+    VAULT_ADDR: $VAULT_ADDR
+    VAULT_TOKEN: $VAULT_TOKEN
+    VAULT_SECRET_PATH: $VAULT_SECRET_PATH
+  only:
+    - main
+
+chaos_test:
+  stage: chaos
+  image: bitnami/kubectl:latest
+  script:
+    - echo "$KUBE_CONFIG" > kubeconfig.yaml
+    - export KUBECONFIG=kubeconfig.yaml
+    - kubectl apply -f chaos-test.yml
+    - sleep 120
+    - kubectl -n bitbucket get pods -l app=bitbucket --no-headers | grep Running || exit 1
+    - kubectl -n bitbucket get chaosmesh --no-headers | grep Finished || exit 1
+  environment:
+    name: production
+    url: https://bitbucket.global.dev.io
+  variables:
+    VAULT_ADDR: $VAULT_ADDR
+    VAULT_TOKEN: $VAULT_TOKEN
+  only:
+    - main
+
+rollback:
+  stage: rollback
+  image: bitnami/kubectl:latest
+  when: on_failure
+  script:
+    - echo "Deployment failed, initiating rollback..."
+    - if [ -n "$CI_JOB_NAME" ] && [ "$CI_JOB_NAME" == "deploy_docker" ]; then
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        PREVIOUS_TAG=$(docker images --format "{{.Tag}}" | grep -v ${CI_COMMIT_SHORT_SHA} | head -n 1)
+        if [ -n "$PREVIOUS_TAG" ]; then
+          sed -i "s/${CI_COMMIT_SHORT_SHA}/$PREVIOUS_TAG/g" docker-compose.yml
+          docker-compose -f docker-compose.yml up -d --no-build
+          echo "Rolled back Docker deployment to tag $PREVIOUS_TAG"
+        else
+          echo "No previous tag found for rollback"
+          exit 1
+        fi
+      elif [ -n "$CI_JOB_NAME" ] && [ "$CI_JOB_NAME" == "deploy_kubernetes" ]; then
+        echo "$KUBE_CONFIG" > kubeconfig.yaml
+        export KUBECONFIG=kubeconfig.yaml
+        PREVIOUS_TAG=$(kubectl -n bitbucket get deployments bitbucket -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -o ':.*$' | cut -c 2- | grep -v ${CI_COMMIT_SHORT_SHA} || echo "previous")
+        if [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "previous" ]; then
+          sed -i "s/:${CI_COMMIT_SHORT_SHA}/:$PREVIOUS_TAG/g" bitbucket-deployment.yml
+          sed -i "s/:${CI_COMMIT_SHORT_SHA}/:$PREVIOUS_TAG/g" postgres-deployment.yml
+          kubectl apply -f bitbucket-deployment.yml -f postgres-deployment.yml -f network-policy.yml -f multi-region.yml
+          echo "Rolled back Kubernetes deployment to tag $PREVIOUS_TAG"
+        else
+          echo "No previous tag found for rollback"
+          exit 1
+        fi
+      fi
+  variables:
+    VAULT_ADDR: $VAULT_ADDR
+    VAULT_TOKEN: $VAULT_TOKEN
+    VAULT_SECRET_PATH: $VAULT_SECRET_PATH
+    BITBUCKET_IPv4: $BITBUCKET_IPv4
+  only:
+    - main

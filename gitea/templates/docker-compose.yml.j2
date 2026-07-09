@@ -1,0 +1,316 @@
+---
+volumes:
+  gitea-postgres:
+    driver: local
+  gitea-data:
+    driver: local
+  minio-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+
+networks:
+  gitea-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+x-common-vars-apps: &common-vars-apps
+  networks:
+    - gitea-net
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  patroni:
+    <<: *common-vars-apps
+    image: {{ postgresql_image }}
+    container_name: patroni-gitea
+    hostname: patroni-gitea.dev.io
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d {{ postgresql_database }} -U {{ postgresql_username }}"]
+      start_period: 30s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - gitea-postgres:/bitnami/postgresql{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:z{% endif %}
+    environment:
+      POSTGRESQL_USERNAME: {{ postgresql_username }}
+      POSTGRESQL_PASSWORD: {{ postgresql_password }}
+      POSTGRESQL_DATABASE: {{ postgresql_database }}
+      POSTGRESQL_REPLICATION_USER: {{ postgresql_replication_user }}
+      POSTGRESQL_REPLICATION_PASSWORD: {{ postgresql_replication_password }}
+      PATRONI_NAME: patroni1
+      PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:5432
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: patroni-gitea.dev.io:5432
+      PATRONI_RESTAPI_LISTEN: 0.0.0.0:8008
+      PATRONI_RESTAPI_CONNECT_ADDRESS: patroni-gitea.dev.io:8008
+    ports:
+      - 5432:5432
+      - 8008:8008
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.2
+  pgbouncer:
+    <<: *common-vars-apps
+    image: {{ pgbouncer_image }}
+    container_name: pgbouncer
+    hostname: pgbouncer.dev.io
+    volumes:
+      - "{{ gitea_compose_dir }}/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro"
+    ports:
+      - 6432:6432
+    healthcheck:
+      test: ["CMD", "pgbouncer", "-u", "postgres", "show", "stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.3
+  gitea:
+    image: {{ gitea_image }}
+    <<: *common-vars-apps
+    container_name: gitea
+    hostname: gitea.dev.io
+    volumes:
+      - gitea-data:/data{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:Z{% endif %}
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      GITEA__database__HOST: pgbouncer.dev.io:6432
+      GITEA__database__NAME: {{ postgresql_database }}
+      GITEA__database__USER: {{ postgresql_username }}
+      GITEA__database__PASSWD: {{ postgresql_password }}
+      GITEA__admin__ADMIN_USER: {{ gitea_admin_user }}
+      GITEA__admin__ADMIN_PASSWORD: {{ gitea_admin_password }}
+      GITEA__admin__ADMIN_EMAIL: {{ gitea_admin_email }}
+      GITEA__server__RUN_MODE: prod
+      GITEA__server__DOMAIN: {{ gitea_domain }}
+      GITEA__server__SSH_DOMAIN: {{ gitea_ssh_domain }}
+      GITEA__server__ROOT_URL: {{ gitea_root_url }}
+      GITEA__server__HTTP_PORT: 3000
+      GITEA__server__SSH_PORT: {{ gitea_ssh_port }}
+      GITEA__server__SSH_LISTEN_PORT: 22
+      GITEA__security__INSTALL_LOCK: true
+      GITEA__service__DISABLE_REGISTRATION: true
+      GITEA__picture__DISABLE_GRAVATAR: true
+      GITEA__metrics__ENABLED: true
+      GITEA__log__MODE: console,network
+      GITEA__log__FORMAT: json
+      GITEA__log__network__HOST: loki.dev.io:3100
+    ports:
+      - "{{ gitea_ssh_port }}:22"
+      - "3000:3000"
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://{{ gitea_domain }}:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    depends_on:
+      patroni:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+  traefik:
+    image: {{ traefik_image }}
+    <<: *common-vars-apps
+    container_name: traefik
+    hostname: traefik.dev.io
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - "{{ gitea_compose_dir }}/modsecurity.conf:/etc/traefik/modsecurity.conf:ro"
+      - "{{ gitea_compose_dir }}/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "{{ gitea_compose_dir }}/ca.crt:/etc/traefik/certs/ca.crt:ro"
+      - "{{ gitea_compose_dir }}/server.crt:/etc/traefik/certs/server.crt:ro"
+      - "{{ gitea_compose_dir }}/server.key:/etc/traefik/certs/server.key:ro"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    labels:
+      - "traefik.http.routers.gitea.rule=Host(`{{ gitea_domain }}`)"
+      - "traefik.http.routers.gitea.entrypoints=websecure"
+      - "traefik.http.routers.gitea.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.gitea.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.gitea.tls.domains[0].main={{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.gitea.middlewares=securityHeaders,modsecurity,rateLimit"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.{{ gitea_domain }}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.grafana.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.grafana.tls.domains[0].main=grafana.{{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.grafana.middlewares=securityHeaders,rateLimit"
+      - "traefik.http.routers.minio.rule=Host(`minio.{{ gitea_domain }}`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.routers.minio.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.minio.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.minio.tls.domains[0].main=minio.{{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.minio.middlewares=securityHeaders,rateLimit"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.{{ gitea_domain }}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.prometheus.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.prometheus.tls.domains[0].main=prometheus.{{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.prometheus.middlewares=securityHeaders,rateLimit"
+      - "traefik.http.routers.loki.rule=Host(`loki.{{ gitea_domain }}`)"
+      - "traefik.http.routers.loki.entrypoints=websecure"
+      - "traefik.http.routers.loki.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.loki.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.loki.tls.domains[0].main=loki.{{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.loki.middlewares=securityHeaders,rateLimit"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.{{ gitea_domain }}`) && PathPrefix(`/dashboard/`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+{% if use_letsencrypt %}
+      - "traefik.http.routers.dashboard.tls.certresolver=le"
+{% else %}
+      - "traefik.http.routers.dashboard.tls.domains[0].main=traefik.{{ gitea_domain }}"
+{% endif %}
+      - "traefik.http.routers.dashboard.middlewares=securityHeaders,dashboardAuth,rateLimit"
+      - "traefik.http.middlewares.securityHeaders.headers.contentSecurityPolicy=default-src 'self'"
+      - "traefik.http.middlewares.securityHeaders.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.securityHeaders.headers.frameDeny=true"
+      - "traefik.http.middlewares.securityHeaders.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.modsecurity.modsecurity.configFile=/etc/traefik/modsecurity.conf"
+      - "traefik.http.middlewares.rateLimit.rateLimit.average=100"
+      - "traefik.http.middlewares.rateLimit.rateLimit.burst=200"
+      - "traefik.http.middlewares.dashboardAuth.basicAuth.users=admin:$apr1$H6uskkkD$5y78re.7R3fW7rB4H3J0B1"
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.5
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  minio:
+    image: {{ minio_image }}
+    <<: *common-vars-apps
+    container_name: minio
+    hostname: minio.dev.io
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - minio-data:/data{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:Z{% endif %}
+    environment:
+      MINIO_ROOT_USER: {{ minio_access_key }}
+      MINIO_ROOT_PASSWORD: {{ minio_secret_key }}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.6
+  prometheus:
+    image: docker.io/prom/prometheus:v2.54.1
+    <<: *common-vars-apps
+    container_name: prometheus
+    hostname: prometheus.dev.io
+    volumes:
+      - prometheus-data:/prometheus{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:Z{% endif %}
+      - "{{ gitea_compose_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.7
+  grafana:
+    image: docker.io/grafana/grafana:11.2.0
+    <<: *common-vars-apps
+    container_name: grafana
+    hostname: grafana.dev.io
+    volumes:
+      - grafana-data:/var/lib/grafana{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:Z{% endif %}
+      - "{{ gitea_compose_dir }}/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: {{ gitea_admin_password }}
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.8
+  loki:
+    image: {{ loki_image }}
+    <<: *common-vars-apps
+    container_name: loki
+    hostname: loki.dev.io
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki-data:/loki{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:Z{% endif %}
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.9
+  backup:
+    image: docker.io/bitnami/postgresql:16
+    <<: *common-vars-apps
+    container_name: gitea-backup
+    volumes:
+      - "{{ gitea_compose_dir }}/backup.sh:/backup/backup.sh:ro"
+      - /tmp:/tmp{% if ansible_selinux is defined and ansible_selinux.status == "enabled" %}:z{% endif %}
+    environment:
+      AWS_ACCESS_KEY_ID: {{ minio_access_key }}
+      AWS_SECRET_ACCESS_KEY: {{ minio_secret_key }}
+      BACKUP_ENCRYPTION_KEY: {{ backup_encryption_key }}
+      POSTGRESQL_USERNAME: {{ postgresql_username }}
+      POSTGRESQL_DATABASE: {{ postgresql_database }}
+      PGPASSWORD: {{ postgresql_password }}
+    command: ["cron", "-f"]
+    networks:
+      gitea-net:
+        ipv4_address: 172.20.0.10

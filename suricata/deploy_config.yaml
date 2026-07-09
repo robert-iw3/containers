@@ -1,0 +1,28 @@
+suricata:
+  version: '8.0.6'
+  interface: 'eth0'
+  log_dir: '/var/log/suricata'
+  rules_dir: '/var/lib/suricata/rules'
+  network_mode: 'host'
+security:
+  enable_json_logs: true
+  disable_password_logging: true
+splunk:
+  enabled: false
+  hec_url: 'https://your-splunk-host:8088/services/collector/event'
+  hec_token: 'your-splunk-hec-token'
+elasticsearch:
+  enabled: false
+  host: 'http://localhost:9200'
+  index: 'suricata-logs'
+deployment:
+  method: 'docker'  # Options: docker, podman, kubernetes, ansible
+  namespace: 'suricata'
+  container_name: 'suricata-monitor'
+  kubernetes:
+    replicas: 1
+    storage_class: 'standard'
+    log_storage_size: '10Gi'
+buffer_timeout: 2.0  # Reduced for Kubernetes
+worker_count: 4
+batch_size: 50  # Reduced for lower latency

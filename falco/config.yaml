@@ -1,0 +1,33 @@
+# Falco Deployment Configuration
+# Edit this file with your settings before running deploy.py
+authority:
+  name: Falco_CA
+  password: insertapasswordhere!  # Set a strong, unique password
+  company: falco
+  domain_name: falco.io
+  country_code: US
+  state: AL
+  city: Locale7
+
+tinyauth:
+  secret: ""  # Leave empty to auto-generate a 32-char random string
+  password: ""  # Leave empty to auto-generate a 12-char random password
+  users_hash: ""  # Optional: Provide pre-generated htpasswd string; overrides password
+
+domains:  # Additional domains for cert generation
+  - falco.io
+  - sidekick.local
+  - tinyauth.local
+  - dashboard.podman.localhost
+  - falco-webui.local
+
+k8s:
+  namespace: falco
+  redis_storage: 10Gi
+
+docker:
+  network: backend
+
+# Add more options as needed, e.g., Slack webhook for FalcoSidekick
+falcosidekick:
+  slack_webhook: ""  # Optional

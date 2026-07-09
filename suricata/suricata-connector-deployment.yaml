@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suricata-connector
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: suricata-connector
+  template:
+    metadata:
+      labels:
+        app: suricata-connector
+    spec:
+      containers:
+      - name: suricata-connector
+        image: suricata-connector:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LOG_DIR
+          value: "/var/log/suricata"
+        - name: SPLUNK_ENABLED
+          value: "false"
+        - name: SPLUNK_HEC_URL
+          value: "https://splunk:8088/services/collector"
+        - name: SPLUNK_TOKEN
+          value: "your-splunk-hec-token"
+        - name: ES_ENABLED
+          value: "true"
+        - name: ES_HOST
+          value: "http://elasticsearch:9200"
+        - name: ES_INDEX
+          value: "suricata-logs"
+        - name: BATCH_SIZE
+          value: "100"
+        - name: BUFFER_TIMEOUT
+          value: "30"
+        - name: WORKER_COUNT
+          value: "4"
+        volumeMounts:
+        - name: logs
+          mountPath: /var/log/suricata
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "0.5"
+            memory: "512Mi"
+        livenessProbe:
+          exec:
+            command: ["pidof", "python3"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command: ["pidof", "python3"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: logs
+        persistentVolumeClaim:
+          claimName: suricata-logs

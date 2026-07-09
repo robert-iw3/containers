@@ -1,0 +1,66 @@
+model_list:
+  - model_name: openai-gpt-3.5-turbo
+    litellm_params:
+      model: gpt-3.5-turbo
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: openai-gpt-4-turbo
+    litellm_params:
+      model: gpt-4-turbo
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: openai-gpt-4o
+    litellm_params:
+      model: gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: openai-o3
+    litellm_params:
+      model: o3
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: google-gemini-2.5-pro
+    litellm_params:
+      model: vertex_ai/gemini-2.5-pro-001
+      vertex_project: os.environ/GOOGLE_VERTEX_PROJECT
+      vertex_location: os.environ/GOOGLE_VERTEX_LOCATION
+  - model_name: google-gemini-2.5-flash
+    litellm_params:
+      model: vertex_ai/gemini-2.5-flash-001
+      vertex_project: os.environ/GOOGLE_VERTEX_PROJECT
+      vertex_location: os.environ/GOOGLE_VERTEX_LOCATION
+  - model_name: anthropic-claude-4-sonnet
+    litellm_params:
+      model: claude-4-sonnet-20250522
+      api_key: os.environ/ANTHROPIC_API_KEY
+  - model_name: groq-llama3.2-70b
+    litellm_params:
+      model: groq/llama-3.2-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+  - model_name: local-google-gemma2
+    litellm_params:
+      model: ollama/gemma2:latest
+      api_base: http://ollama:11434
+  - model_name: local-llama3.1-8b
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_base: http://ollama:11434
+  - model_name: local-mistral-nemo
+    litellm_params:
+      model: ollama/mistral-nemo:latest
+      api_base: http://ollama:11434
+  - model_name: local-mixtral-8x22b
+    litellm_params:
+      model: ollama/mixtral:8x22b
+      api_base: http://ollama:11434
+
+litellm_settings:
+  drop_params: True
+  max_budget: 100
+  budget_duration: 30d
+  num_retries: 5
+  request_timeout: 600
+  cache: redis://redis:6379 # Enable Redis caching for performance
+
+general_settings:
+  proxy_budget_rescheduler_min_time: 60
+  proxy_budget_rescheduler_max_time: 64
+  proxy_batch_write_at: 60
+  database_url: os.environ/POSTGRES_DB_URL
+  telemetry: True # Enable telemetry for monitoring

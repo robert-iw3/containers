@@ -1,0 +1,140 @@
+---
+- name: Deploy Neo4j GenAI Stack
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    orchestrator: "{{ orchestrator | default('docker') }}"
+    env_file: "{{ env_file | default('.env') }}"
+    project_dir: "{{ playbook_dir }}/.."
+    image_registry: "{{ IMAGE_REGISTRY | default('localhost:5000') }}"  # New: for push
+    gpu_enabled: "{{ GPU_ENABLED | default(false) }}"
+    python_services:
+      - name: bot
+        port: 8501
+        service_files: ["bot.py", "utils.py", "chains.py"]
+        entrypoint: '["streamlit", "run", "bot.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enable-xsrf-protection=false"]'
+        health_path: "/_stcore/health"
+        health_timeout: "10s"
+      - name: pdf_bot
+        port: 8503
+        service_files: ["pdf_bot.py", "utils.py", "chains.py"]
+        entrypoint: '["streamlit", "run", "pdf_bot.py", "--server.port=8503", "--server.address=0.0.0.0", "--server.enable-xsrf-protection=false"]'
+        health_path: "/_stcore/health"
+        health_timeout: "10s"
+      - name: loader
+        port: 8502
+        service_files: ["loader.py", "utils.py", "chains.py"]
+        extra_copy: "images ./images"
+        entrypoint: '["streamlit", "run", "loader.py", "--server.port=8502", "--server.address=0.0.0.0", "--server.enable-xsrf-protection=false"]'
+        health_path: "/_stcore/health"
+        health_timeout: "10s"
+      - name: api
+        port: 8504
+        service_files: ["api.py", "utils.py", "chains.py"]
+        entrypoint: '["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8504"]'
+        health_path: "/"
+        health_timeout: "3s"
+  pre_tasks:
+    - name: Load env vars
+      include_vars:
+        file: "{{ env_file }}"
+        format: env
+    - name: Ensure project files exist
+      copy:
+        src: "{{ project_dir }}/{{ item }}"
+        dest: "{{ project_dir }}/{{ item }}"
+        mode: "0644"
+      loop:
+        - api.py
+        - bot.py
+        - chains.py
+        - loader.py
+        - pdf_bot.py
+        - utils.py
+        - pull_model.clj
+        - requirements.txt
+        - requirements-dev.txt
+        - install_ollama.py
+        - install_ollama.sh
+        - pull_model.Dockerfile
+        - front-end.Dockerfile
+        - nginx.conf
+    - name: Render Dockerfiles for Python services
+      template:
+        src: templates/Dockerfile.j2
+        dest: "{{ project_dir }}/{{ item.name }}.Dockerfile"
+        mode: "0644"
+      loop: "{{ python_services }}"
+      when: orchestrator in ['docker', 'podman']
+    - name: Build and push Docker images
+      block:
+        - name: Build Python service images
+          command: docker build -t {{ image_registry }}/neo4j-genai-{{ item.name }}:latest -f {{ project_dir }}/{{ item.name }}.Dockerfile {{ project_dir }}
+          loop: "{{ python_services }}"
+        - name: Build front-end image
+          command: docker build -t {{ image_registry }}/neo4j-genai-front-end:latest -f {{ project_dir }}/front-end.Dockerfile {{ project_dir }}
+        - name: Build pull-model image
+          command: docker build -t {{ image_registry }}/neo4j-genai-pull-model:latest -f {{ project_dir }}/pull_model.Dockerfile {{ project_dir }}
+        - name: Push images
+          command: docker push {{ image_registry }}/neo4j-genai-{{ item.name }}:latest
+          loop:
+            - {name: bot}
+            - {name: pdf_bot}
+            - {name: loader}
+            - {name: api}
+            - {name: front-end}
+            - {name: pull-model}
+      when: orchestrator == "kubernetes"  # Build before K8s apply
+  roles:
+    - role: common
+    - role: ollama
+    - role: neo4j
+    - role: bot
+    - role: pdf_bot
+    - role: loader
+    - role: api
+    - role: front-end
+  tasks:
+    - name: Create K8s Secrets
+      block:
+        - name: Render and apply secrets
+          template:
+            src: templates/k8s-secret.yml.j2
+            dest: "{{ project_dir }}/k8s-secret.yml"
+            mode: "0644"
+        - name: Apply secrets
+          command: kubectl apply -f {{ project_dir }}/k8s-secret.yml
+      when: orchestrator == "kubernetes"
+    - name: Deploy with orchestrator
+      block:
+        - name: Render docker-compose
+          template:
+            src: templates/docker-compose.yml.j2
+            dest: "{{ project_dir }}/docker-compose.yml"
+            mode: "0644"
+          when: orchestrator in ['docker', 'podman']
+        - name: Run docker-compose
+          command: "{{ 'podman' if orchestrator == 'podman' else 'docker' }}-compose -f {{ project_dir }}/docker-compose.yml up -d"
+          when: orchestrator in ['docker', 'podman']
+        - name: Render Kubernetes manifests
+          template:
+            src: "templates/{{ item }}.j2"
+            dest: "{{ project_dir }}/{{ item | regex_replace('.j2$', '') }}"
+            mode: "0644"
+          loop:
+            - k8s-deployment.yml
+            - k8s-service.yml
+            - k8s-configmap.yml
+            - k8s-hpa.yml
+            - k8s-rbac.yml
+            - k8s-ingress.yml
+          when: orchestrator == "kubernetes"
+        - name: Apply Kubernetes manifests
+          command: kubectl apply -f "{{ project_dir }}"
+          when: orchestrator == "kubernetes"
+      notify: Restart services
+  handlers:
+    - name: Restart services
+      command: "{{ 'podman' if orchestrator == 'podman' else 'docker' }}-compose -f {{ project_dir }}/docker-compose.yml restart"
+      when: orchestrator in ['docker', 'podman']

@@ -1,0 +1,122 @@
+# syntax=docker/dockerfile:1
+# sonarqube: clean code for teams and enterprises.
+ARG repo="docker.io" \
+    base_image="alpine:3.23" \
+    image_hash="4d889c14e7d5a73929ab00be2ef8ff22437e7cbc545931e52554a7b00e123d8b"
+
+FROM ${repo}/${base_image}@sha256:${image_hash} AS base
+
+LABEL org.opencontainers.image.name='SonarQube' \
+    org.opencontainers.image.description='Clean code for teams and enterprises.' \
+    org.opencontainers.image.usage='https://docs.sonarqube.org/latest/' \
+    org.opencontainers.image.url='https://www.sonarsource.com/products/sonarqube/' \
+    org.opencontainers.image.licenses='GNU Lesser General Public License v3.0' \
+    org.opencontainers.image.vendor='Sonar' \
+    org.opencontainers.image.schema-version='25.11.0.114957' \
+    MAINTAINER="@rw"
+
+ENV LANG='en_US.UTF-8' \
+    LANGUAGE='en_US:en' \
+    LC_ALL='en_US.UTF-8'
+
+RUN apk add --no-cache \
+    ca-certificates \
+    openjdk17-jre \
+    ttf-dejavu \
+    bash \
+    curl; \
+    addgroup -g 1001 sonarqube; \
+    adduser --shell /sbin/nologin --disabled-password -h /home/sonarqube --uid 1001 --ingroup sonarqube sonarqube
+
+FROM base AS builder
+
+ARG SONARQUBE_VERSION='25.11.0.114957'
+ARG SONARQUBE_ZIP_URL='https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-${SONARQUBE_VERSION}.zip'
+ENV JAVA_HOME='/usr/lib/jvm/java-17-openjdk' \
+    SONARQUBE_HOME='/opt/sonarqube' \
+    SONAR_VERSION="${SONARQUBE_VERSION}" \
+    SQ_DATA_DIR="/opt/sonarqube/data" \
+    SQ_EXTENSIONS_DIR="/opt/sonarqube/extensions" \
+    SQ_LOGS_DIR="/opt/sonarqube/logs" \
+    SQ_TEMP_DIR="/opt/sonarqube/temp" \
+    SNYK_API=
+
+RUN \
+    apk add --no-cache -t .sonar-deps \
+        gnupg \
+        unzip \
+        curl \
+        npm; \
+    for server in $(shuf -e hkps://keys.openpgp.org \
+                            hkps://keyserver.ubuntu.com \
+                            hkps://pgp.mit.edu) ; do \
+        gpg --batch --keyserver "${server}" --recv-keys 679F1EE92B19609DE816FDE81DB198F93525EC1A && break || : ; \
+    done; \
+    mkdir -p /opt; cd /opt; \
+    curl --fail --location --output sonarqube.zip --silent --show-error "${SONARQUBE_ZIP_URL}" ; \
+    curl --fail --location --output sonarqube.zip.asc --silent --show-error "${SONARQUBE_ZIP_URL}.asc" ; \
+    gpg --batch --verify sonarqube.zip.asc sonarqube.zip ; \
+    unzip -q sonarqube.zip ; \
+    mv "sonarqube-${SONARQUBE_VERSION}" sonarqube ; \
+#    cd /opt/sonarqube ; \
+#    npm install -g --prefer-online snyk ; \
+#    npm install -g --prefer-online snyk-to-html ; \
+#    snyk config set api=${SNYK_API} ; \
+#    snyk code test --json | snyk-to-html -o /sonarqube-code-review.html ; \
+#    snyk test --all-projects --json | snyk-to-html -o /sonarqube-deps.html ; \
+#    snyk monitor ; \
+#    npm uninstall -g synk ; \
+#    npm uninstall -g snyk-to-html ; \
+#    cd .. ; \
+    rm -f sonarqube.zip* ; \
+    rm -rf ${SONARQUBE_HOME}/bin/* ; \
+    ln -s "${SONARQUBE_HOME}/lib/sonar-application-${SONARQUBE_VERSION}.jar" "${SONARQUBE_HOME}/lib/sonarqube.jar" ; \
+    echo "networkaddress.cache.ttl=5" >> "${JAVA_HOME}/conf/security/java.security" ; \
+    sed --in-place --expression="s?securerandom.source=file:/dev/random?securerandom.source=file:/dev/urandom?g" "${JAVA_HOME}/conf/security/java.security" ; \
+    apk del --no-network --purge .sonar-deps ; \
+    tini_bin="" ; \
+    case "$(arch)" in \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    esac ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin} ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin}.sha256sum ; \
+    sha256sum -c ${tini_bin}.sha256sum ; \
+    rm ${tini_bin}.sha256sum ; \
+    mv ${tini_bin} /usr/bin/tini ; \
+    chmod 0555 /usr/bin/tini ; \
+    apk add --no-cache clamav freshclam ; \
+    freshclam ; \
+    clamscan -rvi -l /home/sonarqube/clamav_scan.log --exclude-dir="^/sys|^/dev" / ; \
+    apk del --no-network --purge clamav freshclam ; \
+    rm -rf /var/cache/apk/*
+
+FROM base
+
+ENV JAVA_HOME='/usr/lib/jvm/java-17-openjdk' \
+    SONARQUBE_HOME='/opt/sonarqube' \
+    SQ_DATA_DIR="/opt/sonarqube/data" \
+    SQ_EXTENSIONS_DIR="/opt/sonarqube/extensions" \
+    SQ_LOGS_DIR="/opt/sonarqube/logs" \
+    SQ_TEMP_DIR="/opt/sonarqube/temp"
+
+COPY --chown=sonarqube:sonarqube --from=builder ${SONARQUBE_HOME} ${SONARQUBE_HOME}
+COPY --chown=sonarqube:sonarqube --from=builder ${JAVA_HOME} ${JAVA_HOME}
+COPY --chown=sonarqube:sonarqube --from=builder /home/sonarqube /home/sonarqube
+COPY --chown=sonarqube:sonarqube --from=builder /usr/bin/tini /usr/bin/tini
+
+RUN \
+    chmod -R 555 "${SONARQUBE_HOME}"; \
+    chmod -R ugo+wrX "${SQ_DATA_DIR}" "${SQ_EXTENSIONS_DIR}" "${SQ_LOGS_DIR}" "${SQ_TEMP_DIR}"
+
+VOLUME ${SQ_DATA_DIR}
+VOLUME ${SQ_EXTENSIONS_DIR}
+VOLUME ${SQ_LOGS_DIR}
+VOLUME ${SQ_TEMP_DIR}
+WORKDIR ${SONARQUBE_HOME}
+EXPOSE 9000
+USER sonarqube
+STOPSIGNAL SIGINT
+ENTRYPOINT [ "/usr/bin/tini", "--" ]
+CMD [ "/usr/lib/jvm/java-17-openjdk/bin/java", "-jar", "lib/sonarqube.jar", "-Dsonar.log.console=true" ]

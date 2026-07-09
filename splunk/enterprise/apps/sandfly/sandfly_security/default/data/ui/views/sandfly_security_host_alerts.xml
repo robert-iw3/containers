@@ -1,0 +1,566 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security - Host Alerts</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_host_id" searchWhenChanged="true">
+      <label>Hostname (Target Address)</label>
+      <fieldForLabel>target_name</fieldForLabel>
+      <fieldForValue>target_id</fieldForValue>
+      <search>
+        <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$
+| dedup header.host_id
+| eval target_id = 'header.host_id'
+| eval target_addr = 'header.hostname'
+| eval target_name = 'header.node_name' + " (" + 'header.hostname' + ")"
+| table target_id target_name
+| sort target_name</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>Status</title>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$"
+| stats count by data.status</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Status Counts</title>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$"
+| timechart count by data.status</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.text">Time Range</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>Alerts</title>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.status="alert"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Alerts</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Pass</title>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.status="pass"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x118832"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Pass</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Errors</title>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.status="error"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="unit">Errors</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Alerts</title>
+      <input type="dropdown" token="tok_alert_engine" searchWhenChanged="true">
+        <label>Sandfly Engine</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_sandfly_engine</fieldForLabel>
+        <fieldForValue>t_sandfly_engine</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.status="alert" data.name="$tok_alert_name$" data.severity=$tok_severity$
+| dedup data.engine
+| table data.engine
+| sort data.engine
+| rename data.engine as t_sandfly_engine</query>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_alert_name" searchWhenChanged="true">
+        <label>Sandfly Name</label>
+        <fieldForLabel>t_sandfly_name</fieldForLabel>
+        <fieldForValue>t_sandfly_name</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.status="alert" data.engine="$tok_alert_engine$" data.severity=$tok_severity$
+| dedup data.name
+| table data.name
+| sort data.name
+| rename data.name as t_sandfly_name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_severity" searchWhenChanged="true">
+        <label>Severity</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_severity</fieldForLabel>
+        <fieldForValue>t_severity</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.status="alert" data.name="$tok_alert_name$" data.engine="$tok_alert_engine$"
+| dedup data.severity
+| table data.severity
+| sort - data.severity
+| rename data.severity as t_severity</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.status="alert"  data.name="$tok_alert_name$" data.engine="$tok_alert_engine$" data.severity=$tok_severity$
+| table _time header.hostname header.ip_addr header.node_name data.name data.severity data.key_data data.results.explanation
+| rename header.hostname as "Target Address"
+| rename header.ip_addr as "IP Address"
+| rename header.node_name as "Hostname"
+| rename data.name as "Sandfly Name"
+| rename data.severity as "Severity"
+| rename data.key_data as "Key Forensic"
+| rename data.results.explanation as "Explanation"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Top 5 Sandflies</title>
+      <input type="dropdown" token="tok_sandfly_status" searchWhenChanged="true">
+        <label>Sandfly Status</label>
+        <choice value="*">All</choice>
+        <choice value="alert">Alert</choice>
+        <choice value="pass">Pass</choice>
+        <choice value="error">Error</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_sandfly_engine" searchWhenChanged="true">
+        <label>Sandfly Engine</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_data_engine</fieldForLabel>
+        <fieldForValue>t_data_engine</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.status="$tok_sandfly_status$" data.severity=$tok_sandfly_sev$
+| dedup data.engine
+| table data.engine
+| sort data.engine
+| rename data.engine as t_data_engine</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_sandfly_sev" searchWhenChanged="true">
+        <label>Severity</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_data_severity</fieldForLabel>
+        <fieldForValue>t_data_severity</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.status="$tok_sandfly_status$" data.engine="$tok_sandfly_engine$"
+| dedup data.severity
+| table data.severity
+| sort - data.severity
+| rename data.severity as t_data_severity</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <chart>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.status="$tok_sandfly_status$" data.engine="$tok_sandfly_engine$" data.severity=$tok_sandfly_sev$
+| stats count by data.name
+| sort - count
+| head 5
+| rename data.name as "Sandfly Name"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>User Process List</title>
+      <input type="dropdown" token="tok_proc_username" searchWhenChanged="true">
+        <label>Username</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_username</fieldForLabel>
+        <fieldForValue>t_username</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_process_list_all"
+| search data.results.process.command!="kworker/*"
+| dedup data.results.process.cmdline
+| dedup data.results.process.username
+| table data.results.process.username
+| sort data.results.process.username
+| rename data.results.process.username as t_username</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_process_list_all" data.results.process.username="$tok_proc_username$"
+| search data.results.process.command!="kworker/*"
+| dedup data.results.process.cmdline
+| table data.results.process.command data.results.process.cmdline data.results.process.pid data.results.process.username data.results.process.uid data.results.process.true_path
+| rename data.results.process.command as "Command"
+| rename data.results.process.cmdline as "Command Line"
+| rename data.results.process.pid as "PID"
+| rename data.results.process.username as "Username"
+| rename data.results.process.uid as "UID"
+| rename data.results.process.true_path as "True Path"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>User List</title>
+      <input type="dropdown" token="tok_pw_present" searchWhenChanged="true">
+        <label>Password Present</label>
+        <choice value="*">All</choice>
+        <choice value="true">True</choice>
+        <choice value="false">False</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_pw_locked" searchWhenChanged="true">
+        <label>Password Locked</label>
+        <choice value="*">All</choice>
+        <choice value="true">True</choice>
+        <choice value="false">False</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_pw_type" searchWhenChanged="true">
+        <label>Password Type</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>pw_type</fieldForLabel>
+        <fieldForValue>pw_type</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_user_list_all" data.results.user.password.locked="$tok_pw_locked$" data.results.user.password.present="$tok_pw_present$"
+| dedup data.results.user.password.type
+| table data.results.user.password.type
+| sort data.results.user.password.type
+| rename data.results.user.password.type as "pw_type"</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_user_list_all" data.results.user.password.locked="$tok_pw_locked$" data.results.user.password.present="$tok_pw_present$" data.results.user.password.type="$tok_pw_type$"
+| table data.results.user.username data.results.user.uid data.results.user.groupname data.results.user.gid data.results.user.home_dir data.results.user.shell data.results.user.password.present data.results.user.password.locked data.results.user.password.type data.results.user.password.days_since_last_changed data.results.user.password.days_since_expired
+| sort data.results.user.uid
+| rename data.results.user.username as "Username"
+| rename data.results.user.uid as "UID"
+| rename data.results.user.groupname as "Group"
+| rename data.results.user.gid as "GID"
+| rename data.results.user.home_dir as "Home Dir"
+| rename data.results.user.shell as "Shell"
+| rename data.results.user.password.present as "PW Present"
+| rename data.results.user.password.locked as "PW Locked"
+| rename data.results.user.password.type as "PW Type"
+| rename data.results.user.password.days_since_last_changed as "Last Changed Days"
+| rename data.results.user.password.days_since_expired as "Expired Days"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Crontab Entries</title>
+      <input type="dropdown" token="tok_cron_username" searchWhenChanged="true">
+        <label>Username</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_cron_user</fieldForLabel>
+        <fieldForValue>t_cron_user</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_process_persistence_cron_list_all" data.results.cron.path="$tok_cron_path$"
+| eval is_null = if(isnull('data.results.cron.username') OR len('data.results.cron.username')==0, "true", "false")
+| search is_null="false"
+| dedup data.results.cron.username
+| sort data.results.cron.username
+| table data.results.cron.username
+| rename data.results.cron.username as t_cron_user</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_cron_path" searchWhenChanged="true">
+        <label>Crontab File</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_cron_path</fieldForLabel>
+        <fieldForValue>t_cron_path</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_process_persistence_cron_list_all" data.results.cron.username="$tok_cron_username$"
+| eval is_null = if(isnull('data.results.cron.path') OR len('data.results.cron.path')==0, "true", "false")
+| search is_null="false"
+| dedup data.results.cron.path
+| sort data.results.cron.path
+| table data.results.cron.path
+| rename data.results.cron.path as t_cron_path</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_process_persistence_cron_list_all" data.results.cron.username="$tok_cron_username$" data.results.cron.path="$tok_cron_path$"
+| eval is_null = if(isnull('data.results.cron.command') OR len('data.results.cron.command')==0, "true", "false")
+| search is_null="false"
+| table data.results.cron.command data.results.cron.username data.results.cron.minute data.results.cron.hour data.results.cron.day data.results.cron.month data.results.cron.day_of_week data.results.cron.entry data.results.cron.time_macro data.results.cron.path
+| rename data.results.cron.command as "Command"
+| rename data.results.cron.username as "Username"
+| rename data.results.cron.minute as "Minute"
+| rename data.results.cron.hour as "Hour"
+| rename data.results.cron.day as "Day"
+| rename data.results.cron.month as "Month"
+| rename data.results.cron.day_of_week as "Day of Week"
+| rename data.results.cron.entry as "Entry"
+| rename data.results.cron.time_macro as "Time Macro"
+| rename data.results.cron.path as "Crontab File"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Crontab Errors</title>
+      <input type="dropdown" token="tok_cronerr_user" searchWhenChanged="true">
+        <label>Username</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_cronerr_user</fieldForLabel>
+        <fieldForValue>t_cronerr_user</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_process_persistence_cron_list_all"
+| eval is_null = if(isnull('data.results.cron.username') OR len('data.results.cron.username')==0, "true", "false")
+| search is_null="true"
+| dedup data.results.file.username
+| sort data.results.file.username
+| table data.results.file.username
+| rename data.results.file.username as t_cronerr_user</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_process_persistence_cron_list_all"
+| eval is_null = if(isnull('data.results.cron.command') OR len('data.results.cron.command')==0, "true", "false")
+| search is_null="true"
+| table data.results.file.path data.results.file.username data.results.explanation
+| rename data.results.file.path as "Path"
+| rename data.results.file.username as "Username"
+| rename data.results.explanation as "Explanation"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>At Jobs</title>
+      <input type="dropdown" token="tok_at_user" searchWhenChanged="true">
+        <label>Username</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_atjob_user</fieldForLabel>
+        <fieldForValue>t_atjob_user</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_process_persistence_at_jobs_list_all"
+| dedup data.results.atjob.username
+| sort data.results.atjob.username
+| table data.results.atjob.username
+| rename data.results.atjob.username as t_atjob_user</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_process_persistence_at_jobs_list_all" data.results.atjob.username="$tok_at_user$"
+| table data.results.atjob.name data.results.atjob.number data.results.atjob.path data.results.atjob.username data.results.atjob.date.created data.results.atjob.date.execution data.results.atjob.command{}
+| rename data.results.atjob.name as "Name"
+| rename data.results.atjob.number as "Number"
+| rename data.results.atjob.path as "Path"
+| rename data.results.atjob.username as "Username"
+| rename data.results.atjob.date.created as "Created Date"
+| rename data.results.atjob.date.execution as "Execution Date"
+| rename data.results.atjob.command{} as "Command"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Kernel Modules</title>
+      <input type="dropdown" token="tok_module_state" searchWhenChanged="true">
+        <label>Module State</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_module_state</fieldForLabel>
+        <fieldForValue>t_module_state</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_kernel_modules" data.results.kernel_module.hidden="$tok_module_hidden$"
+| dedup data.results.kernel_module.state
+| sort data.results.kernel_module.state
+| table data.results.kernel_module.state
+| rename data.results.kernel_module.state as t_module_state</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_module_hidden" searchWhenChanged="true">
+        <label>Module Hidden</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_module_hidden</fieldForLabel>
+        <fieldForValue>t_module_hidden</fieldForValue>
+        <search>
+          <query>`sandfly_search_alarms` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ header.host_id="$tok_host_id$" data.name="recon_kernel_modules" data.results.kernel_module.state="$tok_module_state$"
+| dedup data.results.kernel_module.hidden
+| sort data.results.kernel_module.hidden
+| table data.results.kernel_module.hidden
+| rename data.results.kernel_module.hidden as t_module_hidden</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$" data.name="recon_kernel_modules" data.results.kernel_module.state="$tok_module_state$" data.results.kernel_module.hidden="$tok_module_hidden$"
+| dedup data.results.kernel_module.name
+| table data.results.kernel_module.name data.results.kernel_module.module_file_path data.results.kernel_module.instance_count data.results.kernel_module.memory_size data.results.kernel_module.memory_offset data.results.kernel_module.state data.results.kernel_module.hidden data.results.kernel_module.dependencies{}
+| rename data.results.kernel_module.name as "Module Name"
+| rename data.results.kernel_module.module_file_path as "Module Path"
+| rename data.results.kernel_module.instance_count as "Instance Count"
+| rename data.results.kernel_module.memory_size as "Memory Size"
+| rename data.results.kernel_module.memory_offset as "Memory Offset"
+| rename data.results.kernel_module.state as "State"
+| rename data.results.kernel_module.hidden as "Hidden"
+| rename data.results.kernel_module.dependencies{} as "Dependencies"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <search>
+          <query>`sandfly_search_alarms` header.host_id="$tok_host_id$"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,11 @@
+---
+- name: Render docker-compose for Podman
+  template:
+    src: docker-compose.j2
+    dest: "{{ project_dir }}/docker-compose-podman.yml"
+
+- name: Start Podman stack
+  community.general.podman_compose:
+    project_src: "{{ project_dir }}"
+    files: docker-compose-podman.yml
+    state: present

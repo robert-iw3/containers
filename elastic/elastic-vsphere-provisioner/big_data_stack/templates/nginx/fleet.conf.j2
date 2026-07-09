@@ -1,0 +1,13 @@
+upstream fleet {
+  {% for host in groups['fleet'] %}
+  server {{ hostvars[host]['ansible_host'] }}:8220;
+  {% endfor %}
+}
+
+server {
+  listen 8220;
+  server_name fleet;
+  location / {
+    proxy_pass http://fleet;
+  }
+}

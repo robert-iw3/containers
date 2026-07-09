@@ -1,0 +1,2614 @@
+{
+	"template": {
+		"description": "Generates empty flowfiles, replaces the contents with a static plaintext message, and writes them as a file to a directory. \n\nReads files from a directory, encrypts using PGP, logs, decrypts, and writes the plaintext files to a new directory.",
+		"name": "PGP Encryption Test",
+		"snippet": {
+			"connections": [
+				{
+					"id": "69f574fd-134b-4946-b23c-6e63927c8141",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "13567097-57a3-47bc-925e-c2b525b0e6d3",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "4a8b0595-4233-4dda-ba15-64cb41db7b63",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "175b1d46-2238-40c1-a857-2ae5877640c9",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "21955025-0fb8-4ecb-bbcf-509354ea3bd0",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "13567097-57a3-47bc-925e-c2b525b0e6d3",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "b927993b-db46-43ef-83de-71df2b14ded1",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "8f496b80-48f5-4854-adcf-d239f24f514b",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "failure",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "fdbac65b-9d3e-4fbb-8ebb-a8b9c320a13c",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "1c0c4f7f-dc7a-4c7c-a5b6-427af67fee5a",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "b9d211ae-8dfe-40c6-b651-8ea9d1c93ee6",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "348de9bf-1113-42f3-aac4-b6b5200d2fcd",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "38e63efa-85d2-486d-97c5-f59ac4f2a3e8",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "62c731a2-50f8-428f-8443-02abfaf61d5b",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "fdbac65b-9d3e-4fbb-8ebb-a8b9c320a13c",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "a0fc88aa-6a80-43ff-b4e5-a115eafada1f",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "3cbd0c46-4dbf-4181-a599-f0a4ed2e2e90",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "3b2c71a3-4f39-4f4e-a6c3-b912a326c46e",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "839e69da-908e-4061-930c-ec6e69c73a04",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "fdbac65b-9d3e-4fbb-8ebb-a8b9c320a13c",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "3cbd0c46-4dbf-4181-a599-f0a4ed2e2e90",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "ddf65ec6-daf7-485e-8d36-ee665cd08730",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "4a8b0595-4233-4dda-ba15-64cb41db7b63",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "63a22a9b-44e5-41f1-9739-77b87538d3f3",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "9f591ac8-e1f7-418f-b626-10c40986816e",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "63a22a9b-44e5-41f1-9739-77b87538d3f3",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+						"id": "b9d211ae-8dfe-40c6-b651-8ea9d1c93ee6",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"processors": [
+				{
+					"id": "4a8b0595-4233-4dda-ba15-64cb41db7b63",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "18.0",
+						"y": "562.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Mode",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "Encrypt",
+												"value": "Encrypt"
+											},
+											{
+												"displayName": "Decrypt",
+												"value": "Decrypt"
+											}
+										],
+										"defaultValue": "Encrypt",
+										"description": "Specifies whether the content should be encrypted or decrypted",
+										"displayName": "Mode",
+										"dynamic": "false",
+										"name": "Mode",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "key-derivation-function",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "MD5 @ 1000 iterations",
+												"displayName": "NiFi Legacy KDF",
+												"value": "NIFI_LEGACY"
+											},
+											{
+												"description": "Single iteration MD5 compatible with PKCS#5 v1.5",
+												"displayName": "OpenSSL EVP_BytesToKey",
+												"value": "OPENSSL_EVP_BYTES_TO_KEY"
+											},
+											{
+												"description": "Bcrypt with configurable work factor. See Admin Guide",
+												"displayName": "Bcrypt",
+												"value": "BCRYPT"
+											},
+											{
+												"description": "Scrypt with configurable cost parameters. See Admin Guide",
+												"displayName": "Scrypt",
+												"value": "SCRYPT"
+											},
+											{
+												"description": "PBKDF2 with configurable hash function and iteration count. See Admin Guide",
+												"displayName": "PBKDF2",
+												"value": "PBKDF2"
+											},
+											{
+												"description": "The cipher is given a raw key conforming to the algorithm specifications",
+												"displayName": "None",
+												"value": "NONE"
+											}
+										],
+										"defaultValue": "BCRYPT",
+										"description": "Specifies the key derivation function to generate the key from the password (and salt)",
+										"displayName": "Key Derivation Function",
+										"dynamic": "false",
+										"name": "key-derivation-function",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Encryption Algorithm",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "org.apache.nifi.security.util.EncryptionMethod@71e35c4[Algorithm name=PBEWITHMD5AND128BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_128AES",
+												"value": "MD5_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5AND192BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_192AES",
+												"value": "MD5_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5AND256BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_256AES",
+												"value": "MD5_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5ANDDES,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_DES",
+												"value": "MD5_DES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5ANDRC2,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_RC2",
+												"value": "MD5_RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA1ANDRC2,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA1_RC2",
+												"value": "SHA1_RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA1ANDDES,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA1_DES",
+												"value": "SHA1_DES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITAES-CBC-BC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128AES",
+												"value": "SHA_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND192BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_192AES",
+												"value": "SHA_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND256BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_256AES",
+												"value": "SHA_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND40BITRC2-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_40RC2",
+												"value": "SHA_40RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITRC2-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128RC2",
+												"value": "SHA_128RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND40BITRC4,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_40RC4",
+												"value": "SHA_40RC4"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITRC4,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128RC4",
+												"value": "SHA_128RC4"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND128BITAES-CBC-BC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_128AES",
+												"value": "SHA256_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND192BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_192AES",
+												"value": "SHA256_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND256BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_256AES",
+												"value": "SHA256_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND2-KEYTRIPLEDES-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_2KEYTRIPLEDES",
+												"value": "SHA_2KEYTRIPLEDES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND3-KEYTRIPLEDES-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_3KEYTRIPLEDES",
+												"value": "SHA_3KEYTRIPLEDES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAANDTWOFISH-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_TWOFISH",
+												"value": "SHA_TWOFISH"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PGP,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "PGP",
+												"value": "PGP"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PGP-ASCII-ARMOR,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "PGP_ASCII_ARMOR",
+												"value": "PGP_ASCII_ARMOR"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/CBC/PKCS7Padding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_CBC",
+												"value": "AES_CBC"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/CTR/NoPadding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_CTR",
+												"value": "AES_CTR"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/GCM/NoPadding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_GCM",
+												"value": "AES_GCM"
+											}
+										],
+										"defaultValue": "MD5_128AES",
+										"description": "The Encryption Algorithm to use",
+										"displayName": "Encryption Algorithm",
+										"dynamic": "false",
+										"name": "Encryption Algorithm",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "allow-weak-crypto",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Operation will not be blocked and no alerts will be presented when unsafe combinations of encryption algorithms and passwords are provided",
+												"displayName": "Allowed",
+												"value": "allowed"
+											},
+											{
+												"description": "When set, operation will be blocked and alerts will be presented to the user if unsafe combinations of encryption algorithms and passwords are provided on a JVM with limited strength crypto. To fix this, see the Admin Guide.",
+												"displayName": "Not Allowed",
+												"value": "not-allowed"
+											}
+										],
+										"defaultValue": "not-allowed",
+										"description": "Overrides the default behavior to prevent unsafe combinations of encryption algorithms and short passwords on JVMs with limited strength cryptographic jurisdiction policies",
+										"displayName": "Allow insecure cryptographic modes",
+										"dynamic": "false",
+										"name": "allow-weak-crypto",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Password",
+									"value": {
+										"description": "The Password to use for encrypting or decrypting the data",
+										"displayName": "Password",
+										"dynamic": "false",
+										"name": "Password",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "raw-key-hex",
+									"value": {
+										"description": "In keyed encryption, this is the raw key, encoded in hexadecimal",
+										"displayName": "Raw Key (hexadecimal)",
+										"dynamic": "false",
+										"name": "raw-key-hex",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "public-keyring-file",
+									"value": {
+										"description": "In a PGP encrypt mode, this keyring contains the public key of the recipient",
+										"displayName": "Public Keyring File",
+										"dynamic": "false",
+										"name": "public-keyring-file",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "public-key-user-id",
+									"value": {
+										"description": "In a PGP encrypt mode, this user id of the recipient",
+										"displayName": "Public Key User Id",
+										"dynamic": "false",
+										"name": "public-key-user-id",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "private-keyring-file",
+									"value": {
+										"description": "In a PGP decrypt mode, this keyring contains the private key of the recipient",
+										"displayName": "Private Keyring File",
+										"dynamic": "false",
+										"name": "private-keyring-file",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "private-keyring-passphrase",
+									"value": {
+										"description": "In a PGP decrypt mode, this is the private keyring passphrase",
+										"displayName": "Private Keyring Passphrase",
+										"dynamic": "false",
+										"name": "private-keyring-passphrase",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Mode",
+									"value": "Decrypt"
+								},
+								{
+									"key": "key-derivation-function"
+								},
+								{
+									"key": "Encryption Algorithm",
+									"value": "PGP_ASCII_ARMOR"
+								},
+								{
+									"key": "allow-weak-crypto"
+								},
+								{
+									"key": "Password"
+								},
+								{
+									"key": "raw-key-hex"
+								},
+								{
+									"key": "public-keyring-file"
+								},
+								{
+									"key": "public-key-user-id"
+								},
+								{
+									"key": "private-keyring-file",
+									"value": "/Users/alopresto/.gnupg_for_nifi_test/secring.gpg"
+								},
+								{
+									"key": "private-keyring-passphrase"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PGP Decrypt",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Any FlowFile that cannot be encrypted or decrypted will be routed to failure",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Any FlowFile that is successfully encrypted or decrypted will be routed to success",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.EncryptContent"
+				},
+				{
+					"id": "3b2c71a3-4f39-4f4e-a6c3-b912a326c46e",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "556.7172702505968",
+						"y": "-12.445118675060968"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "File Size",
+									"value": {
+										"description": "The size of the file that will be used",
+										"displayName": "File Size",
+										"dynamic": "false",
+										"name": "File Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "1",
+										"description": "The number of FlowFiles to be transferred in each invocation",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Data Format",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "Binary",
+												"value": "Binary"
+											},
+											{
+												"displayName": "Text",
+												"value": "Text"
+											}
+										],
+										"defaultValue": "Binary",
+										"description": "Specifies whether the data should be Text or Binary",
+										"displayName": "Data Format",
+										"dynamic": "false",
+										"name": "Data Format",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Unique FlowFiles",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles will get the same content but this offers much higher throughput",
+										"displayName": "Unique FlowFiles",
+										"dynamic": "false",
+										"name": "Unique FlowFiles",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "File Size",
+									"value": "0 B"
+								},
+								{
+									"key": "Batch Size"
+								},
+								{
+									"key": "Data Format",
+									"value": "Text"
+								},
+								{
+									"key": "Unique FlowFiles",
+									"value": "true"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "60 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "GenerateFlowFile",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+				},
+				{
+					"id": "62c731a2-50f8-428f-8443-02abfaf61d5b",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "424.3535243587495",
+						"y": "501.17167252328807"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Success",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "63a22a9b-44e5-41f1-9739-77b87538d3f3",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "33.0",
+						"y": "396.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Log Level",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "trace",
+												"value": "trace"
+											},
+											{
+												"displayName": "debug",
+												"value": "debug"
+											},
+											{
+												"displayName": "info",
+												"value": "info"
+											},
+											{
+												"displayName": "warn",
+												"value": "warn"
+											},
+											{
+												"displayName": "error",
+												"value": "error"
+											}
+										],
+										"defaultValue": "info",
+										"description": "The Log Level to use when logging the Attributes",
+										"displayName": "Log Level",
+										"dynamic": "false",
+										"name": "Log Level",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log Payload",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+										"displayName": "Log Payload",
+										"dynamic": "false",
+										"name": "Log Payload",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Log",
+									"value": {
+										"description": "A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+										"displayName": "Attributes to Log",
+										"dynamic": "false",
+										"name": "Attributes to Log",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Ignore",
+									"value": {
+										"description": "A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+										"displayName": "Attributes to Ignore",
+										"dynamic": "false",
+										"name": "Attributes to Ignore",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log prefix",
+									"value": {
+										"description": "Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+										"displayName": "Log prefix",
+										"dynamic": "false",
+										"name": "Log prefix",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Log Level"
+								},
+								{
+									"key": "Log Payload",
+									"value": "true"
+								},
+								{
+									"key": "Attributes to Log"
+								},
+								{
+									"key": "Attributes to Ignore"
+								},
+								{
+									"key": "Log prefix"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "LogAttribute",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.LogAttribute"
+				},
+				{
+					"id": "21955025-0fb8-4ecb-bbcf-509354ea3bd0",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "16.715988159179688",
+						"y": "884.2323608398438"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": {
+										"description": "The directory to which files should be written. You may use expression language such as /aa/bb/${path}",
+										"displayName": "Directory",
+										"dynamic": "false",
+										"name": "Directory",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Conflict Resolution Strategy",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "replace",
+												"value": "replace"
+											},
+											{
+												"displayName": "ignore",
+												"value": "ignore"
+											},
+											{
+												"displayName": "fail",
+												"value": "fail"
+											}
+										],
+										"defaultValue": "fail",
+										"description": "Indicates what should happen when a file with the same name already exists in the output directory",
+										"displayName": "Conflict Resolution Strategy",
+										"dynamic": "false",
+										"name": "Conflict Resolution Strategy",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Create Missing Directories",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "If true, then missing destination directories will be created. If false, flowfiles are penalized and sent to failure.",
+										"displayName": "Create Missing Directories",
+										"dynamic": "false",
+										"name": "Create Missing Directories",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum File Count",
+									"value": {
+										"description": "Specifies the maximum number of files that can exist in the output directory",
+										"displayName": "Maximum File Count",
+										"dynamic": "false",
+										"name": "Maximum File Count",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Last Modified Time",
+									"value": {
+										"description": "Sets the lastModifiedTime on the output file to the value of this attribute.  Format must be yyyy-MM-dd'T'HH:mm:ssZ.  You may also use expression language such as ${file.lastModifiedTime}.",
+										"displayName": "Last Modified Time",
+										"dynamic": "false",
+										"name": "Last Modified Time",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Permissions",
+									"value": {
+										"description": "Sets the permissions on the output file to the value of this attribute.  Format must be either UNIX rwxrwxrwx with a - in place of denied permissions (e.g. rw-r--r--) or an octal number (e.g. 644).  You may also use expression language such as ${file.permissions}.",
+										"displayName": "Permissions",
+										"dynamic": "false",
+										"name": "Permissions",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Owner",
+									"value": {
+										"description": "Sets the owner on the output file to the value of this attribute.  You may also use expression language such as ${file.owner}.",
+										"displayName": "Owner",
+										"dynamic": "false",
+										"name": "Owner",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Group",
+									"value": {
+										"description": "Sets the group on the output file to the value of this attribute.  You may also use expression language such as ${file.group}.",
+										"displayName": "Group",
+										"dynamic": "false",
+										"name": "Group",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": "/Users/alopresto/Workspace/scratch/pgptest/out"
+								},
+								{
+									"key": "Conflict Resolution Strategy"
+								},
+								{
+									"key": "Create Missing Directories"
+								},
+								{
+									"key": "Maximum File Count"
+								},
+								{
+									"key": "Last Modified Time"
+								},
+								{
+									"key": "Permissions"
+								},
+								{
+									"key": "Owner"
+								},
+								{
+									"key": "Group"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutFile",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Files that could not be written to the output directory for some reason are transferred to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "Files that have been successfully written to the output directory are transferred to this relationship",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.PutFile"
+				},
+				{
+					"id": "fdbac65b-9d3e-4fbb-8ebb-a8b9c320a13c",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "561.2425079104852",
+						"y": "295.2724072235502"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": {
+										"description": "The directory to which files should be written. You may use expression language such as /aa/bb/${path}",
+										"displayName": "Directory",
+										"dynamic": "false",
+										"name": "Directory",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Conflict Resolution Strategy",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "replace",
+												"value": "replace"
+											},
+											{
+												"displayName": "ignore",
+												"value": "ignore"
+											},
+											{
+												"displayName": "fail",
+												"value": "fail"
+											}
+										],
+										"defaultValue": "fail",
+										"description": "Indicates what should happen when a file with the same name already exists in the output directory",
+										"displayName": "Conflict Resolution Strategy",
+										"dynamic": "false",
+										"name": "Conflict Resolution Strategy",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Create Missing Directories",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "If true, then missing destination directories will be created. If false, flowfiles are penalized and sent to failure.",
+										"displayName": "Create Missing Directories",
+										"dynamic": "false",
+										"name": "Create Missing Directories",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum File Count",
+									"value": {
+										"description": "Specifies the maximum number of files that can exist in the output directory",
+										"displayName": "Maximum File Count",
+										"dynamic": "false",
+										"name": "Maximum File Count",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Last Modified Time",
+									"value": {
+										"description": "Sets the lastModifiedTime on the output file to the value of this attribute.  Format must be yyyy-MM-dd'T'HH:mm:ssZ.  You may also use expression language such as ${file.lastModifiedTime}.",
+										"displayName": "Last Modified Time",
+										"dynamic": "false",
+										"name": "Last Modified Time",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Permissions",
+									"value": {
+										"description": "Sets the permissions on the output file to the value of this attribute.  Format must be either UNIX rwxrwxrwx with a - in place of denied permissions (e.g. rw-r--r--) or an octal number (e.g. 644).  You may also use expression language such as ${file.permissions}.",
+										"displayName": "Permissions",
+										"dynamic": "false",
+										"name": "Permissions",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Owner",
+									"value": {
+										"description": "Sets the owner on the output file to the value of this attribute.  You may also use expression language such as ${file.owner}.",
+										"displayName": "Owner",
+										"dynamic": "false",
+										"name": "Owner",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Group",
+									"value": {
+										"description": "Sets the group on the output file to the value of this attribute.  You may also use expression language such as ${file.group}.",
+										"displayName": "Group",
+										"dynamic": "false",
+										"name": "Group",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Directory",
+									"value": "/Users/alopresto/Workspace/scratch/pgptest/in"
+								},
+								{
+									"key": "Conflict Resolution Strategy"
+								},
+								{
+									"key": "Create Missing Directories"
+								},
+								{
+									"key": "Maximum File Count"
+								},
+								{
+									"key": "Last Modified Time"
+								},
+								{
+									"key": "Permissions"
+								},
+								{
+									"key": "Owner"
+								},
+								{
+									"key": "Group"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutFile",
+					"relationships": [
+						{
+							"autoTerminate": "false",
+							"description": "Files that could not be written to the output directory for some reason are transferred to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Files that have been successfully written to the output directory are transferred to this relationship",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.PutFile"
+				},
+				{
+					"id": "8f496b80-48f5-4854-adcf-d239f24f514b",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "781.8488483569311",
+						"y": "509.09084917193445"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "true"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Failure",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "3cbd0c46-4dbf-4181-a599-f0a4ed2e2e90",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "557.8485420318473",
+						"y": "144.80759430253917"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Regular Expression",
+									"value": {
+										"defaultValue": "(?s:^.*$)",
+										"description": "The Search Value to search for in the FlowFile content. Only used for 'Literal Replace' and 'Regex Replace' matching strategies",
+										"displayName": "Search Value",
+										"dynamic": "false",
+										"name": "Regular Expression",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Replacement Value",
+									"value": {
+										"defaultValue": "$1",
+										"description": "The value to insert using the 'Replacement Strategy'. Using \"Regex Replace\" back-references to Regular Expression capturing groups are supported, but back-references that reference capturing groups that do not exist in the regular expression will be treated as literal value. Back References may also be referenced using the Expression Language, as '$1', '$2', etc. The single-tick marks MUST be included, as these variables are not \"Standard\" attribute names (attribute names must be quoted unless they contain only numbers, letters, and _).",
+										"displayName": "Replacement Value",
+										"dynamic": "false",
+										"name": "Replacement Value",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "The Character Set in which the file is encoded",
+										"displayName": "Character Set",
+										"dynamic": "false",
+										"name": "Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum Buffer Size",
+									"value": {
+										"defaultValue": "1 MB",
+										"description": "Specifies the maximum amount of data to buffer (per file or per line, depending on the Evaluation Mode) in order to apply the replacement. If 'Entire Text' (in Evaluation Mode) is selected and the FlowFile is larger than this value, the FlowFile will be routed to 'failure'. In 'Line-by-Line' Mode, if a single line is larger than this value, the FlowFile will be routed to 'failure'. A default value of 1 MB is provided, primarily for 'Entire Text' mode. In 'Line-by-Line' Mode, a value such as 8 KB or 16 KB is suggested. This value is ignored if the <Replacement Strategy> property is set to one of: Append, Prepend, Always Replace",
+										"displayName": "Maximum Buffer Size",
+										"dynamic": "false",
+										"name": "Maximum Buffer Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Replacement Strategy",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Insert the Replacement Value at the beginning of the FlowFile or the beginning of each line (depending on the Evaluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be prepended to each line. For \"Entire Text\" evaluation mode, the value will be prepended to the entire text.",
+												"displayName": "Prepend",
+												"value": "Prepend"
+											},
+											{
+												"description": "Insert the Replacement Value at the end of the FlowFile or the end of each line (depending on the Evluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be appended to each line. For \"Entire Text\" evaluation mode, the value will be appended to the entire text.",
+												"displayName": "Append",
+												"value": "Append"
+											},
+											{
+												"description": "Interpret the Search Value as a Regular Expression and replace all matches with the Replacement Value. The Replacement Value may reference Capturing Groups used in the Search Value by using a dollar-sign followed by the Capturing Group number, such as $1 or $2. If the Search Value is set to .* then everything is replaced without even evaluating the Regular Expression.",
+												"displayName": "Regex Replace",
+												"value": "Regex Replace"
+											},
+											{
+												"description": "Search for all instances of the Search Value and replace the matches with the Replacement Value.",
+												"displayName": "Literal Replace",
+												"value": "Literal Replace"
+											},
+											{
+												"description": "Always replaces the entire line or the entire contents of the FlowFile (depending on the value of the <Evaluation Mode> property) and does not bother searching for any value. When this strategy is chosen, the <Search Value> property is ignored.",
+												"displayName": "Always Replace",
+												"value": "Always Replace"
+											}
+										],
+										"defaultValue": "Regex Replace",
+										"description": "The strategy for how and what to replace within the FlowFile's text content.",
+										"displayName": "Replacement Strategy",
+										"dynamic": "false",
+										"name": "Replacement Strategy",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Evaluation Mode",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "Line-by-Line",
+												"value": "Line-by-Line"
+											},
+											{
+												"displayName": "Entire text",
+												"value": "Entire text"
+											}
+										],
+										"defaultValue": "Entire text",
+										"description": "Run the 'Replacement Strategy' against each line separately (Line-by-Line) or buffer the entire file into memory (Entire Text) and run against that.",
+										"displayName": "Evaluation Mode",
+										"dynamic": "false",
+										"name": "Evaluation Mode",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Regular Expression"
+								},
+								{
+									"key": "Replacement Value",
+									"value": "This is a plaintext message\\."
+								},
+								{
+									"key": "Character Set"
+								},
+								{
+									"key": "Maximum Buffer Size"
+								},
+								{
+									"key": "Replacement Strategy"
+								},
+								{
+									"key": "Evaluation Mode"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ReplaceText",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles that could not be updated are routed to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles that have been successfully processed are routed to this relationship. This includes both FlowFiles that had text replaced and those that did not.",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.ReplaceText"
+				},
+				{
+					"id": "348de9bf-1113-42f3-aac4-b6b5200d2fcd",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "22.0",
+						"y": "27.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Input Directory",
+									"value": {
+										"description": "The input directory from which to pull files",
+										"displayName": "Input Directory",
+										"dynamic": "false",
+										"name": "Input Directory",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "File Filter",
+									"value": {
+										"defaultValue": "[^\\.].*",
+										"description": "Only files whose names match the given regular expression will be picked up",
+										"displayName": "File Filter",
+										"dynamic": "false",
+										"name": "File Filter",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Path Filter",
+									"value": {
+										"description": "When Recurse Subdirectories is true, then only subdirectories whose path matches the given regular expression will be scanned",
+										"displayName": "Path Filter",
+										"dynamic": "false",
+										"name": "Path Filter",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "10",
+										"description": "The maximum number of files to pull in each iteration",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Keep Source File",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, the file is not deleted after it has been copied to the Content Repository; this causes the file to be picked up continually and is useful for testing purposes.  If not keeping original NiFi will need write permissions on the directory it is pulling from otherwise it will ignore the file.",
+										"displayName": "Keep Source File",
+										"dynamic": "false",
+										"name": "Keep Source File",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Recurse Subdirectories",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Indicates whether or not to pull files from subdirectories",
+										"displayName": "Recurse Subdirectories",
+										"dynamic": "false",
+										"name": "Recurse Subdirectories",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Polling Interval",
+									"value": {
+										"defaultValue": "0 sec",
+										"description": "Indicates how long to wait before performing a directory listing",
+										"displayName": "Polling Interval",
+										"dynamic": "false",
+										"name": "Polling Interval",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Ignore Hidden Files",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Indicates whether or not hidden files should be ignored",
+										"displayName": "Ignore Hidden Files",
+										"dynamic": "false",
+										"name": "Ignore Hidden Files",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Minimum File Age",
+									"value": {
+										"defaultValue": "0 sec",
+										"description": "The minimum age that a file must be in order to be pulled; any file younger than this amount of time (according to last modification date) will be ignored",
+										"displayName": "Minimum File Age",
+										"dynamic": "false",
+										"name": "Minimum File Age",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum File Age",
+									"value": {
+										"description": "The maximum age that a file must be in order to be pulled; any file older than this amount of time (according to last modification date) will be ignored",
+										"displayName": "Maximum File Age",
+										"dynamic": "false",
+										"name": "Maximum File Age",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Minimum File Size",
+									"value": {
+										"defaultValue": "0 B",
+										"description": "The minimum size that a file must be in order to be pulled",
+										"displayName": "Minimum File Size",
+										"dynamic": "false",
+										"name": "Minimum File Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Maximum File Size",
+									"value": {
+										"description": "The maximum size that a file can be in order to be pulled",
+										"displayName": "Maximum File Size",
+										"dynamic": "false",
+										"name": "Maximum File Size",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Input Directory",
+									"value": "/Users/alopresto/Workspace/scratch/pgptest/in"
+								},
+								{
+									"key": "File Filter"
+								},
+								{
+									"key": "Path Filter"
+								},
+								{
+									"key": "Batch Size"
+								},
+								{
+									"key": "Keep Source File",
+									"value": "true"
+								},
+								{
+									"key": "Recurse Subdirectories"
+								},
+								{
+									"key": "Polling Interval"
+								},
+								{
+									"key": "Ignore Hidden Files"
+								},
+								{
+									"key": "Minimum File Age"
+								},
+								{
+									"key": "Maximum File Age"
+								},
+								{
+									"key": "Minimum File Size"
+								},
+								{
+									"key": "Maximum File Size"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "GetFile",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All files are routed to success",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.GetFile"
+				},
+				{
+					"id": "b9d211ae-8dfe-40c6-b651-8ea9d1c93ee6",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "26.0",
+						"y": "226.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Mode",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "Encrypt",
+												"value": "Encrypt"
+											},
+											{
+												"displayName": "Decrypt",
+												"value": "Decrypt"
+											}
+										],
+										"defaultValue": "Encrypt",
+										"description": "Specifies whether the content should be encrypted or decrypted",
+										"displayName": "Mode",
+										"dynamic": "false",
+										"name": "Mode",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "key-derivation-function",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "MD5 @ 1000 iterations",
+												"displayName": "NiFi Legacy KDF",
+												"value": "NIFI_LEGACY"
+											},
+											{
+												"description": "Single iteration MD5 compatible with PKCS#5 v1.5",
+												"displayName": "OpenSSL EVP_BytesToKey",
+												"value": "OPENSSL_EVP_BYTES_TO_KEY"
+											},
+											{
+												"description": "Bcrypt with configurable work factor. See Admin Guide",
+												"displayName": "Bcrypt",
+												"value": "BCRYPT"
+											},
+											{
+												"description": "Scrypt with configurable cost parameters. See Admin Guide",
+												"displayName": "Scrypt",
+												"value": "SCRYPT"
+											},
+											{
+												"description": "PBKDF2 with configurable hash function and iteration count. See Admin Guide",
+												"displayName": "PBKDF2",
+												"value": "PBKDF2"
+											},
+											{
+												"description": "The cipher is given a raw key conforming to the algorithm specifications",
+												"displayName": "None",
+												"value": "NONE"
+											}
+										],
+										"defaultValue": "BCRYPT",
+										"description": "Specifies the key derivation function to generate the key from the password (and salt)",
+										"displayName": "Key Derivation Function",
+										"dynamic": "false",
+										"name": "key-derivation-function",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Encryption Algorithm",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "org.apache.nifi.security.util.EncryptionMethod@71e35c4[Algorithm name=PBEWITHMD5AND128BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_128AES",
+												"value": "MD5_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5AND192BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_192AES",
+												"value": "MD5_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5AND256BITAES-CBC-OPENSSL,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_256AES",
+												"value": "MD5_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5ANDDES,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_DES",
+												"value": "MD5_DES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHMD5ANDRC2,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "MD5_RC2",
+												"value": "MD5_RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA1ANDRC2,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA1_RC2",
+												"value": "SHA1_RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA1ANDDES,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA1_DES",
+												"value": "SHA1_DES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITAES-CBC-BC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128AES",
+												"value": "SHA_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND192BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_192AES",
+												"value": "SHA_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND256BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_256AES",
+												"value": "SHA_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND40BITRC2-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_40RC2",
+												"value": "SHA_40RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITRC2-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128RC2",
+												"value": "SHA_128RC2"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND40BITRC4,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_40RC4",
+												"value": "SHA_40RC4"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND128BITRC4,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_128RC4",
+												"value": "SHA_128RC4"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND128BITAES-CBC-BC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_128AES",
+												"value": "SHA256_128AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND192BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_192AES",
+												"value": "SHA256_192AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHA256AND256BITAES-CBC-BC,Requires unlimited strength JCE policy=true,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA256_256AES",
+												"value": "SHA256_256AES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND2-KEYTRIPLEDES-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_2KEYTRIPLEDES",
+												"value": "SHA_2KEYTRIPLEDES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAAND3-KEYTRIPLEDES-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_3KEYTRIPLEDES",
+												"value": "SHA_3KEYTRIPLEDES"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PBEWITHSHAANDTWOFISH-CBC,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "SHA_TWOFISH",
+												"value": "SHA_TWOFISH"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PGP,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "PGP",
+												"value": "PGP"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=PGP-ASCII-ARMOR,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=false,Keyed cipher=false]",
+												"displayName": "PGP_ASCII_ARMOR",
+												"value": "PGP_ASCII_ARMOR"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/CBC/PKCS7Padding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_CBC",
+												"value": "AES_CBC"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/CTR/NoPadding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_CTR",
+												"value": "AES_CTR"
+											},
+											{
+												"description": "EncryptionMethod[Algorithm name=AES/GCM/NoPadding,Requires unlimited strength JCE policy=false,Algorithm Provider=BC,Compatible with strong KDFs=true,Keyed cipher=true]",
+												"displayName": "AES_GCM",
+												"value": "AES_GCM"
+											}
+										],
+										"defaultValue": "MD5_128AES",
+										"description": "The Encryption Algorithm to use",
+										"displayName": "Encryption Algorithm",
+										"dynamic": "false",
+										"name": "Encryption Algorithm",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "allow-weak-crypto",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Operation will not be blocked and no alerts will be presented when unsafe combinations of encryption algorithms and passwords are provided",
+												"displayName": "Allowed",
+												"value": "allowed"
+											},
+											{
+												"description": "When set, operation will be blocked and alerts will be presented to the user if unsafe combinations of encryption algorithms and passwords are provided on a JVM with limited strength crypto. To fix this, see the Admin Guide.",
+												"displayName": "Not Allowed",
+												"value": "not-allowed"
+											}
+										],
+										"defaultValue": "not-allowed",
+										"description": "Overrides the default behavior to prevent unsafe combinations of encryption algorithms and short passwords on JVMs with limited strength cryptographic jurisdiction policies",
+										"displayName": "Allow insecure cryptographic modes",
+										"dynamic": "false",
+										"name": "allow-weak-crypto",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Password",
+									"value": {
+										"description": "The Password to use for encrypting or decrypting the data",
+										"displayName": "Password",
+										"dynamic": "false",
+										"name": "Password",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "raw-key-hex",
+									"value": {
+										"description": "In keyed encryption, this is the raw key, encoded in hexadecimal",
+										"displayName": "Raw Key (hexadecimal)",
+										"dynamic": "false",
+										"name": "raw-key-hex",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "public-keyring-file",
+									"value": {
+										"description": "In a PGP encrypt mode, this keyring contains the public key of the recipient",
+										"displayName": "Public Keyring File",
+										"dynamic": "false",
+										"name": "public-keyring-file",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "public-key-user-id",
+									"value": {
+										"description": "In a PGP encrypt mode, this user id of the recipient",
+										"displayName": "Public Key User Id",
+										"dynamic": "false",
+										"name": "public-key-user-id",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "private-keyring-file",
+									"value": {
+										"description": "In a PGP decrypt mode, this keyring contains the private key of the recipient",
+										"displayName": "Private Keyring File",
+										"dynamic": "false",
+										"name": "private-keyring-file",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "private-keyring-passphrase",
+									"value": {
+										"description": "In a PGP decrypt mode, this is the private keyring passphrase",
+										"displayName": "Private Keyring Passphrase",
+										"dynamic": "false",
+										"name": "private-keyring-passphrase",
+										"required": "false",
+										"sensitive": "true",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Mode"
+								},
+								{
+									"key": "key-derivation-function"
+								},
+								{
+									"key": "Encryption Algorithm",
+									"value": "PGP_ASCII_ARMOR"
+								},
+								{
+									"key": "allow-weak-crypto"
+								},
+								{
+									"key": "Password"
+								},
+								{
+									"key": "raw-key-hex"
+								},
+								{
+									"key": "public-keyring-file",
+									"value": "/Users/alopresto/.gnupg_for_nifi_test/pubring.gpg"
+								},
+								{
+									"key": "public-key-user-id",
+									"value": "NiFi PGP Test Key (Short test key for NiFi PGP unit tests) <alopresto.apache+test@gmail.com>"
+								},
+								{
+									"key": "private-keyring-file"
+								},
+								{
+									"key": "private-keyring-passphrase"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PGP Encrypt",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "Any FlowFile that cannot be encrypted or decrypted will be routed to failure",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Any FlowFile that is successfully encrypted or decrypted will be routed to success",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.EncryptContent"
+				},
+				{
+					"id": "13567097-57a3-47bc-925e-c2b525b0e6d3",
+					"parentGroupId": "ea8b935a-765e-42d4-aeb8-6b22a423af81",
+					"position": {
+						"x": "17.29740180746427",
+						"y": "742.3993604753136"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Log Level",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "trace",
+												"value": "trace"
+											},
+											{
+												"displayName": "debug",
+												"value": "debug"
+											},
+											{
+												"displayName": "info",
+												"value": "info"
+											},
+											{
+												"displayName": "warn",
+												"value": "warn"
+											},
+											{
+												"displayName": "error",
+												"value": "error"
+											}
+										],
+										"defaultValue": "info",
+										"description": "The Log Level to use when logging the Attributes",
+										"displayName": "Log Level",
+										"dynamic": "false",
+										"name": "Log Level",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log Payload",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+										"displayName": "Log Payload",
+										"dynamic": "false",
+										"name": "Log Payload",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Log",
+									"value": {
+										"description": "A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+										"displayName": "Attributes to Log",
+										"dynamic": "false",
+										"name": "Attributes to Log",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Ignore",
+									"value": {
+										"description": "A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+										"displayName": "Attributes to Ignore",
+										"dynamic": "false",
+										"name": "Attributes to Ignore",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log prefix",
+									"value": {
+										"description": "Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+										"displayName": "Log prefix",
+										"dynamic": "false",
+										"name": "Log prefix",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Log Level"
+								},
+								{
+									"key": "Log Payload"
+								},
+								{
+									"key": "Attributes to Log"
+								},
+								{
+									"key": "Attributes to Ignore"
+								},
+								{
+									"key": "Log prefix"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "LogAttribute",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.LogAttribute"
+				}
+			]
+		},
+		"timestamp": "03/28/2022 17:45:46 PDT"
+	}
+}

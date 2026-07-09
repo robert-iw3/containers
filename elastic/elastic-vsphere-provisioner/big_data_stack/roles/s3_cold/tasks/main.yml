@@ -1,0 +1,30 @@
+---
+- name: Install AWS CLI
+  package:
+    name: awscli
+    state: present
+  become: yes
+
+- name: Configure S3 ILM
+  copy:
+    content: |
+      PUT /_ilm/policy/cold_s3
+      {
+        "policy": {
+          "phases": {
+            "cold": {
+              "actions": {
+                "set_priority": { "priority": 0 },
+                "migrate": { "enabled": true },
+                "searchable_snapshot": { "snapshot_repository": "s3_repo" }
+              }
+            }
+          }
+        }
+      }
+    dest: /tmp/s3_ilm.sh
+  become: yes
+
+- name: Apply ILM
+  shell: bash /tmp/s3_ilm.sh
+  become: yes

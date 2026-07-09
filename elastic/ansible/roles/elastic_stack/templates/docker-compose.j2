@@ -1,0 +1,152 @@
+---
+volumes:
+  certs:
+    driver: local
+  elasticsearch:
+    driver: local
+  elasticsearch1:
+    driver: local
+  elasticsearch2:
+    driver: local
+  kibana:
+    driver: local
+  fleetserver:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge
+    internal: true
+
+x-common-vars: &common-vars
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - elastic
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  setup:
+    <<: *common-vars
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:z
+    command: |
+      bash -c '
+        set -e
+        if [ ! -f /usr/share/elasticsearch/config/certs/ca.zip ]; then
+          bin/elasticsearch-certutil ca --silent --pem --out config/certs/ca.zip
+          unzip config/certs/ca.zip -d config/certs
+          cat > config/certs/instances.yml <<EOF
+instances:
+  - name: elasticsearch
+    dns: [elasticsearch, localhost]
+    ip: [127.0.0.1]
+  - name: elasticsearch1
+    dns: [elasticsearch1, localhost]
+    ip: [127.0.0.1]
+  - name: elasticsearch2
+    dns: [elasticsearch2, localhost]
+    ip: [127.0.0.1]
+  - name: kibana
+    dns: [kibana, localhost, kibana.elastic.local]
+    ip: [127.0.0.1]
+  - name: fleet-server
+    dns: [fleet-server, localhost, fleet.elastic.local]
+    ip: [127.0.0.1]
+EOF
+          bin/elasticsearch-certutil cert --silent --pem \
+            --in config/certs/instances.yml \
+            --ca-cert config/certs/ca/ca.crt \
+            --ca-key config/certs/ca/ca.key \
+            --out config/certs/certs.zip
+          unzip config/certs/certs.zip -d config/certs
+          for i in elasticsearch elasticsearch1 elasticsearch2; do
+            cat config/certs/$i/$i.crt config/certs/ca/ca.crt > config/certs/$i/$i.chain.pem
+          done
+        fi
+        chown -R 1000:1000 config/certs
+      '
+
+  elasticsearch:
+    <<: *common-vars
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    depends_on:
+      - setup
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - node.name=elasticsearch
+      - cluster.initial_master_nodes=elasticsearch,elasticsearch1,elasticsearch2
+      - discovery.seed_hosts=elasticsearch1,elasticsearch2
+      - xpack.security.http.ssl.key=certs/elasticsearch/elasticsearch.key
+      - xpack.security.http.ssl.certificate=certs/elasticsearch/elasticsearch.chain.pem
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+    ports:
+      - "9200:9200"
+
+  elasticsearch1:
+    <<: *common-vars
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - elasticsearch1:/usr/share/elasticsearch/data
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - node.name=elasticsearch1
+      - xpack.security.http.ssl.key=certs/elasticsearch1/elasticsearch1.key
+      - xpack.security.http.ssl.certificate=certs/elasticsearch1/elasticsearch1.chain.pem
+
+  elasticsearch2:
+    <<: *common-vars
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - elasticsearch2:/usr/share/elasticsearch/data
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - node.name=elasticsearch2
+      - xpack.security.http.ssl.key=certs/elasticsearch2/elasticsearch2.key
+      - xpack.security.http.ssl.certificate=certs/elasticsearch2/elasticsearch2.chain.pem
+
+  kibana:
+    <<: *common-vars
+    image: docker.elastic.co/kibana/kibana:{{ elastic_version }}
+    depends_on:
+      - elasticsearch
+    volumes:
+      - kibana:/usr/share/kibana/data
+      - certs:/usr/share/kibana/config/certs
+    environment:
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: {{ lookup('env', 'KIBANA_SYSTEM_PASSWORD') }}
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_CERTIFICATE: /usr/share/kibana/config/certs/kibana/kibana.crt
+      SERVER_SSL_KEY: /usr/share/kibana/config/certs/kibana/kibana.key
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /usr/share/kibana/config/certs/ca/ca.crt
+    ports:
+      - "5601:5601"
+
+  fleet-server:
+    <<: *common-vars
+    image: docker.elastic.co/beats/elastic-agent:{{ elastic_version }}
+    depends_on:
+      - kibana
+    volumes:
+      - fleetserver:/usr/share/elastic-agent
+      - certs:/certs
+    environment:
+      - FLEET_ENROLL=1
+      - FLEET_SERVER_ENABLE=1
+      - KIBANA_FLEET_SETUP=1
+      - KIBANA_HOST=https://kibana:5601
+      - FLEET_URL=https://fleet-server:8220
+      - FLEET_SERVER_ELASTICSEARCH_HOST=https://elasticsearch:9200
+      - KIBANA_FLEET_USERNAME=elastic
+      - KIBANA_FLEET_PASSWORD={{ lookup('env', 'ELASTIC_PASSWORD') }}
+      - FLEET_SERVER_CERT=/certs/fleet-server/fleet-server.crt
+      - FLEET_SERVER_CERT_KEY=/certs/fleet-server/fleet-server.key
+      - FLEET_CA=/certs/ca/ca.crt
+    ports:
+      - "8220:8220"

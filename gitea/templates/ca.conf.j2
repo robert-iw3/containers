@@ -1,0 +1,43 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir = {{ cert_dir }}
+database = $dir/index.txt
+new_certs_dir = $dir/newcerts
+certificate = {{ ca_cert }}
+private_key = {{ ca_key }}
+serial = $dir/serial
+rand_serial = yes
+default_md = sha256
+policy = policy_match
+
+[ policy_match ]
+countryName = optional
+stateOrProvinceName = optional
+organizationName = optional
+organizationalUnitName = optional
+commonName = supplied
+emailAddress = optional
+
+[ req ]
+default_bits = 4096
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ca
+prompt = no
+default_md = sha256
+
+[ req_distinguished_name ]
+C = US
+ST = ExampleState
+L = ExampleCity
+O = GiteaCA
+OU = Gitea
+CN = Gitea Root CA
+emailAddress = {{ gitea_admin_email }}
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, cRLSign, keyCertSign

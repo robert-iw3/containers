@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyauth-deployment
+  namespace: tinyauth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinyauth
+  template:
+    metadata:
+      labels:
+        app: tinyauth
+    spec:
+      containers:
+      - name: traefik
+        image: docker.io/traefik:v3.7.7
+        args:
+          - --api.insecure=true
+          - --providers.kubernetescrd
+        ports:
+          - containerPort: 80
+        volumeMounts:
+          - name: podman-socket
+            mountPath: /var/run/docker.sock
+            readOnly: true
+      - name: whoami
+        image: traefik/whoami:latest
+        env:
+          - name: WHOAMI_NAME
+            value: "whoami"
+      - name: tinyauth
+        image: ghcr.io/steveiliop56/tinyauth:v3
+        envFrom:
+          - configMapRef:
+              name: tinyauth-config
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+      volumes:
+      - name: podman-socket
+        hostPath:
+          path: /run/user/1000/podman/podman.sock
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tinyauth-config
+  namespace: tinyauth
+data:
+  PORT: "3000"
+  ADDRESS: "0.0.0.0"
+  SECRET: "some-random-32-chars-string"
+  APP_URL: "https://tinyauth.example.com"
+  USERS: "admin:$2a$10$UdLYoJ5lgPsC0RKqYH/jMua7zIn0g9kPqWmhYayJYLaZQ/FTmH2/u"
+  COOKIE_SECURE: "true"
+  SESSION_EXPIRY: "7200"
+  LOGIN_TIMEOUT: "300"
+  LOGIN_MAX_RETRIES: "5"
+  LOG_LEVEL: "0"
+  APP_TITLE: "TinyAuth SSO"
+  FORGOT_PASSWORD_MESSAGE: "Contact admin to reset password"
+  OAUTH_AUTO_REDIRECT: "none"

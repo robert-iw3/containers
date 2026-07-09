@@ -1,0 +1,150 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Self-contained multi-VM Nomad cluster for local testing. Spins up
+# SERVER_COUNT server VMs and CLIENT_COUNT client VMs on a private network,
+# using only the scripts vendored in this directory (no external repo
+# dependency). Mirrors the ansible role's bootstrap_expect/retry_join model
+# at a much smaller scale, for quick iteration before a real multi-host run.
+#
+# Providers: libvirt (KVM/QEMU) for local/on-prem Linux hosts, vsphere for
+# ESXi/vCenter. Select with `vagrant up --provider=libvirt` or `--provider=vsphere`.
+
+require "ipaddr"
+require "fileutils"
+
+base_box      = ENV["BASE_BOX"] || "generic/rocky10"
+network_cidr  = ENV["NETWORK_CIDR"] || "192.168.56.0/24"
+server_count  = (ENV["SERVER_COUNT"] || "3").to_i
+client_count  = (ENV["CLIENT_COUNT"] || "2").to_i
+nomad_version = ENV["NOMAD_VERSION"] || "2.0.3"
+
+raise "SERVER_COUNT must be odd for Raft quorum (1, 3, 5, ...)" if server_count < 1 || server_count.even?
+raise "CLIENT_COUNT must be >= 0" if client_count < 0
+
+network_base = IPAddr.new(network_cidr)
+node_ip = ->(offset) { (network_base | offset).to_s }
+server_ips = (1..server_count).map { |i| node_ip.call(10 + i) }
+
+def render_nomad_hcl(role, bind_addr, server_ips, bootstrap_expect)
+  server_block = role == :server ? <<~HCL : ""
+    server {
+      enabled          = true
+      bootstrap_expect = #{bootstrap_expect}
+
+      server_join {
+        retry_join = [#{server_ips.map { |ip| "\"#{ip}:4648\"" }.join(", ")}]
+      }
+    }
+  HCL
+
+  <<~HCL
+    data_dir  = "/opt/nomad/data"
+    bind_addr = "#{bind_addr}"
+
+    advertise {
+      http = "#{bind_addr}"
+      rpc  = "#{bind_addr}"
+      serf = "#{bind_addr}"
+    }
+
+    #{server_block}
+    client {
+      enabled = true
+      servers = [#{server_ips.map { |ip| "\"#{ip}:4647\"" }.join(", ")}]
+    }
+
+    telemetry {
+      collection_interval = "1s"
+      disable_hostname    = true
+      prometheus_metrics  = true
+    }
+  HCL
+end
+
+generated_dir = File.join(File.dirname(__FILE__), ".generated")
+FileUtils.mkdir_p(generated_dir)
+
+def provision_node(node, role, ip, server_ips, server_count, nomad_version, generated_dir)
+  hcl_path = File.join(generated_dir, "#{node.vm.hostname}.hcl")
+  File.write(hcl_path, render_nomad_hcl(role, ip, server_ips, server_count))
+
+  node.vm.network :private_network, ip: ip
+  node.vm.provision "file", source: "install-nomad.sh", destination: "/tmp/install-nomad.sh"
+  node.vm.provision "file", source: "install-nomad-systemd.sh", destination: "/tmp/install-nomad-systemd.sh"
+  node.vm.provision "file", source: "nomad.service", destination: "/tmp/nomad.service"
+  node.vm.provision "file", source: "init/systemd", destination: "/tmp/init/systemd"
+  node.vm.provision "file", source: hcl_path, destination: "/tmp/nomad.hcl"
+
+  if role == :client
+    node.vm.provision "shell", inline: <<~SHELL
+      command -v podman &>/dev/null || dnf install -y podman crun slirp4netns 2>/dev/null || apt-get install -y podman crun slirp4netns
+    SHELL
+  end
+
+  node.vm.provision "shell", inline: <<~SHELL
+    set -euo pipefail
+    install -d /home/vagrant/init/systemd
+    cp /tmp/nomad.service /tmp/install-nomad.sh /tmp/install-nomad-systemd.sh /home/vagrant/
+    cp -r /tmp/init/systemd/. /home/vagrant/init/systemd/
+    chmod +x /home/vagrant/install-nomad.sh /home/vagrant/install-nomad-systemd.sh
+    cd /home/vagrant && NOMAD_VERSION=#{nomad_version} ./install-nomad.sh
+    install -o nomad -g nomad -m 0600 /tmp/nomad.hcl /etc/nomad.d/nomad.hcl
+    cd /home/vagrant && ./install-nomad-systemd.sh
+  SHELL
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = base_box
+
+  (1..server_count).each do |i|
+    config.vm.define "server-#{i}" do |node|
+      node.vm.hostname = "nomad-server-#{i}"
+      provision_node(node, :server, server_ips[i - 1], server_ips, server_count, nomad_version, generated_dir)
+    end
+  end
+
+  (1..client_count).each do |i|
+    config.vm.define "client-#{i}" do |node|
+      node.vm.hostname = "nomad-client-#{i}"
+      ip = node_ip.call(10 + server_count + i)
+      provision_node(node, :client, ip, server_ips, server_count, nomad_version, generated_dir)
+    end
+  end
+
+  # KVM/QEMU via vagrant-libvirt (production Linux hypervisor path).
+  config.vm.provider :libvirt do |lv|
+    lv.driver = "kvm"
+    lv.cpus = (ENV["VM_CPUS"] || "2").to_i
+    lv.memory = (ENV["VM_MEMORY"] || "2048").to_i
+    lv.machine_type = "q35"
+    lv.disk_bus = "virtio"
+    lv.nic_model_type = "virtio"
+  end
+
+  # ESXi/vCenter via vagrant-vsphere. Clones an existing template rather than
+  # booting `base_box`, so the box itself is a placeholder required by the plugin.
+  config.vm.provider :vsphere do |vsphere, override|
+    override.vm.box = "vsphere-dummy"
+    override.vm.box_url = "https://github.com/devopsgroup-io/vagrant-vsphere/raw/master/example_box/dummy.box"
+    vsphere.host = ENV.fetch("VSPHERE_HOST", "")
+    vsphere.user = ENV.fetch("VSPHERE_USER", "")
+    vsphere.password = ENV.fetch("VSPHERE_PASSWORD", "")
+    vsphere.insecure = ENV.fetch("VSPHERE_INSECURE", "false") == "true"
+    vsphere.template_name = ENV.fetch("VSPHERE_TEMPLATE", "")
+    vsphere.data_center_name = ENV.fetch("VSPHERE_DATACENTER", "")
+    vsphere.compute_resource_name = ENV.fetch("VSPHERE_CLUSTER", "")
+    vsphere.data_store_name = ENV.fetch("VSPHERE_DATASTORE", "")
+    vsphere.vm_base_path = ENV.fetch("VSPHERE_VM_FOLDER", "")
+  end
+
+  config.vm.post_up_message = <<~MSG
+    Nomad test cluster is up: #{server_count} server(s), #{client_count} client(s).
+
+      $ vagrant ssh server-1
+      $ nomad server members
+      $ nomad node status
+
+    Tear it down with: vagrant destroy -f
+  MSG
+end

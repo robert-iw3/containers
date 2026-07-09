@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-config
+  namespace: elastic
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 75
+        spike_limit_percentage: 25
+
+    exporters:
+      elasticsearch:
+        endpoints: ["https://elasticsearch-cluster:9200"]
+        user: elastic
+        password: "${ELASTIC_PASSWORD}"
+        tls:
+          ca_file: /certs/ca/ca.crt
+          insecure_skip_verify: false
+        mapping:
+          mode: otel
+        logs_dynamic_index:
+          enabled: true
+        metrics_dynamic_index:
+          enabled: true
+        traces_dynamic_index:
+          enabled: true
+        flush:
+          interval: 1s
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]

@@ -1,0 +1,12 @@
+{{ nomad_log_dir }}/nomad.log {
+  size {{ nomad_logrotate_maxsize }}
+  rotate {{ nomad_logrotate_rotate }}
+  compress
+  delaycompress
+  missingok
+  notifempty
+  create 0640 {{ nomad_user }} {{ nomad_group }}
+  postrotate
+    /bin/kill -HUP `cat /run/nomad.pid 2> /dev/null` 2> /dev/null || true
+  endscript
+}

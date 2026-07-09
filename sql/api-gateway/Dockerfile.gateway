@@ -1,0 +1,12 @@
+# ode.js API Gateway for routing to SQL containers
+
+FROM docker.io/node:25-alpine
+
+WORKDIR /app
+
+COPY package.json .
+RUN npm install express mssql redis jsonwebtoken winston express-rate-limit cluster
+
+COPY gateway.js .
+
+CMD ["node", "gateway.js"]

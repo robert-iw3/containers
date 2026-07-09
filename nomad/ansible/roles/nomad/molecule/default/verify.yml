@@ -1,0 +1,96 @@
+---
+- name: Verify
+  hosts: all
+  become: yes
+  tasks:
+    - name: Nomad service is active
+      command: systemctl is-active nomad
+      register: nomad_active
+      failed_when: nomad_active.stdout != "active"
+      changed_when: false
+
+    - name: Nomad answers its HTTPS health endpoint
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}:4646/v1/agent/health"
+        validate_certs: no
+        status_code: [200, 429]
+      register: health
+      until: health.status is defined and health.status in [200, 429]
+      retries: 12
+      delay: 5
+
+    - name: A leader has been elected
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
+        validate_certs: no
+        return_content: yes
+      register: leader
+      failed_when: "':4647' not in leader.content"
+
+    - name: ACLs are enforced (anonymous job listing is rejected)
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}:4646/v1/jobs"
+        validate_certs: no
+        status_code: 403
+
+    - name: Management token file was persisted for snapshots
+      stat:
+        path: /etc/nomad.d/mgmt.token
+      register: token_file
+      failed_when: not token_file.stat.exists or token_file.stat.mode != "0600"
+
+    - name: Load the management token
+      slurp:
+        src: /etc/nomad.d/mgmt.token
+      register: mgmt_token
+      no_log: true
+
+    - name: All three servers joined the cluster and are alive
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}:4646/v1/agent/members"
+        validate_certs: no
+        headers:
+          X-Nomad-Token: "{{ mgmt_token.content | b64decode | trim }}"
+        return_content: yes
+      register: members
+      failed_when: >
+        (members.json.Members | selectattr('Status', 'equalto', 'alive') | list | length) != 3
+      until: members.status == 200
+      retries: 6
+      delay: 5
+
+    - name: Snapshot timer is active
+      command: systemctl is-active nomad-snapshot.timer
+      register: timer_active
+      failed_when: timer_active.stdout != "active"
+      changed_when: false
+
+    - name: Run the snapshot script (only the leader saves)
+      command: /usr/local/bin/nomad-snapshot.sh
+      changed_when: true
+
+    - name: Determine whether this node is the leader
+      set_fact:
+        is_leader: "{{ ansible_default_ipv4.address in leader.content }}"
+
+    - name: Snapshot file exists on the leader
+      shell: ls /opt/nomad/snapshots/nomad-*.snap
+      changed_when: false
+      when: is_leader
+
+    - name: TLS certificate is signed by the shared cluster CA
+      command: openssl verify -CAfile /etc/nomad.d/ca.pem /etc/nomad.d/nomad-cert.pem
+      changed_when: false
+
+    - name: Every node trusts the same CA
+      command: openssl x509 -noout -fingerprint -in /etc/nomad.d/ca.pem
+      register: ca_fingerprint
+      changed_when: false
+
+    - name: CA fingerprints are identical across the cluster
+      assert:
+        that: >
+          groups['nomad_servers']
+          | map('extract', hostvars, ['ca_fingerprint', 'stdout'])
+          | unique | list | length == 1
+      run_once: true

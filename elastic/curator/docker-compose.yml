@@ -1,0 +1,23 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - elastic
+
+services:
+  curator:
+    <<: *common-vars-apps
+    build:
+      context: .
+    init: true
+    volumes:
+      - ./config/curator.yml:/.curator/curator.yml:ro,Z
+      - ./config/delete_log_files_curator.yml:/.curator/delete_log_files_curator.yml:ro,Z
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy

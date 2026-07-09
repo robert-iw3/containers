@@ -1,0 +1,57 @@
+<form version="1.1" theme="light">
+  <label>SSH Hunter - Security Zones</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details
+| dedup ssh_zone_details.id
+| spath output=aaa_zone path=ssh_zone_details
+| mvexpand aaa_zone
+| spath input=aaa_zone
+| fields - ssh_zone_details
+| eval description=if(isnull(description) OR len(description)==0, "&lt;none&gt;", description)
+| table id name description hosts_count permitted_keys_count violation_host_count modification_date create_date
+| sort id
+| rename id as "Zone ID"
+| rename name as "Zone Name"
+| rename description as "Description"
+| rename hosts_count as "Zone Hosts"
+| rename permitted_keys_count as "Permitted Keys"
+| rename violation_host_count as "Violation Hosts"
+| rename modification_date as "Last Modified"
+| rename create_date as "Created Date"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter_-_security_zone_details?form.tok_zone_id=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_zone_details
+| dedup ssh_zone_details.id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+      </event>
+    </panel>
+  </row>
+</form>

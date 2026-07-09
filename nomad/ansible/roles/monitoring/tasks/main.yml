@@ -1,0 +1,173 @@
+---
+- name: Fail fast when required secrets are missing
+  fail:
+    msg: "grafana_admin_password must be supplied (ansible-vault or -e)"
+  when: grafana_admin_password | length == 0
+
+- name: Fail fast when alertmanager is enabled without a receiver
+  fail:
+    msg: "alertmanager_webhook_url must be set when alertmanager_enabled is true"
+  when: alertmanager_enabled and alertmanager_webhook_url | length == 0
+
+- name: Ensure podman is installed
+  package:
+    name: podman
+    state: present
+  become: yes
+
+- name: Create monitoring config directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ monitoring_data_dir }}"
+    - "{{ monitoring_data_dir }}/prometheus"
+    - "{{ monitoring_data_dir }}/prometheus/config"
+    - "{{ monitoring_data_dir }}/grafana"
+    - "{{ monitoring_data_dir }}/grafana/provisioning"
+    - "{{ monitoring_data_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_data_dir }}/alertmanager"
+    - "{{ monitoring_data_dir }}/alertmanager/config"
+  become: yes
+
+- name: Create container-owned data directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.uid }}"
+    group: "{{ item.uid }}"
+    mode: "0700"
+  loop:
+    - { path: "{{ monitoring_data_dir }}/prometheus/data", uid: 65534 }
+    - { path: "{{ monitoring_data_dir }}/grafana/data", uid: 472 }
+    - { path: "{{ monitoring_data_dir }}/alertmanager/data", uid: 65534 }
+  become: yes
+
+- name: Deploy Prometheus configuration
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ monitoring_data_dir }}/prometheus/config/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: prometheus.yml.j2, dest: prometheus.yml }
+    - { src: alerts.yml.j2, dest: alerts.yml }
+  become: yes
+  notify: Restart Prometheus
+
+- name: Copy the Nomad CA for TLS metric scrapes
+  copy:
+    src: "{{ lookup('env', 'HOME') }}/.cache/nomad-ansible-ca/ca.pem"
+    dest: "{{ monitoring_data_dir }}/prometheus/config/nomad-ca.pem"
+    owner: root
+    group: root
+    mode: "0644"
+  become: yes
+  when: nomad_tls_enabled
+  notify: Restart Prometheus
+
+- name: Deploy Grafana environment file
+  copy:
+    content: "GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}\n"
+    dest: "{{ monitoring_data_dir }}/grafana/grafana.env"
+    owner: root
+    group: root
+    mode: "0600"
+  become: yes
+  no_log: true
+  notify: Restart Grafana
+
+- name: Deploy Grafana datasource provisioning
+  template:
+    src: grafana-datasource.yml.j2
+    dest: "{{ monitoring_data_dir }}/grafana/provisioning/datasources/prometheus.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  become: yes
+  notify: Restart Grafana
+
+- name: Deploy Alertmanager configuration
+  template:
+    src: alertmanager.yml.j2
+    dest: "{{ monitoring_data_dir }}/alertmanager/config/alertmanager.yml"
+    owner: 65534
+    group: 65534
+    mode: "0600"
+  become: yes
+  when: alertmanager_enabled
+  notify: Restart Alertmanager
+
+- name: Deploy systemd units
+  template:
+    src: "{{ item }}.service.j2"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ['prometheus', 'grafana'] + (['alertmanager'] if alertmanager_enabled else []) }}"
+  become: yes
+  register: monitoring_units
+
+- name: Restart services whose units changed
+  systemd:
+    name: "{{ item.item }}"
+    state: restarted
+    daemon_reload: yes
+  loop: "{{ monitoring_units.results }}"
+  when: item.changed
+  become: yes
+
+- name: Enable and start monitoring services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop: "{{ ['prometheus', 'grafana'] + (['alertmanager'] if alertmanager_enabled else []) }}"
+  become: yes
+
+- name: Configure firewall for monitoring (RedHat)
+  firewalld:
+    port: "{{ item.1 }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+    source: "{{ item.0 }}"
+  loop: "{{ monitoring_allowed_ips | product([prometheus_port ~ '/tcp', grafana_port ~ '/tcp']) | list }}"
+  become: yes
+  when: ansible_os_family == "RedHat" and monitoring_manage_firewall
+
+- name: Configure firewall for monitoring (Debian)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item.1 }}"
+    source: "{{ item.0 }}"
+    jump: ACCEPT
+    comment: "Allow monitoring access"
+  loop: "{{ monitoring_allowed_ips | product([prometheus_port, grafana_port]) | list }}"
+  become: yes
+  when: ansible_os_family == "Debian" and monitoring_manage_firewall
+
+- name: Wait for Prometheus to answer
+  uri:
+    url: "http://127.0.0.1:{{ prometheus_port }}/-/ready"
+    status_code: 200
+  register: prom_ready
+  until: prom_ready.status == 200
+  retries: 30
+  delay: 5
+
+- name: Wait for Grafana to answer
+  uri:
+    url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_ready
+  until: grafana_ready.status == 200
+  retries: 30
+  delay: 5

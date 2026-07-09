@@ -1,0 +1,34 @@
+- name: Deploy RudderStack to Kubernetes
+  hosts: k8s_control
+  become: yes
+  tasks:
+    - name: Ensure namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
+    - name: Deploy RudderStack secrets
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../generated/rudderstack-secrets.yml"
+
+    - name: Add RudderStack Helm repo
+      kubernetes.core.helm_repository:
+        name: rudderstack
+        repo_url: https://rudderlabs.github.io/rudderstack-helm
+
+    - name: Deploy RudderStack via Helm
+      kubernetes.core.helm:
+        name: rudderstack
+        chart_ref: rudderstack/rudderstack
+        release_namespace: "{{ namespace }}"
+        values_files:
+          - "{{ playbook_dir }}/../generated/values.yml"
+        state: present
+
+    - name: Deploy NetworkPolicy
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../generated/network-policy.yml"

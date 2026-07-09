@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anchore-scanner
+  namespace: anchore
+  labels:
+    app: anchore-scanner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anchore-scanner
+  template:
+    metadata:
+      labels:
+        app: anchore-scanner
+    spec:
+      containers:
+      - name: anchore
+        image: anchore:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 65535
+          runAsGroup: 65535
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        volumeMounts:
+        - name: scan-results
+          mountPath: /home/anchore
+      volumes:
+      - name: scan-results
+        persistentVolumeClaim:
+          claimName: anchore-scan-results
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: anchore-scan-results
+  namespace: anchore
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: anchore-scan-job
+  namespace: anchore
+spec:
+  template:
+    spec:
+      containers:
+      - name: anchore-scanner
+        image: anchore:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          syft some_repo/user/thisimage1:tag --scope all-layers -o syft-json=/home/anchore/thisimage1_SBOM.json &&
+          syft some_repo/user/thisimage1:tag --scope all-layers -o syft-table=/home/anchore/thisimage1_SBOM.csv &&
+          grype some_repo/user/thisimage1:tag -o json --file /home/anchore/thisimage1_vulnerabilities.json &&
+          grype some_repo/user/thisimage1:tag -o table --file /home/anchore/thisimage1_vulnerabilities.csv &&
+          syft some_repo/user/thisimage2:tag --scope all-layers -o syft-json=/home/anchore/thisimage2_SBOM.json &&
+          syft some_repo/user/thisimage2:tag --scope all-layers -o syft-table=/home/anchore/thisimage2_SBOM.csv &&
+          grype some_repo/user/thisimage2:tag -o json --file /home/anchore/thisimage2_vulnerabilities.json &&
+          grype some_repo/user/thisimage2:tag -o table --file /home/anchore/thisimage2_vulnerabilities.csv &&
+          syft some_repo/user/thisimage3:tag --scope all-layers -o syft-json=/home/anchore/thisimage3_SBOM.json &&
+          syft some_repo/user/thisimage3:tag --scope all-layers -o syft-table=/home/anchore/thisimage3_SBOM.csv &&
+          grype some_repo/user/thisimage3:tag -o json --file /home/anchore/thisimage3_vulnerabilities.json &&
+          grype some_repo/user/thisimage3:tag -o table --file /home/anchore/thisimage3_vulnerabilities.csv
+        volumeMounts:
+        - name: scan-results
+          mountPath: /home/anchore
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+      restartPolicy: Never
+      volumes:
+      - name: scan-results
+        persistentVolumeClaim:
+          claimName: anchore-scan-results

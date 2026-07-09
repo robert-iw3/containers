@@ -1,0 +1,185 @@
+<form version="1.1">
+  <label>Sandfly Security - SSH authorized_keys File Report</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>User Names with SSH authorized_keys File Present</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| stats count by data.results.user.username</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Duplicate SSH Keys Found</title>
+      <single>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true" data.results.user.ssh.authorized_keys.duplicate_found
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>SSH authorized_keys File Accessed Today</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.accessed as aaa_date_accessed
+| rename header.hostname as host_name
+| rename data.results.user.username as user_name
+| dedup host_name user_name
+| eval aaa_date_accessed_epoch = strptime(aaa_date_accessed, "%Y-%m-%dT%H:%M:%SZ")
+| where aaa_date_accessed_epoch &gt;= relative_time(now(), "@d")
+| table host_name user_name aaa_date_accessed
+| rename host_name as "Host Name", user_name as "User Name", aaa_date_accessed as "Date Accessed"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>SSH authorized_keys File Modified Today</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.modified as aaa_date_modified
+| rename header.hostname as host_name
+| rename data.results.user.username as user_name
+| dedup host_name user_name
+| eval aaa_date_modified_epoch = strptime(aaa_date_modified, "%Y-%m-%dT%H:%M:%SZ")
+| where aaa_date_modified_epoch &gt;= relative_time(now(), "@d")
+| table host_name user_name aaa_date_modified
+| rename host_name as "Host Name", user_name as "User Name", aaa_date_modified as "Date Modified"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>SSH authorized_keys File Created Today</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.created as aaa_date_created
+| rename header.hostname as host_name
+| rename data.results.user.username as user_name
+| dedup host_name user_name
+| eval aaa_date_created_epoch = strptime(aaa_date_created, "%Y-%m-%dT%H:%M:%SZ")
+| where aaa_date_created_epoch &gt;= relative_time(now(), "@d")
+| table host_name user_name aaa_date_created
+| rename host_name as "Host Name", user_name as "User Name", aaa_date_created as "Date Created"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Hosts with Immutable SSH authorized_keys File Alerts</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.engine="sandfly_engine_user" data.name="user_ssh_authorized_keys_immutable" data.status="alert"
+| dedup header.host_id
+| table header.node_name header.hostname header.ip_addr data.results.explanation
+| rename header.node_name as "Hostname"
+| rename header.hostname as "Target Address"
+| rename header.ip_addr as "IP Address"
+| rename data.results.explanation as Explanation</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>User Names Associated with Specific SSH Key</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| spath output=aaa_keys path=data.results.user.ssh.authorized_keys.data{}.key
+| mvexpand aaa_keys
+| eval aaa_keys_count = mvcount(aaa_keys)
+| eval aaa_keys_len = len(aaa_keys)
+| where aaa_keys_len &gt; 0
+| fields aaa_keys header.hostname data.results.user.username
+| rename aaa_keys as ssh_key, header.hostname as host_name, data.results.user.username as user_name
+| dedup ssh_key, user_name, host_name
+| stats values(user_name) as "User Names" by ssh_key
+| rename ssh_key as "SSH Key"
+| table "User Names", "SSH Key"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>SSH authorized_keys File Last Accessed, Last Modified and Created</title>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.accessed_minutes as aaa_date_accessed_minutes
+| rename data.results.user.ssh.authorized_keys.file{}.date.accessed as aaa_date_accessed
+| eval temp_duration1 = tostring(aaa_date_accessed_minutes*60, "duration")
+| eval aaa_accessed_duration=replace(temp_duration1,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes \4 secs")
+| rename data.results.user.ssh.authorized_keys.file{}.date.created_minutes as aaa_date_created_minutes
+| rename data.results.user.ssh.authorized_keys.file{}.date.created as aaa_date_created
+| eval temp_duration2 = tostring(aaa_date_created_minutes*60, "duration")
+| eval aaa_created_duration=replace(temp_duration2,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes \4 secs")
+| rename data.results.user.ssh.authorized_keys.file{}.date.modified_minutes as aaa_date_modified_minutes
+| rename data.results.user.ssh.authorized_keys.file{}.date.modified as aaa_date_modified
+| eval temp_duration3 = tostring(aaa_date_modified_minutes*60, "duration")
+| eval aaa_modified_duration=replace(temp_duration3,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes \4 secs")
+| rename header.hostname as target_address
+| rename data.results.user.username as user_name
+| dedup target_address user_name
+| table header.node_name target_address header.ip_addr user_name aaa_accessed_duration aaa_modified_duration aaa_created_duration
+| sort aaa_date_accessed_minutes
+| rename header.node_name as "Hostname"
+| rename target_address as "Target Address"
+| rename header.ip_addr as "IP Address"
+| rename user_name as "Username"
+| rename aaa_accessed_duration as "Last Accessed"
+| rename aaa_modified_duration as "Last Modified"
+| rename aaa_created_duration as "Created"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

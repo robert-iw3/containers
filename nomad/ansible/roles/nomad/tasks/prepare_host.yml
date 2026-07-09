@@ -1,0 +1,209 @@
+---
+# Materialize the bind address as a host fact so hostvars extraction works
+# cross-host (role defaults are not visible through hostvars).
+- name: Resolve bind address fact
+  set_fact:
+    nomad_bind_addr: "{{ nomad_bind_addr }}"
+  tags: [prepare, configure, tls]
+
+- name: Ensure dependencies are installed
+  package:
+    name: "{{ ['unzip', 'curl', 'logrotate', 'openssl']
+      + (['chrony'] if nomad_manage_host_settings else [])
+      + (['podman', 'crun', 'slirp4netns', 'cni-plugins'] if nomad_podman_enabled else []) }}"
+    state: present
+  become: yes
+  tags: [prepare]
+
+- name: Enable cgroups v2
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX='
+    line: 'GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"'
+    state: present
+  become: yes
+  register: grub_config
+  when: nomad_podman_enabled and nomad_manage_host_settings
+  tags: [prepare]
+
+- name: Update GRUB
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  become: yes
+  when: grub_config.changed and ansible_os_family == "RedHat"
+  tags: [prepare]
+
+- name: Configure subuid and subgid for Nomad user
+  lineinfile:
+    path: "{{ item.path }}"
+    line: "{{ nomad_user }}:{{ item.start }}:{{ item.range }}"
+    state: present
+    create: yes
+    mode: "0644"
+  with_items:
+    - { path: "/etc/subuid", start: "{{ nomad_subuid_start }}", range: "{{ nomad_subuid_range }}" }
+    - { path: "/etc/subgid", start: "{{ nomad_subgid_start }}", range: "{{ nomad_subgid_range }}" }
+  become: yes
+  when: nomad_podman_enabled
+  tags: [prepare]
+
+- name: Ensure Podman is configured for rootless operation
+  file:
+    path: "/home/{{ nomad_user }}/.config/containers"
+    state: directory
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0700"
+  become: yes
+  when: nomad_podman_enabled
+  tags: [prepare]
+
+- name: Configure Podman storage for Nomad user
+  copy:
+    content: |
+      [storage]
+      driver = "overlay"
+      runroot = "/run/user/{{ ansible_user_uid }}"
+      graphroot = "/home/{{ nomad_user }}/.local/share/containers/storage"
+      [network]
+      network_backend = "cni"
+    dest: "/home/{{ nomad_user }}/.config/containers/storage.conf"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  when: nomad_podman_enabled
+  tags: [prepare]
+
+- name: Configure Podman CNI networks
+  copy:
+    content: |
+      {
+        "cniVersion": "0.4.0",
+        "name": "nomad",
+        "plugins": [
+          {
+            "type": "bridge",
+            "bridge": "nomad0",
+            "isGateway": true,
+            "ipMasq": true,
+            "ipam": {
+              "type": "host-local",
+              "subnet": "10.88.0.0/16",
+              "routes": [
+                { "dst": "0.0.0.0/0" }
+              ]
+            }
+          }
+        ]
+      }
+    dest: "/home/{{ nomad_user }}/.config/cni/net.d/99-nomad.conflist"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  when: nomad_podman_enabled
+  tags: [prepare]
+
+- name: Configure system limits for Nomad
+  pam_limits:
+    domain: "{{ nomad_user }}"
+    limit_type: "{{ item.type }}"
+    limit_item: "{{ item.item }}"
+    value: "{{ item.value }}"
+  loop:
+    - { type: soft, item: nofile, value: "{{ nomad_ulimits_nofile }}" }
+    - { type: hard, item: nofile, value: "{{ nomad_ulimits_nofile }}" }
+    - { type: soft, item: nproc, value: "{{ nomad_ulimits_nproc }}" }
+    - { type: hard, item: nproc, value: "{{ nomad_ulimits_nproc }}" }
+  become: yes
+  tags: [prepare]
+
+- name: Configure kernel parameters for Nomad and Podman
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: vm.max_map_count, value: "262144" }
+    - { name: net.core.somaxconn, value: "1024" }
+    - { name: user.max_user_namespaces, value: "28633" }
+    - { name: net.ipv4.ip_unprivileged_port_start, value: "80" }
+  become: yes
+  when: nomad_manage_host_settings
+  tags: [prepare]
+
+- name: Ensure swap is enabled
+  command: swapon -a
+  when: ansible_swaptotal_mb == 0 and nomad_manage_host_settings
+  become: yes
+  tags: [prepare]
+
+- name: Ensure time synchronization is enabled
+  systemd:
+    name: chronyd
+    enabled: yes
+    state: started
+  become: yes
+  when: nomad_manage_host_settings
+  tags: [prepare]
+
+- name: Compute the full set of addresses allowed to reach cluster ports
+  set_fact:
+    nomad_cluster_allowed_ips: >-
+      {{
+        (nomad_allowed_ips
+          + (groups['nomad_servers'] | default([]) | map('extract', hostvars, ['nomad_bind_addr']) | list)
+          + (groups['nomad_clients'] | default([]) | map('extract', hostvars, ['nomad_bind_addr']) | list))
+        | unique
+      }}
+  tags: [prepare]
+
+- name: Configure firewall for Nomad (RedHat)
+  firewalld:
+    port: "{{ item.1 }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+    source: "{{ item.0 }}"
+  loop: "{{ nomad_cluster_allowed_ips | product(['4646/tcp', '4647/tcp', '4648/tcp', '4648/udp']) | list }}"
+  become: yes
+  when: ansible_os_family == "RedHat" and nomad_manage_host_settings
+  tags: [prepare]
+
+- name: Configure firewall for Nomad (Debian)
+  iptables:
+    chain: INPUT
+    protocol: "{{ item.1.proto }}"
+    destination_port: "{{ item.1.port }}"
+    source: "{{ item.0 }}"
+    jump: ACCEPT
+    comment: "Allow Nomad cluster traffic"
+  loop: >-
+    {{ nomad_cluster_allowed_ips | product([
+      {'proto': 'tcp', 'port': '4646'},
+      {'proto': 'tcp', 'port': '4647'},
+      {'proto': 'tcp', 'port': '4648'},
+      {'proto': 'udp', 'port': '4648'},
+    ]) | list }}
+  become: yes
+  when: ansible_os_family == "Debian" and nomad_manage_host_settings
+  tags: [prepare]
+
+- name: Configure firewall for Podman CNI networking
+  iptables:
+    chain: INPUT
+    protocol: "{{ item.1.proto }}"
+    destination_port: "{{ item.1.port }}"
+    source: "{{ item.0 }}"
+    jump: ACCEPT
+    comment: "Allow Podman CNI"
+  loop: >-
+    {{ nomad_cluster_allowed_ips | product([
+      {'proto': 'tcp', 'port': '80'},
+      {'proto': 'tcp', 'port': '443'},
+      {'proto': 'udp', 'port': '1024-65535'},
+    ]) | list }}
+  become: yes
+  when: ansible_os_family == "Debian" and nomad_podman_enabled and nomad_manage_host_settings
+  tags: [prepare]

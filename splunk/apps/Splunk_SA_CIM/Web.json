@@ -1,0 +1,68 @@
+{
+  "modelName": "Web",
+  "displayName": "Web",
+  "description": "Web Data Model",
+  "editable": false,
+  "objects": [
+    {
+      "comment": {
+        "tags": ["web"]
+      },
+      "objectName": "Web",
+      "displayName": "Web",
+      "parentName": "BaseEvent",
+      "calculations": [
+        {
+          "outputFields": [
+            {
+              "fieldName": "uri_path",
+              "owner": "Web",
+              "type": "string",
+              "fieldSearch": "",
+              "required": false,
+              "multivalue": false,
+              "hidden": false,
+              "editable": true,
+              "displayName": "uri_path",
+              "comment": {
+                "description": "A string containing an initial '/' followed by the path of the URL, not including the query string or fragment.",
+                "recommended": true
+              }
+            }
+          ],
+          "calculationID": "Web_fillnull_uri_path",
+          "owner": "Web",
+          "editable": true,
+          "comment": "",
+          "calculationType": "Eval",
+          "expression": "if(isnull(uri_path) OR uri_path=\"\" OR uri_path=\"-\", if(NOT (isnull(url) OR url=\"\" OR url=\"-\"), \"/\".mvindex(split(mvjoin(mvindex(split(url, \"/\"), 3, -1), \"/\"), \"?\"), 0), \"(null)\"), uri_path)"
+        },
+        {
+          "outputFields": [
+            {
+              "fieldName": "uri_query",
+              "owner": "Web",
+              "type": "string",
+              "fieldSearch": "",
+              "required": false,
+              "multivalue": false,
+              "hidden": false,
+              "editable": true,
+              "displayName": "uri_query",
+              "comment": {
+                "description": "A string indicating the URL's parameter string; if any parameters are provided, this string includes all of them, beginning with the leading ? character.",
+                "recommended": true
+              }
+            }
+          ],
+          "calculationID": "Web_fillnull_uri_query",
+          "owner": "Web",
+          "editable": true,
+          "comment": "",
+          "calculationType": "Eval",
+          "expression": "if(isnull(uri_query) OR uri_query=\"\" OR uri_query=\"-\", if(like(url, \"%?%\"), \"?\".mvjoin(mvindex(split(url, \"?\"), 1,-1), \"?\"), \"(null)\"), uri_query)"
+        }
+      ]
+    }
+  ]
+}

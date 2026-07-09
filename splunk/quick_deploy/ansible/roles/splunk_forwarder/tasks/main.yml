@@ -1,0 +1,82 @@
+---
+- name: Download Splunk Universal Forwarder
+  ansible.builtin.get_url:
+    url: "{{ splunk_uf_download_url }}"
+    dest: "/tmp/splunkforwarder-{{ splunk_uf_version }}.tgz"
+    mode: "0644"
+  async: 600
+  poll: 0
+
+- name: Extract Splunk Universal Forwarder
+  ansible.builtin.unarchive:
+    src: "/tmp/splunkforwarder-{{ splunk_uf_version }}.tgz"
+    dest: /opt
+    remote_src: yes
+    owner: splunk
+    group: splunk
+
+- name: Set Splunk UF ownership and permissions
+  ansible.builtin.file:
+    path: "{{ splunk_uf_home }}"
+    owner: splunk
+    group: splunk
+    recurse: yes
+    mode: "0700"
+
+- name: Configure Splunk UF outputs.conf
+  ansible.builtin.template:
+    src: outputs.conf.j2
+    dest: "{{ splunk_uf_home }}/etc/system/local/outputs.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk UF
+
+- name: Configure Splunk UF to start on boot
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Splunk Universal Forwarder
+      After=network.target
+      [Service]
+      ExecStart={{ splunk_uf_home }}/bin/splunk start --accept-license --answer-yes --no-prompt
+      ExecStop={{ splunk_uf_home }}/bin/splunk stop
+      User=splunk
+      Group=splunk
+      Restart=always
+      LimitNOFILE=65535
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/splunkforwarder.service
+    mode: "0644"
+
+- name: Enable Splunk UF service
+  ansible.builtin.systemd:
+    name: splunkforwarder
+    enabled: yes
+    state: started
+
+- name: Configure Splunk UF to monitor system logs
+  ansible.builtin.copy:
+    content: |
+      [monitor:///var/log/syslog]
+      disabled = false
+      sourcetype = syslog
+      index = main
+      [monitor:///var/log/messages]
+      disabled = false
+      sourcetype = syslog
+      index = main
+    dest: "{{ splunk_uf_home }}/etc/system/local/inputs.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk UF
+
+- name: Backup Splunk UF configuration
+  ansible.builtin.copy:
+    src: "{{ splunk_uf_home }}/etc/system/local"
+    dest: "{{ splunk_uf_home }}/etc/system/local_backup"
+    owner: splunk
+    group: splunk
+    mode: "0600"

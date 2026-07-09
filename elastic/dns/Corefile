@@ -1,0 +1,21 @@
+.:53 {
+    rewrite continue {
+      name regex (^.[^.]+)(\.$) {1}.containers.local answer auto
+    }
+    fanout . 8.8.8.8 8.8.4.4
+    log
+    errors
+    health :8080
+}
+
+containers.local:53 {
+    file /etc/coredns/db.containers.local
+    log
+    errors
+}
+
+10.77.0.0/24:53 {
+    file /etc/coredns/db.10.77.0
+    log
+    errors
+}

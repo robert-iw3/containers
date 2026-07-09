@@ -1,0 +1,192 @@
+---
+# Multi-host Airflow 3.x (CeleryExecutor).
+#   airflow_control : postgres + redis + api-server + scheduler + dag-processor + triggerer
+#   airflow_workers : celery workers (scale horizontally, distinct IPs/hosts)
+# Every worker reaches the control host for the DB, the redis broker, and the
+# HTTPS execution API, so the control host's advertise address is the linchpin.
+
+- name: Resolve the control host's advertise address
+  ansible.builtin.set_fact:
+    control_host: >-
+      {{ hostvars[groups['airflow_control'][0]]['airflow_advertise_host']
+         | default(hostvars[groups['airflow_control'][0]]['ansible_host'])
+         | default(hostvars[groups['airflow_control'][0]]['ansible_default_ipv4']['address']) }}
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Create node directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0777"
+  loop:
+    - "{{ airflow_base_dir }}"
+    - "{{ dags_dir }}"
+    - "{{ logs_dir }}"
+    - "{{ certs_dir }}"
+    - "{{ airflow_base_dir }}/pgdata"
+  become: true
+
+- name: Sync DAGs onto the node (optional)
+  ansible.builtin.copy:
+    src: "{{ dags_src }}/{{ item }}"
+    dest: "{{ dags_dir }}/"
+    mode: "0644"
+  loop:
+    - telemetry_pipeline
+    - example_dags
+  become: true
+  when: dags_src | length > 0
+
+# --- TLS: generate the api-server cert on the control host, distribute to all ---
+- name: Generate the api-server TLS cert (control host)
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -x509 -newkey rsa:2048 -nodes -days 825
+      -keyout {{ certs_dir }}/tls.key -out {{ certs_dir }}/tls.crt
+      -subj "/CN=airflow-apiserver"
+      -addext "subjectAltName=IP:{{ control_host }},DNS:airflow-apiserver,DNS:localhost,IP:127.0.0.1"
+    creates: "{{ certs_dir }}/tls.crt"
+  become: true
+  when: "'airflow_control' in group_names"
+
+- name: Make the cert group-0 readable (the airflow container runs as uid 50000, gid 0)
+  ansible.builtin.file:
+    path: "{{ certs_dir }}/{{ item.f }}"
+    group: "0"
+    mode: "{{ item.m }}"
+  loop:
+    - {f: tls.crt, m: "0644"}
+    - {f: tls.key, m: "0640"}
+  become: true
+  when: "'airflow_control' in group_names"
+
+- name: Fetch the cert to the controller for distribution
+  ansible.builtin.fetch:
+    src: "{{ certs_dir }}/{{ item }}"
+    dest: "/tmp/airflow-tls/{{ item }}"
+    flat: true
+  loop: [tls.crt, tls.key]
+  become: true
+  when: "'airflow_control' in group_names"
+
+- name: Distribute the cert to worker hosts (workers only need the crt to trust it)
+  ansible.builtin.copy:
+    src: "/tmp/airflow-tls/tls.crt"
+    dest: "{{ certs_dir }}/tls.crt"
+    mode: "0644"
+  become: true
+  when: "'airflow_workers' in group_names and 'airflow_control' not in group_names"
+
+- name: Assemble the shared Airflow environment
+  ansible.builtin.set_fact:
+    airflow_env:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:{{ postgres_password }}@{{ control_host }}:{{ postgres_port }}/airflow"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://airflow:{{ postgres_password }}@{{ control_host }}:{{ postgres_port }}/airflow"
+      AIRFLOW__CELERY__BROKER_URL: "redis://{{ control_host }}:{{ redis_port }}/0"
+      AIRFLOW__CORE__FERNET_KEY: "{{ fernet_key }}"
+      AIRFLOW__API_AUTH__JWT_SECRET: "{{ jwt_secret }}"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "https://{{ control_host }}:{{ apiserver_port }}/execution/"
+      AIRFLOW__API__SSL_CERT: "/opt/airflow/certs/tls.crt"
+      AIRFLOW__API__SSL_KEY: "/opt/airflow/certs/tls.key"
+      SSL_CERT_FILE: "/opt/airflow/certs/tls.crt"
+      REQUESTS_CA_BUNDLE: "/opt/airflow/certs/tls.crt"
+      PYTHONPATH: "/home/airflow/.local/lib/python3.13/site-packages:/opt/airflow/dags/telemetry_pipeline:/opt/airflow/dags/examples"
+
+# --- Control-plane data services ---
+- name: Run postgres (control host)
+  containers.podman.podman_container:
+    name: airflow-postgres
+    image: "{{ postgres_image }}"
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+      POSTGRES_DB: airflow
+      # postgres:18 wants data in a subdirectory of the mount, not the mount root.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - "{{ airflow_base_dir }}/pgdata:/var/lib/postgresql/data"
+  become: true
+  when: "'airflow_control' in group_names"
+
+- name: Run redis (control host)
+  containers.podman.podman_container:
+    name: airflow-redis
+    image: "{{ redis_image }}"
+    state: started
+    restart_policy: always
+    network: host
+  become: true
+  when: "'airflow_control' in group_names"
+
+- name: Wait for postgres to accept connections (first-run initdb can be slow)
+  ansible.builtin.wait_for:
+    host: "{{ control_host }}"
+    port: "{{ postgres_port }}"
+    delay: 5
+    timeout: 240
+  when: "'airflow_control' in group_names"
+
+- name: Initialise the metadata DB and admin user (idempotent, control host)
+  # shell (not command) so the quote filter's shell-escaping is honoured.
+  ansible.builtin.shell:
+    cmd: >-
+      {{ container_runtime }} run --rm --network host
+      -v {{ certs_dir }}:/opt/airflow/certs:ro
+      -e _AIRFLOW_DB_MIGRATE=true
+      -e _AIRFLOW_WWW_USER_CREATE=true
+      -e _AIRFLOW_WWW_USER_USERNAME={{ airflow_admin_user | quote }}
+      -e _AIRFLOW_WWW_USER_PASSWORD={{ airflow_admin_password | quote }}
+      {% for k, v in airflow_env.items() %}-e {{ k }}={{ v | quote }} {% endfor %}
+      {{ airflow_image }} airflow version
+  become: true
+  when: "'airflow_control' in group_names"
+  changed_when: true
+
+- name: Run the control-plane Airflow components
+  containers.podman.podman_container:
+    name: "airflow-{{ item.name }}"
+    image: "{{ airflow_image }}"
+    command: "{{ item.command }}"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ airflow_env }}"
+    volumes:
+      - "{{ dags_dir }}:/opt/airflow/dags"
+      - "{{ logs_dir }}:/opt/airflow/logs"
+      - "{{ certs_dir }}:/opt/airflow/certs:ro"
+  loop:
+    - {name: apiserver, command: api-server}
+    - {name: scheduler, command: scheduler}
+    - {name: dag-processor, command: dag-processor}
+    - {name: triggerer, command: triggerer}
+  become: true
+  when: "'airflow_control' in group_names"
+
+# --- Worker plane ---
+- name: Run the Celery worker (worker hosts)
+  containers.podman.podman_container:
+    name: airflow-worker
+    image: "{{ airflow_image }}"
+    command: celery worker
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ airflow_env | combine({'DUMB_INIT_SETSID': '0'}) }}"
+    volumes:
+      - "{{ dags_dir }}:/opt/airflow/dags"
+      - "{{ logs_dir }}:/opt/airflow/logs"
+      - "{{ certs_dir }}:/opt/airflow/certs:ro"
+  become: true
+  when: "'airflow_workers' in group_names"

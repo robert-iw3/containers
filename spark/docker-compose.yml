@@ -1,0 +1,88 @@
+name: spark
+
+networks:
+  spark:
+    name: spark
+    driver: bridge
+
+volumes:
+  spark-events:   # shared event log so the history server sees every job
+
+x-worker: &worker
+  image: spark-worker:4.1.2-hadoop3
+  networks: [spark]
+  depends_on:
+    - spark-master
+  environment:
+    - SPARK_MASTER=spark://spark-master:7077
+    # Per-worker resources. Size to the host; total cluster capacity = sum of these.
+    - SPARK_WORKER_CORES=2
+    - SPARK_WORKER_MEMORY=2g
+  volumes:
+    - spark-events:/tmp/spark-events
+
+services:
+  spark-master:
+    image: spark-master:4.1.2-hadoop3
+    container_name: spark-master
+    hostname: spark-master
+    networks: [spark]
+    ports:
+      - "8080:8080"   # master web UI
+      - "7077:7077"   # cluster submit endpoint
+      - "6066:6066"   # REST submit endpoint
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+    volumes:
+      - spark-events:/tmp/spark-events
+
+  # Scale workers with: docker compose up -d --scale spark-worker=5
+  # (drop container_name to scale beyond one; kept unset intentionally).
+  spark-worker-1:
+    <<: *worker
+    container_name: spark-worker-1
+    ports: ["8081:8081"]
+  spark-worker-2:
+    <<: *worker
+    container_name: spark-worker-2
+    ports: ["8082:8081"]
+  spark-worker-3:
+    <<: *worker
+    container_name: spark-worker-3
+    ports: ["8083:8081"]
+
+  spark-history:
+    image: spark-history-server:4.1.2-hadoop3
+    container_name: spark-history
+    hostname: spark-history
+    networks: [spark]
+    ports:
+      - "18080:18080"
+    volumes:
+      - spark-events:/tmp/spark-events
+    depends_on:
+      - spark-master
+
+  # Run the telemetry ML pipeline against the cluster:
+  #   docker compose run --rm submit
+  # Adjust --rows/--devices for load. Not started by default (submit profile).
+  submit:
+    image: spark-submit:4.1.2-hadoop3
+    networks: [spark]
+    profiles: ["submit"]
+    volumes:
+      - ./pipelines:/pipelines:ro
+      - spark-events:/tmp/spark-events
+    depends_on:
+      - spark-master
+    entrypoint:
+      - /spark/bin/spark-submit
+      - --master
+      - spark://spark-master:7077
+      - /pipelines/telemetry_pipeline.py
+      - --rows
+      - "1000000"
+      - --devices
+      - "500"
+      - --output
+      - /tmp/telemetry-out

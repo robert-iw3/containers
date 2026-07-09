@@ -1,0 +1,53 @@
+# modify Dockerfile: ENV PROXY="on"
+# ADVANCED - The base path for Arkime web access. Must end with a / or bad things will happen
+# Only set when using a reverse proxy
+# webBasePath=/arkime/
+services:
+
+  certs:
+    build: ./nginx/certs
+    container_name: certs
+    environment:
+      - AUTHORITY_NAME=${AUTHORITY_NAME}
+      - AUTHORITY_PASSWORD=${AUTHORITY_PASSWORD}
+      - COMPANY=${COMPANY}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - COUNTRY_CODE=${COUNTRY_CODE}
+      - STATE=${STATE}
+      - CITY=${CITY}
+    volumes:
+      - ./nginx/secrets/certs:/certs:rw,z
+
+  nginx:
+    restart: always
+    image: ${NGINX_IMAGE:-docker.io/nginx:alpine}
+    #build:
+    #  context: ./nginx
+    #  dockerfile: Dockerfile
+    container_name: nginx
+    ports:
+      - 8005:8005/tcp
+      - 443:443/tcp
+    secrets:
+      - source: proxy.ca
+        target: /etc/nginx/certs/arkime_chain.pem
+      - source: proxy.cert
+        target: /etc/nginx/certs/arkime.pem
+      - source: proxy.key
+        target: /etc/nginx/certs/arkime_rsa.key
+      - source: proxy.dhparam
+        target: /etc/nginx/certs/dhparam.pem
+    volumes:
+      - ./nginx/config/arkime.conf:/etc/nginx/conf.d/arkime.conf:ro,Z
+    depends_on:
+      - certs
+
+secrets:
+  proxy.ca:
+    file: ./nginx/secrets/certs/arkime_chain.pem
+  proxy.key:
+    file: ./nginx/secrets/certs/arkime_rsa.key
+  proxy.cert:
+    file: ./nginx/secrets/certs/arkime.pem
+  proxy.dhparam:
+    file: ./nginx/secrets/certs/dhparam.pem

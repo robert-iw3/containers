@@ -1,0 +1,217 @@
+---
+volumes:
+  hanko-postgres:
+    name: hanko-postgres
+  hanko-postgres-backups:
+    name: hanko-postgres-backups
+
+networks:
+  hanko:
+    name: hanko
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+services:
+  hanko-migrate:
+    image: ${CONTAINER_REGISTRY}/hanko-backend:${TAG:-latest}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    volumes:
+      - ./config.yml:/etc/config/config.yml:ro,z
+      - ./tls:/etc/tls:ro,z
+    command: --config /etc/config/config.yml migrate up
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  hanko:
+    image: ${CONTAINER_REGISTRY}/hanko-backend:${TAG:-latest}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    ports:
+      - '8000:8000'
+      - '8001:8001'
+    command: serve --config /etc/config/config.yml all
+    volumes:
+      - ./config.yml:/etc/config/config.yml:ro,z
+      - ./tls:/etc/tls:ro,z
+    environment:
+      - PASSWORD_ENABLED=true
+    depends_on:
+      hanko-migrate:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "--cacert", "/etc/tls/ca.crt", "https://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgresql:
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-hanko
+    hostname: postgres-hanko.dev.io
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    volumes:
+      - hanko-postgres:/bitnami/postgresql:z
+      - ./tls:/etc/postgresql/tls:ro,z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_SSL: on
+      POSTGRESQL_SSL_CERT_FILE: /etc/postgresql/tls/tls.crt
+      POSTGRESQL_SSL_KEY_FILE: /etc/postgresql/tls/tls.key
+      POSTGRESQL_SSL_CA_FILE: /etc/postgresql/tls/ca.crt
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  elements:
+    image: ${CONTAINER_REGISTRY}/hanko-frontend:${TAG:-latest}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    ports:
+      - "9500:80"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mailslurper:
+    image: marcopas/docker-mailslurper:latest
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    volumes:
+      - ./tls:/etc/tls:ro,z
+    environment:
+      SMTP_AUTH_USER: ${SMTP_AUTH_USER}
+      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD}
+    ports:
+      - '8080:8080'
+      - '8085:8085'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backups:
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres2-hanko
+    hostname: postgres2-hanko.dev.io
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hanko
+    env_file:
+      - .env
+    volumes:
+      - hanko-postgres:/bitnami/postgresql:z
+      - hanko-postgres-backups:/srv/hanko-postgres/backups:Z
+      - ./tls:/etc/postgresql/tls:ro,z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-hanko.dev.io
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      POSTGRESQL_SSL: on
+      POSTGRESQL_SSL_CERT_FILE: /etc/postgresql/tls/tls.crt
+      POSTGRESQL_SSL_KEY_FILE: /etc/postgresql/tls/tls.key
+      POSTGRESQL_SSL_CA_FILE: /etc/postgresql/tls/ca.crt
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        && while true; do
+        pg_dump -h postgres-hanko.dev.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" --no-password | gzip > /srv/hanko-postgres/backups/hanko-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz
+        && find /srv/hanko-postgres/backups -type f -mtime +7 -delete;
+        sleep 24h; done
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M

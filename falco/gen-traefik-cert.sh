@@ -1,0 +1,9 @@
+# traefik dashboard
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout secrets/traefik.key -out secrets/traefik.crt \
+  -subj "/CN=*.podman.localhost"
+
+# tinyauth ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout secrets/tinyauth.key -out secrets/tinyauth.crt \
+  -subj "/CN=*tinyauth.local"

@@ -1,0 +1,134 @@
+<form version="1.1">
+  <label>Windows Metrics (chart)</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 60 minutes</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Processor.%_Processor_Time" instance="_Total"
+  [| mstats max(_value) AS maxValue WHERE earliest=-15m latest=now index="windows-metrics" metric_name="Processor.%_Processor_Time" instance="_Total" BY host span=1s
+  | stats avg(maxValue) AS CPU BY host
+  | sort -CPU
+  | table host
+  | head 5]
+  BY host span=1s
+| eval CPU=floor(maxValue)
+| timechart avg(CPU) AS avgCPU BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>RAM</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Memory.%_Committed_Bytes_In_Use"
+  [| mstats max(_value) AS maxValue WHERE earliest=-15m latest=now index="windows-metrics" metric_name="Memory.%_Committed_Bytes_In_Use" BY host span=1s
+  | stats avg(maxValue) AS Memory_Util BY host
+  | sort -Memory_Util
+  | table host
+  | head 5]
+  BY host span=1s
+| timechart avg(maxValue) AS Memory_Util BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Uplink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Network_Interface.Bytes_Sent/sec"
+  [| mstats max(_value) AS maxValue WHERE earliest=-15m latest=now index="windows-metrics" metric_name="Network_Interface.Bytes_Sent/sec" BY host span=1s
+  | stats avg(maxValue) AS Bytes_Sent_per_sec BY host
+  | sort -Bytes_Sent_per_sec
+  | table host
+  | head 5]
+  BY host span=1s
+| eval MBps=round(maxValue/pow(1024,2))
+| timechart avg(MBps) AS avgMBps BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">MBps</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Downlink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="windows-metrics" metric_name="Network_Interface.Bytes_Received/sec"
+  [| mstats max(_value) AS maxValue WHERE earliest=-15m latest=now index="windows-metrics" metric_name="Network_Interface.Bytes_Received/sec" BY host span=1s
+  | stats avg(maxValue) AS Bytes_Received_per_sec BY host
+  | sort -Bytes_Received_per_sec
+  | table host
+  | head 5]
+  BY host span=1s
+| eval MBps=round(maxValue/pow(1024,2))
+| timechart avg(MBps) AS avgMBps BY host span=5m
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">MBps</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>

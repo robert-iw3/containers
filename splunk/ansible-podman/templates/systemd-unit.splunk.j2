@@ -1,0 +1,53 @@
+{{ podman_systemd_comment | default('# Splunk Enterprise Podman Container') | comment }}
+
+[Unit]
+Description={{ podman_systemd_description | default('Splunk Enterprise Container') }}
+Documentation=https://docs.splunk.com/Documentation/Splunk/9.4.2/Installation/Systemrequirements
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=%t/containers /home/{{ podman_systemd_user }}/.local/share/containers
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+{% for var, value in podman_systemd_environment.items() %}
+Environment={{ var }}="{{ value }}"
+{% endfor %}
+Restart=on-failure
+TimeoutStopSec=120  # Increased for Splunk graceful shutdown
+KillMode=mixed
+KillSignal=SIGINT
+LimitNOFILE=64000  # Splunk recommendation
+LimitNPROC=20000   # Splunk recommendation
+LimitFSIZE=infinity  # For large log files
+CPUWeight=200      # Increased for Splunk’s CPU needs
+ExecStartPre=/bin/rm -f %t/%n-pid %t/%n-cid
+ExecStart=/usr/bin/podman run \
+  --cidfile=%t/%n-cid \
+  --cgroups=no-conmon \
+  --replace \
+  --name {{ podman_systemd_name }} \
+  --log-driver journald \
+  --read-only=false \
+{% for port in podman_systemd_ports %}
+  --publish {{ port }}:{{ port }} \
+{% endfor %}
+{% for volume in podman_systemd_volumes %}
+  --volume {{ volume }} \
+{% endfor %}
+{% if podman_systemd_network is defined %}
+  --network {{ podman_systemd_network }} \
+{% endif %}
+  --cap-drop=ALL \
+  --cap-add=NET_BIND_SERVICE \
+  --memory={{ memory }} \
+  --cpus={{ cpus }} \
+  {{ podman_systemd_image }}
+ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/%n-cid -t 120
+ExecStopPost=/usr/bin/podman rm --ignore --cidfile=%t/%n-cid
+Type=simple
+PIDFile=%t/%n-pid
+User={{ podman_systemd_user }}
+WorkingDirectory=/home/{{ podman_systemd_user }}
+
+[Install]
+WantedBy=default.target

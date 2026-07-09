@@ -1,0 +1,234 @@
+---
+services:
+  caddy:
+    image: caddy:2.11.4
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:3000:80
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - caddy
+    environment:
+      - FQDN=$FQDN
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-v1.91.0
+    restart: unless-stopped
+    volumes:
+      - ./litellm_config.yaml:/app/litellm_config.yaml
+      - $GOOGLE_CREDENTIAL_PATH:/app/google_credentials.json
+    networks:
+      - caddy
+      - postgres
+      - ollama
+      - redis
+    ports:
+      - 127.0.0.1:4000:4000
+    command: ["--config", "/app/litellm_config.yaml", "--port", "4000", "--num_workers", "4"]
+    environment:
+      - ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/google_credentials.json
+      - GOOGLE_VERTEX_LOCATION=$GOOGLE_VERTEX_LOCATION
+      - GOOGLE_VERTEX_PROJECT=$GOOGLE_VERTEX_PROJECT
+      - GROQ_API_KEY=$GROQ_API_KEY
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+      - POSTGRES_DB_URL=$POSTGRES_DB_URL
+      - UI_PASSWORD=$UI_PASSWORD
+      - UI_USERNAME=$UI_USERNAME
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    shm_size: 128mb
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    networks:
+      - postgres
+    environment:
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  ollama:
+    image: ollama/ollama:0.31.1
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+      - ./models:/models
+    ports:
+      - 127.0.0.1:11434:11434
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    networks:
+      - ollama
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:0.10.2
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ollama-webui:/app/backend/data
+    networks:
+      - caddy
+    environment:
+      - OPENAI_API_BASE_URL=http://litellm:4000
+      - OPENAI_API_KEY=sk-openwebui
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  yakgpt:
+    image: yakgpt/yakgpt:latest
+    restart: unless-stopped
+    networks:
+      - caddy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  nextchat:
+    image: ${NEXTCHAT_IMAGE:-yidadaa/chatgpt-next-web:v2.16.1}
+    restart: unless-stopped
+    networks:
+      - caddy
+    environment:
+      - OPENAI_API_KEY=any
+      - BASE_URL=http://litellm:4000/
+      - HIDE_USER_API_KEY=1
+      - CUSTOM_MODELS=-all,openai-gpt-4o,openai-gpt-4-turbo,openai-gpt-3.5-turbo,openai-o3,google-gemini-2.5-pro,anthropic-claude-4-sonnet,anthropic-claude-3-opus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  ollama-webui:
+    image: ollama-webui:local
+    restart: unless-stopped
+    init: true
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434/api
+    networks:
+      - caddy
+      - ollama
+    profiles:
+      - custom-ui
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:8.8.0
+    restart: unless-stopped
+    networks:
+      - redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - 127.0.0.1:${PROMETHEUS_PORT:-9090}:9090
+    networks:
+      - caddy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  caddy:
+  postgres:
+  ollama:
+  redis:
+
+volumes:
+  caddy_config:
+  caddy_data:
+  postgres_db:
+  ollama-webui:
+  ollama:
+  prometheus_data:

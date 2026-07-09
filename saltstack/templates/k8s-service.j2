@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: salt-master
+  namespace: {{ namespace }}
+spec:
+  selector:
+    app: salt-master
+  ports:
+  - name: salt-pub
+    port: 4505
+    targetPort: 4505
+  - name: salt-req
+    port: 4506
+    targetPort: 4506
+  type: ClusterIP

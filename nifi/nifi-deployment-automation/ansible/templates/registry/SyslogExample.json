@@ -1,0 +1,1360 @@
+{
+	"template": {
+		"description": "This flow shows how to send and receive messages from Syslog. It requires a Syslog server to be accepting incoming connections using the protocol and port specified in PutSyslog, and forwarding connections using the protocol and port specified in ListenSyslog.",
+		"name": "SyslogExample",
+		"snippet": {
+			"connections": [
+				{
+					"id": "c90de72d-9e4f-4d34-9c72-f07bdf400753",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "687.0",
+						"y": "308.0"
+					},
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "2bd612a4-f019-49ab-b2b8-9cad0e9b7d4d",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "invalid",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "25cbf180-1975-471f-b592-0c8d335ea288",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "6f247e94-18c6-4d90-8c37-e019e23c5d09",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "7ab0725b-cb9e-4622-bfde-4eeb908c7479",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "failure",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "2174076c-188e-4494-9a2d-5d565c6ee0b3",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "1248c97b-44ee-4bfc-b608-c554a02a18e6",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "fc76cda2-f87c-48db-bda6-e81a61a7137e",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "cb712f6c-c390-48f1-8afe-4f658821ef7b",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "1a116e87-ad56-481d-856b-bd1a960e9631",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "2174076c-188e-4494-9a2d-5d565c6ee0b3",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "fc76cda2-f87c-48db-bda6-e81a61a7137e",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "65a1925e-9c9e-40ee-9541-3b9f951e2757",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "1818.0",
+						"y": "659.0"
+					},
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "aec39197-e4ed-4b25-99fe-70546b4c8e6c",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "invalid",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "2174076c-188e-4494-9a2d-5d565c6ee0b3",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "cb126a55-9fe9-4da0-bf0f-5b069b09eeb5",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "936.0",
+						"y": "307.0"
+					},
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "7f2e6b0c-6f2b-437c-8176-9c42ba848fc6",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "25cbf180-1975-471f-b592-0c8d335ea288",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "68e37535-c417-4c97-9712-b63600602254",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"bends": {
+						"x": "1402.0",
+						"y": "659.0"
+					},
+					"destination": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "0e8f7dd8-68c9-41d6-862c-bb1c66edaa7d",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "0",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "6a519c59-9557-4837-a261-f539b369d221",
+						"id": "2174076c-188e-4494-9a2d-5d565c6ee0b3",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"labels": [
+				{
+					"id": "67ca815b-b496-467e-9679-3ea5599e4a1f",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1215.0",
+						"y": "122.0"
+					},
+					"height": "837.0",
+					"label": "Expects the Syslog Server to be accepting incoming connections for the protocol and port configured in PutSyslog.",
+					"style": {
+						"entry": [
+							{
+								"key": "background-color",
+								"value": "#a9ff8f"
+							},
+							{
+								"key": "font-size",
+								"value": "12px"
+							}
+						]
+					},
+					"width": "783.0"
+				},
+				{
+					"id": "217a2982-6a00-46a2-953e-54590abc435f",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "485.0",
+						"y": "122.0"
+					},
+					"height": "409.0",
+					"label": "Expects the Syslog Server to be forwarding messages using the protocol and port configured in ListenSyslog.",
+					"style": {
+						"entry": [
+							{
+								"key": "background-color",
+								"value": "#91daff"
+							},
+							{
+								"key": "font-size",
+								"value": "12px"
+							}
+						]
+					},
+					"width": "699.0"
+				}
+			],
+			"processors": [
+				{
+					"id": "7f2e6b0c-6f2b-437c-8176-9c42ba848fc6",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "850.0",
+						"y": "409.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "25cbf180-1975-471f-b592-0c8d335ea288",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "665.0",
+						"y": "175.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "2",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Protocol",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "TCP",
+												"value": "TCP"
+											},
+											{
+												"displayName": "UDP",
+												"value": "UDP"
+											}
+										],
+										"defaultValue": "UDP",
+										"description": "The protocol for Syslog communication, either TCP or UDP.",
+										"displayName": "Protocol",
+										"dynamic": "false",
+										"name": "Protocol",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Port",
+									"value": {
+										"description": "The port for Syslog communication.",
+										"displayName": "Port",
+										"dynamic": "false",
+										"name": "Port",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Receive Buffer Size",
+									"value": {
+										"defaultValue": "65507 B",
+										"description": "The size of each buffer used to receive Syslog messages. Adjust this value appropriately based on the expected size of the incoming Syslog messages. When UDP is selected each buffer will hold one Syslog message. When TCP is selected messages are read from an incoming connection until the buffer is full, or the connection is closed.",
+										"displayName": "Receive Buffer Size",
+										"dynamic": "false",
+										"name": "Receive Buffer Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Size of Socket Buffer",
+									"value": {
+										"defaultValue": "1 MB",
+										"description": "The maximum size of the socket buffer that should be used. This is a suggestion to the Operating System to indicate how big the socket buffer should be. If this value is set too low, the buffer may fill up before the data can be read, and incoming data will be dropped.",
+										"displayName": "Max Size of Socket Buffer",
+										"dynamic": "false",
+										"name": "Max Size of Socket Buffer",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Max Number of TCP Connections",
+									"value": {
+										"defaultValue": "2",
+										"description": "The maximum number of concurrent connections to accept Syslog messages in TCP mode.",
+										"displayName": "Max Number of TCP Connections",
+										"dynamic": "false",
+										"name": "Max Number of TCP Connections",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "Specifies which character set of the Syslog messages",
+										"displayName": "Character Set",
+										"dynamic": "false",
+										"name": "Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Protocol",
+									"value": "TCP"
+								},
+								{
+									"key": "Port",
+									"value": "7078"
+								},
+								{
+									"key": "Receive Buffer Size",
+									"value": "65 KB"
+								},
+								{
+									"key": "Max Size of Socket Buffer",
+									"value": "1 MB"
+								},
+								{
+									"key": "Max Number of TCP Connections"
+								},
+								{
+									"key": "Character Set",
+									"value": "UTF-8"
+								}
+							]
+						},
+						"runDurationMillis": "50",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Receive from Syslog",
+					"relationships": [
+						{
+							"autoTerminate": "false",
+							"description": "Syslog messages that do not match one of the expected formats will be sent out this relationship as a FlowFile per message.",
+							"name": "invalid"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "Syslog messages that match one of the expected formats will be sent out this relationship as a FlowFile per message.",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.ListenSyslog"
+				},
+				{
+					"id": "aec39197-e4ed-4b25-99fe-70546b4c8e6c",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1666.0",
+						"y": "835.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "0e8f7dd8-68c9-41d6-862c-bb1c66edaa7d",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1249.0",
+						"y": "838.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "2bd612a4-f019-49ab-b2b8-9cad0e9b7d4d",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "511.0",
+						"y": "409.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "fc76cda2-f87c-48db-bda6-e81a61a7137e",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1443.0",
+						"y": "343.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression",
+									"value": {
+										"description": "Regular expression for attributes to be deleted from flowfiles.",
+										"displayName": "Delete Attributes Expression",
+										"dynamic": "false",
+										"name": "Delete Attributes Expression",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "syslog.body",
+									"value": {
+										"description": "",
+										"displayName": "syslog.body",
+										"dynamic": "true",
+										"name": "syslog.body",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "syslog.priority",
+									"value": {
+										"description": "",
+										"displayName": "syslog.priority",
+										"dynamic": "true",
+										"name": "syslog.priority",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "syslog.timestamp",
+									"value": {
+										"description": "",
+										"displayName": "syslog.timestamp",
+										"dynamic": "true",
+										"name": "syslog.timestamp",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression"
+								},
+								{
+									"key": "syslog.body",
+									"value": "test message"
+								},
+								{
+									"key": "syslog.priority",
+									"value": "10"
+								},
+								{
+									"key": "syslog.timestamp",
+									"value": "${now():format(\"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'\")}"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Set priority, timestamp, and body",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "cb712f6c-c390-48f1-8afe-4f658821ef7b",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1443.0",
+						"y": "183.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "File Size",
+									"value": {
+										"description": "The size of the file that will be used",
+										"displayName": "File Size",
+										"dynamic": "false",
+										"name": "File Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "1",
+										"description": "The number of FlowFiles to be transferred in each invocation",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Data Format",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "Binary",
+												"value": "Binary"
+											},
+											{
+												"displayName": "Text",
+												"value": "Text"
+											}
+										],
+										"defaultValue": "Binary",
+										"description": "Specifies whether the data should be Text or Binary",
+										"displayName": "Data Format",
+										"dynamic": "false",
+										"name": "Data Format",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Unique FlowFiles",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles will get the same content but this offers much higher throughput",
+										"displayName": "Unique FlowFiles",
+										"dynamic": "false",
+										"name": "Unique FlowFiles",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "File Size",
+									"value": "1 kb"
+								},
+								{
+									"key": "Batch Size",
+									"value": "1"
+								},
+								{
+									"key": "Data Format",
+									"value": "Binary"
+								},
+								{
+									"key": "Unique FlowFiles",
+									"value": "false"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "1 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "GenerateFlowFile",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+				},
+				{
+					"id": "7ab0725b-cb9e-4622-bfde-4eeb908c7479",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1459.0",
+						"y": "714.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": {
+								"key": "Delete Attributes Expression",
+								"value": {
+									"description": "Regular expression for attributes to be deleted from flowfiles.",
+									"displayName": "Delete Attributes Expression",
+									"dynamic": "false",
+									"name": "Delete Attributes Expression",
+									"required": "false",
+									"sensitive": "false",
+									"supportsEl": "false"
+								}
+							}
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": {
+								"key": "Delete Attributes Expression"
+							}
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "UpdateAttribute",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "2174076c-188e-4494-9a2d-5d565c6ee0b3",
+					"parentGroupId": "6a519c59-9557-4837-a261-f539b369d221",
+					"position": {
+						"x": "1448.0",
+						"y": "505.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "3",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Hostname",
+									"value": {
+										"defaultValue": "localhost",
+										"description": "The ip address or hostname of the Syslog server.",
+										"displayName": "Hostname",
+										"dynamic": "false",
+										"name": "Hostname",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Protocol",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "TCP",
+												"value": "TCP"
+											},
+											{
+												"displayName": "UDP",
+												"value": "UDP"
+											}
+										],
+										"defaultValue": "UDP",
+										"description": "The protocol for Syslog communication, either TCP or UDP.",
+										"displayName": "Protocol",
+										"dynamic": "false",
+										"name": "Protocol",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Port",
+									"value": {
+										"description": "The port for Syslog communication.",
+										"displayName": "Port",
+										"dynamic": "false",
+										"name": "Port",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Idle Connection Expiration",
+									"value": {
+										"defaultValue": "5 seconds",
+										"description": "The amount of time a connection should be held open without being used before closing the connection.",
+										"displayName": "Idle Connection Expiration",
+										"dynamic": "false",
+										"name": "Idle Connection Expiration",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Send Buffer Size",
+									"value": {
+										"defaultValue": "2048 B",
+										"description": "The size of each buffer used to send a Syslog message. Adjust this value appropriately based on the expected size of the Syslog messages being produced. Messages larger than this buffer size will still be sent, but will not make use of the buffer pool.",
+										"displayName": "Send Buffer Size",
+										"dynamic": "false",
+										"name": "Send Buffer Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"defaultValue": "25",
+										"description": "The number of incoming FlowFiles to process in a single execution of this processor.",
+										"displayName": "Batch Size",
+										"dynamic": "false",
+										"name": "Batch Size",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "Specifies which character set of the Syslog messages",
+										"displayName": "Character Set",
+										"dynamic": "false",
+										"name": "Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Message Priority",
+									"value": {
+										"description": "The priority for the Syslog messages, excluding < >.",
+										"displayName": "Message Priority",
+										"dynamic": "false",
+										"name": "Message Priority",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Message Version",
+									"value": {
+										"description": "The version for the Syslog messages.",
+										"displayName": "Message Version",
+										"dynamic": "false",
+										"name": "Message Version",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Message Timestamp",
+									"value": {
+										"description": "The timestamp for the Syslog messages. The timestamp can be an RFC5424 timestamp with a format of \"yyyy-MM-dd'T'HH:mm:ss.SZ\" or \"yyyy-MM-dd'T'HH:mm:ss.S+hh:mm\", \" or it can be an RFC3164 timestamp with a format of \"MMM d HH:mm:ss\".",
+										"displayName": "Message Timestamp",
+										"dynamic": "false",
+										"name": "Message Timestamp",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Message Hostname",
+									"value": {
+										"defaultValue": "${hostname(true)}",
+										"description": "The hostname for the Syslog messages.",
+										"displayName": "Message Hostname",
+										"dynamic": "false",
+										"name": "Message Hostname",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "Message Body",
+									"value": {
+										"description": "The body for the Syslog messages.",
+										"displayName": "Message Body",
+										"dynamic": "false",
+										"name": "Message Body",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Hostname",
+									"value": "localhost"
+								},
+								{
+									"key": "Protocol",
+									"value": "TCP"
+								},
+								{
+									"key": "Port",
+									"value": "514"
+								},
+								{
+									"key": "Idle Connection Expiration",
+									"value": "5 seconds"
+								},
+								{
+									"key": "Send Buffer Size",
+									"value": "65 KB"
+								},
+								{
+									"key": "Batch Size",
+									"value": "25"
+								},
+								{
+									"key": "Character Set",
+									"value": "UTF-8"
+								},
+								{
+									"key": "Message Priority",
+									"value": "${syslog.priority}"
+								},
+								{
+									"key": "Message Version"
+								},
+								{
+									"key": "Message Timestamp",
+									"value": "${syslog.timestamp}"
+								},
+								{
+									"key": "Message Hostname",
+									"value": "${hostname(true)}"
+								},
+								{
+									"key": "Message Body",
+									"value": "${syslog.body}"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Send to Syslog",
+					"relationships": [
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles that failed to send to Syslog are sent out this relationship.",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles that do not form a valid Syslog message are sent out this relationship.",
+							"name": "invalid"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles that are sent successfully to Syslog are sent out this relationship.",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.PutSyslog"
+				}
+			]
+		},
+		"timestamp": "11/05/2022 10:27:15 EST"
+	}
+}

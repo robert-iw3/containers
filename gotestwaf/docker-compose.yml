@@ -1,0 +1,19 @@
+---
+services:
+  gotestwaf:
+    image: gotestwaf
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ${OUTPUT_DIR:-./reports}:/app/reports
+    command: ["/app/gotestwaf", "--url=${TARGET_URL}", "--noEmailReport"]
+    deploy:
+      mode: replicated
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep gotestwaf | grep -v grep"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

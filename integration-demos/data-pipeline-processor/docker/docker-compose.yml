@@ -1,0 +1,375 @@
+---
+networks:
+  pipeline_internal_system_network:
+    driver: bridge
+
+services:
+  hbase:
+    build: hbase/
+    #image: docker.io/openeuler/hbase:latest
+    init: true
+    hostname: hbase
+    container_name: hbase
+    ports:
+      - "2180:2181" # client port - http://localhost:2180
+      - "16010:16010" # HMaster info web UI - http://localhost:16010
+      - "8079:8080"
+      - "8085:8085"
+      - "9090:9090"
+      - "9095:9095"
+    networks:
+      - pipeline_internal_system_network
+
+  kafka-zookeeper:
+    image: docker.io/confluentinc/cp-zookeeper:7.2.15
+    init: true
+    hostname: kafka-zookeeper # To differ from Druid zookeeper
+    container_name: kafka_zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - pipeline_internal_system_network
+
+  kafka-broker:
+    image: docker.io/confluentinc/cp-enterprise-kafka:7.2.15
+    init: true
+    hostname: broker
+    container_name: kafka_broker
+    depends_on:
+      - kafka-zookeeper
+    ports:
+      - "29092:29092"
+    volumes:
+      - $PWD/kafka/data:/var/lib/kafka/data/ # for ease of data inspection
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'kafka-zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # variable substitution to allow quick sync of configuration and setting
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_INTERNAL_SERVER},PLAINTEXT_HOST://${KAFKA_BOOTSTRAP_SERVER}
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_HOURS: 720
+      KAFKA_TRANSACTIONAL_ID_EXPIRATION_MS: 2073600000
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: ${KAFKA_INTERNAL_SERVER}
+      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - pipeline_internal_system_network
+
+  kafka-setup:
+    image: docker.io/confluentinc/cp-enterprise-kafka:7.2.15
+    init: true
+    container_name: kafka_setup
+    depends_on:
+      - kafka-broker
+    # variable substitution to allow quick sync of configuration and setting
+    environment:
+      KAFKA_INTERNAL_SERVER: ${KAFKA_INTERNAL_SERVER}
+      KAFKA_SRC_ORDER_TOPIC: ${KAFKA_SRC_ORDER_TOPIC}
+      KAFKA_DST_TXN_TOPIC: ${KAFKA_DST_TXN_TOPIC}
+      KAFKA_DST_TXN_USER_TOPIC: ${KAFKA_DST_TXN_USER_TOPIC}
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                      cub kafka-ready -b ${KAFKA_INTERNAL_SERVER} 1 200 && \
+                      kafka-topics --create --if-not-exists --zookeeper kafka-zookeeper:2181 --partitions 3 --replication-factor 1 --topic ${KAFKA_SRC_ORDER_TOPIC} && \
+                      kafka-topics --create --if-not-exists --zookeeper kafka-zookeeper:2181 --partitions 3 --replication-factor 1 --topic ${KAFKA_DST_TXN_TOPIC} && \
+                      kafka-topics --create --if-not-exists --zookeeper kafka-zookeeper:2181 --partitions 3 --replication-factor 1 --topic ${KAFKA_DST_TXN_USER_TOPIC} '"
+    networks:
+      - pipeline_internal_system_network
+
+  kafka-python:
+    image: docker.io/continuumio/miniconda3:latest
+    init: true
+    container_name: kafka_python
+    depends_on:
+      - kafka-setup
+    volumes:
+      - $PWD/../python:/python
+    environment:
+      KAFKA_INTERNAL_SERVER: ${KAFKA_INTERNAL_SERVER}
+      KAFKA_SRC_ORDER_TOPIC: ${KAFKA_SRC_ORDER_TOPIC}
+      KAFKA_DST_TXN_TOPIC: ${KAFKA_DST_TXN_TOPIC}
+      KAFKA_DST_TXN_USER_TOPIC: ${KAFKA_DST_TXN_USER_TOPIC}
+    # generate data to Kafka source topic
+    command: "bash -c 'conda env create -f python/environment.yml && \
+              conda run --no-capture-output -n big-data-processing python python/kafka_main.py'"
+    networks:
+      - pipeline_internal_system_network
+
+  spark-master:
+    image: docker.io/bitnami/spark:4.0.0
+    init: true
+    hostname: spark-master
+    container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - '8080:8080' # http://localhost:8080
+    networks:
+      - pipeline_internal_system_network
+
+  spark-worker:
+    image: docker.io/bitnami/spark:4.0.0
+    init: true
+    container_name: spark_worker
+    depends_on:
+      - spark-master
+    volumes:
+      - $PWD/..:/project-data-processing-pipeline # for cluster use
+      - ./jars:/opt/bitnami/spark/ivy:z # https://stackoverflow.com/questions/60630832/i-cannot-use-package-option-on-bitnami-spark-docker-container
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=${SPARK_MASTER}
+      - SPARK_WORKER_MEMORY=6G
+      - SPARK_WORKER_CORES=6
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - '8081:8081' # http://localhost:8081
+    networks:
+      - pipeline_internal_system_network
+
+  spark-submit:
+    image: docker.io/bitnami/spark:4.0.0
+    init: true
+    hostname: ${SPARK_SUBMIT_HOSTNAME}
+    container_name: spark_submit
+    depends_on:
+      - spark-master
+      - spark-worker
+      - kafka-setup
+      - hbase
+    volumes:
+      - $PWD/..:/project-data-processing-pipeline # for client use
+      - ./jars:/opt/bitnami/spark/ivy:z # https://stackoverflow.com/questions/60630832/i-cannot-use-package-option-on-bitnami-spark-docker-container
+    environment:
+      SPARK_MASTER: ${SPARK_MASTER}
+      SPARK_SUBMIT_HOSTNAME: ${SPARK_SUBMIT_HOSTNAME}
+      JOB: ${JOB}
+      CONFIG_RESOURCE_PATH: ${CONFIG_RESOURCE_PATH}
+      KAFKA_START_TIME: ${KAFKA_START_TIME}
+      KAFKA_END_TIME: ${KAFKA_END_TIME}
+    ports:
+      - '8082:8082' # http://localhost:8082
+    networks:
+      - pipeline_internal_system_network
+    command: "bash -c 'sleep infinity'"
+
+    # client
+    #    "bash -c 'cd /project-data-processing-pipeline && \
+    #                       spark-submit \
+    #                       --verbose \
+    #                       --master ${SPARK_MASTER} \
+    #                       --deploy-mode client \
+    #                       --driver-memory 4G \
+    #                       --num-executors 3 \
+    #                       --executor-cores 1 \
+    #                       --executor-memory 1G \
+    #                       --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.5 \
+    #                       --files src/main/resources/log4j.properties \
+    #                       --conf spark.jars.ivy=/opt/bitnami/spark/ivy \
+    #                       --conf spark.speculation=false \
+    #                       --conf spark.driver.extraJavaOptions=-Dlog4j.configuration=log4j.properties \
+    #                       --conf spark.executor.extraJavaOptions=-Dlog4j.configuration=log4j.properties \
+    #                       --conf spark.driver.bindAddress=${SPARK_SUBMIT_HOSTNAME} \
+    #                       --conf spark.driver.host=${SPARK_SUBMIT_HOSTNAME} \
+    #                       --class streaming.spark.StreamingRunner \
+    #                       sparkpl/target/sparkpl-1.0-SNAPSHOT.jar \
+    #                       --job ${JOB} --config-resource-path ${CONFIG_RESOURCE_PATH} --kafka-start-time ${KAFKA_END_TIME} --kafka-end-time ${KAFKA_END_TIME}'"
+
+    # cluster - Include extraPath for both executor and driver since driver is now on a spark worker and it does not
+    #           know the directory where package (--packages) is saved. In cluster mode, only the application jar is
+    #           copied from client machine to worker, so the files under "--files" needs to be available in worker
+    #  "bash -c 'spark-submit \
+    #            --verbose \
+    #            --master ${SPARK_MASTER} \
+    #            --deploy-mode cluster \
+    #            --driver-memory 4G \
+    #            --num-executors 3 \
+    #            --executor-cores 1 \
+    #            --executor-memory 1G \
+    #            --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.5 \
+    #            --files /project-data-processing-pipeline/sparkpl/src/main/resources/log4j.properties \
+    #            --conf spark.jars.ivy=/opt/bitnami/spark/ivy \
+    #            --conf spark.speculation=false \
+    #            --conf spark.driver.extraJavaOptions=-Dlog4j.configuration=log4j.properties \
+    #            --conf spark.executor.extraJavaOptions=-Dlog4j.configuration=log4j.properties \
+    #            --conf spark.driver.extraClassPath=/opt/bitnami/spark/ivy/jars/* \
+    #            --conf spark.executor.extraClassPath=/opt/bitnami/spark/ivy/jars/* \
+    #            --class streaming.spark.StreamingRunner \
+    #            /project-data-processing-pipeline/sparkpl/target/sparkpl-1.0-SNAPSHOT.jar \
+    #            --job ${JOB} --config-resource-path ${CONFIG_RESOURCE_PATH} --kafka-start-time ${KAFKA_END_TIME} --kafka-end-time ${KAFKA_END_TIME} & \
+    #            sleep infinity'"
+
+  flink-jobmanager:
+    image: docker.io/flink:2.0.0-scala_2.12-java17
+    init: true
+    ports:
+      - "8083:8081"
+    command: jobmanager
+    container_name: flink_jobmanager
+    volumes:
+      - $PWD/..:/project-data-processing-pipeline
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+    networks:
+      - pipeline_internal_system_network
+
+  flink-taskmanager:
+    image: docker.io/flink:2.0.0-scala_2.12-java17
+    init: true
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    container_name: flink_taskmanager
+    scale: 1 # allow scaling - docker-compose scale flink-taskmanager=<N>
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+    networks:
+      - pipeline_internal_system_network
+
+  druid-postgres:
+    image: docker.io/postgres:latest
+    init: true
+    container_name: druid_postgres
+    hostname: postgres # To avoid hectic change of Druid components' setting
+    volumes:
+      - $PWD/druid/metadata_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=FoolishPassword
+      - POSTGRES_USER=druid
+      - POSTGRES_DB=druid
+    networks:
+      - pipeline_internal_system_network
+
+  druid-zookeeper:
+    image: docker.io/zookeeper:3.9
+    init: true
+    container_name: druid_zookeeper
+    hostname: zookeeper # To avoid hectic change of Druid components' setting
+    ports:
+      - "2182:2181"
+    environment:
+      - ZOO_MY_ID=1
+    networks:
+      - pipeline_internal_system_network
+
+  druid-coordinator:
+    image: docker.io/apache/druid:33.0.0
+    init: true
+    container_name: druid_coordinator
+    volumes:
+      - $PWD/druid/druid_shared:/opt/shared
+      - $PWD/druid/coordinator_var:/opt/druid/var
+    depends_on:
+      - druid-zookeeper
+      - druid-postgres
+    ports:
+      - "8086:8081"
+    command:
+      - coordinator
+    env_file:
+      - druid-environment
+    networks:
+      - pipeline_internal_system_network
+
+  druid-broker:
+    image: docker.io/apache/druid:33.0.0
+    init: true
+    container_name: druid_broker
+    volumes:
+      - $PWD/druid/broker_var:/opt/druid/var
+    depends_on:
+      - druid-zookeeper
+      - druid-postgres
+      - druid-coordinator
+    ports:
+      - "8087:8082"
+    command:
+      - broker
+    env_file:
+      - druid-environment
+    networks:
+      - pipeline_internal_system_network
+
+  druid-historical:
+    image: docker.io/apache/druid:33.0.0
+    init: true
+    container_name: druid_historical
+    volumes:
+      - $PWD/druid/druid_shared:/opt/shared
+      - $PWD/druid/historical_var:/opt/druid/var
+    depends_on:
+      - druid-zookeeper
+      - druid-postgres
+      - druid-coordinator
+    ports:
+      - "8088:8083"
+    command:
+      - historical
+    env_file:
+      - druid-environment
+    networks:
+      - pipeline_internal_system_network
+
+  druid-middlemanager:
+    image: docker.io/apache/druid:33.0.0
+    init: true
+    container_name: druid_middlemanager
+    volumes:
+      - $PWD/druid/druid_shared:/opt/shared
+      - $PWD/druid/middle_var:/opt/druid/var
+    depends_on:
+      - druid-zookeeper
+      - druid-postgres
+      - druid-coordinator
+    ports:
+      - "8089:8091"
+      - "8100-8105:8100-8105"
+    command:
+      - middleManager
+    env_file:
+      - druid-environment
+    networks:
+      - pipeline_internal_system_network
+
+  druid-router:
+    image: docker.io/apache/druid:33.0.0
+    init: true
+    container_name: druid_router
+    volumes:
+      - $PWD/druid/router_var:/opt/druid/var
+    depends_on:
+      - druid-zookeeper
+      - druid-postgres
+      - druid-coordinator
+    ports:
+      - "8889:8888" # http://localhost:8889
+    command:
+      - router
+    env_file:
+      - druid-environment
+    networks:
+      - pipeline_internal_system_network
+

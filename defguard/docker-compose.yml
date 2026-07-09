@@ -1,0 +1,144 @@
+---
+volumes:
+  defguard-db:
+    name: defguard-db
+  certs:
+    name: certs
+
+# Define isolated network with encryption
+networks:
+  defguard:
+    name: defguard
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: "1500"
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  env_file:
+    - .env
+  networks:
+    - defguard
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 20s
+
+services:
+  core:
+    <<: *common-vars-apps
+    image: ghcr.io/defguard/defguard:current
+    environment:
+      DEFGUARD_COOKIE_INSECURE: ${DEFGUARD_COOKIE_INSECURE:-false}
+      DEFGUARD_COOKIE_DOMAIN: ${DEFGUARD_COOKIE_DOMAIN:-localhost}
+      DEFGUARD_LOG_LEVEL: ${DEFGUARD_LOG_LEVEL:-info}
+      DEFGUARD_DB_HOST: ${DEFGUARD_DB_HOST:-db}
+      DEFGUARD_DB_PORT: ${DEFGUARD_DB_PORT:-5432}
+      DEFGUARD_URL: ${DEFGUARD_URL:-https://localhost:8000}
+      RUST_BACKTRACE: ${RUST_BACKTRACE:-0}
+      DEFGUARD_GRPC_TLS: "true"
+    ports:
+      - "8000:8000" # REST API
+      - "50055:50055" # gRPC with mTLS
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 256M
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+
+  db:
+    <<: *common-vars-apps
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-defguard}
+      POSTGRES_USER: ${POSTGRES_USER:-defguard}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - defguard-db:/var/lib/postgresql/data:Z
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          memory: 128M
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 999
+
+  gateway:
+    <<: *common-vars-apps
+    image: ghcr.io/defguard/gateway:latest
+    environment:
+      DEFGUARD_GRPC_URL: "https://core:50055"
+      DEFGUARD_STATS_PERIOD: ${DEFGUARD_STATS_PERIOD:-60}
+      DEFGUARD_TOKEN: ${DEFGUARD_TOKEN}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "50051:50051/udp" # WireGuard endpoint
+    depends_on:
+      core:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - certs:/certs:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: 256M
+        reservations:
+          memory: 128M
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+
+  proxy:
+    <<: *common-vars-apps
+    image: ghcr.io/defguard/defguard-proxy:current
+    ports:
+      - "8080:8080"
+    environment:
+      DEFGUARD_PROXY_UPSTREAM_GRPC_URL: "https://core:50055/"
+    depends_on:
+      core:
+        condition: service_healthy
+    volumes:
+      - certs:/certs:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          memory: 128M
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000

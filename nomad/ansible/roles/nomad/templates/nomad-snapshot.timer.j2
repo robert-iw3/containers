@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Nomad Raft snapshot
+
+[Timer]
+OnCalendar={{ nomad_snapshot_on_calendar }}
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

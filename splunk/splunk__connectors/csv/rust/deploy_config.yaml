@@ -1,0 +1,23 @@
+# Configuration for the Rust-based CSV connector for Splunk and Elasticsearch
+csv_connectors:
+  log_dir: '/var/log/csv_data'  # Directory containing CSV log files
+  schemas_file: '/app/schemas.yaml'  # Path to schema mappings file
+splunk:
+  enabled: false  # Set to true to enable Splunk mode (sets ENABLE_SPLUNK=true)
+  hec_url: 'https://your-splunk-host:8088/services/collector/event'  # Splunk HEC URL (update for production)
+  hec_token: 'your-splunk-hec-token'  # Splunk HEC token (update for production)
+elasticsearch:
+  enabled: true  # Set to true to enable Elasticsearch mode (ENABLE_SPLUNK=false)
+  host: 'http://localhost:9200'  # Elasticsearch host URL
+  index: 'csv-logs'  # Elasticsearch index name
+deployment:
+  method: 'docker'  # Deployment method: docker, podman, kubernetes, ansible
+  namespace: 'csv-connectors'  # Kubernetes namespace
+  kubernetes:
+    replicas: 1  # Number of pod replicas
+    storage_class: 'standard'  # Kubernetes storage class
+    log_storage_size: '10Gi'  # Persistent volume size for logs
+buffer_timeout: 2.0  # Time (seconds) to wait before flushing batch (e.g., 1.0–5.0)
+worker_count: 4  # Number of worker threads (recommended: up to 2x CPU count)
+batch_size: 100  # Number of events per batch (recommended: 100–1000)
+delimiter: ','  # Default CSV delimiter (auto-detected if not set; options: ,, ;, \t, |)

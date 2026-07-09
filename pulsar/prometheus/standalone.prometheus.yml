@@ -1,0 +1,30 @@
+---
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'standalone'
+
+scrape_configs:
+  # In standalone mode the broker, bookie, and zookeeper all expose their
+  # metrics on the single admin port (8080) of the "pulsar" service.
+  - job_name: "broker"
+    honor_labels: true
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 'pulsar:8080'
+
+  - job_name: "bookie"
+    honor_labels: true
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 'pulsar:8080'
+
+  - job_name: "zookeeper"
+    honor_labels: true
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 'pulsar:8080'

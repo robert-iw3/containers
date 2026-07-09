@@ -1,0 +1,9 @@
+echo "POSTGRES_USER=n8n" >> .env
+echo "POSTGRES_DB=n8n" >> .env
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 36 | tr -d '\n')" >> .env
+echo "N8N_ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -d '\n')" >> .env
+echo "N8N_USER_MANAGEMENT_JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')" >> .env
+echo "QDRANT__SERVICE__API_KEY=$(openssl rand -base64 64 | tr -d '\n')" >> .env
+echo "QDRANT__SERVICE__API_KEY1=$(openssl rand -base64 64 | tr -d '\n')" >> .env
+echo "QDRANT__SERVICE__API_KEY2=$(openssl rand -base64 64 | tr -d '\n')" >> .env
+echo "GF_SECURITY_ADMIN_PASSWORD=$(openssl rand -base64 36 | tr -d '\n')" >> .env

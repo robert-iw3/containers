@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    build: .
+    image: sqlserver-2025
+    container_name: sql2025
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"  # Update if changing TcpPort
+    volumes:
+      - sql-data:C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\DATA # where the DB files are stored
+      - ./config.ini:C:/config.ini  # Optional for overrides
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+
+volumes:
+  sql-data:

@@ -1,0 +1,67 @@
+{
+  "_comment": "migrating to opensearch specific perms/privs - below is elastic"
+  "cluster": [
+    "manage_index_templates",
+    "monitor",
+    "manage_ilm"
+  ],
+  "indices": [
+    {
+      "names": [
+        "logs-generic-default",
+        "dataprepper-*",
+        "ecs-dataprepper-*"
+      ],
+      "privileges": [
+        "write",
+        "create",
+        "create_index",
+        "manage",
+        "manage_ilm"
+      ]
+    },
+    {
+      "names": [
+        "dataprepper",
+        "ecs-dataprepper"
+      ],
+      "privileges": [
+        "write",
+        "manage"
+      ]
+    }
+  ]
+}
+{
+  "_comment": "migrating to opensearch specific perms/privs - below is opensearch"
+  "cluster_permissions": [
+    "cluster_composite_ops",
+    "index_template",
+    "indices_monitor"
+  ],
+  "index_permissions": [{
+    "index_patterns": [
+      "logs-generic-default",
+      "dataprepper-*",
+      "ecs-dataprepper-*"
+    ],
+    "dls": "",
+    "fls": [],
+    "masked_fields": [],
+    "allowed_actions": [
+      "write",
+      "create",
+      "manage"
+    ]
+  }],
+  "tenant_permissions": [{
+    "tenant_patterns": [
+      "dataprepper",
+      "ecs-dataprepper"
+    ],
+    "allowed_actions": [
+      "write",
+      "manage"
+    ]
+  }]
+}

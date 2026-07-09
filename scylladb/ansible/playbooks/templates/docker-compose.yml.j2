@@ -1,0 +1,43 @@
+---
+services:
+{% for rack_idx in range(0, num_racks | int) %}
+{% for node_idx in range(0, nodes_per_rack | int) %}
+  scylla-rack{{ rack_idx }}-node{{ node_idx }}:
+    image: {{ image }}
+    container_name: scylla-rack{{ rack_idx }}-node{{ node_idx }}-{{ inventory_hostname_short }}
+    restart: always
+    volumes:
+      - {{ data_path }}/rack{{ rack_idx }}/node{{ node_idx }}:/var/lib/scylla
+      - {{ playbook_dir }}/../tenant-init.cql:/docker-entrypoint-initdb.d/tenant-init.cql:ro
+{% if tls_enabled %}
+      - {{ cert_path }}/scylla.pem:/etc/scylla/scylla.pem:ro
+      - {{ cert_path }}/ca.pem:/etc/scylla/ca.pem:ro
+      - {{ cert_path }}/scylla-cluster.pem:/etc/scylla/scylla-cluster.pem:ro
+{% endif %}
+    environment:
+      - SCYLLA_ROOT_USERNAME={{ root_username }}
+      - SCYLLA_ROOT_PASSWORD={{ vault_scylla_password }}
+    ports:
+      - "{{ 9042 + (node_idx | int) * 10 + (rack_idx | int) * 100 }}:9042"
+      - "{{ 9142 + (node_idx | int) * 10 + (rack_idx | int) * 100 }}:9142"
+      - "{{ 7001 + (node_idx | int) * 10 + (rack_idx | int) * 100 }}:7001"
+      - "{{ 10001 + (node_idx | int) * 10 + (rack_idx | int) * 100 }}:10001"
+    command: --smp 8 --memory 12G --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer --audit --seeds scylla-rack0-node0-{{ inventory_hostname_short }}
+    user: "999:999"
+    networks:
+      - scylla-net
+{% endfor %}
+{% endfor %}
+  scylla-manager:
+    image: scylladb/scylla-manager:3.2
+    container_name: scylla-manager-{{ inventory_hostname_short }}
+    restart: always
+    ports:
+      - "10001:10001"
+    environment:
+      - SCYLLA_MANAGER_AUTH_TOKEN=token
+    networks:
+      - scylla-net
+networks:
+  scylla-net:
+    driver: bridge

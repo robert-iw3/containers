@@ -1,0 +1,44 @@
+version: '3'
+
+volumes:
+  zitadel-data:
+
+networks:
+  zitadel:
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - zitadel
+  restart: always
+
+services:
+  zitadel:
+    <<: *common-vars-apps
+    image: 'ghcr.io/zitadel/zitadel:latest'
+    command: 'start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled'
+    environment:
+      - 'ZITADEL_DATABASE_COCKROACH_HOST=crdb'
+      - 'ZITADEL_EXTERNALSECURE=false'
+    depends_on:
+      crdb:
+        condition: 'service_healthy'
+    ports:
+      - '8080:8080'
+
+  crdb:
+    <<: *common-vars-apps
+    image: 'cockroachdb/cockroach:latest'
+    volumes:
+      - zitadel-data:/cockroach/cockroach-data:Z
+    command: 'start-single-node --insecure'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health?ready=1"]
+      interval: '10s'
+      timeout: '30s'
+      retries: 5
+      start_period: '20s'
+    ports:
+      - '9090:8080'
+      - '26257:26257'

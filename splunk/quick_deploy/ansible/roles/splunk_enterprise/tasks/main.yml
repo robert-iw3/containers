@@ -1,0 +1,269 @@
+---
+- name: Ensure Ansible vault passwords are provided
+  ansible.builtin.fail:
+    msg: "Vault passwords must be defined in config/deployment_config.yaml"
+  when: >
+    vault_splunk_admin_password is not defined or
+    vault_splunk_hec_token is not defined or
+    vault_sec_analyst_password is not defined or
+    vault_sec_admin_password is not defined or
+    vault_splunk_symm_key is not defined
+
+- name: Set timezone
+  ansible.builtin.timezone:
+    name: "{{ timezone | default('UTC') }}"
+
+- name: Install prerequisites (Debian)
+  ansible.builtin.apt:
+    name:
+      - curl
+      - tar
+      - ufw
+      - chrony
+      - libssl-dev
+      - python3-pip
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+  async: 300
+  poll: 0
+
+- name: Install prerequisites (Red Hat)
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - tar
+      - firewalld
+      - chrony
+      - openssl-devel
+      - python3-pip
+    state: present
+  when: ansible_os_family == "RedHat"
+  async: 300
+  poll: 0
+
+- name: Install Splunk Python SDK
+  ansible.builtin.pip:
+    name: splunk-sdk
+    state: present
+
+- name: Create Splunk user
+  ansible.builtin.user:
+    name: splunk
+    system: yes
+    home: "{{ splunk_home }}"
+    shell: /bin/bash
+
+- name: Download Splunk Enterprise
+  ansible.builtin.get_url:
+    url: "{{ splunk_download_url }}"
+    dest: "/tmp/splunk-{{ splunk_version }}.tgz"
+    mode: "0644"
+  async: 600
+  poll: 0
+
+- name: Extract Splunk Enterprise
+  ansible.builtin.unarchive:
+    src: "/tmp/splunk-{{ splunk_version }}.tgz"
+    dest: /opt
+    remote_src: yes
+    owner: splunk
+    group: splunk
+
+- name: Set Splunk ownership and permissions
+  ansible.builtin.file:
+    path: "{{ splunk_home }}"
+    owner: splunk
+    group: splunk
+    recurse: yes
+    mode: "0700"
+
+- name: Configure Splunk to start on boot
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Splunk Enterprise
+      After=network.target
+      [Service]
+      ExecStart={{ splunk_home }}/bin/splunk start --accept-license --answer-yes --no-prompt
+      ExecStop={{ splunk_home }}/bin/splunk stop
+      User=splunk
+      Group=splunk
+      Restart=always
+      LimitNOFILE=65535
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/splunk.service
+    mode: "0644"
+
+- name: Enable Splunk service
+  ansible.builtin.systemd:
+    name: splunk
+    enabled: yes
+    state: started
+
+- name: Configure Splunk server.conf
+  ansible.builtin.template:
+    src: server.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/server.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk web.conf
+  ansible.builtin.template:
+    src: web.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/web.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk inputs.conf
+  ansible.builtin.template:
+    src: inputs.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/inputs.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk outputs.conf
+  ansible.builtin.template:
+    src: outputs.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/outputs.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Install Splunk CIM app
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk install app https://splunkbase.splunk.com/app/1621/-/download -auth {{ splunk_admin_user }}:{{ vault_splunk_admin_password }}"
+    creates: "{{ splunk_home }}/etc/apps/Splunk_SA_CIM"
+  notify: Restart Splunk
+  async: 600
+  poll: 0
+
+- name: Configure Splunk props.conf for CIM compliance
+  ansible.builtin.template:
+    src: props.conf.j2
+    dest: "{{ splunk_home }}/etc/apps/Splunk_SA_CIM/local/props.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk tags.conf for CIM compliance
+  ansible.builtin.template:
+    src: tags.conf.j2
+    dest: "{{ splunk_home }}/etc/apps/Splunk_SA_CIM/local/tags.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk limits.conf for performance
+  ansible.builtin.template:
+    src: limits.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/limits.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk indexes.conf for scalability
+  ansible.builtin.template:
+    src: indexes.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/indexes.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk thruput.conf for ingestion
+  ansible.builtin.template:
+    src: thruput.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/thruput.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk Monitoring Console
+  ansible.builtin.template:
+    src: monitoring.conf.j2
+    dest: "{{ splunk_home }}/etc/system/local/monitoring.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure Splunk user accounts
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk add user {{ item.username }} -role {{ item.role }} -password {{ item.password }} -no-prompt"
+    creates: "{{ splunk_home }}/etc/passwd/{{ item.username }}"
+  with_items: "{{ splunk_users }}"
+  notify: Restart Splunk
+
+- name: Configure Splunk admin password
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk edit user admin -password {{ vault_splunk_admin_password }} -role admin -no-prompt"
+    creates: "{{ splunk_home }}/etc/passwd/admin"
+  notify: Restart Splunk
+
+- name: Configure Splunk HEC
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk http-event-collector create hec-token -uri https://localhost:{{ splunk_port }} -token {{ vault_splunk_hec_token }} -disabled 0"
+  notify: Restart Splunk
+
+- name: Enable Splunk audit logging
+  ansible.builtin.copy:
+    content: |
+      [audit]
+      auditTrail = enabled
+      auditdPort = 514
+    dest: "{{ splunk_home }}/etc/system/local/audit.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Configure firewall (Debian - ufw)
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: "{{ item.split('/')[1] }}"
+  loop: "{{ firewall_ports }}"
+  when: ansible_os_family == "Debian"
+
+- name: Configure firewall (Red Hat - firewalld)
+  ansible.builtin.firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop: "{{ firewall_ports }}"
+  when: ansible_os_family == "RedHat"
+
+- name: Configure Splunk internal log monitoring
+  ansible.builtin.copy:
+    content: |
+      [monitor://{{ splunk_home }}/var/log/splunk]
+      disabled = false
+      sourcetype = splunkd
+      index = _internal
+    dest: "{{ splunk_home }}/etc/system/local/inputs.conf"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+  notify: Restart Splunk
+
+- name: Backup Splunk configuration
+  ansible.builtin.copy:
+    src: "{{ splunk_home }}/etc/system/local"
+    dest: "{{ splunk_home }}/etc/system/local_backup"
+    owner: splunk
+    group: splunk
+    mode: "0600"

@@ -1,0 +1,251 @@
+---
+- name: Deploy Cribl with Scalability and Integrations
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    platform: ""
+    replicas: 2
+    k8s_namespace: default
+    splunk_host: "splunk:9997"
+    elastic_host: "elastic:9200"
+    splunk_hec_token: ""
+    elastic_api_key: ""
+    cribl_image: "cribl/cribl:latest"
+    cribl_helm_repo_url: "https://helm.cribl.io"
+    cribl_helm_leader_chart: "criblio/logstream-leader"
+    cribl_helm_worker_chart: "criblio/logstream-workergroup"
+    cribl_network: "cribl_net"
+    cribl_vol_size: "10Gi"  # Increased
+    cribl_resources_requests_cpu: "2"
+    cribl_resources_requests_mem: "4Gi"
+    cribl_resources_limits_cpu: "4"
+    cribl_resources_limits_mem: "8Gi"
+    cribl_hpa_min: "{{ (replicas | int / 2) | default(1) }}"
+    cribl_hpa_max: "{{ (replicas | int * 2) | default(10) }}"
+    cribl_hpa_cpu_target: 60  # Tuned
+    cribl_dist_token: "criblmaster"
+    cribl_volume_dir: "/opt/cribl/local"
+    common_env:
+      CRIBL_VOLUME_DIR: "{{ cribl_volume_dir }}"
+      SCOPE_METRIC_DEST: "udp://cribl-workers:8125"
+      SCOPE_EVENT_DEST: "tcp://cribl-workers:10001"
+      CRIBL_SPLUNK: "{{ splunk_host if splunk_host else 'cribl-workers:9999' }}"
+      CRIBL_SPLUNK_ARGS: "-ssl-cert-path /opt/cribl/certs/client.pem"
+      CRIBL_SPLUNK_HEC_TOKEN: "{{ splunk_hec_token }}"
+      CRIBL_ELASTIC: "{{ elastic_host if elastic_host else 'http://cribl-workers:10200' }}"
+      CRIBL_ELASTIC_AUTH: "{{ elastic_api_key }}"
+      CRIBL_HEC: "http://cribl-workers:10088/services/collector/event"
+      CRIBL_SYSLOG: "cribl-workers:5140"
+      CRIBL_KAFKA: "kafka:29092"
+      CRIBL_STATSD: "cribl-workers:8125"
+      CRIBL_TCPJSON: "cribl-workers:10001"
+
+  pre_tasks:
+    - name: QA - Lint YAML/JSON
+      command: yamllint -f parsable .
+      changed_when: false
+      register: lint_result
+      failed_when: lint_result.rc != 0
+
+    - name: QA - Dockerfile syntax
+      command: docker build --no-cache --dry-run -f Dockerfile .
+      changed_when: false
+      when: platform in ['docker', 'podman']
+
+    - name: QA - Validate Splunk connectivity
+      uri:
+        url: "{{ splunk_host }}/services/collector/health"
+        method: GET
+        headers:
+          Authorization: "Splunk {{ splunk_hec_token }}"
+        status_code: [200, 201]
+      ignore_errors: true
+      register: splunk_check
+      when: splunk_hec_token and splunk_host != 'cribl-workers:9999'
+
+    - name: QA - Validate Elastic connectivity
+      uri:
+        url: "{{ elastic_host }}/_cluster/health"
+        method: GET
+        headers:
+          Authorization: "ApiKey {{ elastic_api_key }}"
+        status_code: [200]
+      ignore_errors: true
+      register: elastic_check
+      when: elastic_api_key and elastic_host != 'http://cribl-workers:10200'
+
+    - name: Run host prep for Docker/Podman
+      command: bash prep_cribl_host.sh
+      when: platform in ['docker', 'podman']
+
+  tasks:
+    - block:  # Kubernetes
+        - name: Add Cribl Helm repo
+          kubernetes.core.helm_repository:
+            name: criblio
+            repo_url: "{{ cribl_helm_repo_url }}"
+            state: present
+
+        - name: Deploy Leader
+          kubernetes.core.helm:
+            name: cribl-master
+            chart_ref: "{{ cribl_helm_leader_chart }}"
+            release_namespace: "{{ k8s_namespace }}"
+            create_namespace: true
+            atomic: true
+            values:
+              replicaCount: 1
+              persistence:
+                enabled: true
+                config: { size: "{{ cribl_vol_size }}", storageClassName: "fast-ssd" }
+                state: { size: "{{ cribl_vol_size }}", storageClassName: "fast-ssd" }
+              resources:
+                limits: { cpu: "{{ cribl_resources_limits_cpu }}", memory: "{{ cribl_resources_limits_mem }}" }
+                requests: { cpu: "{{ cribl_resources_requests_cpu }}", memory: "{{ cribl_resources_requests_mem }}" }
+              env:
+                << : "{{ common_env }}"
+                CRIBL_DIST_MODE: "master"
+                CRIBL_DIST_LEADER_URL: "tcp://{{ cribl_dist_token }}@0.0.0.0:4200"
+              service: { type: ClusterIP }
+              livenessProbe: { enabled: true, path: "/api/v1/health", port: 9000 }
+              readinessProbe: { enabled: true, path: "/api/v1/health", port: 9000 }
+              podAnnotations:
+                prometheus.io/scrape: "true"
+                prometheus.io/port: "9000"
+
+        - name: Deploy Workers
+          kubernetes.core.helm:
+            name: cribl-workers
+            chart_ref: "{{ cribl_helm_worker_chart }}"
+            release_namespace: "{{ k8s_namespace }}"
+            atomic: true
+            values:
+              replicaCount: "{{ replicas }}"
+              persistence:
+                enabled: true
+                config: { size: "{{ cribl_vol_size }}", storageClassName: "fast-ssd" }
+                state: { size: "{{ cribl_vol_size }}", storageClassName: "fast-ssd" }
+              resources:
+                limits: { cpu: "{{ cribl_resources_limits_cpu }}", memory: "{{ cribl_resources_limits_mem }}" }
+                requests: { cpu: "{{ cribl_resources_requests_cpu }}", memory: "{{ cribl_resources_requests_mem }}" }
+              autoscaling:
+                enabled: true
+                minReplicas: "{{ cribl_hpa_min }}"
+                maxReplicas: "{{ cribl_hpa_max }}"
+                targetCPUUtilizationPercentage: "{{ cribl_hpa_cpu_target }}"
+                targetMemoryUtilizationPercentage: 80
+              upstream:
+                leaderUrl: "tcp://{{ cribl_dist_token }}@cribl-master.{{ k8s_namespace }}:4200"
+              env:
+                << : "{{ common_env }}"
+                CRIBL_DIST_MODE: "worker"
+              service: { type: ClusterIP }
+              livenessProbe: { enabled: true, path: "/api/v1/health", port: 9000 }
+              readinessProbe: { enabled: true, path: "/api/v1/health", port: 9000 }
+              podAnnotations:
+                prometheus.io/scrape: "true"
+                prometheus.io/port: "9000"
+
+        - name: Create certs Secret
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: v1
+              kind: Secret
+              metadata: { name: cribl-certs, namespace: "{{ k8s_namespace }}" }
+              type: Opaque
+              data:
+                client.pem: "{{ lookup('file', './certs/client.pem') | b64encode }}"
+
+        - name: QA - Check integration status
+          command: kubectl -n {{ k8s_namespace }} exec {{ master_pods.resources[0].metadata.name }} -- curl -s -u admin:admin http://localhost:9000/api/v1/system/destinations
+          register: dest_check
+          changed_when: false
+          when: master_pods.resources is defined
+
+        - debug:
+            msg: "Deployment done. UI: kubectl -n {{ k8s_namespace }} port-forward svc/cribl-master 19000:9000. Destinations: {{ dest_check.stdout | default('N/A') }}"
+
+      when: platform == 'kubernetes'
+
+    - block:  # Docker
+        - name: Deploy with Compose
+          community.docker.docker_compose_v2:
+            project_src: "."
+            files: ["docker-compose.yml"]
+            state: present
+            recreate: smart
+            scale:
+              master: 1
+              workers: "{{ replicas }}"
+
+        - name: QA - Check integration status
+          community.docker.docker_container_exec:
+            container: master
+            command: curl -s -u admin:admin http://localhost:9000/api/v1/system/destinations
+          register: docker_dest_check
+          changed_when: false
+
+        - debug:
+            msg: "Deployment done. UI: http://localhost:19000. Destinations: {{ docker_dest_check.stdout | default('N/A') }}"
+
+      when: platform == 'docker'
+
+    - block:  # Podman
+        - name: Create network
+          community.general.podman_network:
+            name: "{{ cribl_network }}"
+            state: present
+
+        - name: Run Master
+          community.general.podman_container:
+            name: master
+            image: "{{ cribl_image }}"
+            network: "{{ cribl_network }}"
+            env:
+              CRIBL_DIST_MODE: "master"
+              CRIBL_DIST_LEADER_URL: "tcp://{{ cribl_dist_token }}@0.0.0.0:4200"
+              << : "{{ common_env }}"
+            ports: ["19000:9000"]
+            volumes:
+              - cribl_config:/opt/cribl/local:z
+              - cribl_state:/opt/cribl/state:z
+              - ./certs:/opt/cribl/certs:ro
+            state: started
+            restart_policy: on-failure
+
+        - name: Run Workers
+          community.general.podman_container:
+            name: "worker-{{ item }}"
+            image: "{{ cribl_image }}"
+            network: "{{ cribl_network }}"
+            env:
+              CRIBL_DIST_MODE: "worker"
+              CRIBL_DIST_LEADER_URL: "tcp://{{ cribl_dist_token }}@master:4200"
+              << : "{{ common_env }}"
+            ports:
+              - "10200{{ item }}:10200"
+              - "10088{{ item }}:10088"
+              - "9999{{ item }}:9999"
+              - "5140{{ item }}:5140"
+              - "8125{{ item }}:8125"
+              - "8125{{ item }}:8125/udp"
+              - "10001{{ item }}:10001"
+            volumes:
+              - "cribl_worker_{{ item }}_config:/opt/cribl/local:z"
+              - "cribl_worker_{{ item }}_state:/opt/cribl/state:z"
+              - ./certs:/opt/cribl/certs:ro
+            state: started
+            restart_policy: on-failure
+          loop: "{{ range(1, replicas|int + 1) | list }}"
+
+        - name: QA - Check integration status
+          command: podman exec master curl -s -u admin:admin http://localhost:9000/api/v1/system/destinations
+          register: podman_dest_check
+          changed_when: false
+
+        - debug:
+            msg: "Deployment done. UI: http://localhost:19000. Workers ports offset (e.g., 99991 for Splunk). Destinations: {{ podman_dest_check.stdout | default('N/A') }}"
+
+      when: platform == 'podman'

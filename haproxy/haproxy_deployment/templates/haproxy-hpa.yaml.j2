@@ -1,0 +1,33 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: haproxy-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: haproxy
+  minReplicas: {{ replicas | default(2) }}
+  maxReplicas: {{ max_replicas | default(10) }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: haproxy_frontend_session_rate
+      target:
+        type: AverageValue
+        averageValue: 1000
+  - type: Pods
+    pods:
+      metric:
+        name: haproxy_backend_response_time_ms
+      target:
+        type: AverageValue
+        averageValue: 500

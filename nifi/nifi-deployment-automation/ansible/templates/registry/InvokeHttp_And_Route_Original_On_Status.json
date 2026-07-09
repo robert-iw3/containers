@@ -1,0 +1,1105 @@
+{
+   "template":{
+      "description":"This flow demonstrates how to call an HTTP service based on an incoming FlowFile, and route the original FlowFile based on the status code returned from the invocation. In this example, every 30 seconds a FlowFile is produced, an attribute is added to the FlowFile that sets q=nifi, the google.com is invoked for that FlowFile, and any response with a 200 is routed to a relationship called 200.",
+      "name":"InvokeHttp And Route Original On Status",
+      "snippet":{
+         "connections":[
+            {
+               "id":"f944d7d5-626a-4100-93f5-e13a145d1b45",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"ffcc8819-75f5-4811-9952-a7d66effacb0",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"Original",
+               "source":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"e829b880-ef17-432a-b387-04e4b964c28a",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"0352020c-9fdf-4388-8960-ac46dd714bea",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"e829b880-ef17-432a-b387-04e4b964c28a",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"719d5fb9-cd96-4491-b48d-79a91d6b5d79",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"f06a2356-c839-4272-ad43-4328b95df7c4",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "bends":[
+                  {
+                     "x":"1273.863850933559",
+                     "y":"310.17145282997745"
+                  },
+                  {
+                     "x":"1273.863850933559",
+                     "y":"360.17145282997745"
+                  }
+               ],
+               "destination":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"e829b880-ef17-432a-b387-04e4b964c28a",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":[
+                  "Failure",
+                  "Retry"
+               ],
+               "source":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"e829b880-ef17-432a-b387-04e4b964c28a",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"b4e79c52-4342-4215-893e-b56bcc1982dc",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"83ca901a-efe0-4d97-a121-d162f2a053ad",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"200",
+               "source":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"ffcc8819-75f5-4811-9952-a7d66effacb0",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"9d1b23ac-05e2-47a4-9423-9cb0f73219d3",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"719d5fb9-cd96-4491-b48d-79a91d6b5d79",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+                  "id":"f96be8b1-78b2-42f2-96a5-759deefae932",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "processors":[
+            {
+               "id":"719d5fb9-cd96-4491-b48d-79a91d6b5d79",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "position":{
+                  "x":"862.8694051327777",
+                  "y":"94.09914524330755"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Delete Attributes Expression",
+                           "value":{
+                              "description":"Regular expression for attributes to be deleted from flowfiles.",
+                              "displayName":"Delete Attributes Expression",
+                              "dynamic":"false",
+                              "name":"Delete Attributes Expression",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"q",
+                           "value":{
+                              "description":"",
+                              "displayName":"q",
+                              "dynamic":"true",
+                              "name":"q",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Delete Attributes Expression"
+                        },
+                        {
+                           "key":"q",
+                           "value":"nifi"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"q=nifi",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"f96be8b1-78b2-42f2-96a5-759deefae932",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "position":{
+                  "x":"317.9999593319965",
+                  "y":"89.00000793709417"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":{
+                              "description":"The size of the file that will be used",
+                              "displayName":"File Size",
+                              "dynamic":"false",
+                              "name":"File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The number of FlowFiles to be transferred in each invocation",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Data Format",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Binary",
+                                    "value":"Binary"
+                                 },
+                                 {
+                                    "displayName":"Text",
+                                    "value":"Text"
+                                 }
+                              ],
+                              "defaultValue":"Binary",
+                              "description":"Specifies whether the data should be Text or Binary",
+                              "displayName":"Data Format",
+                              "dynamic":"false",
+                              "name":"Data Format",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Unique FlowFiles",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles will get the same content but this offers much higher throughput",
+                              "displayName":"Unique FlowFiles",
+                              "dynamic":"false",
+                              "name":"Unique FlowFiles",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":"10 b"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Data Format"
+                        },
+                        {
+                           "key":"Unique FlowFiles"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"30 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Source",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GenerateFlowFile"
+            },
+            {
+               "id":"83ca901a-efe0-4d97-a121-d162f2a053ad",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "position":{
+                  "x":"877.6148838100909",
+                  "y":"646.8078335626049"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Hash Attribute Name",
+                           "value":{
+                              "defaultValue":"hash.value",
+                              "description":"The name of the FlowFile Attribute into which the Hash Value should be written. If the value already exists, it will be overwritten",
+                              "displayName":"Hash Attribute Name",
+                              "dynamic":"false",
+                              "name":"Hash Attribute Name",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Hash Algorithm",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"RIPEMD320",
+                                    "value":"RIPEMD320"
+                                 },
+                                 {
+                                    "displayName":"SHA-1",
+                                    "value":"SHA-1"
+                                 },
+                                 {
+                                    "displayName":"SHA-384",
+                                    "value":"SHA-384"
+                                 },
+                                 {
+                                    "displayName":"RIPEMD160",
+                                    "value":"RIPEMD160"
+                                 },
+                                 {
+                                    "displayName":"SHA",
+                                    "value":"SHA"
+                                 },
+                                 {
+                                    "displayName":"WHIRLPOOL",
+                                    "value":"WHIRLPOOL"
+                                 },
+                                 {
+                                    "displayName":"GOST3411",
+                                    "value":"GOST3411"
+                                 },
+                                 {
+                                    "displayName":"SHA-224",
+                                    "value":"SHA-224"
+                                 },
+                                 {
+                                    "displayName":"SHA-256",
+                                    "value":"SHA-256"
+                                 },
+                                 {
+                                    "displayName":"MD2",
+                                    "value":"MD2"
+                                 },
+                                 {
+                                    "displayName":"RIPEMD128",
+                                    "value":"RIPEMD128"
+                                 },
+                                 {
+                                    "displayName":"MD4",
+                                    "value":"MD4"
+                                 },
+                                 {
+                                    "displayName":"SHA-512",
+                                    "value":"SHA-512"
+                                 },
+                                 {
+                                    "displayName":"RIPEMD256",
+                                    "value":"RIPEMD256"
+                                 },
+                                 {
+                                    "displayName":"TIGER",
+                                    "value":"TIGER"
+                                 },
+                                 {
+                                    "displayName":"MD5",
+                                    "value":"MD5"
+                                 }
+                              ],
+                              "defaultValue":"MD5",
+                              "description":"Determines what hashing algorithm should be used to perform the hashing function",
+                              "displayName":"Hash Algorithm",
+                              "dynamic":"false",
+                              "name":"Hash Algorithm",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Hash Attribute Name"
+                        },
+                        {
+                           "key":"Hash Algorithm"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"HashContent",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"Any FlowFile that cannot be processed successfully will be sent to this relationship without any attribute being added",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles that are process successfully will be sent to this relationship",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.HashContent"
+            },
+            {
+               "id":"e829b880-ef17-432a-b387-04e4b964c28a",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "position":{
+                  "x":"864.863850933559",
+                  "y":"285.17145282997745"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"HTTP Method",
+                           "value":{
+                              "defaultValue":"GET",
+                              "description":"HTTP request method (GET, POST, PUT, DELETE, HEAD, OPTIONS). Arbitrary methods are also supported but will be sent without a message body.",
+                              "displayName":"HTTP Method",
+                              "dynamic":"false",
+                              "name":"HTTP Method",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Remote URL",
+                           "value":{
+                              "description":"Remote URL which will be connected to, including scheme, host, port, path.",
+                              "displayName":"Remote URL",
+                              "dynamic":"false",
+                              "name":"Remote URL",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"SSL Context Service",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"StandardSSLContextService",
+                                    "value":"1f4a6e32-f65b-4879-ab97-fea616f422f2"
+                                 },
+                                 {
+                                    "displayName":"StandardSSLContextService",
+                                    "value":"44cf39bc-7ec0-4809-b0bb-96f6426efd81"
+                                 },
+                                 {
+                                    "displayName":"StandardSSLContextService",
+                                    "value":"c4cad782-a3c7-4a9c-8f80-106799964c63"
+                                 }
+                              ],
+                              "description":"The SSL Context Service used to provide client certificate information for TLS/SSL (https) connections.",
+                              "displayName":"SSL Context Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                              "name":"SSL Context Service",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Connection Timeout",
+                           "value":{
+                              "defaultValue":"5 secs",
+                              "description":"Max wait time for connection to remote service.",
+                              "displayName":"Connection Timeout",
+                              "dynamic":"false",
+                              "name":"Connection Timeout",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Read Timeout",
+                           "value":{
+                              "defaultValue":"15 secs",
+                              "description":"Max wait time for response from remote service.",
+                              "displayName":"Read Timeout",
+                              "dynamic":"false",
+                              "name":"Read Timeout",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Include Date Header",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"True",
+                                    "value":"True"
+                                 },
+                                 {
+                                    "displayName":"False",
+                                    "value":"False"
+                                 }
+                              ],
+                              "defaultValue":"True",
+                              "description":"Include an RFC-2616 Date header in the request.",
+                              "displayName":"Include Date Header",
+                              "dynamic":"false",
+                              "name":"Include Date Header",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Follow Redirects",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"True",
+                                    "value":"True"
+                                 },
+                                 {
+                                    "displayName":"False",
+                                    "value":"False"
+                                 }
+                              ],
+                              "defaultValue":"True",
+                              "description":"Follow HTTP redirects issued by remote server.",
+                              "displayName":"Follow Redirects",
+                              "dynamic":"false",
+                              "name":"Follow Redirects",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attributes to Send",
+                           "value":{
+                              "description":"Regular expression that defines which attributes to send as HTTP headers in the request. If not defined, no attributes are sent as headers. Also any dynamic properties set will be sent as headers. The dynamic property key will be the header key and the dynamic property value will be interpreted as expression language will be the header value.",
+                              "displayName":"Attributes to Send",
+                              "dynamic":"false",
+                              "name":"Attributes to Send",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Basic Authentication Username",
+                           "value":{
+                              "description":"The username to be used by the client to authenticate against the Remote URL.  Cannot include control characters (0-31), ':', or DEL (127).",
+                              "displayName":"Basic Authentication Username",
+                              "dynamic":"false",
+                              "name":"Basic Authentication Username",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Basic Authentication Password",
+                           "value":{
+                              "description":"The password to be used by the client to authenticate against the Remote URL.",
+                              "displayName":"Basic Authentication Password",
+                              "dynamic":"false",
+                              "name":"Basic Authentication Password",
+                              "required":"false",
+                              "sensitive":"true",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Proxy Host",
+                           "value":{
+                              "description":"The fully qualified hostname or IP address of the proxy server",
+                              "displayName":"Proxy Host",
+                              "dynamic":"false",
+                              "name":"Proxy Host",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Proxy Port",
+                           "value":{
+                              "description":"The port of the proxy server",
+                              "displayName":"Proxy Port",
+                              "dynamic":"false",
+                              "name":"Proxy Port",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Put Response Body In Attribute",
+                           "value":{
+                              "description":"If set, the response body received back will be put into an attribute of the original FlowFile instead of a separate FlowFile. The attribute key to put to is determined by evaluating value of this property.",
+                              "displayName":"Put Response Body In Attribute",
+                              "dynamic":"false",
+                              "name":"Put Response Body In Attribute",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Max Length To Put In Attribute",
+                           "value":{
+                              "defaultValue":"256",
+                              "description":"If routing the response body to an attribute of the original (by setting the \"Put response body in attribute\" property or by receiving an error status code), the number of characters put to the attribute value will be at most this amount. This is important because attributes are held in memory and large attributes will quickly cause out of memory issues. If the output goes longer than this value, it will be truncated to fit. Consider making this smaller if able.",
+                              "displayName":"Max Length To Put In Attribute",
+                              "dynamic":"false",
+                              "name":"Max Length To Put In Attribute",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Digest Authentication",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Whether to communicate with the website using Digest Authentication. 'Basic Authentication Username' and 'Basic Authentication Password' are used for authentication.",
+                              "displayName":"Use Digest Authentication",
+                              "dynamic":"false",
+                              "name":"Digest Authentication",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Always Output Response",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Will force a response FlowFile to be generated and routed to the 'Response' relationship regardless of what the server status code received is or if the processor is configured to put the server response body in the request attribute. In the later configuration a request FlowFile with the response body in the attribute and a typical response FlowFile will be emitted to their respective relationships.",
+                              "displayName":"Always Output Response",
+                              "dynamic":"false",
+                              "name":"Always Output Response",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Trusted Hostname",
+                           "value":{
+                              "description":"Bypass the normal truststore hostname verifier to allow the specified remote hostname as trusted. Enabling this property has MITM security implications, use wisely. Will still accept other connections based on the normal truststore hostname verifier. Only valid with SSL (HTTPS) connections.",
+                              "displayName":"Trusted Hostname",
+                              "dynamic":"false",
+                              "name":"Trusted Hostname",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Add Response Headers to Request",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Enabling this property saves all the response headers to the original request. This may be when the response headers are needed but a response is not generated due to the status code received.",
+                              "displayName":"Add Response Headers to Request",
+                              "dynamic":"false",
+                              "name":"Add Response Headers to Request",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"HTTP Method"
+                        },
+                        {
+                           "key":"Remote URL",
+                           "value":"http://www.google.com/search?q=${q}&rct=j"
+                        },
+                        {
+                           "key":"SSL Context Service"
+                        },
+                        {
+                           "key":"Connection Timeout"
+                        },
+                        {
+                           "key":"Read Timeout"
+                        },
+                        {
+                           "key":"Include Date Header"
+                        },
+                        {
+                           "key":"Follow Redirects"
+                        },
+                        {
+                           "key":"Attributes to Send"
+                        },
+                        {
+                           "key":"Basic Authentication Username"
+                        },
+                        {
+                           "key":"Basic Authentication Password"
+                        },
+                        {
+                           "key":"Proxy Host"
+                        },
+                        {
+                           "key":"Proxy Port"
+                        },
+                        {
+                           "key":"Put Response Body In Attribute"
+                        },
+                        {
+                           "key":"Max Length To Put In Attribute"
+                        },
+                        {
+                           "key":"Digest Authentication"
+                        },
+                        {
+                           "key":"Always Output Response"
+                        },
+                        {
+                           "key":"Trusted Hostname"
+                        },
+                        {
+                           "key":"Add Response Headers to Request"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Search Google",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"The original FlowFile will be routed on any type of connection failure, timeout or general exception. It will have new attributes detailing the request.",
+                     "name":"Failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The original FlowFile will be routed on any status code that should NOT be retried (1xx, 3xx, 4xx status codes).  It will have new attributes detailing the request.",
+                     "name":"No Retry"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The original FlowFile will be routed upon success (2xx status codes). It will have new attributes detailing the success of the request.",
+                     "name":"Original"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"A Response FlowFile will be routed upon success (2xx status codes). If the 'Output Response Regardless' property is true then the response will be sent to this relationship regardless of the status code received.",
+                     "name":"Response"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The original FlowFile will be routed on any status code that can be retried (5xx status codes). It will have new attributes detailing the request.",
+                     "name":"Retry"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.InvokeHTTP"
+            },
+            {
+               "id":"ffcc8819-75f5-4811-9952-a7d66effacb0",
+               "parentGroupId":"5ba45800-7ae7-4c79-aa77-e4296320a8fe",
+               "position":{
+                  "x":"862.7192586484027",
+                  "y":"464.2159169413056"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"A copy of the FlowFile will be routed to each relationship whose corresponding expression evaluates to 'true'",
+                                    "displayName":"Route to Property name",
+                                    "value":"Route to Property name"
+                                 },
+                                 {
+                                    "description":"Requires that all user-defined expressions evaluate to 'true' for the FlowFile to be considered a match",
+                                    "displayName":"Route to 'matched' if all match",
+                                    "value":"Route to 'match' if all match"
+                                 },
+                                 {
+                                    "description":"Requires that at least one user-defined expression evaluate to 'true' for hte FlowFile to be considered a match",
+                                    "displayName":"Route to 'matched' if any matches",
+                                    "value":"Route to 'match' if any matches"
+                                 }
+                              ],
+                              "defaultValue":"Route to Property name",
+                              "description":"Specifies how to determine which relationship to use when evaluating the Expression Language",
+                              "displayName":"Routing Strategy",
+                              "dynamic":"false",
+                              "name":"Routing Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"200",
+                           "value":{
+                              "description":"",
+                              "displayName":"200",
+                              "dynamic":"true",
+                              "name":"200",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy",
+                           "value":"Route to Property name"
+                        },
+                        {
+                           "key":"200",
+                           "value":"${invokehttp.status.code:equals(200)}"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Route On Status Code",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"",
+                     "name":"200"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles that do not match any user-define expression will be routed here",
+                     "name":"unmatched"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.RouteOnAttribute"
+            }
+         ]
+      },
+      "timestamp":"12/18/2020 15:52:29 EST"
+   }
+}

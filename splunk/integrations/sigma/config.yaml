@@ -1,0 +1,29 @@
+alert_action:
+  email:
+    enabled: 1
+    to: 'ticketing@example.com'
+    subject: 'Splunk Alert: $name$'
+    message: 'Use Case $name$ triggered | List of interesting fields: %fields% | MITRE Techniques: %mitre_techniques%'
+    result_link: 1
+    view_link: 1
+summary_index:
+  enabled: true
+  index: 'threat-hunting'
+datamodel_acceleration:
+  enabled: true
+  name: 'Threat_Detection'
+search_transformations:
+  - type: whitelist
+    lookup: 'sigma_whitelist.csv'
+  - type: custom_command
+    command: 'eval threat_level=case(level=="high", 3, level=="medium", 2, level=="low", 1, true(), 0)'
+  - type: cim_tags
+    enabled: true
+cron_schedule: '*/10 * * * *'
+earliest_time: '-10m'
+latest_time: 'now'
+app: 'sigma_hunting_app'
+alert_severity: 1
+sigma_sources:
+  - 'https://github.com/robert-iw3/detection-rules.git'
+  - 'https://github.com/SigmaHQ/sigma.git'

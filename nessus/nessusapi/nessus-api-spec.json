@@ -1,0 +1,524 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Nessus API Specification",
+    "description": "API for managing Nessus users, scans, and scan policies.",
+    "version": "1.1.0",
+    "contact": {
+      "name": "Tenable Nessus API Support",
+      "url": "https://docs.tenable.com/nessus",
+      "email": "support@tenable.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api-fw.testing.io:8088",
+      "description": "API Firewall proxy for Nessus"
+    },
+    {
+      "url": "https://nessus.testing.io:8834",
+      "description": "Direct Nessus server (not recommended for production)"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeys": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeys": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-ApiKeys",
+        "description": "Format: accessKey=<key>;secretKey=<secret>"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "Unique user ID" },
+          "username": { "type": "string", "description": "Username" },
+          "name": { "type": "string", "description": "Full name" },
+          "email": { "type": "string", "format": "email", "description": "User email" },
+          "role": {
+            "type": "string",
+            "enum": ["admin", "standard", "read-only"],
+            "description": "User role"
+          },
+          "lastlogin": { "type": "integer", "description": "Last login timestamp (Unix)" }
+        },
+        "required": ["id", "username", "role"]
+      },
+      "Scan": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "Unique scan ID" },
+          "name": { "type": "string", "description": "Name of the scan" },
+          "status": {
+            "type": "string",
+            "enum": ["running", "completed", "failed", "pending", "paused"],
+            "description": "Current status of the scan"
+          },
+          "created_at": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+          "updated_at": { "type": "string", "format": "date-time", "description": "Last update timestamp" },
+          "folder_id": { "type": "integer", "description": "Folder ID" },
+          "owner": { "type": "string", "description": "Owner username" },
+          "enabled": { "type": "boolean", "description": "Whether the scan is enabled" },
+          "last_modified": { "type": "string", "format": "date-time", "description": "Last modified timestamp" },
+          "info": {
+            "type": "object",
+            "properties": {
+              "hostcount": { "type": "integer", "description": "Number of scanned hosts" },
+              "critical": { "type": "integer", "description": "Critical vulnerabilities" },
+              "high": { "type": "integer", "description": "High vulnerabilities" },
+              "medium": { "type": "integer", "description": "Medium vulnerabilities" },
+              "low": { "type": "integer", "description": "Low vulnerabilities" }
+            }
+          }
+        },
+        "required": ["id", "name", "status"]
+      },
+      "Policy": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "Unique policy ID" },
+          "name": { "type": "string", "description": "Name of the policy" },
+          "description": { "type": "string", "description": "Policy description" },
+          "template_uuid": { "type": "string", "description": "Template UUID" },
+          "no_target": { "type": "boolean", "description": "Whether policy has no targets" },
+          "owner": { "type": "string", "description": "Owner username" },
+          "last_modification_date": { "type": "integer", "description": "Last modification timestamp (Unix)" },
+          "settings": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "description": "Policy name" },
+              "description": { "type": "string", "description": "Policy description" },
+              "target": { "type": "string", "description": "Target hosts" }
+            }
+          }
+        },
+        "required": ["id", "name"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "description": "Error code" },
+          "message": { "type": "string", "description": "Error message" }
+        },
+        "required": ["code", "message"]
+      }
+    }
+  },
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "List all users",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new user",
+        "operationId": "createUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "name": { "type": "string" },
+                  "role": { "type": "string", "enum": ["admin", "standard", "read-only"] }
+                },
+                "required": ["username", "password", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/users/{user_id}": {
+      "parameters": [
+        { "name": "user_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the user" }
+      ],
+      "get": {
+        "summary": "Get user details",
+        "operationId": "getUser",
+        "responses": {
+          "200": {
+            "description": "User details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "404": {
+            "description": "User not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user",
+        "operationId": "deleteUser",
+        "responses": {
+          "204": { "description": "User deleted" },
+          "404": {
+            "description": "User not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/scans": {
+      "get": {
+        "summary": "List all scans",
+        "operationId": "listScans",
+        "responses": {
+          "200": {
+            "description": "List of scans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "scans": { "type": "array", "items": { "$ref": "#/components/schemas/Scan" } } }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new scan",
+        "operationId": "createScan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uuid": { "type": "string", "description": "Template UUID" },
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string", "description": "Scan name" },
+                      "description": { "type": "string", "description": "Scan description" },
+                      "enabled": { "type": "boolean", "description": "Whether scan is enabled" },
+                      "text_targets": { "type": "string", "description": "Target hosts" },
+                      "policy_id": { "type": "integer", "description": "Policy ID" }
+                    },
+                    "required": ["name", "text_targets", "policy_id"]
+                  }
+                },
+                "required": ["uuid", "settings"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scan created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Scan" } } }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "403": {
+            "description": "Forbidden (not supported in some editions)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/scans/{scan_id}": {
+      "parameters": [
+        { "name": "scan_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the scan" }
+      ],
+      "get": {
+        "summary": "Get scan details",
+        "operationId": "getScan",
+        "responses": {
+          "200": {
+            "description": "Scan details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Scan" } } }
+          },
+          "404": {
+            "description": "Scan not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/scans/{scan_id}/launch": {
+      "parameters": [
+        { "name": "scan_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the scan to launch" }
+      ],
+      "post": {
+        "summary": "Launch a scan",
+        "operationId": "launchScan",
+        "responses": {
+          "200": {
+            "description": "Scan launched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "scan_uuid": { "type": "string", "description": "UUID of the launched scan" } }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scan not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/scans/{scan_id}/export": {
+      "parameters": [
+        { "name": "scan_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the scan to export" }
+      ],
+      "post": {
+        "summary": "Request scan export",
+        "operationId": "exportScan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": ["nessus", "html", "pdf", "csv", "db"],
+                    "description": "Export format"
+                  }
+                },
+                "required": ["format"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Export requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "file": { "type": "integer", "description": "File ID for download" } }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scan not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/scans/{scan_id}/export/{file_id}/download": {
+      "parameters": [
+        { "name": "scan_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the scan" },
+        { "name": "file_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the exported file" }
+      ],
+      "get": {
+        "summary": "Download exported scan file",
+        "operationId": "downloadScanExport",
+        "responses": {
+          "200": {
+            "description": "Exported scan file",
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "404": {
+            "description": "File or scan not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/policies": {
+      "get": {
+        "summary": "List all policies",
+        "operationId": "listPolicies",
+        "responses": {
+          "200": {
+            "description": "List of policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "policies": { "type": "array", "items": { "$ref": "#/components/schemas/Policy" } } }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new policy",
+        "operationId": "createPolicy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uuid": { "type": "string", "description": "Template UUID" },
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string", "description": "Policy name" },
+                      "description": { "type": "string", "description": "Policy description" },
+                      "target": { "type": "string", "description": "Target hosts" }
+                    },
+                    "required": ["name"]
+                  }
+                },
+                "required": ["uuid", "settings"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Policy created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Policy" } } }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "403": {
+            "description": "Forbidden (not supported in some editions)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/policies/{policy_id}": {
+      "parameters": [
+        { "name": "policy_id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "ID of the policy" }
+      ],
+      "get": {
+        "summary": "Get policy details",
+        "operationId": "getPolicy",
+        "responses": {
+          "200": {
+            "description": "Policy details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Policy" } } }
+          },
+          "404": {
+            "description": "Policy not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a policy",
+        "operationId": "deletePolicy",
+        "responses": {
+          "204": { "description": "Policy deleted" },
+          "404": {
+            "description": "Policy not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "403": {
+            "description": "Forbidden (not supported in some editions)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  }
+}

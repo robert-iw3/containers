@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: All three nodes are UN (Up/Normal)
+      ansible.builtin.shell: >-
+        podman exec scylla-node1 nodetool status | grep -cE '^UN'
+      register: un
+      failed_when: un.stdout | int != 3
+      changed_when: false
+
+    - name: The telemetry keyspace exists with RF=3
+      ansible.builtin.command: >-
+        podman exec scylla-node1 cqlsh -e
+        "SELECT replication FROM system_schema.keyspaces WHERE keyspace_name='telemetry';"
+      register: ks
+      failed_when: "'\\'datacenter1\\': \\'3\\'' not in ks.stdout and 'replication_factor' not in ks.stdout"
+      changed_when: false
+
+    - name: Produce and read back a row at QUORUM (proves replication)
+      ansible.builtin.command: >-
+        podman exec scylla-node1 cqlsh -e
+        "CONSISTENCY QUORUM;
+         INSERT INTO telemetry.devices (device_id, kind, registered_at, last_seen)
+         VALUES ('molecule-probe','test', toTimestamp(now()), toTimestamp(now()));
+         SELECT device_id FROM telemetry.devices WHERE device_id='molecule-probe';"
+      register: roundtrip
+      failed_when: "'molecule-probe' not in roundtrip.stdout"
+      changed_when: true

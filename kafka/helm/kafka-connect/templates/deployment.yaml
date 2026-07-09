@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-connect.fullname" . }}
+  labels:
+    {{- include "kafka-connect.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kafka-connect.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "kafka-connect.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "kafka-connect.fullname" . }}-sa
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+        {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: CONNECT_REST_ADVERTISED_HOST_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: CONNECT_BOOTSTRAP_SERVERS
+              value: {{ include "kafka-connect.kafka.bootstrapServers" . | quote }}
+            - name: CONNECT_GROUP_ID
+              value: "{{ include "kafka-connect.kafka.groupId" . }}-connect"
+            - name: CONNECT_CONFIG_STORAGE_TOPIC
+              value: "{{ include "kafka-connect.kafka.groupId" . }}-config"
+            - name: CONNECT_OFFSET_STORAGE_TOPIC
+              value: "{{ include "kafka-connect.kafka.groupId" . }}-offset"
+            - name: CONNECT_STATUS_STORAGE_TOPIC
+              value: "{{ include "kafka-connect.kafka.groupId" . }}-status"
+            - name: CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL
+              value: {{ include "kafka-connect.schema-registry.url" . | quote }}
+            - name: CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL
+              value: {{ include "kafka-connect.schema-registry.url" . | quote }}
+            - name: KAFKA_HEAP_OPTS
+              value: "{{ .Values.heapOpts }}"
+            - name: CONNECT_KEY_CONVERTER
+              value: {{ .Values.keyConverter | quote}}
+            - name: CONNECT_VALUE_CONVERTER
+              value: {{ .Values.valueConverter | quote }}
+            - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.storageReplicatorFactor | int | quote }}
+            - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.storageReplicatorFactor | int | quote }}
+            - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.storageReplicatorFactor | int | quote }}
+            - name: CONNECT_PLUGIN_PATH
+              value: {{ .Values.pluginPath | quote }}
+            - name: CONNECT_CONFLUENT_SUPPORT_METRICS_ENABLE
+              value: {{ .Values.confluentSupportMetricsEnable | quote }}
+            - name: CONNECT_CONFIG_PROVIDERS
+              value: file
+            - name: CONNECT_CONFIG_PROVIDERS_FILE_CLASS
+              value: org.apache.kafka.common.config.provider.FileConfigProvider
+            {{- if .Values.kafka.kerberos.enabled }}
+            - name: KAFKA_OPTS
+              value: -Dsun.security.krb5.debug=false
+                    -Djava.security.krb5.conf=/etc/krb5.conf
+                    -Djava.security.auth.login.config=/jaas/ks-connect.conf
+            - name: CONNECT_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_PRODUCER_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_CONSUMER_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_SASL_MECHANISM
+              value: GSSAPI
+            - name: CONNECT_SASL_KERBEROS_SERVICE_NAME
+              value: kafka
+            - name: CONNECT_SASL_JAAS_CONFIG
+              value: com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/keytabs/{{ .Values.kafka.kerberos.serviceName | required "Missing kafka.kerberos.serviceName" }}.keytab" principal="{{ .Values.kafka.kerberos.serviceName }}@{{ .Values.kafka.kerberos.domain | required "Missing kafka.kerberos.domain" }}";
+            - name: CONNECT_PRODUCER_SASL_MECHANISM
+              value: GSSAPI
+            - name: CONNECT_PRODUCER_SASL_KERBEROS_SERVICE_NAME
+              value: kafka
+            - name: CONNECT_PRODUCER_SASL_JAAS_CONFIG
+              value: com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/keytabs/{{ .Values.kafka.kerberos.serviceName }}.keytab" principal="{{ .Values.kafka.kerberos.serviceName }}@{{ .Values.kafka.kerberos.domain }}";
+            - name: CONNECT_CONSUMER_SASL_MECHANISM
+              value: GSSAPI
+            - name: CONNECT_CONSUMER_SASL_KERBEROS_SERVICE_NAME
+              value: kafka
+            - name: CONNECT_CONSUMER_SASL_JAAS_CONFIG
+              value: com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/keytabs/{{ .Values.kafka.kerberos.serviceName }}.keytab" principal="{{ .Values.kafka.kerberos.serviceName }}@{{ .Values.kafka.kerberos.domain }}";
+            {{- end }}
+          ports:
+            - name: tcp
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: tcp
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path:
+              port: tcp
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - name: config
+            mountPath: /etc/kafka-connect
+          - name: config2
+            mountPath: /etc/kafka
+          {{- if .Values.kerberos.enabled  }}
+          - name: krb5
+            mountPath: /etc/krb5.conf
+            subPath: krb5.conf
+          - name: keytabs
+            mountPath: /keytabs
+            readOnly: true
+          - name: jaas
+            mountPath: /jaas
+            readOnly: true
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: config
+        emptyDir: {}
+      - name: config2
+        emptyDir: {}
+      {{- if .Values.kerberos.enabled }}
+      - name: krb5
+        configMap:
+          name: {{ required "The .Values.kerberos.krb5Conf is required when kerberos enabled!" .Values.kerberos.krb5Conf }}
+      - name: keytabs
+        secret:
+          secretName: {{ required "The .Values.kerberos.keyTabSecret is required when kerberos enabled!" .Values.kerberos.keyTabSecret }}
+      - name: jaas
+        configMap:
+          name: {{ required "The .Values.kerberos.jaasConf is required when kerberos enabled!" .Values.kerberos.jaasConf }}
+      {{- end }}

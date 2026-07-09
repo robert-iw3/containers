@@ -1,0 +1,28 @@
+{
+  "node_name": "consul-worker",
+  "server": false,
+  "datacenter": "dc1",
+  "encrypt": "qDOPBEr+/oUVeOFQOnVypxwDaHzLrD+lvjo5vCEBbZ0=",
+  "data_dir": "consul/data",
+  "log_level": "INFO",
+  "advertise_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "retry_join": [ "consul-server1", "consul-server2", "consul-server3" ],
+  "addresses": {
+    "https": "0.0.0.0"
+  },
+  "ports": {
+    "https": 8501
+  },
+  "tls": {
+    "defaults": {
+      "ca_file": "/certs/consul-agent-ca.pem",
+      "verify_incoming": true,
+      "verify_outgoing": true,
+      "verify_server_hostname": true
+    }
+  },
+  "auto_encrypt" : {
+    "tls" : true
+  }
+}
+

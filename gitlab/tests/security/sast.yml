@@ -1,0 +1,24 @@
+sast:
+  stage: test
+  image: docker.io/docker:latest
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - export SP_VERSION="${SP_VERSION:-$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')}"
+    - docker run
+        --env SAST_BRAKEMAN_LEVEL="${SAST_BRAKEMAN_LEVEL:-1}"
+        --env SAST_FLAWFINDER_LEVEL="${SAST_FLAWFINDER_LEVEL:-1}"
+        --env SAST_GO_AST_SCANNER_LEVEL="${SAST_GO_AST_SCANNER_LEVEL:-1}"
+        --volume "$PWD:/code"
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        "registry.gitlab.com/gitlab-org/security-products/sast:$SP_VERSION" /app/bin/run /code
+  artifacts:
+    paths:
+      - gl-sast-report.json
+    reports:
+      sast: gl-sast-report.json

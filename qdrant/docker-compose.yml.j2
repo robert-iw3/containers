@@ -1,0 +1,102 @@
+---
+services:
+  qdrant:
+    image: docker.io/qdrant/qdrant:{{ qdrant_version }}
+    container_name: qdrant
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__SERVICE__API_KEY: "{{ api_key }}"
+      QDRANT__TLS__ENABLED: "{{ tls_enabled }}"
+    ports:
+      - 6333:6333
+      - 6334:6334
+    volumes:
+      - "{{ data_dir }}/qdrant_data:/qdrant/storage"
+      - "{{ data_dir }}/config.yaml:/qdrant/config/config.yaml"
+      - "{{ data_dir }}/tls:/qdrant/tls"
+    networks:
+      - db
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring
+    volumes:
+      - "{{ data_dir }}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+    restart: always
+
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    ports:
+      - 3000:3000
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('admin', true) }}"
+    networks:
+      - monitoring
+    volumes:
+      - "{{ data_dir }}/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml"
+      - grafana_data:/var/lib/grafana
+    restart: always
+
+  zookeeper:
+    image: docker.io/confluentinc/cp-zookeeper:{{ kafka_version }}
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - db
+    restart: always
+
+  broker:
+    image: docker.io/confluentinc/cp-kafka:{{ kafka_version }}
+    container_name: broker
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - db
+    restart: always
+
+  kafka-consumer:
+    build:
+      context: ./auto
+      dockerfile: Dockerfile.qdapi
+    container_name: kafka-qdapi-consumer
+    environment:
+      QDRANT_ADDR: qdrant:6334
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+    depends_on:
+      - qdrant
+      - broker
+    networks:
+      - db
+    restart: always
+
+volumes:
+  qdrant_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
+  db:
+    driver: bridge

@@ -1,0 +1,25 @@
+name: "${PCAP_NODE_NAME:nginx}"
+
+logging.metrics.enabled: false
+
+filebeat.modules:
+- module: nginx
+  access:
+    enabled: true
+    var.paths: ["${FILEBEAT_NGINX_LOG_PATH:/nginx}/access.log*"]
+  error:
+    enabled: true
+    var.paths: ["${FILEBEAT_NGINX_LOG_PATH:/nginx}/error.log*"]
+
+processors:
+  - add_tags:
+      tags: [_nginx_beats]
+
+output.logstash:
+  hosts: ["${LOGSTASH_HOST:logstash:5044}"]
+  ssl.enabled: ${BEATS_SSL:false}
+  ssl.certificate_authorities: ["/certs/ca.crt"]
+  ssl.certificate: "/certs/client.crt"
+  ssl.key: "/certs/client.key"
+  ssl.supported_protocols: "TLSv1.2"
+  ssl.verification_mode: "none"

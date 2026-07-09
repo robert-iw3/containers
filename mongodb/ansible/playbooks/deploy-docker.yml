@@ -1,0 +1,43 @@
+---
+- hosts: servers
+  become: yes
+  vars:
+    mongodb_image: "{{ image | default('mongodb:8.0') }}"
+    config_dir: "/path/to/config"
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Pull MongoDB image
+      docker_image:
+        name: "{{ mongodb_image }}"
+        source: build  # Or pull if pre-built
+        build:
+          path: /path/to/docker/dir
+          dockerfile: Dockerfile
+
+    - name: Copy config and keyfile
+      copy:
+        src: "{{ config_dir }}/{{ db_type }}.yaml"  # e.g., replica.yaml
+        dest: /etc/mongod.conf
+        mode: '0644'
+
+    - name: Run MongoDB container
+      docker_container:
+        name: mongodb-{{ inventory_hostname }}
+        image: "{{ mongodb_image }}"
+        state: started
+        ports:
+          - "27017:27017"
+        volumes:
+          - /host/data:/data/db
+          - /etc/mongod.conf:/etc/mongod.conf:ro
+          - "{{ config_dir }}/keyfile:/etc/mongod-keyfile:ro"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "admin"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongo_password }}"
+          MONGO_INITDB_REPLSET: "rs0"
+        command: "--config /etc/mongod.conf"

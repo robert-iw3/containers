@@ -1,0 +1,29 @@
+
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-netbios-nessus-egress
+spec:
+  selector: network == 'nessus'
+  applyOnForward: true
+  types:
+  - Egress
+  egress:
+  # Allow netbios
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports:
+      - 139
+---
+apiVersion: projectcalico.org/v3
+kind: HostEndpoint
+metadata:
+  name: server.being.scanned
+  labels:
+    network: nessus
+spec:
+  interfaceName: eth1
+  node: some-windows-host-being-scanned
+  expectedIPs:
+  - 192.168.0.45

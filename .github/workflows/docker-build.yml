@@ -1,0 +1,203 @@
+name: Build, Scan & Publish Container Images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_all:
+        description: "Build every Dockerfile in the repo, not just changed ones"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  static-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/requirements.txt
+          pip install -r nomad/tests/requirements.txt
+
+      - name: Run static validation suite
+        run: python -m pytest tests/ nomad/tests/ -q
+
+  nomad-terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build tofu/tflint validation image
+        run: docker build -t nomad-tofu-tests -f nomad/tests/Dockerfile nomad
+
+      - name: Run tofu fmt/validate/tflint/packer
+        run: docker run --rm nomad-tofu-tests
+
+  nomad-molecule:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        role: [nomad, monitoring]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install molecule
+        run: |
+          pip install molecule "molecule-plugins[podman]" ansible-core
+          ansible-galaxy collection install containers.podman ansible.posix community.general
+
+      - name: Run molecule test (${{ matrix.role }})
+        working-directory: nomad/ansible/roles/${{ matrix.role }}
+        run: molecule test
+
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has_targets: ${{ steps.discover.outputs.has_targets }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Discover Dockerfiles to build
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_all }}" == "true" ]]; then
+            mapfile -t FILES < <(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##' | sort)
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            mapfile -t FILES < <(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- '**/Dockerfile*' | sort)
+          else
+            BEFORE="${{ github.event.before }}"
+            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+              mapfile -t FILES < <(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##' | sort)
+            else
+              mapfile -t FILES < <(git diff --name-only "$BEFORE" HEAD -- '**/Dockerfile*' | sort)
+            fi
+          fi
+
+          python3 - "${FILES[@]}" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, sys
+
+          files = [f for f in sys.argv[1:] if f and os.path.isfile(f)]
+          entries = []
+          for f in files:
+              d = os.path.dirname(f) or "."
+              base = os.path.basename(f)
+              suffix = base[len("Dockerfile"):].lstrip(".") if base.startswith("Dockerfile") else base
+              name = d if not suffix else f"{d}-{suffix}"
+              name = name.strip("./").lower()
+              name = "".join(c if (c.isalnum() or c in "-_/.") else "-" for c in name)
+              entries.append({"dockerfile": f, "context": d, "image": name})
+
+          matrix = {"include": entries}
+          print(f"matrix={json.dumps(matrix)}")
+          print(f"has_targets={'true' if entries else 'false'}")
+          PY
+
+  build-scan-publish:
+    needs: discover
+    if: needs.discover.outputs.has_targets == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (local, for scanning)
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Generate SBOM (CycloneDX)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          format: cyclonedx
+          output: sbom.cdx.json
+
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.image }}
+          path: sbom.cdx.json
+
+      - name: Vulnerability scan (SARIF, non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-${{ matrix.image }}
+
+      - name: Fail on fixable CRITICAL/HIGH vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

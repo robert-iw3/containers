@@ -1,0 +1,20 @@
+# Nessus scan configuration
+# Required fields: name, enabled, text_targets
+# Optional: rrules (freq: DAILY/WEEKLY/MONTHLY, interval, byday), starttime, uuid
+# Example rrules: FREQ=WEEKLY;INTERVAL=1;BYDAY=MO (every Monday)
+
+[scan1]
+name = "Web Servers Scan"
+enabled = true
+text_targets = "192.168.1.0/24,10.0.0.1"
+rrules = { freq = "WEEKLY", interval = 1, byday = "MO" }
+starttime = "20250903T090000"
+uuid = "731a8e52-3ea6-a291-2adf-1567a46550a4"
+
+[scan2]
+name = "Database Servers Scan"
+enabled = true
+text_targets = "10.0.1.0/24"
+rrules = { freq = "DAILY", interval = 1 }
+starttime = "20250903T020000"
+uuid = "731a8e52-3ea6-a291-2adf-1567a46550a4"

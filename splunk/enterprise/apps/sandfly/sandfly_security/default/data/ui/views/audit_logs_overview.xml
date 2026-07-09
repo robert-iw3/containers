@@ -1,0 +1,198 @@
+<form version="1.1" theme="light">
+  <label>Audit Logs Overview</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Total Audit Logs Trend - Previous 7 Days</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit` earliest=-7d@d latest=@d
+| timechart count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trendDisplayMode">percent</option>
+        <option name="trendInterval">-24h</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Audit Logs - Today</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit` earliest=@d
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Audit Logs - Last Hour</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit`
+| stats count</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Audit Logs over Time Range by Record Type</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit`
+| timechart count by audit_log.record_type</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Audit Logs over Time Range by Level</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit`
+| timechart count by audit_log.level</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Audit Logs over Time Range by IP Address</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit`
+| rename audit_log.ip_addr as "IP_Addr"
+| stats count by IP_Addr</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Audit Logs over Time Range by UserName</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit`
+| rename audit_log.username as "UserName"
+| stats count by UserName</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Audit Logs</title>
+      <input type="dropdown" token="tok_username" searchWhenChanged="true">
+        <label>UserName</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>audit_log.username</fieldForLabel>
+        <fieldForValue>audit_log.username</fieldForValue>
+        <search>
+          <query>`sandfly_search_audit` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ audit_log.level="$tok_level$" audit_log.ip_addr="$tok_ipaddr$"
+| dedup audit_log.username
+| table audit_log.username
+| sort audit_log.username</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_level" searchWhenChanged="true">
+        <label>Level</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>audit_log.level</fieldForLabel>
+        <fieldForValue>audit_log.level</fieldForValue>
+        <search>
+          <query>`sandfly_search_audit` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ audit_log.username="$tok_username$" audit_log.ip_addr="$tok_ipaddr$"
+| dedup audit_log.level
+| table audit_log.level
+| sort audit_log.level</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_ipaddr" searchWhenChanged="true">
+        <label>IP Address</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>audit_log.ip_addr</fieldForLabel>
+        <fieldForValue>audit_log.ip_addr</fieldForValue>
+        <search>
+          <query>`sandfly_search_audit` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ audit_log.username="$tok_username$" audit_log.level="$tok_level$"
+| dedup audit_log.ip_addr
+| table audit_log.ip_addr
+| sort audit_log.ip_addr</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.username="$tok_username$" audit_log.level="$tok_level$" audit_log.ip_addr="$tok_ipaddr$"
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| table TimeStamp audit_log.record_type audit_log.level audit_log.username audit_log.ip_addr audit_log.id audit_log.message
+| rename audit_log.record_type as RecordType
+| rename audit_log.level as Level
+| rename audit_log.username as UserName
+| rename audit_log.ip_addr as IP_Addr
+| rename audit_log.id as ID
+| rename audit_log.message as Message</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

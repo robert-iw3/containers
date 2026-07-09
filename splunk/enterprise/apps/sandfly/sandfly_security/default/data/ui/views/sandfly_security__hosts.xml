@@ -1,0 +1,140 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security - Hosts</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Total Unique Hosts</title>
+      <single>
+        <search>
+          <query>`sandfly_search_hosts_summary`
+| dedup "host_summary.host_id"
+| stats count</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>OS Release Names</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_hosts_summary`
+| dedup "host_summary.host_id"
+| eval os_release_name = 'host_summary.os_info_os_release_pretty_name'
+| stats count by os_release_name</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>System Architecture</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_hosts_summary`
+| dedup "host_summary.host_id"
+| eval arch='host_summary.os_info_arch'
+| eval arch=if(arch="", "unknown", arch)
+| stats count by arch</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Active Hosts</title>
+      <table>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.active="true"
+| dedup "host_summary.host_id"
+| table host_summary.os_info_node host_summary.hostname host_summary.last_seen_ip_addr host_summary.os_info_os_release_pretty_name host_summary.tags{} host_summary.jump_hosts{} host_summary.authentication_status host_summary.credentials_id host_summary.results_alert host_summary.results_pass host_summary.results_error host_summary.os_info_uptime_days host_summary.date_last_scan host_summary.host_id
+| rename host_summary.os_info_node as "Hostname"
+| rename host_summary.hostname as "Target Address"
+| rename host_summary.last_seen_ip_addr as "IP Address"
+| rename host_summary.os_info_os_release_pretty_name as "OS"
+| rename host_summary.tags{} as "Tags"
+| rename host_summary.jump_hosts{} as "Jump Hosts"
+| rename host_summary.authentication_status as "Auth Status"
+| rename host_summary.credentials_id as "Credential"
+| rename host_summary.results_alert as "Alerts"
+| rename host_summary.results_pass as "Passing"
+| rename host_summary.results_error as "Errors"
+| rename host_summary.os_info_uptime_days as "Uptime (Days)"
+| rename host_summary.date_last_scan as "Last Scan"
+| rename host_summary.host_id as "host_id"</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="wrap">true</option>
+        <fields>["Hostname","Target Address","IP Address","OS","Tags","Jump Hosts","Auth Status","Credential","Alerts","Passing","Errors","Uptime (Days)","Last Scan"]</fields>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/sandfly_security__host_details?form.tok_host_id=$row.host_id$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Inactive Hosts</title>
+      <table>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.active="false"
+| dedup "host_summary.host_id"
+| eval date_last_scan='host_summary.date_last_scan'
+| eval date_last_scan=if(isnull(date_last_scan) OR len(date_last_scan)==0 OR date_last_scan=="null", "N/A", date_last_scan)
+| table host_summary.hostname host_summary.os_info_os_release_pretty_name host_summary.active host_summary.tags{} host_summary.jump_hosts{} host_summary.authentication_status host_summary.credentials_id date_last_scan
+| rename host_summary.hostname as "Target Address"
+| rename host_summary.os_info_os_release_pretty_name as "OS"
+| rename host_summary.active as "Active"
+| rename host_summary.tags{} as "Tags"
+| rename host_summary.jump_hosts{} as "Jump Hosts"
+| rename host_summary.authentication_status as "Auth Status"
+| rename host_summary.credentials_id as "Credential"
+| rename date_last_scan as "Last Scan"</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Raw Event</title>
+      <event>
+        <search>
+          <query>`sandfly_search_hosts_summary`
+| dedup "host_summary.host_id"</query>
+          <earliest>$tok_time.earliest$</earliest>
+          <latest>$tok_time.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+      </event>
+    </panel>
+  </row>
+</form>

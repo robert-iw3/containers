@@ -1,0 +1,180 @@
+<form version="1.1">
+  <label>Linux Metrics (table)</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 15 minutes</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats min(_value) AS minValue WHERE index="linux-metrics" metric_name="cpu_metric.pctIdle" CPU="all" BY host span=1s
+| rename host AS Host
+| stats avg(minValue) AS cpuIdle BY Host
+| sort cpuIdle
+| eval "CPU %"=floor(100-cpuIdle)
+| table Host, "CPU %"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="CPU %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=80, "#FFFFFF", value>80 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Memory</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="linux-metrics" metric_name="vmstat_metric.memUsedPct" BY host span=1s
+| rename host AS Host
+| stats avg(maxValue) AS Memory_Util BY Host
+| sort -Memory_Util
+| eval "Memory Utlisation %"=floor(Memory_Util)
+| table Host, "Memory Utlisation %"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Memory Utlisation %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=80, "#FFFFFF", value>80 AND value<=90, "#FF9900", value>90, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Disk Space</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS maxValue WHERE index="linux-metrics" metric_name="df_metric.Use" BY host, Filesystem span=1s
+| rename host AS Host, Filesystem AS Disk
+| stats max(maxValue) AS maxSpace BY Host, Disk
+| sort -maxSpace
+| eval "Disk Space Utilisation %"=floor(maxSpace)
+| table Host, Disk, "Disk Space Utilisation %"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Disk Space Utilisation %">
+          <colorPalette type="expression">
+            <![CDATA[
+case(value<=90, "#FFFFFF", value>90 AND value<=95, "#FF9900", value>95, "#FF0000")
+            ]]>
+          </colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Uplink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS TXbytes WHERE index="linux-metrics" metric_name="interfaces_metric.TXbytes" BY host, Name span=1s
+| rename host AS Host, Name AS Interface
+| streamstats current=f last(_time) AS last_time, last(TXbytes) AS lastTXbytes BY Host, Interface
+| eval interval=_time-last_time, Bps=round((TXbytes-lastTXbytes)/interval)
+| stats avg(Bps) AS Bytes_Sent_per_sec BY Host, Interface
+| sort -Bytes_Sent_per_sec
+| eval "Uplink (KBps)"=round(Bytes_Sent_per_sec/pow(1024,1), 1)
+| table Host, Interface, "Uplink (KBps)"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Downlink</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats max(_value) AS RXbytes WHERE index="linux-metrics" metric_name="interfaces_metric.RXbytes" BY host, Name span=1s
+| rename host AS Host, Name AS Interface
+| streamstats current=f last(_time) AS last_time, last(RXbytes) AS lastRXbytes BY Host, Interface
+| eval interval=_time-last_time, Bps=round((RXbytes-lastRXbytes)/interval)
+| stats avg(Bps) AS Bytes_Received_per_sec BY Host, Interface
+| sort -Bytes_Received_per_sec
+| eval "Downlink (KBps)"=round(Bytes_Received_per_sec/pow(1024,1), 1)
+| table Host, Interface, "Downlink (KBps)"
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Uptime</title>
+        <search>
+          <query>
+            <![CDATA[
+index="linux" source="Unix:Uptime"
+| rename host AS Host
+| stats max(SystemUpTime) AS System_Up_Time BY Host
+| sort -System_Up_Time
+| eval "Uptime (day)"=round(System_Up_Time/60/60/24)
+| table Host, "Uptime (day)"
+            ]]>
+          </query>
+          <earliest>-24h</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>1h</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

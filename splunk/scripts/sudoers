@@ -1,0 +1,9 @@
+# /etc/sudoers.d/ad_group
+
+# Members of Example-AD-Group can gain root privileges
+%Example-AD-Group@domain.example ALL=(ALL) ALL
+
+# Add $SPLUNK_HOME/bin (/opt/splunk/bin) to $PATH in sudo
+# Requires $SPLUNK_HOME to be set in $HOME/.profile prior; see setup.sh
+Defaults:%Example-AD-Group@domain.example env_keep += "SPLUNK_HOME"
+Defaults:%Example-AD-Group@domain.example secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/splunk/bin"

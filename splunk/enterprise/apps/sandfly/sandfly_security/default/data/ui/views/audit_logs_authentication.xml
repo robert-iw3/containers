@@ -1,0 +1,98 @@
+<form version="1.1" theme="light">
+  <label>Audit Logs - Authentication</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Successful Login</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="successful login"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Valid SAML Response</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="received valid SAML response*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Failed Login</title>
+      <single>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="*login*" OR audit_log.message="*SAML*"
+| search NOT audit_log.message="successful login"
+| search NOT audit_log.message="received valid SAML response*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Successful Login by UserName</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="successful login"
+| stats count by audit_log.username</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Valid SAML Response by UserName</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="received valid SAML response*"
+| rex field=audit_log.message "'\s*(?&lt;t_username&gt;[^']+?)\s*'"
+| stats count by t_username</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Failed Login by UserName</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="login attempt for user*"
+| rex field=audit_log.message "'\s*(?&lt;t_username&gt;[^']+?)\s*'"
+| stats count by t_username</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,20 @@
+{% for input in vendor_inputs %}
+{% if input.protocol in ['tcp', 'udp'] %}
+[{{ input.protocol }}://{{ input.port }}]
+sourcetype = {{ input.sourcetype }}
+index = {{ input.index | default(splunk_index) }}
+disabled = false
+{% elif input.protocol == 'wineventlog' %}
+[WinEventLog://Security]
+disabled = false
+sourcetype = {{ input.sourcetype }}
+index = {{ input.index | default(splunk_index) }}
+{% elif input.protocol == 'http' %}
+[http://{{ input.sourcetype }}]
+disabled = false
+port = {{ input.port }}
+token = {{ vault_splunk_hec_token }}
+sourcetype = {{ input.sourcetype }}
+index = {{ input.index | default(splunk_index) }}
+{% endif %}
+{% endfor %}

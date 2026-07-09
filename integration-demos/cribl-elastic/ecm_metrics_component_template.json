@@ -1,0 +1,92 @@
+{
+  "template": {
+    "settings": {
+      "index": {
+        "look_ahead_time": "10m",
+        "codec": "best_compression"
+      }
+    },
+    "mappings": {
+      "_data_stream_timestamp": {
+        "enabled": true
+      },
+      "dynamic": "runtime",
+      "properties": {
+        "custom_id": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "@timestamp": {
+          "type": "date"
+        },
+        "_metric_type": {
+          "type": "keyword"
+        },
+        "host": {
+          "properties": {
+            "name": {
+              "type": "keyword",
+              "time_series_dimension": true
+            }
+          }
+        },
+        "_metric": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "_value": {
+          "type": "double",
+          "time_series_metric": "gauge"
+        },
+        "cribl_wp": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "group": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "id": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "input": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "output": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "name": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "pipeline": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "project": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "route": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "source": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "subscription": {
+          "type": "keyword",
+          "time_series_dimension": true
+        },
+        "sourcetype": {
+          "type": "keyword",
+          "time_series_dimension": true
+        }
+      }
+    }
+  }
+}

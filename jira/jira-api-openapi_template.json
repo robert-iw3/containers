@@ -1,0 +1,68 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Jira API Restricted Spec",
+        "version": "1.0.0",
+        "description": "Restricted OpenAPI spec for Jira API to allow only necessary operations via Wallarm."
+    },
+    "servers": [
+        {
+            "url": "http://jira.example.com/rest/api/2"
+        }
+    ],
+    "paths": {
+        "/issue": {
+            "post": {
+                "summary": "Create issue",
+                "operationId": "createIssue",
+                "responses": {
+                    "201": {
+                        "description": "Issue created"
+                    }
+                }
+            },
+            "get": {
+                "summary": "Get issues",
+                "operationId": "getIssues",
+                "responses": {
+                    "200": {
+                        "description": "List of issues"
+                    }
+                }
+            }
+        },
+        "/user": {
+            "get": {
+                "summary": "Get user",
+                "operationId": "getUser",
+                "responses": {
+                    "200": {
+                        "description": "User details"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "basicAuth": {
+                "type": "http",
+                "scheme": "basic"
+            },
+            "OAuth": {
+                "type": "oauth2",
+                "flows": {
+                    "authorizationCode": {}
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "basicAuth": []
+        },
+        {
+            "OAuth": []
+        }
+    ]
+}

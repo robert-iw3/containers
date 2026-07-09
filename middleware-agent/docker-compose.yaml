@@ -1,0 +1,26 @@
+---
+services:
+  mw-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mw-agent:1.20.3
+    container_name: mw-agent
+    restart: always
+    environment:
+      - MW_API_KEY=${MW_API_KEY}
+      - MW_TARGET=${MW_TARGET:-https://ingest.middleware.io}
+      - MW_HOST_TAGS=${MW_HOST_TAGS:-env:prod,team:ops}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    network_mode: host
+    pid: host
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp

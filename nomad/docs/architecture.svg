@@ -1,0 +1,192 @@
+<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a-ctrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#00CA8E"/>
+    </marker>
+    <marker id="a-mesh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#CA2171"/>
+    </marker>
+    <marker id="a-sec" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FFEC6E"/>
+    </marker>
+    <marker id="a-obs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1DAEFF"/>
+    </marker>
+    <marker id="a-art" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A8A93"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="1000" fill="#16161B"/>
+
+  <text x="700" y="40" fill="#FFFFFF" font-size="24" font-weight="600" text-anchor="middle">Nomad System Topology — ports and data flow</text>
+
+  <!-- ================= Actors (left) ================= -->
+  <rect x="40" y="120" width="180" height="70" rx="8" fill="#25252B" stroke="#4A4A52" stroke-width="1.5"/>
+  <text x="130" y="150" fill="#FFFFFF" font-size="14" font-weight="600" text-anchor="middle">Operator</text>
+  <text x="130" y="170" fill="#8A8A93" font-size="10" text-anchor="middle">bastion / VPN CIDR</text>
+
+  <rect x="40" y="240" width="180" height="70" rx="8" fill="#25252B" stroke="#4A4A52" stroke-width="1.5"/>
+  <text x="130" y="264" fill="#FFFFFF" font-size="14" font-weight="600" text-anchor="middle">CI / local dev</text>
+  <text x="130" y="282" fill="#8A8A93" font-size="10" text-anchor="middle">pipeline/ship.py</text>
+  <text x="130" y="296" fill="#8A8A93" font-size="10" text-anchor="middle">build → push → deploy</text>
+
+  <rect x="40" y="380" width="180" height="60" rx="8" fill="#25252B" stroke="#8A8A93" stroke-width="1.5"/>
+  <text x="130" y="405" fill="#FFFFFF" font-size="13" font-weight="600" text-anchor="middle">Registry</text>
+  <text x="130" y="423" fill="#8A8A93" font-size="10" text-anchor="middle">GHCR :443</text>
+
+  <!-- ================= Nomad servers ================= -->
+  <rect x="330" y="100" width="480" height="200" rx="10" fill="none" stroke="#00CA8E" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="350" y="124" fill="#00CA8E" font-size="13" font-weight="600">Nomad servers (odd count, Raft quorum)</text>
+
+  <rect x="360" y="145" width="120" height="60" rx="8" fill="#00CA8E" opacity="0.9"/>
+  <text x="420" y="171" fill="#0B0B0C" font-size="13" font-weight="700" text-anchor="middle">server-1</text>
+  <text x="420" y="188" fill="#0B0B0C" font-size="9" text-anchor="middle">leader</text>
+
+  <rect x="505" y="145" width="120" height="60" rx="8" fill="#00CA8E" opacity="0.9"/>
+  <text x="565" y="171" fill="#0B0B0C" font-size="13" font-weight="700" text-anchor="middle">server-2</text>
+
+  <rect x="650" y="145" width="120" height="60" rx="8" fill="#00CA8E" opacity="0.9"/>
+  <text x="710" y="171" fill="#0B0B0C" font-size="13" font-weight="700" text-anchor="middle">server-3</text>
+
+  <line x1="480" y1="175" x2="505" y2="175" stroke="#00CA8E" stroke-width="2" marker-end="url(#a-ctrl)" marker-start="url(#a-ctrl)"/>
+  <line x1="625" y1="175" x2="650" y2="175" stroke="#00CA8E" stroke-width="2" marker-end="url(#a-ctrl)" marker-start="url(#a-ctrl)"/>
+  <text x="565" y="230" fill="#8A8A93" font-size="10" text-anchor="middle">↔ 4647/tcp Raft RPC · 4648/tcp+udp Serf gossip (encrypted)</text>
+  <text x="565" y="248" fill="#8A8A93" font-size="10" text-anchor="middle">mTLS everywhere: one shared CA signs every leaf cert · ACLs enforced</text>
+  <text x="565" y="278" fill="#8A8A93" font-size="10" text-anchor="middle">HTTPS API :4646 (UI, deploys, metrics)</text>
+
+  <!-- ================= Nomad clients ================= -->
+  <rect x="330" y="380" width="480" height="180" rx="10" fill="none" stroke="#00CA8E" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="350" y="404" fill="#00CA8E" font-size="13" font-weight="600">Nomad clients (autoscaling)</text>
+
+  <rect x="360" y="425" width="130" height="105" rx="8" fill="#00CA8E" opacity="0.35" stroke="#00CA8E" stroke-width="1.5"/>
+  <text x="425" y="450" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">client-1</text>
+  <text x="425" y="468" fill="#EAEAEA" font-size="9" text-anchor="middle">podman (rootless)</text>
+  <text x="425" y="482" fill="#8A8A93" font-size="9" text-anchor="middle">docker fallback</text>
+  <text x="425" y="500" fill="#8A8A93" font-size="9" text-anchor="middle">workloads :80/:443</text>
+  <text x="425" y="514" fill="#8A8A93" font-size="9" text-anchor="middle">CSI node plugin</text>
+
+  <rect x="510" y="425" width="130" height="105" rx="8" fill="#00CA8E" opacity="0.35" stroke="#00CA8E" stroke-width="1.5"/>
+  <text x="575" y="450" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">client-2</text>
+  <text x="575" y="468" fill="#EAEAEA" font-size="9" text-anchor="middle">podman (rootless)</text>
+  <text x="575" y="482" fill="#8A8A93" font-size="9" text-anchor="middle">docker fallback</text>
+  <text x="575" y="500" fill="#8A8A93" font-size="9" text-anchor="middle">workloads :80/:443</text>
+  <text x="575" y="514" fill="#8A8A93" font-size="9" text-anchor="middle">autoscaler job</text>
+
+  <rect x="660" y="425" width="130" height="105" rx="8" fill="#00CA8E" opacity="0.35" stroke="#00CA8E" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="725" y="450" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">client-N</text>
+  <text x="725" y="468" fill="#EAEAEA" font-size="9" text-anchor="middle">scales via ASG /</text>
+  <text x="725" y="482" fill="#8A8A93" font-size="9" text-anchor="middle">Nomad Autoscaler</text>
+
+  <!-- clients -> servers RPC -->
+  <line x1="565" y1="380" x2="565" y2="300" stroke="#00CA8E" stroke-width="1.6" marker-end="url(#a-ctrl)"/>
+  <text x="655" y="345" fill="#00CA8E" font-size="10" text-anchor="middle">RPC 4647/tcp · retry_join</text>
+
+  <!-- operator flows -->
+  <line x1="220" y1="145" x2="360" y2="160" stroke="#00CA8E" stroke-width="1.6" marker-end="url(#a-ctrl)"/>
+  <text x="278" y="138" fill="#00CA8E" font-size="10">:4646 UI/API · :22 SSH</text>
+
+  <!-- CI flows -->
+  <line x1="220" y1="265" x2="360" y2="200" stroke="#00CA8E" stroke-width="1.6" marker-end="url(#a-ctrl)"/>
+  <text x="268" y="238" fill="#00CA8E" font-size="10">deploy :4646</text>
+  <line x1="130" y1="310" x2="130" y2="380" stroke="#8A8A93" stroke-width="1.6" marker-end="url(#a-art)"/>
+  <text x="145" y="350" fill="#8A8A93" font-size="10">push image</text>
+  <line x1="220" y1="425" x2="360" y2="460" stroke="#8A8A93" stroke-width="1.6" stroke-dasharray="5,3" marker-start="url(#a-art)"/>
+  <text x="268" y="432" fill="#8A8A93" font-size="10">clients pull :443</text>
+
+  <!-- ================= Consul ================= -->
+  <rect x="900" y="120" width="200" height="120" rx="8" fill="#CA2171" opacity="0.9"/>
+  <text x="1000" y="150" fill="#FFFFFF" font-size="14" font-weight="700" text-anchor="middle">Consul cluster</text>
+  <text x="1000" y="170" fill="#FFF0F5" font-size="9" text-anchor="middle">HTTP :8500 · gRPC-TLS :8502</text>
+  <text x="1000" y="184" fill="#FFF0F5" font-size="9" text-anchor="middle">gRPC :8503 · RPC :8300</text>
+  <text x="1000" y="198" fill="#FFF0F5" font-size="9" text-anchor="middle">Serf :8301-8302 tcp/udp (internal)</text>
+  <text x="1000" y="218" fill="#FFF0F5" font-size="9" text-anchor="middle">Connect service mesh enabled</text>
+
+  <line x1="810" y1="180" x2="900" y2="180" stroke="#CA2171" stroke-width="1.6" marker-end="url(#a-mesh)"/>
+  <text x="855" y="171" fill="#CA2171" font-size="10" text-anchor="middle">:8500/:8503</text>
+
+  <!-- ================= Vault ================= -->
+  <rect x="900" y="290" width="200" height="130" rx="8" fill="#25252B" stroke="#FFEC6E" stroke-width="1.5"/>
+  <text x="1000" y="318" fill="#FFEC6E" font-size="14" font-weight="700" text-anchor="middle">Vault cluster</text>
+  <text x="1000" y="338" fill="#EAEAEA" font-size="9" text-anchor="middle">behind internal NLB</text>
+  <text x="1000" y="354" fill="#EAEAEA" font-size="9" text-anchor="middle">API :8200 · cluster :8201 (internal)</text>
+  <text x="1000" y="374" fill="#EAEAEA" font-size="9" text-anchor="middle">dynamic secrets for workloads</text>
+  <text x="1000" y="390" fill="#EAEAEA" font-size="9" text-anchor="middle">create_from_role = nomad-cluster</text>
+
+  <line x1="810" y1="330" x2="900" y2="340" stroke="#FFEC6E" stroke-width="1.6" marker-end="url(#a-sec)"/>
+  <text x="852" y="323" fill="#FFEC6E" font-size="10" text-anchor="middle">:8200</text>
+
+  <!-- ================= AWS services (right-bottom) ================= -->
+  <rect x="900" y="470" width="200" height="90" rx="8" fill="#25252B" stroke="#4A4A52" stroke-width="1.5"/>
+  <text x="1000" y="496" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Secrets Manager</text>
+  <text x="1000" y="514" fill="#8A8A93" font-size="9" text-anchor="middle">gossip key · ACL token · vault token</text>
+  <text x="1000" y="528" fill="#8A8A93" font-size="9" text-anchor="middle">KMS-encrypted, cross-region replica</text>
+  <text x="1000" y="546" fill="#8A8A93" font-size="9" text-anchor="middle">fetched at boot via IAM :443</text>
+
+  <line x1="810" y1="500" x2="900" y2="505" stroke="#FFEC6E" stroke-width="1.4" stroke-dasharray="5,3" marker-end="url(#a-sec)"/>
+  <text x="852" y="492" fill="#FFEC6E" font-size="9" text-anchor="middle">boot :443</text>
+
+  <rect x="1160" y="120" width="200" height="90" rx="8" fill="#25252B" stroke="#4A4A52" stroke-width="1.5"/>
+  <text x="1260" y="146" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">S3 snapshots</text>
+  <text x="1260" y="164" fill="#8A8A93" font-size="9" text-anchor="middle">daily Raft snapshot :443</text>
+  <text x="1260" y="178" fill="#8A8A93" font-size="9" text-anchor="middle">leader-only cron / systemd timer</text>
+  <text x="1260" y="192" fill="#8A8A93" font-size="9" text-anchor="middle">30-day lifecycle expiry</text>
+
+  <line x1="480" y1="150" x2="1160" y2="140" stroke="#00CA8E" stroke-width="1.4" stroke-dasharray="5,3" marker-end="url(#a-ctrl)"/>
+  <text x="860" y="128" fill="#8A8A93" font-size="9" text-anchor="middle">nomad operator snapshot save → s3 cp</text>
+
+  <!-- ================= Monitoring ================= -->
+  <rect x="330" y="640" width="770" height="200" rx="10" fill="#25252B" stroke="#1DAEFF" stroke-width="1.5"/>
+  <text x="350" y="666" fill="#1DAEFF" font-size="13" font-weight="600">Monitoring host / module</text>
+
+  <rect x="360" y="690" width="200" height="120" rx="8" fill="#1DAEFF" opacity="0.18" stroke="#1DAEFF" stroke-width="1.5"/>
+  <text x="460" y="716" fill="#1DAEFF" font-size="13" font-weight="600" text-anchor="middle">Prometheus :9090</text>
+  <text x="460" y="736" fill="#8A8A93" font-size="9" text-anchor="middle">scrapes /v1/metrics :4646</text>
+  <text x="460" y="750" fill="#8A8A93" font-size="9" text-anchor="middle">(servers + clients, TLS via cluster CA)</text>
+  <text x="460" y="764" fill="#8A8A93" font-size="9" text-anchor="middle">Consul :8500 · Vault :8200</text>
+  <text x="460" y="784" fill="#8A8A93" font-size="9" text-anchor="middle">alert rules: quorum, node down, evals</text>
+
+  <rect x="610" y="690" width="200" height="120" rx="8" fill="#F05A28" opacity="0.18" stroke="#F05A28" stroke-width="1.5"/>
+  <text x="710" y="716" fill="#F05A28" font-size="13" font-weight="600" text-anchor="middle">Grafana :3000</text>
+  <text x="710" y="736" fill="#8A8A93" font-size="9" text-anchor="middle">HTTPS ALB :443 (AWS avenue)</text>
+  <text x="710" y="750" fill="#8A8A93" font-size="9" text-anchor="middle">admin password from secrets</text>
+  <text x="710" y="764" fill="#8A8A93" font-size="9" text-anchor="middle">Prometheus datasource provisioned</text>
+
+  <rect x="860" y="690" width="200" height="120" rx="8" fill="#8A8A93" opacity="0.12" stroke="#8A8A93" stroke-width="1.5"/>
+  <text x="960" y="716" fill="#EAEAEA" font-size="13" font-weight="600" text-anchor="middle">Alertmanager :9093</text>
+  <text x="960" y="736" fill="#8A8A93" font-size="9" text-anchor="middle">webhook receiver → chat/pager</text>
+  <text x="960" y="756" fill="#8A8A93" font-size="9" text-anchor="middle">AWS: CloudWatch quorum alarm</text>
+  <text x="960" y="770" fill="#8A8A93" font-size="9" text-anchor="middle">→ SNS email</text>
+
+  <line x1="460" y1="690" x2="480" y2="560" stroke="#1DAEFF" stroke-width="1.6" marker-end="url(#a-obs)"/>
+  <line x1="470" y1="690" x2="530" y2="300" stroke="#1DAEFF" stroke-width="1.6" marker-end="url(#a-obs)"/>
+  <text x="405" y="620" fill="#1DAEFF" font-size="10">scrape :4646</text>
+  <line x1="560" y1="740" x2="610" y2="740" stroke="#1DAEFF" stroke-width="1.6" marker-start="url(#a-obs)"/>
+  <text x="585" y="731" fill="#1DAEFF" font-size="9" text-anchor="middle">:9090</text>
+  <line x1="560" y1="780" x2="860" y2="780" stroke="#1DAEFF" stroke-width="1.6" marker-end="url(#a-obs)"/>
+  <text x="712" y="794" fill="#1DAEFF" font-size="9" text-anchor="middle">fire alerts :9093</text>
+  <line x1="900" y1="240" x2="540" y2="690" stroke="#1DAEFF" stroke-width="1.2" stroke-dasharray="5,3" marker-start="url(#a-obs)"/>
+  <line x1="220" y1="175" x2="610" y2="720" stroke="#00CA8E" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a-ctrl)"/>
+  <text x="255" y="440" fill="#8A8A93" font-size="9" transform="rotate(53 255 440)">Grafana :443/:3000</text>
+
+  <!-- ================= Legend ================= -->
+  <g>
+    <text x="60" y="900" fill="#FFFFFF" font-size="12" font-weight="600">Flows</text>
+    <line x1="60" y1="920" x2="100" y2="920" stroke="#00CA8E" stroke-width="2" marker-end="url(#a-ctrl)"/>
+    <text x="108" y="924" fill="#EAEAEA" font-size="11">control plane (Nomad RPC/API/Raft)</text>
+
+    <line x1="360" y1="920" x2="400" y2="920" stroke="#CA2171" stroke-width="2" marker-end="url(#a-mesh)"/>
+    <text x="408" y="924" fill="#EAEAEA" font-size="11">service discovery / mesh (Consul)</text>
+
+    <line x1="660" y1="920" x2="700" y2="920" stroke="#FFEC6E" stroke-width="2" marker-end="url(#a-sec)"/>
+    <text x="708" y="924" fill="#EAEAEA" font-size="11">secrets (Vault, Secrets Manager)</text>
+
+    <line x1="60" y1="950" x2="100" y2="950" stroke="#1DAEFF" stroke-width="2" marker-end="url(#a-obs)"/>
+    <text x="108" y="954" fill="#EAEAEA" font-size="11">observability (metrics, alerts)</text>
+
+    <line x1="360" y1="950" x2="400" y2="950" stroke="#8A8A93" stroke-width="2" marker-end="url(#a-art)"/>
+    <text x="408" y="954" fill="#EAEAEA" font-size="11">artifacts (image push/pull)</text>
+
+    <text x="660" y="954" fill="#8A8A93" font-size="11">dashed = boot-time or cross-boundary · arrow = connection initiator → listener</text>
+  </g>
+</svg>

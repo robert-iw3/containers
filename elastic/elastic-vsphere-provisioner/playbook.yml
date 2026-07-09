@@ -1,0 +1,26 @@
+---
+- name: OS Tuning and Reboot
+  hosts: all
+  become: yes
+  tags: os_tuning
+  roles:
+    - os_setup
+
+- name: Container Runtime
+  hosts: all
+  become: yes
+  roles:
+    - container_runtime
+
+- name: Elasticsearch
+  hosts: elasticsearch
+  become: yes
+  roles:
+    - setup
+    - elastic_node
+
+- name: Kibana + Fleet
+  hosts: kibana
+  become: yes
+  roles:
+    - kibana_fleet

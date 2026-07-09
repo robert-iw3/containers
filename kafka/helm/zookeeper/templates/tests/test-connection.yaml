@@ -1,0 +1,34 @@
+{{- $root := . }}
+{{- $fullName := include "zookeeper.fullname" . }}
+{{- $port := .Values.port.admin | int }}
+{{- $replicaCount := .Values.replicaCount | int }}
+
+{{- range $i, $e := until $replicaCount }}
+{{- $targetPod := printf "%s-%d" (printf "%s" $fullName) $i }}
+{{- $_ := set $ "targetPod" $targetPod }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ $targetPod}}-test"
+  labels:
+    {{- include "zookeeper.labels" $root | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  serviceAccountName: {{ $fullName }}-sa
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['-qO-', '{{ $targetPod}}.{{ $fullName }}-headless:{{ $port }}/commands/srvr']
+      resources:
+        requests:
+          memory: "200Mi"
+          cpu: "10m"
+        limits:
+          memory: "200Mi"
+          cpu: "10m"
+  restartPolicy: Never
+{{- end }}

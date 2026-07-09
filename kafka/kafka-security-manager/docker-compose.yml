@@ -1,0 +1,55 @@
+---
+services:
+
+  zoo1:
+    image: docker.io/zookeeper:latest
+    hostname: zoo1
+    ports:
+      - "2181:2181"
+    environment:
+        ZOO_MY_ID: 1
+        ZOO_PORT: 2181
+        ZOO_SERVERS: server.1=zoo1:2888:3888
+
+  kafka1:
+    image: docker.io/confluentinc/cp-kafka:latest
+    hostname: kafka1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: "zoo1:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zoo1
+
+  kafka-security-manager:
+    image: docker.io/conduktor/kafka-security-manager:latest
+    environment:
+      KSM_READONLY: "false"
+      AUTHORIZER_ZOOKEEPER_CONNECT: "zoo1:2181"
+      # FILE:
+      SOURCE_CLASS: "io.conduktor.ksm.source.FileSourceAcl"
+      SOURCE_FILE_FILENAME: "example/acls.csv"
+      # GITHUB pull:
+#      SOURCE_CLASS: "io.conduktor.ksm.source.GitHubSourceAcl"
+#      SOURCE_GITHUB_USER: "robert-iw3"
+#      SOURCE_GITHUB_REPO: "containers"
+#      SOURCE_GITHUB_FILEPATH: "kafka/kafka-security-manager/example/acls.csv"
+
+      # SOURCE ACLS FROM KAFKA INSTEAD
+      # THIS WON't WORK WITH THIS DOCKER COMPOSE FILE AS IT
+      # REQUIRES KAFKA TO BE CONFIGURED IN SECURED MODE
+      # PR ACCEPTED :)
+
+      # AUTHORIZER_CLASS: "io.conduktor.ksm.compat.AdminClientAuthorizer"
+      # ADMIN_CLIENT_BOOTSTRAP_SERVERS: "kafka1:19092"
+      # set ADMIN_CLIENT_SECURITY_PROTOCOL, ADMIN_CLIENT_SASL_JAAS_CONFIG, ADMIN_CLIENT_SASL_MECHANISM, ADMIN_CLIENT_SSL_KEY_PASSWORD, ADMIN_CLIENT_SSL_KEYSTORE_LOCATION, ADMIN_CLIENT_SSL_KEYSTORE_PASSWORD, ADMIN_CLIENT_SSL_TRUSTSTORE_LOCATION, ADMIN_CLIENT_SSL_TRUSTSTORE_PASSWORD for a secure Kafka setup
+    volumes:
+      - ${PWD}/example:/opt/docker/example:ro
+    depends_on:
+      - kafka1

@@ -1,0 +1,166 @@
+---
+networks:
+  frontend:
+  backend:
+    internal: true
+
+secrets:
+  falco.pem:
+    file: ./secrets/certs/falco.pem
+  sidekick.ca:
+    file: ./secrets/certs/sslcert_chain.pem
+  sidekick.key:
+    file: ./secrets/certs/sslcert_rsa.key.pem
+  sidekick.cert:
+    file: ./secrets/certs/sslcert.pem
+
+services:
+
+  certs:
+    build: ./certs
+    container_name: certs
+    environment:
+      - AUTHORITY_NAME=${AUTHORITY_NAME:-Falco CA}
+      - AUTHORITY_PASSWORD=${AUTHORITY_PASSWORD:-youshouldchangethis}
+      - COMPANY=${COMPANY:-falco}
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+      - COUNTRY_CODE=${COUNTRY_CODE:-US}
+      - STATE=${STATE:-VA}
+      - CITY=${CITY:-Site7}
+    volumes: ['./secrets/certs:/certs:rw']
+
+  traefik:
+    container_name: traefik
+    image: docker.io/traefik:v3.4
+    command:
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--providers.file.filename=/dynamic/tls.yaml"
+      # Providers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=falco"
+      # API & Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      # Observability
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      # sudo systemctl enable --now podman.socket
+      - /var/run/podman/podman.sock:/var/run/docker.sock:ro
+      #- /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets:/secrets:ro
+      - ./dynamic:/dynamic:ro
+    networks:
+      - frontend
+      - backend
+    #sysctls:
+    #  net.ipv4.ip_unprivileged_port_start: 80
+    labels:
+      - "traefik.enable=true"
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.podman.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      # htpasswd -B -c .htpasswd admin  - htpasswd -nb admin "InsertAPasswordHere" | sed -e 's/\$/\$\$/g'
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users= "
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+      # to access dashboard - https://dashboard.podman.localhost
+
+  tinyauth:
+    container_name: tinyauth
+    hostname: tinyauth.local
+    image: ghcr.io/steveiliop56/tinyauth:latest
+    environment:
+      # openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32 && echo
+      - SECRET=      #some-random-32-chars-string
+      - APP_URL=https://tinyauth.local
+      # htpasswd -B -c .htpasswd tinyauth - htpasswd -nb tinyauth "InsertAPasswordHere" | sed -e 's/\$/\$\$/g'
+      - USERS=       # user:password
+    networks: ['backend']
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tinyauth.rule=Host(`tinyauth.local`)"
+      - "traefik.http.routers.tinyauth.entrypoints=https"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.service=tinyauth"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth.local:3000/api/auth/traefik"
+
+  falco:
+    image: docker.io/falcosecurity/falco:latest
+    container_name: falco
+    privileged: true
+    cap_drop: ['all']
+    cap_add:
+      - sys_admin
+      - sys_resource
+      - sys_ptrace
+    volumes:
+      #- /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/podman/podman.sock:/host/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - /dev:/host/dev
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+      - ./config/http_output.yml:/etc/falco/config.d/http_output.yml
+      - ./log:/logs:rw,Z
+    secrets:
+      - source: falco.pem
+        target: /etc/falco/falco.pem
+    depends_on: ['certs']
+    networks: ['backend']
+
+  sidekick:
+    container_name: falco-sidekick
+    image: docker.io/falcosecurity/falcosidekick:latest
+    environment:
+      WEBUI_URL: http://falco-webui:2802
+      #TLSSERVER_DEPLOY: true
+      #TLSSERVER_CERTFILE: /etc/certs/server/server.crt
+      #TLSSERVER_KEYFILE: /etc/certs/server/server.key
+      #TLSSERVER_CACERTFILE: /etc/certs/server/ca.crt
+    secrets:
+      - source: sidekick.ca
+        target: /etc/certs/server/ca.crt
+      - source: sidekick.cert
+        target: /etc/certs/server/server.crt
+      - source: sidekick.key
+        target: /etc/certs/server/server.key
+    networks: ['backend']
+
+  webui:
+    container_name: falco-webui
+    image: docker.io/falcosecurity/falcosidekick-ui:latest
+    hostname: falco.io
+    #ports: ['2802:2802']
+    networks: ['backend']
+    depends_on: ['redis']
+    command: ['-r', 'redis:6379', '-d']
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.falco-webui.entrypoints=https"
+      - "traefik.http.routers.falco-webui.tls=true"
+      - "traefik.http.routers.falco-webui.middlewares=tinyauth"
+      - "traefik.http.routers.falco-webui.service=falco"
+      - "traefik.http.services.falco-webui.loadbalancer.server.port=2802"
+      - "traefik.http.routers.falco-webui.rule=Host(`falco-webui`)"
+
+  redis:
+    container_name: redis
+    image: docker.io/redis/redis-stack:7.2.0-v17
+    networks: ['backend']

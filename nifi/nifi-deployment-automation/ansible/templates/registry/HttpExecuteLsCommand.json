@@ -1,0 +1,3189 @@
+{
+   "template":{
+      "description":"Sets up an http web server that responds to a http request to localhost:33333/trigger with an \"ls\" of the directory.\n\nWon't work on Windows due to the lack of \"ls\" command by default.",
+      "name":"HttpExecuteLsCommand",
+      "snippet":{
+         "connections":[
+            {
+               "id":"cbb6aa65-cbda-4473-aecc-34bcf6d6fb8d",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"6b25957e-dea6-426c-867b-fdb8ab540f14",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"flow1",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"4dc0e678-ecad-4d06-9e6d-2f34b335b928",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"7c70ffbc-8093-43c1-8d2e-f04c54b142af",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"df2be014-480e-4f79-ad1b-cfa6b62096a3",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":[
+                  "failure",
+                  "success"
+               ],
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b8d74711-94b8-4c59-81dd-b3342fa2aac6",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"7d8ed51f-563d-43cd-a8f5-f77b7042b441",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d242a40d-428a-4f52-aaf1-46dcc09d802d",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"original",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"6b25957e-dea6-426c-867b-fdb8ab540f14",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"3c0b5788-11bc-454d-b567-faa8bfd75a21",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"78a2bb4a-c2f5-4abb-b906-925f2280b6cb",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":[
+                  "failure",
+                  "success"
+               ],
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"c7fc59fa-f08c-493e-9856-5774419b87ed",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"d91a8fb3-3794-4097-8c91-be3dad3e7cec",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"b8d74711-94b8-4c59-81dd-b3342fa2aac6",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"unmatched",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"4dc0e678-ecad-4d06-9e6d-2f34b335b928",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"f7c36444-b212-4a69-9288-ba266391ea3b",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d575990f-203d-47ba-9d4a-c41589238597",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":[
+                  "failure",
+                  "success"
+               ],
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"c8a62e5d-045e-47ad-8a3c-d262dff7faff",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"3f69811f-de16-42f9-886e-fbcd9892c3fc",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"4dc0e678-ecad-4d06-9e6d-2f34b335b928",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"95dc2550-31d1-478f-a36e-4f31cbb723a7",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"38b2ddf7-4ccb-45a5-8cfb-15219c741f43",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"c8a62e5d-045e-47ad-8a3c-d262dff7faff",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"merged",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d242a40d-428a-4f52-aaf1-46dcc09d802d",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"69e8b3ad-71f1-4d24-b87d-0b5af49cd44b",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d242a40d-428a-4f52-aaf1-46dcc09d802d",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":[
+                  "matched",
+                  "unmatched"
+               ],
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"78a2bb4a-c2f5-4abb-b906-925f2280b6cb",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"fe8c043d-a7eb-44b6-9c83-fc2d16e4b338",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"c7fc59fa-f08c-493e-9856-5774419b87ed",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"output stream",
+               "source":{
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"6b25957e-dea6-426c-867b-fdb8ab540f14",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "controllerServices":{
+            "id":"57d0c4d9-6075-4c8b-bea1-182136b30308",
+            "comments":"",
+            "descriptors":{
+               "entry":[
+                  {
+                     "key":"Maximum Outstanding Requests",
+                     "value":{
+                        "defaultValue":"5000",
+                        "description":"The maximum number of HTTP requests that can be outstanding at any one time. Any attempt to register an additional HTTP Request will cause an error",
+                        "displayName":"Maximum Outstanding Requests",
+                        "dynamic":"false",
+                        "name":"Maximum Outstanding Requests",
+                        "required":"true",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  },
+                  {
+                     "key":"Request Expiration",
+                     "value":{
+                        "defaultValue":"1 min",
+                        "description":"Specifies how long an HTTP Request should be left unanswered before being evicted from the cache and being responded to with a Service Unavailable status code",
+                        "displayName":"Request Expiration",
+                        "dynamic":"false",
+                        "name":"Request Expiration",
+                        "required":"true",
+                        "sensitive":"false",
+                        "supportsEl":"false"
+                     }
+                  }
+               ]
+            },
+            "name":"StandardHttpContextMap",
+            "properties":{
+               "entry":[
+                  {
+                     "key":"Maximum Outstanding Requests",
+                     "value":"5000"
+                  },
+                  {
+                     "key":"Request Expiration",
+                     "value":"1 min"
+                  }
+               ]
+            },
+            "referencingComponents":[
+               {
+                  "activeThreadCount":"0",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Listening Port",
+                           "value":{
+                              "defaultValue":"80",
+                              "description":"The Port to listen on for incoming HTTP requests",
+                              "displayName":"Listening Port",
+                              "dynamic":"false",
+                              "name":"Listening Port",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Hostname",
+                           "value":{
+                              "description":"The Hostname to bind to. If not specified, will bind to all hosts",
+                              "displayName":"Hostname",
+                              "dynamic":"false",
+                              "name":"Hostname",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"SSL Context Service",
+                           "value":{
+                              "description":"The SSL Context Service to use in order to secure the server. If specified, the server will accept only HTTPS requests; otherwise, the server will accept only HTTP requests",
+                              "displayName":"SSL Context Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                              "name":"SSL Context Service",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allowed Paths",
+                           "value":{
+                              "description":"A Regular Expression that specifies the valid HTTP Paths that are allowed in the incoming URL Requests. If this value is specified and the path of the HTTP Requests does not match this Regular Expression, the Processor will respond with a 404: NotFound",
+                              "displayName":"Allowed Paths",
+                              "dynamic":"false",
+                              "name":"Allowed Paths",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Default URL Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The character set to use for decoding URL parameters if the HTTP Request does not supply one",
+                              "displayName":"Default URL Character Set",
+                              "dynamic":"false",
+                              "name":"Default URL Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow GET",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP GET Method",
+                              "displayName":"Allow GET",
+                              "dynamic":"false",
+                              "name":"Allow GET",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow POST",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP POST Method",
+                              "displayName":"Allow POST",
+                              "dynamic":"false",
+                              "name":"Allow POST",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow PUT",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP PUT Method",
+                              "displayName":"Allow PUT",
+                              "dynamic":"false",
+                              "name":"Allow PUT",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow DELETE",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP DELETE Method",
+                              "displayName":"Allow DELETE",
+                              "dynamic":"false",
+                              "name":"Allow DELETE",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow HEAD",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Allow HTTP HEAD Method",
+                              "displayName":"Allow HEAD",
+                              "dynamic":"false",
+                              "name":"Allow HEAD",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow OPTIONS",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Allow HTTP OPTIONS Method",
+                              "displayName":"Allow OPTIONS",
+                              "dynamic":"false",
+                              "name":"Allow OPTIONS",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Additional HTTP Methods",
+                           "value":{
+                              "description":"A comma-separated list of non-standard HTTP Methods that should be allowed",
+                              "displayName":"Additional HTTP Methods",
+                              "dynamic":"false",
+                              "name":"Additional HTTP Methods",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Client Authentication",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Processor will not authenticate clients. Anyone can communicate with this Processor anonymously",
+                                    "displayName":"No Authentication",
+                                    "value":"No Authentication"
+                                 },
+                                 {
+                                    "description":"Processor will try to verify the client but if unable to verify will allow the client to communicate anonymously",
+                                    "displayName":"Want Authentication",
+                                    "value":"Want Authentication"
+                                 },
+                                 {
+                                    "description":"Processor will reject communications from any client unless the client provides a certificate that is trusted by the TrustStorespecified in the SSL Context Service",
+                                    "displayName":"Need Authentication",
+                                    "value":"Need Authentication"
+                                 }
+                              ],
+                              "defaultValue":"No Authentication",
+                              "description":"Specifies whether or not the Processor should authenticate clients. This value is ignored if the <SSL Context Service> Property is not specified or the SSL Context provided uses only a KeyStore and not a TrustStore.",
+                              "displayName":"Client Authentication",
+                              "dynamic":"false",
+                              "name":"Client Authentication",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"95dc2550-31d1-478f-a36e-4f31cbb723a7",
+                  "name":"HandleHttpRequest",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Listening Port",
+                           "value":"33333"
+                        },
+                        {
+                           "key":"Hostname"
+                        },
+                        {
+                           "key":"SSL Context Service"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"Allowed Paths"
+                        },
+                        {
+                           "key":"Default URL Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Allow GET",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow POST",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow PUT",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow DELETE",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Allow HEAD",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Allow OPTIONS",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Additional HTTP Methods"
+                        },
+                        {
+                           "key":"Client Authentication",
+                           "value":"No Authentication"
+                        }
+                     ]
+                  },
+                  "referenceType":"Processor",
+                  "state":"STOPPED",
+                  "type":"org.apache.nifi.processors.standard.HandleHttpRequest"
+               },
+               {
+                  "activeThreadCount":"0",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":{
+                              "description":"The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+                              "displayName":"HTTP Status Code",
+                              "dynamic":"false",
+                              "name":"HTTP Status Code",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"http.Response.Content-type",
+                           "value":{
+                              "description":"Specifies the value to send for the 'http.Response.Content-type' HTTP Header",
+                              "displayName":"http.Response.Content-type",
+                              "dynamic":"true",
+                              "name":"http.Response.Content-type",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"df2be014-480e-4f79-ad1b-cfa6b62096a3",
+                  "name":"HandleHttpResponse",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":"200"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"http.Response.Content-type",
+                           "value":"text/html; charset=utf-8"
+                        }
+                     ]
+                  },
+                  "referenceType":"Processor",
+                  "state":"STOPPED",
+                  "type":"org.apache.nifi.processors.standard.HandleHttpResponse"
+               },
+               {
+                  "activeThreadCount":"0",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":{
+                              "description":"The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+                              "displayName":"HTTP Status Code",
+                              "dynamic":"false",
+                              "name":"HTTP Status Code",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Content-type",
+                           "value":{
+                              "description":"Specifies the value to send for the 'Content-type' HTTP Header",
+                              "displayName":"Content-type",
+                              "dynamic":"true",
+                              "name":"Content-type",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "groupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+                  "id":"d575990f-203d-47ba-9d4a-c41589238597",
+                  "name":"HandleHttpResponse",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":"200"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"Content-type",
+                           "value":"text/html; charset=utf-8"
+                        }
+                     ]
+                  },
+                  "referenceType":"Processor",
+                  "state":"STOPPED",
+                  "type":"org.apache.nifi.processors.standard.HandleHttpResponse"
+               }
+            ],
+            "state":"ENABLED",
+            "type":"org.apache.nifi.http.StandardHttpContextMap"
+         },
+         "processors":[
+            {
+               "id":"4dc0e678-ecad-4d06-9e6d-2f34b335b928",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1292.9605517703683",
+                  "y":"-52.24578728492247"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"0",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"A copy of the FlowFile will be routed to each relationship whose corresponding expression evaluates to 'true'",
+                                    "displayName":"Route to Property name",
+                                    "value":"Route to Property name"
+                                 },
+                                 {
+                                    "description":"Requires that all user-defined expressions evaluate to 'true' for the FlowFile to be considered a match",
+                                    "displayName":"Route to 'matched' if all match",
+                                    "value":"Route to 'match' if all match"
+                                 },
+                                 {
+                                    "description":"Requires that at least one user-defined expression evaluate to 'true' for hte FlowFile to be considered a match",
+                                    "displayName":"Route to 'matched' if any matches",
+                                    "value":"Route to 'match' if any matches"
+                                 }
+                              ],
+                              "defaultValue":"Route to Property name",
+                              "description":"Specifies how to determine which relationship to use when evaluating the Expression Language",
+                              "displayName":"Routing Strategy",
+                              "dynamic":"false",
+                              "name":"Routing Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"flow1",
+                           "value":{
+                              "description":"",
+                              "displayName":"flow1",
+                              "dynamic":"true",
+                              "name":"flow1",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Routing Strategy",
+                           "value":"Route to Property name"
+                        },
+                        {
+                           "key":"flow1",
+                           "value":"${http.request.uri:endsWith('trigger')}"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"EVENT_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"RouteOnAttribute",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"",
+                     "name":"flow1"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that do not match any user-define expression will be routed here",
+                     "name":"unmatched"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.RouteOnAttribute"
+            },
+            {
+               "id":"78a2bb4a-c2f5-4abb-b906-925f2280b6cb",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1325.8642077762277",
+                  "y":"508.91764197533143"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"0",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer (per file) in order to apply the regular expressions.  Files larger than the specified maximum will not be fully evaluated.",
+                              "displayName":"Maximum Buffer Size",
+                              "dynamic":"false",
+                              "name":"Maximum Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Capture Group Length",
+                           "value":{
+                              "defaultValue":"1024",
+                              "description":"Specifies the maximum number of characters a given capture group value can have.  Any characters beyond the max will be truncated.",
+                              "displayName":"Maximum Capture Group Length",
+                              "dynamic":"false",
+                              "name":"Maximum Capture Group Length",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Canonical Equivalence",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that two characters match only when their full canonical decompositions match.",
+                              "displayName":"Enable Canonical Equivalence",
+                              "dynamic":"false",
+                              "name":"Enable Canonical Equivalence",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Case-insensitive Matching",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that two characters match even if they are in a different case.  Can also be specified via the embeded flag (?i).",
+                              "displayName":"Enable Case-insensitive Matching",
+                              "dynamic":"false",
+                              "name":"Enable Case-insensitive Matching",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Permit Whitespace and Comments in Pattern",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"In this mode, whitespace is ignored, and embedded comments starting with # are ignored until the end of a line.  Can also be specified via the embeded flag (?x).",
+                              "displayName":"Permit Whitespace and Comments in Pattern",
+                              "dynamic":"false",
+                              "name":"Permit Whitespace and Comments in Pattern",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable DOTALL Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that the expression '.' should match any character, including a line terminator.  Can also be specified via the embeded flag (?s).",
+                              "displayName":"Enable DOTALL Mode",
+                              "dynamic":"false",
+                              "name":"Enable DOTALL Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Literal Parsing of the Pattern",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that Metacharacters and escape characters should be given no special meaning.",
+                              "displayName":"Enable Literal Parsing of the Pattern",
+                              "dynamic":"false",
+                              "name":"Enable Literal Parsing of the Pattern",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Multiline Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that '^' and '$' should match just after and just before a line terminator or end of sequence, instead of only the begining or end of the entire input.  Can also be specified via the embeded flag (?m).",
+                              "displayName":"Enable Multiline Mode",
+                              "dynamic":"false",
+                              "name":"Enable Multiline Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Unicode-aware Case Folding",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"When used with 'Enable Case-insensitive Matching', matches in a manner consistent with the Unicode Standard.  Can also be specified via the embeded flag (?u).",
+                              "displayName":"Enable Unicode-aware Case Folding",
+                              "dynamic":"false",
+                              "name":"Enable Unicode-aware Case Folding",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Unicode Predefined Character Classes",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Specifies conformance with the Unicode Technical Standard #18: Unicode Regular Expression Annex C: Compatibility Properties.  Can also be specified via the embeded flag (?U).",
+                              "displayName":"Enable Unicode Predefined Character Classes",
+                              "dynamic":"false",
+                              "name":"Enable Unicode Predefined Character Classes",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Enable Unix Lines Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Indicates that only the '\n' line terminator is recognized in the behavior of '.', '^', and '$'.  Can also be specified via the embeded flag (?d).",
+                              "displayName":"Enable Unix Lines Mode",
+                              "dynamic":"false",
+                              "name":"Enable Unix Lines Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Include Capture Group 0",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Indicates that Capture Group 0 should be included as an attribute. Capture Group 0 represents the entirety of the regular expression match, is typically not used, and could have considerable length.",
+                              "displayName":"Include Capture Group 0",
+                              "dynamic":"false",
+                              "name":"Include Capture Group 0",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"CmdText",
+                           "value":{
+                              "description":"",
+                              "displayName":"CmdText",
+                              "dynamic":"true",
+                              "name":"CmdText",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":"10 MB"
+                        },
+                        {
+                           "key":"Maximum Capture Group Length",
+                           "value":"10000000"
+                        },
+                        {
+                           "key":"Enable Canonical Equivalence",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Enable Case-insensitive Matching",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Permit Whitespace and Comments in Pattern",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Enable DOTALL Mode",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Enable Literal Parsing of the Pattern",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Enable Multiline Mode",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Enable Unicode-aware Case Folding",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Enable Unicode Predefined Character Classes",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Enable Unix Lines Mode",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Include Capture Group 0",
+                           "value":"false"
+                        },
+                        {
+                           "key":"CmdText",
+                           "value":"(.*)"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"EVENT_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ExtractText",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles are routed to this relationship when the Regular Expression is successfully evaluated and the FlowFile is modified as a result",
+                     "name":"matched"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles are routed to this relationship when no provided Regular Expression matches the content of the FlowFile",
+                     "name":"unmatched"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ExtractText"
+            },
+            {
+               "id":"c8a62e5d-045e-47ad-8a3c-d262dff7faff",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"865.195983211148",
+                  "y":"538.5424670106079"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"0",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":{
+                              "defaultValue":"(?s:^.*$)",
+                              "description":"The Search Value to search for in the FlowFile content. Only used for 'Literal Replace' and 'Regex Replace' matching strategies",
+                              "displayName":"Search Value",
+                              "dynamic":"false",
+                              "name":"Regular Expression",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":{
+                              "defaultValue":"$1",
+                              "description":"The value to insert using the 'Replacement Strategy'. Using \"Regex Replace\" back-references to Regular Expression capturing groups are supported, but back-references that reference capturing groups that do not exist in the regular expression will be treated as literal value.",
+                              "displayName":"Replacement Value",
+                              "dynamic":"false",
+                              "name":"Replacement Value",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer (per file or per line, depending on the Evaluation Mode) in order to apply the regular expressions. If 'Entire Text' (in Evaluation Mode) is selected and the FlowFile is larger than this value, the FlowFile will be routed to 'failure'. In 'Line-by-Line' Mode, if a single line is larger than this value, the FlowFile will be routed to 'failure'. A default value of 1 MB is provided, primarily for 'Entire Text' mode. In 'Line-by-Line' Mode, a value such as 8 KB or 16 KB is suggested. This value is ignored and the buffer is not used if 'Regular Expression' is set to '.*'",
+                              "displayName":"Maximum Buffer Size",
+                              "dynamic":"false",
+                              "name":"Maximum Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Replacement Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Insert the Replacement Value at the beginning of the FlowFile or the beginning of each line (depending on the Evaluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be prepended to each line. For \"Entire Text\" evaluation mode, the value will be prepended to the entire text.",
+                                    "displayName":"Prepend",
+                                    "value":"Prepend"
+                                 },
+                                 {
+                                    "description":"Insert the Replacement Value at the end of the FlowFile or the end of each line (depending on the Evluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be appended to each line. For \"Entire Text\" evaluation mode, the value will be appended to the entire text.",
+                                    "displayName":"Append",
+                                    "value":"Append"
+                                 },
+                                 {
+                                    "description":"Interpret the Search Value as a Regular Expression and replace all matches with the Replacement Value. The Replacement Value may reference Capturing Groups used in the Search Value by using a dollar-sign followed by the Capturing Group number, such as $1 or $2. If the Search Value is set to .* then everything is replaced without even evaluating the Regular Expression.",
+                                    "displayName":"Regex Replace",
+                                    "value":"Regex Replace"
+                                 },
+                                 {
+                                    "description":"Search for all instances of the Search Value and replace the matches with the Replacement Value.",
+                                    "displayName":"Literal Replace",
+                                    "value":"Literal Replace"
+                                 }
+                              ],
+                              "defaultValue":"Regex Replace",
+                              "description":"The strategy for how and what to replace within the FlowFile's text content.",
+                              "displayName":"Replacement Strategy",
+                              "dynamic":"false",
+                              "name":"Replacement Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Line-by-Line",
+                                    "value":"Line-by-Line"
+                                 },
+                                 {
+                                    "displayName":"Entire text",
+                                    "value":"Entire text"
+                                 }
+                              ],
+                              "defaultValue":"Entire text",
+                              "description":"Run the 'Replacement Strategy' against each line separately (Line-by-Line) or buffer the entire file into memory (Entire Text) and run against that.",
+                              "displayName":"Evaluation Mode",
+                              "dynamic":"false",
+                              "name":"Evaluation Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":"(?s:^.*$)"
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":"${CmdText}"
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":"1 MB"
+                        },
+                        {
+                           "key":"Replacement Strategy"
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":"Entire text"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"EVENT_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ReplaceText",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that could not be updated are routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that have been successfully processed are routed to this relationship. This includes both FlowFiles that had text replaced and those that did not.",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ReplaceText"
+            },
+            {
+               "id":"c7fc59fa-f08c-493e-9856-5774419b87ed",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1302.5058739582182",
+                  "y":"324.4032153016235"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":{
+                              "defaultValue":"(?s:^.*$)",
+                              "description":"The Search Value to search for in the FlowFile content. Only used for 'Literal Replace' and 'Regex Replace' matching strategies",
+                              "displayName":"Search Value",
+                              "dynamic":"false",
+                              "name":"Regular Expression",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":{
+                              "defaultValue":"$1",
+                              "description":"The value to insert using the 'Replacement Strategy'. Using \"Regex Replace\" back-references to Regular Expression capturing groups are supported, but back-references that reference capturing groups that do not exist in the regular expression will be treated as literal value.",
+                              "displayName":"Replacement Value",
+                              "dynamic":"false",
+                              "name":"Replacement Value",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer (per file or per line, depending on the Evaluation Mode) in order to apply the regular expressions. If 'Entire Text' (in Evaluation Mode) is selected and the FlowFile is larger than this value, the FlowFile will be routed to 'failure'. In 'Line-by-Line' Mode, if a single line is larger than this value, the FlowFile will be routed to 'failure'. A default value of 1 MB is provided, primarily for 'Entire Text' mode. In 'Line-by-Line' Mode, a value such as 8 KB or 16 KB is suggested. This value is ignored and the buffer is not used if 'Regular Expression' is set to '.*'",
+                              "displayName":"Maximum Buffer Size",
+                              "dynamic":"false",
+                              "name":"Maximum Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Replacement Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Insert the Replacement Value at the beginning of the FlowFile or the beginning of each line (depending on the Evaluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be prepended to each line. For \"Entire Text\" evaluation mode, the value will be prepended to the entire text.",
+                                    "displayName":"Prepend",
+                                    "value":"Prepend"
+                                 },
+                                 {
+                                    "description":"Insert the Replacement Value at the end of the FlowFile or the end of each line (depending on the Evluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be appended to each line. For \"Entire Text\" evaluation mode, the value will be appended to the entire text.",
+                                    "displayName":"Append",
+                                    "value":"Append"
+                                 },
+                                 {
+                                    "description":"Interpret the Search Value as a Regular Expression and replace all matches with the Replacement Value. The Replacement Value may reference Capturing Groups used in the Search Value by using a dollar-sign followed by the Capturing Group number, such as $1 or $2. If the Search Value is set to .* then everything is replaced without even evaluating the Regular Expression.",
+                                    "displayName":"Regex Replace",
+                                    "value":"Regex Replace"
+                                 },
+                                 {
+                                    "description":"Search for all instances of the Search Value and replace the matches with the Replacement Value.",
+                                    "displayName":"Literal Replace",
+                                    "value":"Literal Replace"
+                                 }
+                              ],
+                              "defaultValue":"Regex Replace",
+                              "description":"The strategy for how and what to replace within the FlowFile's text content.",
+                              "displayName":"Replacement Strategy",
+                              "dynamic":"false",
+                              "name":"Replacement Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Line-by-Line",
+                                    "value":"Line-by-Line"
+                                 },
+                                 {
+                                    "displayName":"Entire text",
+                                    "value":"Entire text"
+                                 }
+                              ],
+                              "defaultValue":"Entire text",
+                              "description":"Run the 'Replacement Strategy' against each line separately (Line-by-Line) or buffer the entire file into memory (Entire Text) and run against that.",
+                              "displayName":"Evaluation Mode",
+                              "dynamic":"false",
+                              "name":"Evaluation Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":"(?s:^.*$)"
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":"$0 <br>"
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":"1 MB"
+                        },
+                        {
+                           "key":"Replacement Strategy"
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":"Line-by-Line"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ReplaceText",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that could not be updated are routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that have been successfully processed are routed to this relationship. This includes both FlowFiles that had text replaced and those that did not.",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ReplaceText"
+            },
+            {
+               "id":"df2be014-480e-4f79-ad1b-cfa6b62096a3",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1868.8045459109933",
+                  "y":"153.92099509422792"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":{
+                              "description":"The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+                              "displayName":"HTTP Status Code",
+                              "dynamic":"false",
+                              "name":"HTTP Status Code",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"http.Response.Content-type",
+                           "value":{
+                              "description":"Specifies the value to send for the 'http.Response.Content-type' HTTP Header",
+                              "displayName":"http.Response.Content-type",
+                              "dynamic":"true",
+                              "name":"http.Response.Content-type",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":"200"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"http.Response.Content-type",
+                           "value":"text/html; charset=utf-8"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"HandleHttpResponse",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles will be routed to this Relationship if the Processor is unable to respond to the requestor. This may happen, for instance, if the connection times out or if NiFi is restarted before responding to the HTTP Request.",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles will be routed to this Relationship after the response has been successfully sent to the requestor",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.HandleHttpResponse"
+            },
+            {
+               "id":"d242a40d-428a-4f52-aaf1-46dcc09d802d",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"869.7085106769683",
+                  "y":"321.0045336609985"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Merge Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Generates 'bins' of FlowFiles and fills each bin as full as possible. FlowFiles are placed into a bin based on their size and optionally their attributes (if the <Correlation Attribute> property is set)",
+                                    "displayName":"Bin-Packing Algorithm",
+                                    "value":"Bin-Packing Algorithm"
+                                 },
+                                 {
+                                    "description":"Combines fragments that are associated by attributes back into a single cohesive FlowFile. If using this strategy, all FlowFiles must have the attributes <fragment.identifier>, <fragment.count>, and <fragment.index> or alternatively (for backward compatibility purposes) <segment.identifier>, <segment.count>, and <segment.index>. All FlowFiles with the same value for \"fragment.identifier\" will be grouped together. All FlowFiles in this group must have the same value for the \"fragment.count\" attribute. All FlowFiles in this group must have a unique value for the \"fragment.index\" attribute between 0 and the value of the \"fragment.count\" attribute.",
+                                    "displayName":"Defragment",
+                                    "value":"Defragment"
+                                 }
+                              ],
+                              "defaultValue":"Bin-Packing Algorithm",
+                              "description":"Specifies the algorithm used to merge content. The 'Defragment' algorithm combines fragments that are associated by attributes back into a single cohesive FlowFile. The 'Bin-Packing Algorithm' generates a FlowFile populated by arbitrarily chosen FlowFiles",
+                              "displayName":"Merge Strategy",
+                              "dynamic":"false",
+                              "name":"Merge Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Merge Format",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single TAR file. The FlowFiles' <path> attribute will be used to create a directory in the TAR file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the TAR file. If a FlowFile has an attribute named <tar.permissions> that is 3 characters, each between 0-7, that attribute will be used as the TAR entry's 'mode'.",
+                                    "displayName":"TAR",
+                                    "value":"TAR"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single ZIP file. The FlowFiles' <path> attribute will be used to create a directory in the ZIP file if the <Keep Paths> property is set to true; otherwise, all FlowFiles will be added at the root of the ZIP file. The <Compression Level> property indicates the ZIP compression to use.",
+                                    "displayName":"ZIP",
+                                    "value":"ZIP"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 3 FlowFile Stream",
+                                    "displayName":"FlowFile Stream, v3",
+                                    "value":"FlowFile Stream, v3"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 2 FlowFile Stream",
+                                    "displayName":"FlowFile Stream, v2",
+                                    "value":"FlowFile Stream, v2"
+                                 },
+                                 {
+                                    "description":"A bin of FlowFiles will be combined into a single Version 1 FlowFile Package",
+                                    "displayName":"FlowFile Tar, v1",
+                                    "value":"FlowFile Tar, v1"
+                                 },
+                                 {
+                                    "description":"The contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                    "displayName":"Binary Concatenation",
+                                    "value":"Binary Concatenation"
+                                 },
+                                 {
+                                    "description":"The Avro contents of all FlowFiles will be concatenated together into a single FlowFile",
+                                    "displayName":"Avro",
+                                    "value":"Avro"
+                                 }
+                              ],
+                              "defaultValue":"Binary Concatenation",
+                              "description":"Determines the format that will be used to merge the content.",
+                              "displayName":"Merge Format",
+                              "dynamic":"false",
+                              "name":"Merge Format",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Attribute Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Keep Only Common Attributes",
+                                    "value":"Keep Only Common Attributes"
+                                 },
+                                 {
+                                    "displayName":"Keep All Unique Attributes",
+                                    "value":"Keep All Unique Attributes"
+                                 }
+                              ],
+                              "defaultValue":"Keep Only Common Attributes",
+                              "description":"Determines which FlowFile attributes should be added to the bundle. If 'Keep All Unique Attributes' is selected, any attribute on any FlowFile that gets bundled will be kept unless its value conflicts with the value from another FlowFile. If 'Keep Only Common Attributes' is selected, only the attributes that exist on all FlowFiles in the bundle, with the same value, will be preserved.",
+                              "displayName":"Attribute Strategy",
+                              "dynamic":"false",
+                              "name":"Attribute Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Correlation Attribute Name",
+                           "value":{
+                              "description":"If specified, like FlowFiles will be binned together, where 'like FlowFiles' means FlowFiles that have the same value for this Attribute. If not specified, FlowFiles are bundled by the order in which they are pulled from the queue.",
+                              "displayName":"Correlation Attribute Name",
+                              "dynamic":"false",
+                              "name":"Correlation Attribute Name",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum Number of Entries",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The minimum number of files to include in a bundle",
+                              "displayName":"Minimum Number of Entries",
+                              "dynamic":"false",
+                              "name":"Minimum Number of Entries",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Number of Entries",
+                           "value":{
+                              "description":"The maximum number of files to include in a bundle. If not specified, there is no maximum.",
+                              "displayName":"Maximum Number of Entries",
+                              "dynamic":"false",
+                              "name":"Maximum Number of Entries",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Minimum Group Size",
+                           "value":{
+                              "defaultValue":"0 B",
+                              "description":"The minimum size of for the bundle",
+                              "displayName":"Minimum Group Size",
+                              "dynamic":"false",
+                              "name":"Minimum Group Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Group Size",
+                           "value":{
+                              "description":"The maximum size for the bundle. If not specified, there is no maximum.",
+                              "displayName":"Maximum Group Size",
+                              "dynamic":"false",
+                              "name":"Maximum Group Size",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Max Bin Age",
+                           "value":{
+                              "description":"The maximum age of a Bin that will trigger a Bin to be complete. Expected format is <duration> <time unit> where <duration> is a positive integer and time unit is one of seconds, minutes, hours",
+                              "displayName":"Max Bin Age",
+                              "dynamic":"false",
+                              "name":"Max Bin Age",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum number of Bins",
+                           "value":{
+                              "defaultValue":"100",
+                              "description":"Specifies the maximum number of bins that can be held in memory at any one time",
+                              "displayName":"Maximum number of Bins",
+                              "dynamic":"false",
+                              "name":"Maximum number of Bins",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Delimiter Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"The values of Header, Footer, and Demarcator will be retrieved from the contents of a file",
+                                    "displayName":"Filename",
+                                    "value":"Filename"
+                                 },
+                                 {
+                                    "description":"The values of Header, Footer, and Demarcator will be specified as property values",
+                                    "displayName":"Text",
+                                    "value":"Text"
+                                 }
+                              ],
+                              "defaultValue":"Filename",
+                              "description":"Determines if Header, Footer, and Demarcator should point to files containing the respective content, or if the values of the properties should be used as the content.",
+                              "displayName":"Delimiter Strategy",
+                              "dynamic":"false",
+                              "name":"Delimiter Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Header File",
+                           "value":{
+                              "description":"Filename specifying the header to use. If not specified, no header is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Header",
+                              "dynamic":"false",
+                              "name":"Header File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Footer File",
+                           "value":{
+                              "description":"Filename specifying the footer to use. If not specified, no footer is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Footer",
+                              "dynamic":"false",
+                              "name":"Footer File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Demarcator File",
+                           "value":{
+                              "description":"Filename specifying the demarcator to use. If not specified, no demarcator is supplied. This property is valid only when using the binary-concatenation merge strategy; otherwise, it is ignored.",
+                              "displayName":"Demarcator",
+                              "dynamic":"false",
+                              "name":"Demarcator File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Compression Level",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"0",
+                                    "value":"0"
+                                 },
+                                 {
+                                    "displayName":"1",
+                                    "value":"1"
+                                 },
+                                 {
+                                    "displayName":"2",
+                                    "value":"2"
+                                 },
+                                 {
+                                    "displayName":"3",
+                                    "value":"3"
+                                 },
+                                 {
+                                    "displayName":"4",
+                                    "value":"4"
+                                 },
+                                 {
+                                    "displayName":"5",
+                                    "value":"5"
+                                 },
+                                 {
+                                    "displayName":"6",
+                                    "value":"6"
+                                 },
+                                 {
+                                    "displayName":"7",
+                                    "value":"7"
+                                 },
+                                 {
+                                    "displayName":"8",
+                                    "value":"8"
+                                 },
+                                 {
+                                    "displayName":"9",
+                                    "value":"9"
+                                 }
+                              ],
+                              "defaultValue":"1",
+                              "description":"Specifies the compression level to use when using the Zip Merge Format; if not using the Zip Merge Format, this value is ignored",
+                              "displayName":"Compression Level",
+                              "dynamic":"false",
+                              "name":"Compression Level",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Keep Path",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If using the Zip or Tar Merge Format, specifies whether or not the FlowFiles' paths should be included in their entry names; if using other merge strategy, this value is ignored",
+                              "displayName":"Keep Path",
+                              "dynamic":"false",
+                              "name":"Keep Path",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Merge Strategy",
+                           "value":"Bin-Packing Algorithm"
+                        },
+                        {
+                           "key":"Merge Format",
+                           "value":"FlowFile Stream, v2"
+                        },
+                        {
+                           "key":"Attribute Strategy",
+                           "value":"Keep All Unique Attributes"
+                        },
+                        {
+                           "key":"Correlation Attribute Name"
+                        },
+                        {
+                           "key":"Minimum Number of Entries",
+                           "value":"1"
+                        },
+                        {
+                           "key":"Maximum Number of Entries"
+                        },
+                        {
+                           "key":"Minimum Group Size",
+                           "value":"0 B"
+                        },
+                        {
+                           "key":"Maximum Group Size"
+                        },
+                        {
+                           "key":"Max Bin Age"
+                        },
+                        {
+                           "key":"Maximum number of Bins",
+                           "value":"100"
+                        },
+                        {
+                           "key":"Delimiter Strategy",
+                           "value":"Filename"
+                        },
+                        {
+                           "key":"Header File"
+                        },
+                        {
+                           "key":"Footer File"
+                        },
+                        {
+                           "key":"Demarcator File"
+                        },
+                        {
+                           "key":"Compression Level",
+                           "value":"1"
+                        },
+                        {
+                           "key":"Keep Path",
+                           "value":"false"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"MergeContent",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"If the bundle cannot be created, all FlowFiles that would have been used to created the bundle will be transferred to failure",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The FlowFile containing the merged content",
+                     "name":"merged"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"The FlowFiles that were used to create the bundle",
+                     "name":"original"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.MergeContent"
+            },
+            {
+               "id":"6b25957e-dea6-426c-867b-fdb8ab540f14",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1295.4401736575753",
+                  "y":"124.4492848891498"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"0",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Command Arguments",
+                           "value":{
+                              "description":"The arguments to supply to the executable delimited by the ';' character.",
+                              "displayName":"Command Arguments",
+                              "dynamic":"false",
+                              "name":"Command Arguments",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Command Path",
+                           "value":{
+                              "description":"Specifies the command to be executed; if just the name of an executable is provided, it must be in the user's environment PATH.",
+                              "displayName":"Command Path",
+                              "dynamic":"false",
+                              "name":"Command Path",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Ignore STDIN",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, the contents of the incoming flowfile will not be passed to the executing command",
+                              "displayName":"Ignore STDIN",
+                              "dynamic":"false",
+                              "name":"Ignore STDIN",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Working Directory",
+                           "value":{
+                              "description":"The directory to use as the current working directory when executing the command",
+                              "displayName":"Working Directory",
+                              "dynamic":"false",
+                              "name":"Working Directory",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Argument Delimiter",
+                           "value":{
+                              "defaultValue":";",
+                              "description":"Delimiter to use to separate arguments for a command [default: ;]. Must be a single character",
+                              "displayName":"Argument Delimiter",
+                              "dynamic":"false",
+                              "name":"Argument Delimiter",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Output Destination Attribute",
+                           "value":{
+                              "description":"If set, the output of the stream command will be put into an attribute of the original FlowFile instead of a separate FlowFile. There will no longer be a relationship for 'output stream'. The value of this property will be the key for the output attribute.",
+                              "displayName":"Output Destination Attribute",
+                              "dynamic":"false",
+                              "name":"Output Destination Attribute",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Max Attribute Length",
+                           "value":{
+                              "defaultValue":"256",
+                              "description":"If routing the output of the stream command to an attribute, the number of characters put to the attribute value will be at most this amount. This is important because attributes are held in memory and large attributes will quickly cause out of memory issues. If the output goes longer than this value, it will truncated to fit. Consider making this smaller if able.",
+                              "displayName":"Max Attribute Length",
+                              "dynamic":"false",
+                              "name":"Max Attribute Length",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Command Arguments",
+                           "value":"-lt"
+                        },
+                        {
+                           "key":"Command Path",
+                           "value":"ls"
+                        },
+                        {
+                           "key":"Ignore STDIN",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Working Directory"
+                        },
+                        {
+                           "key":"Argument Delimiter"
+                        },
+                        {
+                           "key":"Output Destination Attribute"
+                        },
+                        {
+                           "key":"Max Attribute Length"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"EVENT_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ExecuteStreamCommand",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that were successfully processed",
+                     "name":"original"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"The destination path for the flow file created from the command's output",
+                     "name":"output stream"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ExecuteStreamCommand"
+            },
+            {
+               "id":"95dc2550-31d1-478f-a36e-4f31cbb723a7",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1299.254436047712",
+                  "y":"-256.44414391334044"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Listening Port",
+                           "value":{
+                              "defaultValue":"80",
+                              "description":"The Port to listen on for incoming HTTP requests",
+                              "displayName":"Listening Port",
+                              "dynamic":"false",
+                              "name":"Listening Port",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Hostname",
+                           "value":{
+                              "description":"The Hostname to bind to. If not specified, will bind to all hosts",
+                              "displayName":"Hostname",
+                              "dynamic":"false",
+                              "name":"Hostname",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"SSL Context Service",
+                           "value":{
+                              "description":"The SSL Context Service to use in order to secure the server. If specified, the server will accept only HTTPS requests; otherwise, the server will accept only HTTP requests",
+                              "displayName":"SSL Context Service",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                              "name":"SSL Context Service",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allowed Paths",
+                           "value":{
+                              "description":"A Regular Expression that specifies the valid HTTP Paths that are allowed in the incoming URL Requests. If this value is specified and the path of the HTTP Requests does not match this Regular Expression, the Processor will respond with a 404: NotFound",
+                              "displayName":"Allowed Paths",
+                              "dynamic":"false",
+                              "name":"Allowed Paths",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Default URL Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The character set to use for decoding URL parameters if the HTTP Request does not supply one",
+                              "displayName":"Default URL Character Set",
+                              "dynamic":"false",
+                              "name":"Default URL Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow GET",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP GET Method",
+                              "displayName":"Allow GET",
+                              "dynamic":"false",
+                              "name":"Allow GET",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow POST",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP POST Method",
+                              "displayName":"Allow POST",
+                              "dynamic":"false",
+                              "name":"Allow POST",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow PUT",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP PUT Method",
+                              "displayName":"Allow PUT",
+                              "dynamic":"false",
+                              "name":"Allow PUT",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow DELETE",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"Allow HTTP DELETE Method",
+                              "displayName":"Allow DELETE",
+                              "dynamic":"false",
+                              "name":"Allow DELETE",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow HEAD",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Allow HTTP HEAD Method",
+                              "displayName":"Allow HEAD",
+                              "dynamic":"false",
+                              "name":"Allow HEAD",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Allow OPTIONS",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"Allow HTTP OPTIONS Method",
+                              "displayName":"Allow OPTIONS",
+                              "dynamic":"false",
+                              "name":"Allow OPTIONS",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Additional HTTP Methods",
+                           "value":{
+                              "description":"A comma-separated list of non-standard HTTP Methods that should be allowed",
+                              "displayName":"Additional HTTP Methods",
+                              "dynamic":"false",
+                              "name":"Additional HTTP Methods",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Client Authentication",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Processor will not authenticate clients. Anyone can communicate with this Processor anonymously",
+                                    "displayName":"No Authentication",
+                                    "value":"No Authentication"
+                                 },
+                                 {
+                                    "description":"Processor will try to verify the client but if unable to verify will allow the client to communicate anonymously",
+                                    "displayName":"Want Authentication",
+                                    "value":"Want Authentication"
+                                 },
+                                 {
+                                    "description":"Processor will reject communications from any client unless the client provides a certificate that is trusted by the TrustStorespecified in the SSL Context Service",
+                                    "displayName":"Need Authentication",
+                                    "value":"Need Authentication"
+                                 }
+                              ],
+                              "defaultValue":"No Authentication",
+                              "description":"Specifies whether or not the Processor should authenticate clients. This value is ignored if the <SSL Context Service> Property is not specified or the SSL Context provided uses only a KeyStore and not a TrustStore.",
+                              "displayName":"Client Authentication",
+                              "dynamic":"false",
+                              "name":"Client Authentication",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Listening Port",
+                           "value":"33333"
+                        },
+                        {
+                           "key":"Hostname"
+                        },
+                        {
+                           "key":"SSL Context Service"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"Allowed Paths"
+                        },
+                        {
+                           "key":"Default URL Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Allow GET",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow POST",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow PUT",
+                           "value":"true"
+                        },
+                        {
+                           "key":"Allow DELETE",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Allow HEAD",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Allow OPTIONS",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Additional HTTP Methods"
+                        },
+                        {
+                           "key":"Client Authentication",
+                           "value":"No Authentication"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"HandleHttpRequest",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All content that is received is routed to the 'success' relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.HandleHttpRequest"
+            },
+            {
+               "id":"b8d74711-94b8-4c59-81dd-b3342fa2aac6",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"1870.0273242313058",
+                  "y":"-57.89640297706114"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":{
+                              "defaultValue":"(?s:^.*$)",
+                              "description":"The Search Value to search for in the FlowFile content. Only used for 'Literal Replace' and 'Regex Replace' matching strategies",
+                              "displayName":"Search Value",
+                              "dynamic":"false",
+                              "name":"Regular Expression",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":{
+                              "defaultValue":"$1",
+                              "description":"The value to insert using the 'Replacement Strategy'. Using \"Regex Replace\" back-references to Regular Expression capturing groups are supported, but back-references that reference capturing groups that do not exist in the regular expression will be treated as literal value.",
+                              "displayName":"Replacement Value",
+                              "dynamic":"false",
+                              "name":"Replacement Value",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer (per file or per line, depending on the Evaluation Mode) in order to apply the regular expressions. If 'Entire Text' (in Evaluation Mode) is selected and the FlowFile is larger than this value, the FlowFile will be routed to 'failure'. In 'Line-by-Line' Mode, if a single line is larger than this value, the FlowFile will be routed to 'failure'. A default value of 1 MB is provided, primarily for 'Entire Text' mode. In 'Line-by-Line' Mode, a value such as 8 KB or 16 KB is suggested. This value is ignored and the buffer is not used if 'Regular Expression' is set to '.*'",
+                              "displayName":"Maximum Buffer Size",
+                              "dynamic":"false",
+                              "name":"Maximum Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Replacement Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Insert the Replacement Value at the beginning of the FlowFile or the beginning of each line (depending on the Evaluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be prepended to each line. For \"Entire Text\" evaluation mode, the value will be prepended to the entire text.",
+                                    "displayName":"Prepend",
+                                    "value":"Prepend"
+                                 },
+                                 {
+                                    "description":"Insert the Replacement Value at the end of the FlowFile or the end of each line (depending on the Evluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be appended to each line. For \"Entire Text\" evaluation mode, the value will be appended to the entire text.",
+                                    "displayName":"Append",
+                                    "value":"Append"
+                                 },
+                                 {
+                                    "description":"Interpret the Search Value as a Regular Expression and replace all matches with the Replacement Value. The Replacement Value may reference Capturing Groups used in the Search Value by using a dollar-sign followed by the Capturing Group number, such as $1 or $2. If the Search Value is set to .* then everything is replaced without even evaluating the Regular Expression.",
+                                    "displayName":"Regex Replace",
+                                    "value":"Regex Replace"
+                                 },
+                                 {
+                                    "description":"Search for all instances of the Search Value and replace the matches with the Replacement Value.",
+                                    "displayName":"Literal Replace",
+                                    "value":"Literal Replace"
+                                 }
+                              ],
+                              "defaultValue":"Regex Replace",
+                              "description":"The strategy for how and what to replace within the FlowFile's text content.",
+                              "displayName":"Replacement Strategy",
+                              "dynamic":"false",
+                              "name":"Replacement Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Line-by-Line",
+                                    "value":"Line-by-Line"
+                                 },
+                                 {
+                                    "displayName":"Entire text",
+                                    "value":"Entire text"
+                                 }
+                              ],
+                              "defaultValue":"Entire text",
+                              "description":"Run the 'Replacement Strategy' against each line separately (Line-by-Line) or buffer the entire file into memory (Entire Text) and run against that.",
+                              "displayName":"Evaluation Mode",
+                              "dynamic":"false",
+                              "name":"Evaluation Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":"(?s:^.*$)"
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":"<b>403<br>Now you know that target won't work</b>"
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":"UTF-8"
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":"1 MB"
+                        },
+                        {
+                           "key":"Replacement Strategy"
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":"Entire text"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ReplaceText",
+               "relationships":[
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that could not be updated are routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that have been successfully processed are routed to this relationship. This includes both FlowFiles that had text replaced and those that did not.",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ReplaceText"
+            },
+            {
+               "id":"d575990f-203d-47ba-9d4a-c41589238597",
+               "parentGroupId":"8bb67d83-44ab-4758-89fb-52c68298eb76",
+               "position":{
+                  "x":"866.0777621585519",
+                  "y":"744.7232297438861"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":{
+                              "description":"The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+                              "displayName":"HTTP Status Code",
+                              "dynamic":"false",
+                              "name":"HTTP Status Code",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":{
+                              "allowableValues":{
+                                 "displayName":"StandardHttpContextMap",
+                                 "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                              },
+                              "description":"The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+                              "displayName":"HTTP Context Map",
+                              "dynamic":"false",
+                              "identifiesControllerService":"org.apache.nifi.http.HttpContextMap",
+                              "name":"HTTP Context Map",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Content-type",
+                           "value":{
+                              "description":"Specifies the value to send for the 'Content-type' HTTP Header",
+                              "displayName":"Content-type",
+                              "dynamic":"true",
+                              "name":"Content-type",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"HTTP Status Code",
+                           "value":"200"
+                        },
+                        {
+                           "key":"HTTP Context Map",
+                           "value":"57d0c4d9-6075-4c8b-bea1-182136b30308"
+                        },
+                        {
+                           "key":"Content-type",
+                           "value":"text/html; charset=utf-8"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"HandleHttpResponse",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles will be routed to this Relationship if the Processor is unable to respond to the requestor. This may happen, for instance, if the connection times out or if NiFi is restarted before responding to the HTTP Request.",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles will be routed to this Relationship after the response has been successfully sent to the requestor",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.HandleHttpResponse"
+            }
+         ]
+      },
+      "timestamp":"12/03/2020 12:30:53 EST"
+   }
+}

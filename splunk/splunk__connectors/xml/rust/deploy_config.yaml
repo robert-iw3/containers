@@ -1,0 +1,22 @@
+xml_connectors:
+  log_dir: '/var/log/xml_data'
+  schemas_file: '/app/schemas.yaml'
+splunk:
+  enabled: false
+  hec_url: 'https://your-splunk-host:8088/services/collector/event'
+  hec_token: 'your-splunk-hec-token'
+elasticsearch:
+  enabled: false
+  host: 'http://localhost:9200'
+  index: 'xml-logs'
+deployment:
+  method: 'docker'  # Options: docker, podman, kubernetes, ansible
+  namespace: 'xml-connectors'
+  kubernetes:
+    replicas: 1
+    storage_class: 'standard'
+    log_storage_size: '10Gi'
+buffer_timeout: 2.0
+worker_count: 4
+batch_size: 100
+#delimiter: ','  # Default delimiter for XML parsing (if applicable)

@@ -1,0 +1,56 @@
+upstream elasticsearch {
+    server localhost:9200;
+    keepalive 15;
+  }
+
+upstream kibana {
+    server localhost:5601;
+    keepalive 15;
+  }
+
+server {
+
+  listen 443;
+  server_name elastic-lab.io;
+
+  ssl on;
+  ssl_certificate /path/to/your/kibana.crt;
+  ssl_certificate_key /path/to/your/kibana.key;
+
+  ssl_protocols TLSv1.2;
+  ssl_prefer_server_ciphers on;
+  ssl_session_timeout 1d;
+  ssl_session_cache shared:SSL:50m;
+  ssl_ciphers 'YOUR-CHIPER-SUITE'
+  ssl_dhparam /etc/nginx/dhparam.pem;
+
+  auth_basic "Your Company Restricted Area";
+  auth_basic_user_file /path/to/your/basicauth.htpasswd;
+
+   # Elasticsearch
+  location / {
+
+    proxy_pass http://localhost:9200;
+    proxy_redirect off;
+    proxy_buffering off;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "Keep-Alive";
+    proxy_set_header Proxy-Connection "Keep-Alive";
+
+  }
+
+  # Kibana
+  location /kibana/ {
+
+    proxy_pass http://localhost:5601;
+    proxy_redirect off;
+    proxy_buffering off;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "Keep-Alive";
+    proxy_set_header Proxy-Connection "Keep-Alive";
+
+    rewrite ^/kibana/(.*)$ /$1 break;
+
+  }

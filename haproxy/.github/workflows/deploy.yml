@@ -1,0 +1,67 @@
+name: Deploy HAProxy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install pyyaml jinja2 requests
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo systemctl enable docker
+
+      - name: Install OpenSSL and Certbot
+        run: |
+          sudo apt-get install -y openssl certbot
+
+      - name: Run deployment (Docker)
+        run: python3 deploy_haproxy.py --dry-run
+
+      - name: Run tests
+        run: python3 test_deployment.py --host localhost
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Run deployment (Kubernetes, dry-run)
+        run: |
+          python3 deploy_haproxy.py --config config.yml --dry-run
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-configmap.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-deployment.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-service.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-hpa.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-ingress.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-rbac.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-network-policy.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/haproxy-pod-security.yaml
+          kubectl apply --dry-run=client -f haproxy_deployment/logging-deployment.yaml
+
+      - name: Install Ansible
+        run: sudo apt-get install -y ansible
+
+      - name: Run Ansible playbook (dry-run)
+        run: ansible-playbook haproxy_deployment/deploy_haproxy.yml -i inventory --check

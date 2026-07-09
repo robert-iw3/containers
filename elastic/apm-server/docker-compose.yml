@@ -1,0 +1,44 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+  networks:
+    - elastic
+
+services:
+  apm-server:
+    <<: *common-vars-apps
+    build:
+      context: .
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    container_name: apm-server
+    volumes:
+      - ./conf/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro,Z
+      - certs:/usr/share/apm-server/config/certs/:z
+    environment:
+      APM_SERVER_TOKEN: ${APM_SERVER_TOKEN}
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+    command:
+      - -e
+      - --strict.perms=false
+    ports:
+      - 8200:8200
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --cacert /usr/share/apm-server/config/certificates/ca/ca.crt --max-time 120 --retry 120 --retry-delay 1 --show-error --silent https://localhost:8200",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+      fleet-server:
+        condition: service_healthy

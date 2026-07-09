@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: litellm-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - litellm.example.com
+        - webui.example.com
+        - yakgpt.example.com
+        - nextchat.example.com
+      secretName: litellm-tls
+  rules:
+    - host: litellm.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: litellm
+                port:
+                  number: 4000
+    - host: webui.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-webui
+                port:
+                  number: 8080
+    - host: yakgpt.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: yakgpt
+                port:
+                  number: 3000
+    - host: nextchat.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nextchat
+                port:
+                  number: 3000
+    # chat.example.com / ollama-webui intentionally omitted: that compose service builds
+    # from a locally-tagged image (ollama-webui:local, no registry) and only runs behind the
+    # opt-in "custom-ui" compose profile — it isn't something a generic k8s node can pull, so
+    # there's no corresponding Deployment/Service to route to here.

@@ -1,0 +1,21 @@
+[Unit]
+Description=Prometheus (podman)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStartPre=-/usr/bin/podman rm -f prometheus
+ExecStart=/usr/bin/podman run --name prometheus --rm \
+  -p {{ prometheus_port }}:9090 \
+  -v {{ monitoring_data_dir }}/prometheus/config:/etc/prometheus:ro,Z \
+  -v {{ monitoring_data_dir }}/prometheus/data:/prometheus:Z \
+  {{ prometheus_image }} \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/prometheus \
+  --storage.tsdb.retention.time={{ prometheus_retention }}
+ExecStop=/usr/bin/podman stop prometheus
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

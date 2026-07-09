@@ -1,0 +1,97 @@
+{
+  "title": "Log Pipeline Overview",
+  "uid": "log-pipeline-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "utc",
+  "time": {"from": "now-6h", "to": "now"},
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Event Volume by Level",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "elasticsearch", "uid": "es-metrics"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{"id": "1", "type": "sum", "field": "event_count"}],
+          "bucketAggs": [
+            {"id": "2", "type": "date_histogram", "field": "window_start", "settings": {"interval": "1m"}},
+            {"id": "3", "type": "terms", "field": "level", "settings": {"size": "5", "order": "desc", "orderBy": "_term"}}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Count by Service",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "elasticsearch", "uid": "es-metrics"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{"id": "1", "type": "sum", "field": "error_count"}],
+          "bucketAggs": [
+            {"id": "2", "type": "date_histogram", "field": "window_start", "settings": {"interval": "1m"}},
+            {"id": "3", "type": "terms", "field": "service", "settings": {"size": "10", "order": "desc", "orderBy": "_term"}}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Average Request Duration (ms) by Service",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "elasticsearch", "uid": "es-metrics"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{"id": "1", "type": "avg", "field": "avg_duration_ms"}],
+          "bucketAggs": [
+            {"id": "2", "type": "date_histogram", "field": "window_start", "settings": {"interval": "1m"}},
+            {"id": "3", "type": "terms", "field": "service", "settings": {"size": "10", "order": "desc", "orderBy": "_term"}}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Total Events by Service (last 6h)",
+      "type": "bargauge",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "elasticsearch", "uid": "es-metrics"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{"id": "1", "type": "sum", "field": "event_count"}],
+          "bucketAggs": [
+            {"id": "2", "type": "terms", "field": "service", "settings": {"size": "10", "order": "desc", "orderBy": "1"}}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Recent Error Logs",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 16},
+      "datasource": {"type": "elasticsearch", "uid": "es-raw-logs"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "level:ERROR",
+          "metrics": [{"id": "1", "type": "logs"}]
+        }
+      ]
+    }
+  ]
+}

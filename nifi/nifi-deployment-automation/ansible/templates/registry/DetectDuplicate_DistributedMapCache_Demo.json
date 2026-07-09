@@ -1,0 +1,569 @@
+{
+	"template": {
+		"description": "An example of how to use DetectDuplicate with the DistributedMapCacheServer and DistributedMapCacheClient.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "DetectDuplicate DistributedMapCache Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "ad84107f-34c3-37a2-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "59484c6d-f66f-3da8-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "9843aa48-b974-3d24-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "4b5831cb-1cd4-3845-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "5c8d82a8-5d27-3405-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "-339.24985563847315",
+								"y": "702.1200805355081"
+							},
+							"destination": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "b9919470-350c-3bc7-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "9843aa48-b974-3d24-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "8a27799a-eb0a-30db-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "4b5831cb-1cd4-3845-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "7781203a-137c-3131-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "e40071c4-c241-3a40-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "b9919470-350c-3bc7-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "duplicate",
+							"source": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "9843aa48-b974-3d24-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "f14a0e36-8629-3941-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "-804.2498556384732",
+								"y": "701.1200805355081"
+							},
+							"destination": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "b9919470-350c-3bc7-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "non-duplicate",
+							"source": {
+								"groupId": "ad84107f-34c3-37a2-0000-000000000000",
+								"id": "9843aa48-b974-3d24-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"controllerServices": {
+						"id": "163fc456-3278-3a10-0000-000000000000",
+						"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+						"bundle": {
+							"artifact": "nifi-distributed-cache-services-nar",
+							"group": "org.apache.nifi",
+							"version": "1.9.0.3.4.1.1-4"
+						},
+						"comments": "",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Server Hostname",
+									"value": {
+										"name": "Server Hostname"
+									}
+								},
+								{
+									"key": "Server Port",
+									"value": {
+										"name": "Server Port"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service"
+									}
+								},
+								{
+									"key": "Communications Timeout",
+									"value": {
+										"name": "Communications Timeout"
+									}
+								}
+							]
+						},
+						"name": "DistributedMapCacheClientService",
+						"persistsState": "false",
+						"properties": {
+							"entry": [
+								{
+									"key": "Server Hostname",
+									"value": "localhost"
+								},
+								{
+									"key": "Server Port"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Communications Timeout"
+								}
+							]
+						},
+						"state": "ENABLED",
+						"type": "org.apache.nifi.distributed.cache.client.DistributedMapCacheClientService"
+					},
+					"labels": [
+						{
+							"id": "35bb4c08-0efb-3b2f-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"position": {
+								"x": "-793.9429921516935",
+								"y": "814.2365664265149"
+							},
+							"height": "140.85916137695312",
+							"label": "Notice use of Output Port for All Routes\nLeave these routed during testing and\nthen auto terminate later, or route the\noutput port to an  Error Notification Handler.",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "492.9417724609375"
+						},
+						{
+							"id": "a5b6abdc-4a7a-35a8-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"position": {
+								"x": "-1018.542931498007",
+								"y": "-49.96341526293827"
+							},
+							"height": "164.85916137695312",
+							"label": "Before starting the flow check Controller Services Tab for this Process Group.  \nYou will need to click + to add the DistributedMapCacheServer.  \nNext edit the DistributedMapCacheClient to set Server Name to localhost.  \nThe Client port should be the same as Server above.\nEnable Both Controller Services.",
+							"style": {
+								"entry": [
+									{
+										"key": "background-color",
+										"value": "#fc0a1e"
+									},
+									{
+										"key": "font-size",
+										"value": "24px"
+									}
+								]
+							},
+							"width": "858.9417724609375"
+						}
+					],
+					"outputPorts": {
+						"id": "b9919470-350c-3bc7-0000-000000000000",
+						"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+						"position": {
+							"x": "-696.1870944274087",
+							"y": "759.0000003404181"
+						},
+						"concurrentlySchedulableTaskCount": "1",
+						"name": "Output",
+						"state": "STOPPED",
+						"type": "OUTPUT_PORT",
+						"validationErrors": "'Port 'Output'' is invalid because Output connection for port 'Output' is not defined."
+					},
+					"processors": [
+						{
+							"id": "4b5831cb-1cd4-3845-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"position": {
+								"x": "-751.18708661342",
+								"y": "313.07971818022145"
+							},
+							"bundle": {
+								"artifact": "nifi-update-attribute-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression",
+											"value": {
+												"name": "Delete Attributes Expression"
+											}
+										},
+										{
+											"key": "Store State",
+											"value": {
+												"name": "Store State"
+											}
+										},
+										{
+											"key": "Stateful Variables Initial Value",
+											"value": {
+												"name": "Stateful Variables Initial Value"
+											}
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": {
+												"name": "canonical-value-lookup-cache-size"
+											}
+										},
+										{
+											"key": "id",
+											"value": {
+												"name": "id"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression"
+										},
+										{
+											"key": "Store State",
+											"value": "Do not store state"
+										},
+										{
+											"key": "Stateful Variables Initial Value"
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": "100"
+										},
+										{
+											"key": "id",
+											"value": "0"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UpdateAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+						},
+						{
+							"id": "7781203a-137c-3131-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"position": {
+								"x": "-752.244891110447",
+								"y": "130.8977937450593"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "10 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						},
+						{
+							"id": "9843aa48-b974-3d24-0000-000000000000",
+							"parentGroupId": "ad84107f-34c3-37a2-0000-000000000000",
+							"position": {
+								"x": "-749.3126168495376",
+								"y": "515.2401607305981"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Cache Entry Identifier",
+											"value": {
+												"name": "Cache Entry Identifier"
+											}
+										},
+										{
+											"key": "FlowFile Description",
+											"value": {
+												"name": "FlowFile Description"
+											}
+										},
+										{
+											"key": "Age Off Duration",
+											"value": {
+												"name": "Age Off Duration"
+											}
+										},
+										{
+											"key": "Distributed Cache Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.distributed.cache.client.DistributedMapCacheClient",
+												"name": "Distributed Cache Service"
+											}
+										},
+										{
+											"key": "Cache The Entry Identifier",
+											"value": {
+												"name": "Cache The Entry Identifier"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Cache Entry Identifier",
+											"value": "${id}"
+										},
+										{
+											"key": "FlowFile Description",
+											"value": ""
+										},
+										{
+											"key": "Age Off Duration"
+										},
+										{
+											"key": "Distributed Cache Service",
+											"value": "163fc456-3278-3a10-0000-000000000000"
+										},
+										{
+											"key": "Cache The Entry Identifier",
+											"value": "true"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "DetectDuplicate",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "duplicate"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "non-duplicate"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.DetectDuplicate"
+						}
+					]
+				},
+				"name": "DetectDuplicate DistributedMapCache Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "05/28/2020 19:56:56 UTC",
+		"_encoding-version": "1.2"
+	}
+}

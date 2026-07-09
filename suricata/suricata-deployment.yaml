@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suricata
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: suricata
+  template:
+    metadata:
+      labels:
+        app: suricata
+    spec:
+      hostNetwork: true
+      containers:
+      - name: suricata
+        image: suricata:8.0.6
+        imagePullPolicy: IfNotPresent
+        env:
+        # IPS-mode toggling (defaults = passive IDS). Set IPS_MODE=ips with
+        # INLINE_METHOD=nfqueue for inline blocking (needs NET_ADMIN, already granted).
+        - name: IPS_MODE
+          value: "ids"
+        - name: INLINE_METHOD
+          value: "afpacket_bridge"
+        - name: CAPTURE_INTERFACE
+          value: "eth0"
+        - name: RULE_ACTION_POLICY
+          value: "balanced"
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: logs
+          mountPath: /var/log/suricata
+        - name: rules
+          mountPath: /var/lib/suricata
+        - name: config
+          mountPath: /etc/suricata
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW", "SYS_NICE"]
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        livenessProbe:
+          exec:
+            command: ["pidof", "suricata"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command: ["pidof", "suricata"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: logs
+        persistentVolumeClaim:
+          claimName: suricata-logs
+      - name: rules
+        persistentVolumeClaim:
+          claimName: suricata-rules
+      - name: config
+        persistentVolumeClaim:
+          claimName: suricata-config

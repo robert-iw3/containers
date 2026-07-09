@@ -1,0 +1,57 @@
+<form version="1.1">
+  <label>SSH Hunter - User Investigation</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>User Investigation</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_user_details
+| dedup ssh_user_details.username
+| table ssh_user_details.username ssh_user_details.keys_current ssh_user_details.keys_total ssh_user_details.hosts_current ssh_user_details.hosts_total ssh_user_details.first_seen ssh_user_details.last_seen ssh_user_details.has_duplicate_keys
+| sort ssh_user_details.username
+| rename ssh_user_details.has_duplicate_keys as "Duplicate Keys"
+| rename ssh_user_details.username as "Username"
+| rename ssh_user_details.keys_current as "Active Keys"
+| rename ssh_user_details.keys_total as "All-Time Keys"
+| rename ssh_user_details.hosts_current as "Active Hosts"
+| rename ssh_user_details.hosts_total as "All-Time Hosts"
+| rename ssh_user_details.first_seen as "First Seen"
+| rename ssh_user_details.last_seen as "Last Seen"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <format type="color" field="Duplicate Keys">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__user_summary?form.tok_user=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Raw Event Details</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_user_details
+| dedup ssh_user_details.username</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,23 @@
+---
+# Converges the scylladb role on a systemd+podman-capable instance and verifies
+# a real 3-node cluster forms with the telemetry schema loaded. Heavy (three
+# Scylla nodes); intended for a CI runner with enough memory (~4GB).
+driver:
+  name: podman
+
+platforms:
+  - name: scylladb-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+
+verifier:
+  name: ansible

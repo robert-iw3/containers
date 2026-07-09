@@ -1,0 +1,55 @@
+---
+- name: Deploy Middleware Agent via Docker
+  hosts: all
+  become: true
+  vars:
+    mw_api_key: "{{ lookup('ansible.builtin.env', 'MW_API_KEY', default='') }}"
+    mw_target: "{{ lookup('ansible.builtin.env', 'MW_TARGET', default='https://ingest.middleware.io') }}"
+    mw_host_tags: "{{ lookup('ansible.builtin.env', 'MW_HOST_TAGS', default='env:prod,team:ops') }}"
+  tasks:
+    - name: Ensure Docker is installed
+      ansible.builtin.package:
+        name: docker
+        state: present
+
+    - name: Copy Dockerfile
+      ansible.builtin.copy:
+        src: ./Dockerfile
+        dest: /tmp/Dockerfile
+        mode: '0644'
+
+    - name: Build mw-agent image
+      ansible.builtin.command: docker build -t mw-agent:1.3.0 .
+      args:
+        chdir: /tmp
+      register: build_result
+      changed_when: build_result.rc == 0
+
+    - name: Run mw-agent container
+      community.docker.docker_container:
+        name: mw-agent
+        image: mw-agent:1.3.0
+        state: started
+        restart_policy: always
+        env:
+          MW_API_KEY: "{{ mw_api_key }}"
+          MW_TARGET: "{{ mw_target }}"
+          MW_HOST_TAGS: "{{ mw_host_tags }}"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - /var/log:/var/log:ro
+          - /proc:/host/proc:ro
+          - /sys:/host/sys:ro
+          - /:/host/root:ro
+        network_mode: host
+        pid_mode: host
+        cap_drop:
+          - ALL
+        read_only: true
+        tmpfs:
+          - /tmp
+
+    - name: Verify container status
+      ansible.builtin.command: docker ps -f name=mw-agent
+      register: container_status
+      changed_when: false

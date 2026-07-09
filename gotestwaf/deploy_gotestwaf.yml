@@ -1,0 +1,84 @@
+---
+- name: Deploy GoTestWAF for WAF testing
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure output directory exists
+      file:
+        path: "{{ output_dir }}"
+        state: directory
+        mode: '0777'
+
+    - name: Build GoTestWAF image
+      command: "{{ container_cmd }} build -t gotestwaf ."
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: deploy_type in ['docker', 'podman']
+      timeout: "{{ timeout }}"
+
+    - name: Run GoTestWAF for each URL batch with Docker/Podman
+      command: >-
+        {{ container_cmd }} run --rm -v {{ output_dir }}:/app/reports gotestwaf
+        --url={{ item }} --noEmailReport
+        --reportName=gotestwaf_{{ item | replace('/', '_') }}
+        --reportFormat=json
+      loop: "{{ urls }}"
+      when: deploy_type in ['docker', 'podman']
+      async: "{{ timeout }}"
+      poll: 0
+      register: gotestwaf_output
+      throttle: "{{ parallel }}"
+      retries: "{{ retries }}"
+      delay: 10
+
+    - name: Wait for GoTestWAF tasks to complete
+      async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ gotestwaf_output.results }}"
+      when: deploy_type in ['docker', 'podman']
+      register: async_results
+      until: async_results.finished
+      retries: "{{ retries }}"
+      delay: 10
+
+    - name: Render per-URL GoTestWAF Job manifests
+      template:
+        src: gotestwaf_k8s.yml.j2
+        dest: "/tmp/gotestwaf-job-{{ item | hash('md5') }}.yml"
+      loop: "{{ urls }}"
+      when: deploy_type == 'kubernetes'
+
+    - name: Apply GoTestWAF Job for each URL
+      command: "kubectl apply -f /tmp/gotestwaf-job-{{ item | hash('md5') }}.yml"
+      loop: "{{ urls }}"
+      when: deploy_type == 'kubernetes'
+      throttle: "{{ parallel }}"
+
+    - name: Wait for GoTestWAF Jobs to complete
+      command: "kubectl wait --for=condition=complete --timeout={{ timeout }}s job/gotestwaf-job-{{ item | hash('md5') }}"
+      loop: "{{ urls }}"
+      when: deploy_type == 'kubernetes'
+      throttle: "{{ parallel }}"
+      register: k8s_wait_results
+      failed_when: false
+
+    - name: Find pod for each completed Job
+      command: "kubectl get pods -l job-name=gotestwaf-job-{{ item | hash('md5') }} -o jsonpath={.items[0].metadata.name}"
+      loop: "{{ urls }}"
+      when: deploy_type == 'kubernetes'
+      register: k8s_pod_names
+
+    - name: Copy report out of each Job's pod
+      command: >-
+        kubectl cp
+        {{ item.stdout }}:/app/reports/gotestwaf_{{ item.item | replace('/', '_') }}.json
+        {{ output_dir }}/gotestwaf_{{ item.item | replace('/', '_') }}.json
+      loop: "{{ k8s_pod_names.results }}"
+      when: deploy_type == 'kubernetes' and item.stdout is defined and item.stdout | length > 0
+      failed_when: false
+
+    - name: Clean up completed GoTestWAF Jobs
+      command: "kubectl delete job gotestwaf-job-{{ item | hash('md5') }} --ignore-not-found"
+      loop: "{{ urls }}"
+      when: deploy_type == 'kubernetes'
+      failed_when: false

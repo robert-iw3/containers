@@ -1,0 +1,44 @@
+---
+- name: Verify
+  hosts: all
+  become: yes
+  tasks:
+    - name: Prometheus is ready
+      uri:
+        url: "http://127.0.0.1:9090/-/ready"
+        status_code: 200
+
+    - name: Prometheus loaded the alert rules
+      uri:
+        url: "http://127.0.0.1:9090/api/v1/rules"
+        return_content: yes
+      register: rules
+      failed_when: "'NomadQuorumAtRisk' not in rules.content"
+
+    - name: Grafana is healthy
+      uri:
+        url: "http://127.0.0.1:3000/api/health"
+        status_code: 200
+
+    - name: Grafana admin login works with the provisioned password
+      uri:
+        url: "http://127.0.0.1:3000/api/org"
+        user: admin
+        password: "molecule-test-password"
+        force_basic_auth: yes
+        status_code: 200
+
+    - name: Grafana has the Prometheus datasource provisioned
+      uri:
+        url: "http://127.0.0.1:3000/api/datasources"
+        user: admin
+        password: "molecule-test-password"
+        force_basic_auth: yes
+        return_content: yes
+      register: datasources
+      failed_when: "'prometheus' not in datasources.content | lower"
+
+    - name: Alertmanager is ready
+      uri:
+        url: "http://127.0.0.1:9093/-/ready"
+        status_code: 200

@@ -1,0 +1,897 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
+import axios from 'axios';
+import Chart from 'chart.js/auto';
+import './index.css';
+
+const NessusManagementApp = () => {
+  const [users, setUsers] = useState([]);
+  const [scans, setScans] = useState([]);
+  const [policies, setPolicies] = useState([]);
+  const [folders, setFolders] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedScan, setSelectedScan] = useState(null);
+  const [selectedPolicy, setSelectedPolicy] = useState(null);
+  const [newUser, setNewUser] = useState({ username: '', password: '', email: '', role: 'standard', name: '' });
+  const [newScan, setNewScan] = useState({ name: '', text_targets: '', policy_id: '', uuid: '' });
+  const [newPolicy, setNewPolicy] = useState({ name: '', description: '', template_uuid: '' });
+  const [newFolder, setNewFolder] = useState({ name: '', type: 'custom' });
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiKeys, setApiKeys] = useState('');
+  const [activeTab, setActiveTab] = useState('users');
+  const vulnChartRef = useRef(null);
+  const hostChartRef = useRef(null);
+  const apiUrl = process.env.REACT_APP_API_URL || 'https://nessus.testing.io/api';
+
+  // Fetch API keys
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      if (!process.env.REACT_APP_NESSUS_API_KEYS_FILE) {
+        setMessage('No API keys file specified.');
+        return;
+      }
+      try {
+        const response = await fetch(process.env.REACT_APP_NESSUS_API_KEYS_FILE);
+        if (!response.ok) throw new Error(`Failed to fetch API keys: ${response.statusText}`);
+        const keys = await response.text();
+        setApiKeys(keys.trim());
+      } catch (error) {
+        setMessage(`Error loading API keys: ${error.message}`);
+      }
+    };
+    fetchApiKeys();
+  }, []);
+
+  // Fetch data
+  const fetchData = useCallback(async () => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const [userResponse, scanResponse, policyResponse, folderResponse] = await Promise.all([
+        axios.get(`${apiUrl}/users`, { headers: { 'X-ApiKeys': apiKeys }, timeout: 10000 }),
+        axios.get(`${apiUrl}/scans`, { headers: { 'X-ApiKeys': apiKeys }, timeout: 10000 }),
+        axios.get(`${apiUrl}/policies`, { headers: { 'X-ApiKeys': apiKeys }, timeout: 10000 }),
+        axios.get(`${apiUrl}/folders`, { headers: { 'X-ApiKeys': apiKeys }, timeout: 10000 }),
+      ]);
+      setUsers(Array.isArray(userResponse.data.users) ? userResponse.data.users : []);
+      setScans(Array.isArray(scanResponse.data.scans) ? scanResponse.data.scans : []);
+      setPolicies(Array.isArray(policyResponse.data.policies) ? policyResponse.data.policies : []);
+      setFolders(Array.isArray(folderResponse.data.folders) ? folderResponse.data.folders : []);
+      setMessage('');
+    } catch (error) {
+      setMessage(`Failed to fetch data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  useEffect(() => {
+    if (apiKeys) fetchData();
+  }, [apiKeys, fetchData]);
+
+  // Create user
+  const handleCreateUser = useCallback(async (e) => {
+    e.preventDefault();
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    if (!newUser.username || !newUser.password) {
+      setMessage('Username and password are required.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/users`, newUser, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setUsers((prev) => [...prev, response.data]);
+      setNewUser({ username: '', password: '', email: '', role: 'standard', name: '' });
+      setMessage('User created successfully!');
+      e.target.reset();
+    } catch (error) {
+      setMessage(`Failed to create user: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, newUser, apiUrl]);
+
+  // Fetch user details
+  const fetchUserDetails = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${apiUrl}/users/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setSelectedUser(response.data);
+      setMessage('');
+    } catch (error) {
+      setMessage(`Failed to fetch user details: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Delete user
+  const handleDeleteUser = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await axios.delete(`${apiUrl}/users/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setUsers((prev) => prev.filter((user) => user.id !== id));
+      setSelectedUser(null);
+      setMessage('User deleted successfully!');
+    } catch (error) {
+      setMessage(`Failed to delete user: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Create scan
+  const handleCreateScan = useCallback(async (e) => {
+    e.preventDefault();
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    if (!newScan.name || !newScan.text_targets || !newScan.policy_id || !newScan.uuid) {
+      setMessage('Name, targets, policy ID, and template UUID are required.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/scans`, {
+        uuid: newScan.uuid,
+        settings: {
+          name: newScan.name,
+          text_targets: newScan.text_targets,
+          policy_id: parseInt(newScan.policy_id),
+          enabled: true,
+        },
+      }, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setScans((prev) => [...prev, response.data]);
+      setNewScan({ name: '', text_targets: '', policy_id: '', uuid: '' });
+      setMessage('Scan created successfully!');
+      e.target.reset();
+    } catch (error) {
+      setMessage(`Failed to create scan: ${error.message} (Note: Scan creation may not be supported in Nessus Professional/Expert.)`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, newScan, apiUrl]);
+
+  // Fetch scan details
+  const fetchScanDetails = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${apiUrl}/scans/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setSelectedScan(response.data);
+      setMessage('');
+    } catch (error) {
+      setMessage(`Failed to fetch scan details: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Launch scan
+  const handleLaunchScan = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/scans/${id}/launch`, {}, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setMessage(`Scan launched successfully! UUID: ${response.data.scan_uuid}`);
+    } catch (error) {
+      setMessage(`Failed to launch scan: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Export scan
+  const handleExportScan = useCallback(async (id, format) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/scans/${id}/export`, { format }, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      const fileId = response.data.file;
+      const downloadUrl = `${apiUrl}/scans/${id}/export/${fileId}/download`;
+      setMessage(`Export requested! Download link: ${downloadUrl}`);
+      window.open(downloadUrl, '_blank');
+    } catch (error) {
+      setMessage(`Failed to export scan: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Fetch policy details
+  const fetchPolicyDetails = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${apiUrl}/policies/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setSelectedPolicy(response.data);
+      setMessage('');
+    } catch (error) {
+      setMessage(`Failed to fetch policy details: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Create policy
+  const handleCreatePolicy = useCallback(async (e) => {
+    e.preventDefault();
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    if (!newPolicy.name || !newPolicy.template_uuid) {
+      setMessage('Policy name and template UUID are required.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/policies`, {
+        settings: { name: newPolicy.name, description: newPolicy.description },
+        uuid: newPolicy.template_uuid,
+      }, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setPolicies((prev) => [...prev, response.data]);
+      setNewPolicy({ name: '', description: '', template_uuid: '' });
+      setMessage('Policy created successfully!');
+      e.target.reset();
+    } catch (error) {
+      setMessage(`Failed to create policy: ${error.message} (Note: Policy creation may not be supported in Nessus Professional/Expert.)`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, newPolicy, apiUrl]);
+
+  // Delete policy
+  const handleDeletePolicy = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await axios.delete(`${apiUrl}/policies/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setPolicies((prev) => prev.filter((policy) => policy.id !== id));
+      setSelectedPolicy(null);
+      setMessage('Policy deleted successfully!');
+    } catch (error) {
+      setMessage(`Failed to delete policy: ${error.message} (Note: Policy deletion may not be supported in Nessus Professional/Expert.)`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Create folder
+  const handleCreateFolder = useCallback(async (e) => {
+    e.preventDefault();
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    if (!newFolder.name) {
+      setMessage('Folder name is required.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${apiUrl}/folders`, {
+        name: newFolder.name,
+        type: newFolder.type,
+      }, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setFolders((prev) => [...prev, response.data]);
+      setNewFolder({ name: '', type: 'custom' });
+      setMessage('Folder created successfully!');
+      e.target.reset();
+    } catch (error) {
+      setMessage(`Failed to create folder: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, newFolder, apiUrl]);
+
+  // Delete folder
+  const handleDeleteFolder = useCallback(async (id) => {
+    if (!apiKeys) {
+      setMessage('API keys not loaded.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await axios.delete(`${apiUrl}/folders/${id}`, {
+        headers: { 'X-ApiKeys': apiKeys },
+        timeout: 10000,
+      });
+      setFolders((prev) => prev.filter((folder) => folder.id !== id));
+      setMessage('Folder deleted successfully!');
+    } catch (error) {
+      setMessage(`Failed to delete folder: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKeys, apiUrl]);
+
+  // Render charts for scan details
+  useEffect(() => {
+    if (selectedScan && selectedScan.info && vulnChartRef.current) {
+      const ctx = vulnChartRef.current.getContext('2d');
+      if (vulnChartRef.current.chart) {
+        vulnChartRef.current.chart.destroy();
+      }
+      vulnChartRef.current.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Critical', 'High', 'Medium', 'Low'],
+          datasets: [{
+            label: 'Vulnerabilities',
+            data: [
+              selectedScan.info.critical || 0,
+              selectedScan.info.high || 0,
+              selectedScan.info.medium || 0,
+              selectedScan.info.low || 0
+            ],
+            backgroundColor: ['#dc2626', '#f59e0b', '#facc15', '#22c55e'],
+            borderColor: ['#b91c1c', '#d97706', '#eab308', '#16a34a'],
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'Count' } } },
+        },
+      });
+    }
+  }, [selectedScan]);
+
+  useEffect(() => {
+    if (selectedScan && selectedScan.hosts && hostChartRef.current) {
+      const ctx = hostChartRef.current.getContext('2d');
+      if (hostChartRef.current.chart) {
+        hostChartRef.current.chart.destroy();
+      }
+      const severityCounts = selectedScan.hosts.reduce(
+        (acc, host) => ({
+          critical: acc.critical + (host.critical || 0),
+          high: acc.high + (host.high || 0),
+          medium: acc.medium + (host.medium || 0),
+          low: acc.low + (host.low || 0),
+        }),
+        { critical: 0, high: 0, medium: 0, low: 0 }
+      );
+      hostChartRef.current.chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Critical', 'High', 'Medium', 'Low'],
+          datasets: [{
+            data: [
+              severityCounts.critical,
+              severityCounts.high,
+              severityCounts.medium,
+              severityCounts.low
+            ],
+            backgroundColor: ['#dc2626', '#f59e0b', '#facc15', '#22c55e'],
+            borderColor: ['#b91c1c', '#d97706', '#eab308', '#16a34a'],
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'right' } },
+        },
+      });
+    }
+  }, [selectedScan]);
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+      <div className="container mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">Nessus Management Application</h1>
+        <div className="mb-8 p-4 bg-gray-800 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-2">Get Started with Nessus</h2>
+          <p className="text-gray-300">
+            To use this application, you need a valid Nessus license. Visit{' '}
+            <a href="https://www.tenable.com/products/nessus" className="text-blue-500 hover:underline">
+              Tenable's Nessus page
+            </a>{' '}
+            to register and download Nessus.
+          </p>
+        </div>
+
+        {message && (
+          <div className="mb-6 p-4 bg-gray-800 rounded-lg text-center">
+            <p className="text-gray-300">{message}</p>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="mb-6 p-4 bg-gray-800 rounded-lg text-center">
+            <p className="text-gray-300 animate-pulse">Loading...</p>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <div className="flex space-x-4 border-b-2 border-gray-700">
+            {['users', 'scans', 'policies', 'folders'].map((tab) => (
+              <button
+                key={tab}
+                className={`py-2 px-4 ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-300 hover:bg-gray-700'} rounded-t-lg`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeTab === 'users' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Users</h2>
+            {users.length === 0 ? (
+              <p className="text-gray-400">No users available.</p>
+            ) : (
+              <ul className="space-y-4">
+                {users.map((user) => (
+                  <li key={user.id} className="border border-gray-700 p-4 rounded-lg bg-gray-800">
+                    <span className="font-medium text-white">{user.username}</span>
+                    <span className="text-gray-400"> ({user.role})</span>
+                    {user.email && <p className="text-sm text-gray-400">Email: {user.email}</p>}
+                    {user.name && <p className="text-sm text-gray-400">Name: {user.name}</p>}
+                    {user.lastlogin && <p className="text-sm text-gray-400">Last Login: {new Date(user.lastlogin * 1000).toLocaleString()}</p>}
+                    <div className="mt-2 grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => fetchUserDetails(user.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {selectedUser && selectedUser.id === user.id && (
+                      <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+                        <h3 className="text-lg font-semibold">User Details</h3>
+                        <p className="text-sm text-gray-300">ID: {selectedUser.id}</p>
+                        <p className="text-sm text-gray-300">Username: {selectedUser.username}</p>
+                        <p className="text-sm text-gray-300">Role: {selectedUser.role}</p>
+                        <p className="text-sm text-gray-300">Email: {selectedUser.email || 'None'}</p>
+                        <p className="text-sm text-gray-300">Name: {selectedUser.name || 'None'}</p>
+                        <p className="text-sm text-gray-300">Last Login: {selectedUser.lastlogin ? new Date(selectedUser.lastlogin * 1000).toLocaleString() : 'Never'}</p>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold mb-2">Create User</h3>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Name (optional)"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="standard">Standard</option>
+                  <option value="read-only">Read-Only</option>
+                </select>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create User
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'scans' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Scans</h2>
+            {scans.length === 0 ? (
+              <p className="text-gray-400">No scans available.</p>
+            ) : (
+              <ul className="space-y-4">
+                {scans.map((scan) => (
+                  <li key={scan.id} className="border border-gray-700 p-4 rounded-lg bg-gray-800">
+                    <span className="font-medium text-white">{scan.name}</span>
+                    <span className="text-gray-400"> (Status: {scan.status})</span>
+                    <p className="text-sm text-gray-400">Created: {new Date(scan.created_at).toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">Folder ID: {scan.folder_id}</p>
+                    <p className="text-sm text-gray-400">Owner: {scan.owner}</p>
+                    <p className="text-sm text-gray-400">Enabled: {scan.enabled ? 'Yes' : 'No'}</p>
+                    <div className="mt-2 grid grid-cols-3 gap-4">
+                      <button
+                        onClick={() => fetchScanDetails(scan.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleLaunchScan(scan.id)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        Launch
+                      </button>
+                      <button
+                        onClick={() => handleExportScan(scan.id, 'html')}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Export HTML
+                      </button>
+                    </div>
+                    {selectedScan && selectedScan.id === scan.id && (
+                      <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+                        <h3 className="text-lg font-semibold">Scan Details</h3>
+                        <p className="text-sm text-gray-300">ID: {selectedScan.id}</p>
+                        <p className="text-sm text-gray-300">Name: {selectedScan.name}</p>
+                        <p className="text-sm text-gray-300">Status: {selectedScan.status}</p>
+                        <p className="text-sm text-gray-300">Last Modified: {new Date(selectedScan.last_modified).toLocaleString()}</p>
+                        {selectedScan.info && (
+                          <>
+                            <h4 className="text-md font-semibold mt-2">Summary</h4>
+                            <p className="text-sm text-gray-300">Hosts: {selectedScan.info.hostcount || 0}</p>
+                            <p className="text-sm text-gray-300">Critical: {selectedScan.info.critical || 0}</p>
+                            <p className="text-sm text-gray-300">High: {selectedScan.info.high || 0}</p>
+                            <p className="text-sm text-gray-300">Medium: {selectedScan.info.medium || 0}</p>
+                            <p className="text-sm text-gray-300">Low: {selectedScan.info.low || 0}</p>
+                            <canvas ref={vulnChartRef} className="mt-4 max-w-md mx-auto"></canvas>
+                          </>
+                        )}
+                        {selectedScan.hosts && selectedScan.hosts.length > 0 && (
+                          <>
+                            <h4 className="text-md font-semibold mt-4">Hosts</h4>
+                            <canvas ref={hostChartRef} className="mt-4 max-w-md mx-auto"></canvas>
+                            <table className="w-full mt-4 border-collapse border border-gray-700">
+                              <thead>
+                                <tr className="bg-gray-600">
+                                  <th className="border border-gray-700 p-2">Hostname</th>
+                                  <th className="border border-gray-700 p-2">Critical</th>
+                                  <th className="border border-gray-700 p-2">High</th>
+                                  <th className="border border-gray-700 p-2">Medium</th>
+                                  <th className="border border-gray-700 p-2">Low</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedScan.hosts.map((host, index) => (
+                                  <tr key={index} className="bg-gray-800">
+                                    <td className="border border-gray-700 p-2">{host.hostname}</td>
+                                    <td className="border border-gray-700 p-2">{host.critical || 0}</td>
+                                    <td className="border border-gray-700 p-2">{host.high || 0}</td>
+                                    <td className="border border-gray-700 p-2">{host.medium || 0}</td>
+                                    <td className="border border-gray-700 p-2">{host.low || 0}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </>
+                        )}
+                        {selectedScan.vulnerabilities && selectedScan.vulnerabilities.length > 0 && (
+                          <>
+                            <h4 className="text-md font-semibold mt-4">Vulnerabilities</h4>
+                            <table className="w-full mt-4 border-collapse border border-gray-700">
+                              <thead>
+                                <tr className="bg-gray-600">
+                                  <th className="border border-gray-700 p-2">Plugin ID</th>
+                                  <th className="border border-gray-700 p-2">Plugin Name</th>
+                                  <th className="border border-gray-700 p-2">Severity</th>
+                                  <th className="border border-gray-700 p-2">Count</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedScan.vulnerabilities.map((vuln, index) => (
+                                  <tr key={index} className="bg-gray-800">
+                                    <td className="border border-gray-700 p-2">{vuln.plugin_id}</td>
+                                    <td className="border border-gray-700 p-2">{vuln.plugin_name}</td>
+                                    <td className="border border-gray-700 p-2">{vuln.severity}</td>
+                                    <td className="border border-gray-700 p-2">{vuln.count}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </>
+                        )}
+                        {selectedScan.history && selectedScan.history.length > 0 && (
+                          <>
+                            <h4 className="text-md font-semibold mt-4">History</h4>
+                            <ul className="space-y-2">
+                              {selectedScan.history.map((entry, index) => (
+                                <li key={index} className="text-sm text-gray-300">
+                                  {entry.status} - {new Date(entry.creation_date * 1000).toLocaleString()}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold mb-2">Create Scan</h3>
+              <form onSubmit={handleCreateScan} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Scan Name"
+                  value={newScan.name}
+                  onChange={(e) => setNewScan({ ...newScan, name: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Targets (e.g., 192.168.1.1, example.com)"
+                  value={newScan.text_targets}
+                  onChange={(e) => setNewScan({ ...newScan, text_targets: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="number"
+                  placeholder="Policy ID"
+                  value={newScan.policy_id}
+                  onChange={(e) => setNewScan({ ...newScan, policy_id: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Template UUID"
+                  value={newScan.uuid}
+                  onChange={(e) => setNewScan({ ...newScan, uuid: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Scan
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'policies' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Scan Policies</h2>
+            {policies.length === 0 ? (
+              <p className="text-gray-400">No policies available.</p>
+            ) : (
+              <ul className="space-y-4">
+                {policies.map((policy) => (
+                  <li key={policy.id} className="border border-gray-700 p-4 rounded-lg bg-gray-800">
+                    <span className="font-medium text-white">{policy.name}</span>
+                    {policy.description && <p className="text-sm text-gray-400">{policy.description}</p>}
+                    <p className="text-sm text-gray-400">Last Modified: {new Date(policy.last_modification_date * 1000).toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">Owner: {policy.owner}</p>
+                    <p className="text-sm text-gray-400">No Targets: {policy.no_target ? 'Yes' : 'No'}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => fetchPolicyDetails(policy.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDeletePolicy(policy.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {selectedPolicy && selectedPolicy.id === policy.id && (
+                      <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+                        <h3 className="text-lg font-semibold">Policy Details</h3>
+                        <p className="text-sm text-gray-300">ID: {selectedPolicy.id}</p>
+                        <p className="text-sm text-gray-300">Name: {selectedPolicy.name}</p>
+                        <p className="text-sm text-gray-300">Template UUID: {selectedPolicy.template_uuid}</p>
+                        {selectedPolicy.settings && (
+                          <>
+                            <p className="text-sm text-gray-300">Description: {selectedPolicy.settings.description || 'None'}</p>
+                            <p className="text-sm text-gray-300">Targets: {selectedPolicy.settings.target || 'None'}</p>
+                          </>
+                        )}
+                        {selectedPolicy.plugins && selectedPolicy.plugins.length > 0 && (
+                          <>
+                            <h4 className="text-md font-semibold mt-4">Plugins</h4>
+                            <ul className="space-y-2">
+                              {selectedPolicy.plugins.map((plugin, index) => (
+                                <li key={index} className="text-sm text-gray-300">
+                                  {plugin.plugin_id}: {plugin.plugin_name}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold mb-2">Create Policy</h3>
+              <form onSubmit={handleCreatePolicy} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Policy Name"
+                  value={newPolicy.name}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={newPolicy.description}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Template UUID"
+                  value={newPolicy.template_uuid}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, template_uuid: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Policy
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'folders' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Folders</h2>
+            {folders.length === 0 ? (
+              <p className="text-gray-400">No folders available.</p>
+            ) : (
+              <ul className="space-y-4">
+                {folders.map((folder) => (
+                  <li key={folder.id} className="border border-gray-700 p-4 rounded-lg bg-gray-800">
+                    <span className="font-medium text-white">{folder.name}</span>
+                    <p className="text-sm text-gray-400">Type: {folder.type}</p>
+                    <p className="text-sm text-gray-400">Scan Count: {folder.scan_count || 0}</p>
+                    <p className="text-sm text-gray-400">Unread Count: {folder.unread_count || 0}</p>
+                    <button
+                      onClick={() => handleDeleteFolder(folder.id)}
+                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold mb-2">Create Folder</h3>
+              <form onSubmit={handleCreateFolder} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Folder Name"
+                  value={newFolder.name}
+                  onChange={(e) => setNewFolder({ ...newFolder, name: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                />
+                <select
+                  value={newFolder.type}
+                  onChange={(e) => setNewFolder({ ...newFolder, type: e.target.value })}
+                  className="w-full p-2 bg-gray-800 text-gray-100 border border-gray-700 rounded-lg"
+                >
+                  <option value="main">Main</option>
+                  <option value="trash">Trash</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Folder
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<NessusManagementApp />);

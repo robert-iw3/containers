@@ -1,0 +1,203 @@
+---
+- name: Deploy Bitbucket Infrastructure
+  hosts: bitbucket_nodes
+  become: yes
+  vars:
+    vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://localhost:8200', true) }}"
+    vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+    vault_secret_path: "{{ lookup('env', 'VAULT_SECRET_PATH') | default('bitbucket', true) }}"
+  tasks:
+    - name: Install container runtime (Docker) on Debian
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      register: docker_install
+      failed_when: docker_install.failed
+
+    - name: Install container runtime (Docker) on RedHat
+      ansible.builtin.dnf:
+        name: docker
+        state: present
+      when: ansible_os_family == "RedHat"
+      register: docker_install_redhat
+      failed_when: docker_install_redhat.failed
+
+    - name: Install zstd for backups
+      ansible.builtin.package:
+        name: zstd
+        state: present
+      register: zstd_install
+      failed_when: zstd_install.failed
+
+    - name: Ensure Docker service is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+      register: docker_service
+      failed_when: docker_service.failed
+
+    - name: Install Python dependencies
+      ansible.builtin.pip:
+        name:
+          - docker
+          - python-dotenv
+          - pyyaml
+          - hvac
+          - psycopg2-binary
+          - tenacity
+          - prometheus-client
+        state: present
+      register: pip_install
+      failed_when: pip_install.failed
+
+    - name: Create secrets directory
+      ansible.builtin.file:
+        path: /opt/bitbucket/secrets
+        state: directory
+        mode: '0700'
+      when: vault_addr == '' or vault_token == ''
+
+    - name: Copy secrets files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/opt/bitbucket/secrets/{{ item.name }}"
+        mode: '0600'
+      loop:
+        - name: postgresql_password
+          content: "{{ POSTGRESQL_PASSWORD | default('secure_password_123') }}"
+        - name: postgresql_replication_password
+          content: "{{ POSTGRESQL_REPLICATION_PASSWORD | default('replpass') }}"
+      when: vault_addr == '' or vault_token == ''
+
+    - name: Create Bitbucket namespace (Kubernetes)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: bitbucket
+      when: inventory_hostname in groups['k8s_nodes']
+      register: k8s_namespace
+      failed_when: k8s_namespace.failed
+
+    - name: Create Vault token secret (Kubernetes)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: vault-token
+            namespace: bitbucket
+          type: Opaque
+          data:
+            token: "{{ vault_token | b64encode }}"
+      when: inventory_hostname in groups['k8s_nodes'] and vault_token != ''
+      register: vault_secret
+      failed_when: vault_secret.failed
+
+    - name: Copy Docker Compose and related files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /opt/bitbucket/{{ item | basename }}
+        mode: '0644'
+      loop:
+        - docker-compose.yml
+        - .env
+        - prometheus.yml
+        - prometheus-alerts.yml
+        - grafana/provisioning/datasources/datasource.yml
+        - grafana/provisioning/dashboards/dashboard.yml
+        - grafana/dashboards/bitbucket.json
+        - bitbucket-exporter.py
+      when: inventory_hostname not in groups['k8s_nodes']
+      register: copy_files
+      failed_when: copy_files.failed
+
+    - name: Copy Python deployment script
+      ansible.builtin.copy:
+        src: deploy_bitbucket.py
+        dest: /opt/bitbucket/deploy_bitbucket.py
+        mode: '0755'
+      when: inventory_hostname not in groups['k8s_nodes']
+      register: copy_script
+      failed_when: copy_script.failed
+
+    - name: Copy Kubernetes manifests
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /opt/bitbucket/{{ item | basename }}
+        mode: '0644'
+      loop:
+        - bitbucket-deployment.yml
+        - postgres-deployment.yml
+        - network-policy.yml
+        - multi-region.yml
+        - chaos-test.yml
+      when: inventory_hostname in groups['k8s_nodes']
+      register: copy_k8s_files
+      failed_when: copy_k8s_files.failed
+
+    - name: Apply Kubernetes manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+        namespace: bitbucket
+      loop:
+        - bitbucket-deployment.yml
+        - postgres-deployment.yml
+        - network-policy.yml
+        - multi-region.yml
+      when: inventory_hostname in groups['k8s_nodes']
+      register: k8s_apply
+      failed_when: k8s_apply.failed
+
+    - name: Apply chaos test for Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        src: chaos-test.yml
+        namespace: bitbucket
+      when: inventory_hostname in groups['k8s_nodes']
+      register: chaos_apply
+      failed_when: chaos_apply.failed
+
+    - name: Validate Kubernetes deployment health
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: bitbucket
+        label_selectors:
+          - app=bitbucket
+      when: inventory_hostname in groups['k8s_nodes']
+      register: pod_status
+      failed_when: pod_status.resources | length == 0 or pod_status.resources[0].status.phase != 'Running'
+      retries: 5
+      delay: 10
+
+    - name: Run Python deployment script for Docker
+      ansible.builtin.command:
+        cmd: python3 /opt/bitbucket/deploy_bitbucket.py
+        chdir: /opt/bitbucket
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+        VAULT_TOKEN: "{{ vault_token }}"
+        VAULT_SECRET_PATH: "{{ vault_secret_path }}"
+        USE_VAULT: "{{ 'true' if vault_addr and vault_token else 'false' }}"
+      when: inventory_hostname not in groups['k8s_nodes']
+      register: deploy_script
+      failed_when: deploy_script.rc != 0
+
+    - name: Validate Bitbucket exporter metrics endpoint
+      ansible.builtin.uri:
+        url: http://{{ BITBUCKET_EXPORTER_IPv4 | default('172.28.0.9') }}:8000/metrics
+        method: GET
+        status_code: 200
+        timeout: 10
+      when: inventory_hostname not in groups['k8s_nodes']
+      register: exporter_check
+      failed_when: exporter_check.status != 200
+      retries: 5
+      delay: 10

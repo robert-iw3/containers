@@ -1,0 +1,10 @@
+[Unit]
+Description=Nomad Raft snapshot backup
+After=nomad.service
+Requisite=nomad.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nomad-snapshot.sh
+User={{ nomad_user }}
+Group={{ nomad_group }}

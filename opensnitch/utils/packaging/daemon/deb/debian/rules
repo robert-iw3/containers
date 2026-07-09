@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+export DESTDIR = debian/opensnitch
+
+override_dh_installsystemd:
+	dh_installsystemd --restart-after-upgrade
+
+execute_before_dh_auto_build:
+	cd proto; make ../daemon/ui/protocol/ui.pb.go
+
+execute_before_dh_auto_install:
+	mkdir -p $(DESTDIR)/usr/bin
+	mv _build/bin/daemon $(DESTDIR)/usr/bin/opensnitchd
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+
+%:
+	dh $@ --builddirectory=_build --buildsystem=golang --with=golang

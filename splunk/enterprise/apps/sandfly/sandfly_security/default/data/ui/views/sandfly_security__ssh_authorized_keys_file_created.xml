@@ -1,0 +1,67 @@
+<form version="1.1">
+  <label>Sandfly Security - SSH authorized_keys File Created</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time_range" searchWhenChanged="true">
+      <label>Time Range (Events)</label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="time" token="tok_time_file" searchWhenChanged="true">
+      <label>Time Range (File Created)</label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Number of authorized_keys Files Created</title>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.created as aaa_date_created
+| rename data.results.user.ssh.authorized_keys.file{}.path as aaa_file_path
+| rename header.hostname as host_name
+| rename data.results.user.username as user_name
+| dedup host_name user_name
+| eval aaa_date_created_epoch = strptime(aaa_date_created, "%Y-%m-%dT%H:%M:%SZ")
+| where aaa_date_created_epoch &gt;= relative_time(now(), "$tok_time_file.earliest$")
+| stats count</query>
+          <earliest>$tok_time_range.earliest$</earliest>
+          <latest>$tok_time_range.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_alarms` data.results.user.ssh.authorized_keys.present="true"
+| rename data.results.user.ssh.authorized_keys.file{}.date.created as aaa_date_created
+| rename data.results.user.ssh.authorized_keys.file{}.path as aaa_file_path
+| rename header.hostname as target_address
+| rename header.ip_addr as ip_address
+| rename header.node_name as host_name
+| rename data.results.user.username as user_name
+| dedup host_name user_name
+| eval aaa_date_created_epoch = strptime(aaa_date_created, "%Y-%m-%dT%H:%M:%SZ")
+| where aaa_date_created_epoch &gt;= relative_time(now(), "$tok_time_file.earliest$")
+| table aaa_date_created host_name target_address ip_address user_name aaa_file_path
+| rename aaa_date_created as "Date Created"
+| rename host_name as "Hostname"
+| rename target_address as "Target Address"
+| rename ip_address as "IP Address"
+| rename user_name as "Username"
+| rename aaa_file_path as "File Path"</query>
+          <earliest>$tok_time_range.earliest$</earliest>
+          <latest>$tok_time_range.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

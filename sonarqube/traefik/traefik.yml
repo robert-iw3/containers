@@ -1,0 +1,65 @@
+#global:
+#  checkNewVersion: true
+#  sendAnonymousUsage: false
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+providers:
+  docker:
+    endpoint: unix:///var/run/docker.sock
+    watch: true
+    exposedByDefault: false
+    swarmMode: false
+    network: sonarnet
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+#serversTransport:
+#  maxIdleConnsPerHost: 8
+#  forwardingTimeouts:
+#    responseHeaderTimeout: "15s"
+#    idleConnTimeout: "15s"
+#    dialTimeout: "30s"
+#certificatesResolvers:
+#  le-staging:
+#    acme:
+      # certificates will be generate with the staging ACME premium account
+#      email: enter.your@email.com
+#      httpChallenge:
+        # used during the challenge
+#        entryPoint: web
+#  le-prod:
+#    acme:
+      # certificates will be generate with the production ACME premium account
+#      email: enter.your@email.com
+#      httpChallenge:
+        # used during the challenge
+#        entryPoint: web
+#      tlsChallenge: {}
+log:
+  filePath: "/var/log/traefik/sonar/traefik.log"
+  format: json
+  level: INFO
+accessLog:
+  filePath: "/var/log/traefik/sonar/access.log"
+  format: json
+  filters:
+    statusCodes:
+      - "204-299"
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+#experimental:
+#  plugins:
+#    plugin-log4shell:
+#      moduleName: "github.com/traefik/plugin-log4shell"
+#      version: "v0.1.2"
+#    fail2ban:
+#      moduleName: "github.com/tomMoulard/fail2ban"
+#      version: "v0.6.6"
+#    crowdsec-bouncer-traefik-plugin:
+#      moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+#      version: "v1.1.2"

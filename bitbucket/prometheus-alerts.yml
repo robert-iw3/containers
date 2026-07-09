@@ -1,0 +1,43 @@
+groups:
+- name: bitbucket-alerts
+  rules:
+  - alert: BitbucketHighMemoryUsage
+    expr: jvm_memory_bytes_used{job="bitbucket",area="heap"} / jvm_memory_bytes_max{job="bitbucket",area="heap"} > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High JVM memory usage on {{ $labels.instance }}"
+      description: "{{ $labels.instance }} is using {{ $value | humanizePercentage }} of available heap memory."
+  - alert: PostgresHighConnections
+    expr: pg_stat_activity_count{job="postgres"} > 50
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High PostgreSQL connections on {{ $labels.instance }}"
+      description: "{{ $labels.instance }} has {{ $value }} active connections."
+  - alert: BackupFailure
+    expr: rate(backup_status{job="backup",status="failure"}[5m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Backup failure detected"
+      description: "Backup process failed on {{ $labels.instance }}."
+  - alert: HighRepositoryPushRate
+    expr: rate(bitbucket_repo_pushes_total[5m]) > 100
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High repository push rate on {{ $labels.repository }}"
+      description: "{{ $labels.repository }} has a push rate of {{ $value | humanize }} per minute."
+  - alert: ExporterDown
+    expr: up{job="bitbucket-exporter"} == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Bitbucket exporter down"
+      description: "Bitbucket exporter on {{ $labels.instance }} is not responding."

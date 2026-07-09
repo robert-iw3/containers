@@ -1,0 +1,102 @@
+---
+services:
+  traefik:
+    container_name: traefik
+    image: docker.io/traefik:v3.7.7
+    hostname: traefik.testing.io
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tenable
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/nessus-tls.yml:/etc/traefik/dynamic/nessus-tls.yml:ro
+      - ./traefik/certs/nessus.testing.io.crt:/traefik/certs/nessus.testing.io.crt:ro
+      - ./traefik/certs/nessus.testing.io.key:/traefik/certs/nessus.testing.io.key:ro
+      - ./traefik/apifw-tls.yml:/etc/traefik/dynamic/apifw-tls.yml:ro
+      - ./traefik/certs/apifw.testing.io.crt:/traefik/certs/apifw.testing.io.crt:ro
+      - ./traefik/certs/apifw.testing.io.key:/traefik/certs/apifw.testing.io.key:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.testing.io`)"
+      - "traefik.http.routers.traefik.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.testing.io`)"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.nessus.entrypoints=websecure"
+      - "traefik.http.routers.nessus.rule=Host(`nessus.testing.io`)"
+      - "traefik.http.routers.nessus.service=nessus"
+      - "traefik.http.routers.nessus.tls=true"
+      - "traefik.http.services.nessus.loadbalancer.server.url=https://nessus:8834"
+    secrets:
+      - traefik_auth
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  nessus:
+    container_name: nessus
+    image: tenableofficial/nessus:10.8.4
+    hostname: nessus.testing.io
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      USERNAME_FILE: /run/secrets/nessus_username
+      PASSWORD_FILE: /run/secrets/nessus_password
+      ACTIVATION_CODE_FILE: /run/secrets/activation_code
+      AUTO_UPDATE: all
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_RESOURCE
+    networks:
+      - tenable
+    ports:
+      - 8834:8834
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./certs/nessus.testing.io.key:/certs/nessus.testing.io.key:ro
+      - ./certs/nessus.testing.io.crt:/certs/nessus.testing.io.crt:ro
+      - ./certs/ca.crt:/certs/ca.crt:ro
+      - nessus_data:/opt/nessus/var/nessus:Z
+      - ./exports:/home/nessus/artifacts:z
+    secrets:
+      - nessus_username
+      - nessus_password
+      - activation_code
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8834"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  tenable:
+    name: tenable
+    driver: bridge
+
+volumes:
+  nessus_data:
+
+secrets:
+  nessus_username:
+    file: ./secrets/nessus_username.txt
+  nessus_password:
+    file: ./secrets/nessus_password.txt
+  activation_code:
+    file: ./secrets/activation_code.txt
+  traefik_auth:
+    file: ./secrets/traefik_auth.txt

@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+
+  reverse_proxy:
+    container_name: reverse_proxy
+    image: docker.io/bitnami/nginx
+    hostname: nginx.testing.io
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./nginx-logs/:/opt/bitnami/nginx/logs/:Z
+      #generate a cert and key and place in nginx directory
+      - ./nginx/sonarqube.crt:/opt/bitnami/nginx/conf/bitnami/certs/sonarqube.crt:ro
+      - ./nginx/sonarqube.key:/opt/bitnami/nginx/conf/bitnami/certs/sonarqube.key:ro
+      - ./nginx/server_blocks/sonarqube-server-block.conf:/opt/bitnami/nginx/conf/server_blocks/sonarqube-server-block.conf:ro
+      - ./nginx/sonar-nginx.conf:/opt/bitnami/nginx/conf/sonar-nginx.conf:ro
+    command:
+      - sh
+      - -c
+      - |
+        ln -sf /dev/stdout /opt/bitnami/nginx/logs/access.log
+        ln -sf /dev/stdout /opt/bitnami/nginx/logs/sonarqube.access.log
+        ln -sf /dev/stderr /opt/bitnami/nginx/logs/error.log
+        /opt/bitnami/ctlscript.sh restart nginx
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://$(echo $NGINX_IPv4) || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      sonarnet:
+        ipv4_address: ${NGINX_IPv4}

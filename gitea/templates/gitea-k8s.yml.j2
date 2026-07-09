@@ -1,0 +1,1348 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitea
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitea-secrets
+  namespace: gitea
+type: Opaque
+data:
+  postgresql_username: {{ postgresql_username | b64encode }}
+  postgresql_password: {{ postgresql_password | b64encode }}
+  postgresql_database: {{ postgresql_database | b64encode }}
+  postgresql_replication_user: {{ postgresql_replication_user | b64encode }}
+  postgresql_replication_password: {{ postgresql_replication_password | b64encode }}
+  gitea_admin_user: {{ gitea_admin_user | b64encode }}
+  gitea_admin_password: {{ gitea_admin_password | b64encode }}
+  gitea_admin_email: {{ gitea_admin_email | b64encode }}
+  minio_access_key: {{ minio_access_key | b64encode }}
+  minio_secret_key: {{ minio_secret_key | b64encode }}
+  backup_encryption_key: {{ backup_encryption_key | b64encode }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitea-postgres-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitea-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-script
+  namespace: gitea
+data:
+  backup.sh: |
+    {{ lookup('template', 'backup.sh.j2') | indent(6) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource
+  namespace: gitea
+data:
+  datasource.yml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus.gitea.svc.cluster.local:9090
+      access: proxy
+      isDefault: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: patroni
+  namespace: gitea
+spec:
+  serviceName: patroni
+  replicas: 2
+  selector:
+    matchLabels:
+      app: patroni
+  template:
+    metadata:
+      labels:
+        app: patroni
+    spec:
+      containers:
+      - name: patroni
+        image: {{ postgresql_image }}
+        env:
+        - name: POSTGRESQL_USERNAME
+          value: {{ postgresql_username }}
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: postgresql_password
+        - name: POSTGRESQL_DATABASE
+          value: {{ postgresql_database }}
+        - name: POSTGRESQL_REPLICATION_USER
+          value: {{ postgresql_replication_user }}
+        - name: POSTGRESQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: postgresql_replication_password
+        - name: PATRONI_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PATRONI_POSTGRESQL_LISTEN
+          value: 0.0.0.0:5432
+        - name: PATRONI_POSTGRESQL_CONNECT_ADDRESS
+          value: "$(PATRONI_NAME).patroni.gitea.svc.cluster.local:5432"
+        - name: PATRONI_RESTAPI_LISTEN
+          value: 0.0.0.0:8008
+        - name: PATRONI_RESTAPI_CONNECT_ADDRESS
+          value: "$(PATRONI_NAME).patroni.gitea.svc.cluster.local:8008"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /bitnami/postgresql
+        - name: timezone
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        resources:
+          limits:
+            memory: 2048Mi
+            cpu: "1"
+          requests:
+            memory: 512Mi
+            cpu: "250m"
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+        ports:
+        - containerPort: 5432
+        - containerPort: 8008
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-d", "{{ postgresql_database }}", "-U", "{{ postgresql_username }}"]
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-d", "{{ postgresql_database }}", "-U", "{{ postgresql_username }}"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: timezone
+        hostPath:
+          path: /etc/timezone
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      containers:
+      - name: pgbouncer
+        image: {{ pgbouncer_image }}
+        volumeMounts:
+        - name: pgbouncer-config
+          mountPath: /etc/pgbouncer/pgbouncer.ini
+          subPath: pgbouncer.ini
+        ports:
+        - containerPort: 6432
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: "500m"
+          requests:
+            memory: 128Mi
+            cpu: "100m"
+        readinessProbe:
+          exec:
+            command: ["pgbouncer", "-u", "postgres", "show", "stats"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: pgbouncer-config
+        configMap:
+          name: pgbouncer-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitea
+  template:
+    metadata:
+      labels:
+        app: gitea
+    spec:
+      containers:
+      - name: gitea
+        image: {{ gitea_image }}
+        env:
+        - name: GITEA__database__HOST
+          value: pgbouncer.gitea.svc.cluster.local:6432
+        - name: GITEA__database__NAME
+          value: {{ postgresql_database }}
+        - name: GITEA__database__USER
+          value: {{ postgresql_username }}
+        - name: GITEA__database__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: postgresql_password
+        - name: GITEA__admin__ADMIN_USER
+          value: {{ gitea_admin_user }}
+        - name: GITEA__admin__ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: gitea_admin_password
+        - name: GITEA__admin__ADMIN_EMAIL
+          value: {{ gitea_admin_email }}
+        - name: GITEA__server__RUN_MODE
+          value: prod
+        - name: GITEA__server__DOMAIN
+          value: {{ gitea_domain }}
+        - name: GITEA__server__SSH_DOMAIN
+          value: {{ gitea_ssh_domain }}
+        - name: GITEA__server__ROOT_URL
+          value: {{ gitea_root_url }}
+        - name: GITEA__server__HTTP_PORT
+          value: "3000"
+        - name: GITEA__server__SSH_PORT
+          value: {{ gitea_ssh_port }}
+        - name: GITEA__server__SSH_LISTEN_PORT
+          value: "22"
+        - name: GITEA__security__INSTALL_LOCK
+          value: "true"
+        - name: GITEA__service__DISABLE_REGISTRATION
+          value: "true"
+        - name: GITEA__picture__DISABLE_GRAVATAR
+          value: "true"
+        - name: GITEA__metrics__ENABLED
+          value: "true"
+        - name: GITEA__log__MODE
+          value: console,network
+        - name: GITEA__log__FORMAT
+          value: json
+        - name: GITEA__log__network__HOST
+          value: loki.gitea.svc.cluster.local:3100
+        volumeMounts:
+        - name: gitea-data
+          mountPath: /data
+        - name: timezone
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        resources:
+          limits:
+            memory: 2048Mi
+            cpu: "1"
+          requests:
+            memory: 512Mi
+            cpu: "250m"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        ports:
+        - containerPort: 3000
+        - containerPort: 22
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: gitea-data
+        persistentVolumeClaim:
+          claimName: gitea-data-pvc
+      - name: timezone
+        hostPath:
+          path: /etc/timezone
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gitea-hpa
+  namespace: gitea
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gitea
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      containers:
+      - name: traefik
+        image: {{ traefik_image }}
+        args:
+        - --configFile=/etc/traefik/traefik.yml
+        volumeMounts:
+        - name: traefik-config
+          mountPath: /etc/traefik/traefik.yml
+          subPath: traefik.yml
+        - name: modsecurity-config
+          mountPath: /etc/traefik/modsecurity.conf
+          subPath: modsecurity.conf
+        - name: certs
+          mountPath: /etc/traefik/certs
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 1024Mi
+            cpu: "1000m"
+          requests:
+            memory: 512Mi
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: traefik-config
+        configMap:
+          name: traefik-config
+      - name: modsecurity-config
+        configMap:
+          name: modsecurity-config
+      - name: certs
+        secret:
+          secretName: gitea-certs
+          optional: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: {{ minio_image }}
+        command: ["server", "/data", "--console-address", ":9001"]
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: minio_access_key
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: minio_secret_key
+        volumeMounts:
+        - name: minio-data
+          mountPath: /data
+        ports:
+        - containerPort: 9000
+        - containerPort: 9001
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "500m"
+          requests:
+            memory: 256Mi
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: minio-data
+        persistentVolumeClaim:
+          claimName: minio-data-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: docker.io/prom/prometheus:v2.54.1
+        volumeMounts:
+        - name: prometheus-data
+          mountPath: /prometheus
+        - name: prometheus-config
+          mountPath: /etc/prometheus/prometheus.yml
+          subPath: prometheus.yml
+        ports:
+        - containerPort: 9090
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "500m"
+          requests:
+            memory: 256Mi
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: prometheus-data
+        persistentVolumeClaim:
+          claimName: prometheus-data-pvc
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: docker.io/grafana/grafana:11.2.0
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: admin
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: gitea_admin_password
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana
+        - name: grafana-dashboard
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: grafana-datasource
+          mountPath: /etc/grafana/provisioning/datasources
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "500m"
+          requests:
+            memory: 256Mi
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: grafana-data
+        persistentVolumeClaim:
+          claimName: grafana-data-pvc
+      - name: grafana-dashboard
+        configMap:
+          name: grafana-dashboard
+      - name: grafana-datasource
+        configMap:
+          name: grafana-datasource
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+      - name: loki
+        image: {{ loki_image }}
+        command: ["-config.file=/etc/loki/local-config.yaml"]
+        volumeMounts:
+        - name: loki-data
+          mountPath: /loki
+        ports:
+        - containerPort: 3100
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "500m"
+          requests:
+            memory: 256Mi
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      - name: loki-data
+        persistentVolumeClaim:
+          claimName: loki-data-pvc
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitea-backup
+  namespace: gitea
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: docker.io/bitnami/postgresql:16
+            command: ["/bin/bash", "/backup/backup.sh"]
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: minio_access_key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: minio_secret_key
+            - name: BACKUP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: backup_encryption_key
+            - name: POSTGRESQL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: postgresql_username
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: postgresql_database
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-secrets
+                  key: postgresql_password
+            volumeMounts:
+            - name: backup-script
+              mountPath: /backup/backup.sh
+              subPath: backup.sh
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: backup-script
+            configMap:
+              name: backup-script
+          - name: tmp
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+  namespace: gitea
+data:
+  traefik.yml: |
+    api:
+      insecure: false
+      dashboard: true
+    providers:
+      kubernetesCRD: {}
+    entryPoints:
+      web:
+        address: ":80"
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+      websecure:
+        address: ":443"
+{% if use_letsencrypt %}
+    certificatesResolvers:
+      le:
+        acme:
+          email: {{ gitea_admin_email }}
+          storage: /data/acme.json
+          tlsChallenge: {}
+{% else %}
+    tls:
+      certificates:
+        - certFile: /etc/traefik/certs/server.crt
+          keyFile: /etc/traefik/certs/server.key
+      stores:
+        default:
+          defaultCertificate:
+            certFile: /etc/traefik/certs/server.crt
+            keyFile: /etc/traefik/certs/server.key
+{% endif %}
+    http:
+      middlewares:
+        securityHeaders:
+          headers:
+            contentSecurityPolicy: "default-src 'self'"
+            stsSeconds: 31536000
+            frameDeny: true
+            browserXssFilter: true
+        modsecurity:
+          modsecurity:
+            configFile: /etc/traefik/modsecurity.conf
+        rateLimit:
+          rateLimit:
+            average: 100
+            burst: 200
+        dashboardAuth:
+          basicAuth:
+            users:
+              - "admin:$apr1$H6uskkkD$5y78re.7R3fW7rB4H3J0B1"
+    log:
+      level: INFO
+      format: json
+    accessLog:
+      format: json
+      fields:
+        headers:
+          defaultMode: keep
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: gitea
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+    - job_name: 'gitea'
+      static_configs:
+      - targets: ['gitea.gitea.svc.cluster.local:3000']
+    - job_name: 'patroni'
+      static_configs:
+      - targets: ['patroni.gitea.svc.cluster.local:8008']
+    - job_name: 'pgbouncer'
+      static_configs:
+      - targets: ['pgbouncer.gitea.svc.cluster.local:6432']
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['prometheus.gitea.svc.cluster.local:9090']
+    - job_name: 'loki'
+      static_configs:
+      - targets: ['loki.gitea.svc.cluster.local:3100']
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: modsecurity-config
+  namespace: gitea
+data:
+  modsecurity.conf: |
+    SecRuleEngine On
+    SecRequestBodyAccess On
+    SecResponseBodyAccess On
+    SecDefaultAction "phase:1,log,deny,status:403"
+    SecDefaultAction "phase:2,log,deny,status:403"
+    SecAuditEngine RelevantOnly
+    SecAuditLogParts ABCFHZ
+    Include /etc/modsecurity/crs/*.conf
+    SecAction "phase:1,id:10001,initcol:ip=%{REMOTE_ADDR}"
+    SecRule IP:REQUEST_COUNT "@gt 100" "phase:1,id:10002,deny,status:429,log,msg:'Rate limit exceeded',setvar:ip.request_count=+1,expirevar:ip.request_count=60"
+    SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:10003,deny,status:403,log,msg:'Blocked by GeoIP',chain"
+    SecRule GEO:COUNTRY_CODE "@streq CN" "t:none"
+    SecRule REQUEST_URI "@beginsWith /api/" "phase:2,id:10004,deny,status:403,log,msg:'Unauthorized API access',chain"
+    SecRule REQUEST_HEADERS:Authorization "!@streq Bearer VALID_TOKEN" "t:none"
+    SecAction "phase:1,id:10005,log,pass,nolog,ctl:auditEngine=Off,setvar:tx.loki_host=loki.gitea.svc.cluster.local:3100"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgbouncer-config
+  namespace: gitea
+data:
+  pgbouncer.ini: |
+    [databases]
+    {{ postgresql_database }} = host=patroni.gitea.svc.cluster.local port=5432 dbname={{ postgresql_database }} user={{ postgresql_username }} password={{ postgresql_password | replace('"', '\\"') | replace("'", "\\'") }}
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = 6432
+    auth_type = md5
+    pool_mode = transaction
+    max_client_conn = 500
+    default_pool_size = 50
+    reserve_pool_size = 10
+    server_lifetime = 3600
+    server_idle_timeout = 600
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard
+  namespace: gitea
+data:
+  gitea-dashboard.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Prometheus",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "11.2.0",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(gitea_requests_total[5m])",
+              "interval": "",
+              "legendFormat": "Requests per Second",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gitea HTTP Requests",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Prometheus",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 2,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "11.2.0",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(patroni_postgres_up[5m])",
+              "interval": "",
+              "legendFormat": "Patroni Uptime",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Patroni Database Uptime",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
+      "title": "Gitea Metrics",
+      "uid": "gitea-metrics",
+      "version": 1
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: patroni
+  namespace: gitea
+spec:
+  selector:
+    app: patroni
+  ports:
+  - port: 5432
+    targetPort: 5432
+  - port: 8008
+    targetPort: 8008
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer
+  namespace: gitea
+spec:
+  selector:
+    app: pgbouncer
+  ports:
+  - port: 6432
+    targetPort: 6432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea
+  namespace: gitea
+spec:
+  selector:
+    app: gitea
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+  - name: ssh
+    port: 22
+    targetPort: 22
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: gitea
+spec:
+  selector:
+    app: traefik
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80
+  - name: websecure
+    port: 443
+    targetPort: 443
+  - name: ping
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: gitea
+spec:
+  selector:
+    app: minio
+  ports:
+  - name: api
+    port: 9000
+    targetPort: 9000
+  - name: console
+    port: 9001
+    targetPort: 9001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: gitea
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: gitea
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: gitea
+spec:
+  selector:
+    app: loki
+  ports:
+  - port: 3100
+    targetPort: 3100
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gitea-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: {{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-modsecurity@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: {{ gitea_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gitea
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: grafana.{{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: grafana.{{ gitea_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: minio.{{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: minio.{{ gitea_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: minio
+            port:
+              number: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: prometheus.{{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: prometheus.{{ gitea_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: loki.{{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: loki.{{ gitea_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: loki
+            port:
+              number: 3100
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-ingress
+  namespace: gitea
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if use_letsencrypt %}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+{% else %}
+    traefik.ingress.kubernetes.io/router.tls.domains[0].main: traefik.{{ gitea_domain }}
+{% endif %}
+    traefik.ingress.kubernetes.io/router.middlewares: gitea-securityHeaders@kubernetescrd,gitea-dashboardAuth@kubernetescrd,gitea-rateLimit@kubernetescrd
+spec:
+  rules:
+  - host: traefik.{{ gitea_domain }}
+    http:
+      paths:
+      - path: /dashboard/
+        pathType: Prefix
+        backend:
+          service:
+            name: traefik
+            port:
+              number: 8080

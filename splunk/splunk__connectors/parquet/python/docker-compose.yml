@@ -1,0 +1,37 @@
+---
+services:
+  parquet-splunk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SCHEMAS_FILE=/app/schemas.yaml
+      - STATE_PATH=/app/state.db
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - POLL_INTERVAL=${POLL_INTERVAL:-60}
+      - DATA_DIR=${DATA_DIR:-/app/data}
+      - INCREMENTAL_ENABLED=${INCREMENTAL_ENABLED:-false}
+      - MAX_FILES_CONCURRENT=${MAX_FILES_CONCURRENT:-5}
+      - MAX_MEMORY_MB=${MAX_MEMORY_MB:-1024}
+      - METRICS_PORT=${METRICS_PORT:-9000}
+      - SQLCIPHER_KEY=${SQLCIPHER_KEY:-}
+      - ENABLE_SPLUNK=true
+      - PYTHON_LOGGING_LEVEL=INFO
+    ports:
+      - "${METRICS_PORT:-9000}:${METRICS_PORT:-9000}"
+    volumes:
+      - sql-state:/app/state.db:Z
+      - data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '${MAX_MEMORY_MB:-1024}M'
+    restart: unless-stopped
+volumes:
+  sql-state:
+  data:

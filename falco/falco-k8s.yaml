@@ -1,0 +1,671 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-config
+  namespace: falco
+data:
+  http_output.yml: |-
+    json_output: true
+    json_include_output_property: true
+    http_output:
+      enabled: true
+      url: "http://falco-sidekick:2801/"
+    file_output:
+      enabled: true
+      keep_alive: true
+      filename: /logs/falco-events.log
+    webserver:
+      enabled: true
+      threadiness: 0
+      listen_port: 8765
+      k8s_healthz_endpoint: /healthz
+      ssl_enabled: false
+      ssl_certificate: /etc/falco/falco.pem
+  tls.yaml: |-
+    tls:
+      certificates:
+        - certFile: /secrets/traefik.crt
+          keyFile:  /secrets/traefik.key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: falco-secrets
+  namespace: falco
+type: Opaque
+data:
+  falco.pem: |-
+    # Base64-encoded content of secrets/certs/falco.pem
+  sidekick.ca: |-
+    # Base64-encoded content of secrets/certs/sslcert_chain.pem
+  sidekick.key: |-
+    # Base64-encoded content of secrets/certs/sslcert_rsa.key.pem
+  sidekick.cert: |-
+    # Base64-encoded content of secrets/certs/sslcert.pem
+  tinyauth.secret: |-
+    # Base64-encoded random 32-char string
+  tinyauth.users: |-
+    # Base64-encoded htpasswd string for tinyauth
+  traefik.dashboard.users: |-
+    # Base64-encoded htpasswd string for Traefik dashboard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: certs
+  namespace: falco
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi # Adjust based on needs
+  storageClassName: standard # Replace with appropriate storage class
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: falco
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi # Adjust based on needs
+  storageClassName: standard
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: certs
+  namespace: falco
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: certs
+          image: certs:latest # Replace with custom-built image from ./certs
+          env:
+            - name: AUTHORITY_NAME
+              value: "Falco CA"
+            - name: AUTHORITY_PASSWORD
+              value: "youshouldchangethis" # Replace with secure password or use Secret
+            - name: COMPANY
+              value: "falco"
+            - name: DOMAIN_NAME
+              value: "localhost"
+            - name: COUNTRY_CODE
+              value: "US"
+            - name: STATE
+              value: "VA"
+            - name: CITY
+              value: "Locale41"
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+      volumes:
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: falco
+spec:
+  selector:
+    app: traefik
+  ports:
+    - name: web
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: websecure
+      port: 443
+      targetPort: 443
+      protocol: TCP
+    - name: dashboard
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: LoadBalancer # Consider IngressRouteTCP for production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tinyauth
+  namespace: falco
+spec:
+  selector:
+    app: tinyauth
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco
+  namespace: falco
+spec:
+  clusterIP: None
+  selector:
+    app: falco
+  ports:
+    - name: http
+      port: 8765
+      targetPort: 8765
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sidekick
+  namespace: falco
+spec:
+  selector:
+    app: sidekick
+  ports:
+    - name: http
+      port: 2801
+      targetPort: 2801
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webui
+  namespace: falco
+spec:
+  selector:
+    app: webui
+  ports:
+    - name: http
+      port: 2802
+      targetPort: 2802
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: falco
+spec:
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-ingress
+  namespace: falco
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  rules:
+    - host: dashboard.podman.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: traefik
+                port:
+                  number: 8080
+    - host: tinyauth.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tinyauth
+                port:
+                  number: 3000
+    - host: falco-webui
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webui
+                port:
+                  number: 2802
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: traefik
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: traefik
+          image: docker.io/traefik:v3.7.6
+          args:
+            - --entrypoints.web.address=:80
+            - --entrypoints.web.http.redirections.entrypoint.to=websecure
+            - --entrypoints.web.http.redirections.entrypoint.scheme=https
+            - --entrypoints.web.http.redirections.entrypoint.permanent=true
+            - --entrypoints.websecure.address=:443
+            - --entrypoints.websecure.http.tls=true
+            - --providers.file.filename=/dynamic/tls.yaml
+            - --providers.kubernetesingress=true
+            - --api.dashboard=true
+            - --api.insecure=false
+            - --log.level=INFO
+            - --accesslog=true
+            - --metrics.prometheus=true
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: "512Mi"
+            limits:
+              cpu: "0.5"
+              memory: "1Gi"
+          ports:
+            - containerPort: 80
+              name: web
+            - containerPort: 443
+              name: websecure
+            - containerPort: 8080
+              name: dashboard
+          volumeMounts:
+            - name: config
+              mountPath: /dynamic/tls.yaml
+              subPath: tls.yaml
+            - name: secrets
+              mountPath: /secrets
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: falco-config
+        - name: secrets
+          secret:
+            name: falco-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyauth
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinyauth
+  template:
+    metadata:
+      labels:
+        app: tinyauth
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: tinyauth
+          image: ghcr.io/steveiliop56/tinyauth:latest
+          env:
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: falco-secrets
+                  key: tinyauth.secret
+            - name: USERS
+              valueFrom:
+                secretKeyRef:
+                  name: falco-secrets
+                  key: tinyauth.users
+            - name: APP_URL
+              value: "https://tinyauth.local"
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "256Mi"
+            limits:
+              cpu: "0.3"
+              memory: "512Mi"
+          ports:
+            - containerPort: 3000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falco
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falco
+  template:
+    metadata:
+      labels:
+        app: falco
+    spec:
+      securityContext:
+        runAsUser: 0 # Required for privileged access
+      containers:
+        - name: falco
+          image: docker.io/falcosecurity/falco:latest
+          securityContext:
+            privileged: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["SYS_ADMIN", "SYS_RESOURCE", "SYS_PTRACE"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/falco/config.d/http_output.yml
+              subPath: http_output.yml
+            - name: secrets
+              mountPath: /etc/falco/falco.pem
+              subPath: falco.pem
+            - name: logs
+              mountPath: /logs
+            - name: host-proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: host-etc
+              mountPath: /host/etc
+              readOnly: true
+            - name: host-dev
+              mountPath: /host/dev
+            - name: host-boot
+              mountPath: /host/boot
+              readOnly: true
+            - name: host-lib-modules
+              mountPath: /host/lib/modules
+              readOnly: true
+            - name: host-usr
+              mountPath: /host/usr
+              readOnly: true
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: "512Mi"
+            limits:
+              cpu: "0.5"
+              memory: "1Gi"
+          ports:
+            - containerPort: 8765
+              name: http
+          livenessProbe:
+            tcpSocket:
+              port: 8765
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8765
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: falco-config
+        - name: secrets
+          secret:
+            name: falco-secrets
+        - name: logs
+          emptyDir: {}
+        - name: host-proc
+          hostPath:
+            path: /proc
+        - name: host-etc
+          hostPath:
+            path: /etc
+        - name: host-dev
+          hostPath:
+            path: /dev
+        - name: host-boot
+          hostPath:
+            path: /boot
+        - name: host-lib-modules
+          hostPath:
+            path: /lib/modules
+        - name: host-usr
+          hostPath:
+            path: /usr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidekick
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidekick
+  template:
+    metadata:
+      labels:
+        app: sidekick
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: sidekick
+          image: docker.io/falcosecurity/falcosidekick:latest
+          env:
+            - name: WEBUI_URL
+              value: "http://webui.falco.svc.cluster.local:2802"
+            - name: TLSSERVER_DEPLOY
+              value: "true"
+            - name: TLSSERVER_CERTFILE
+              value: /etc/certs/server/server.crt
+            - name: TLSSERVER_KEYFILE
+              value: /etc/certs/server/server.key
+            - name: TLSSERVER_CACERTFILE
+              value: /etc/certs/server/ca.crt
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "256Mi"
+            limits:
+              cpu: "0.3"
+              memory: "512Mi"
+          ports:
+            - containerPort: 2801
+              name: http
+          volumeMounts:
+            - name: secrets
+              mountPath: /etc/certs/server
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 2801
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 2801
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: secrets
+          secret:
+            name: falco-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: webui
+          image: docker.io/falcosecurity/falcosidekick-ui:latest
+          command: ["-r", "redis.falco.svc.cluster.local:6379", "-d"]
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "256Mi"
+            limits:
+              cpu: "0.3"
+              memory: "512Mi"
+          ports:
+            - containerPort: 2802
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 2802
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2802
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: falco
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: redis
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: redis
+          image: docker.io/redis/redis-stack:7.4.0-v8
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: "512Mi"
+            limits:
+              cpu: "0.5"
+              memory: "1Gi"
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: redis-data

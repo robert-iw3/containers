@@ -1,0 +1,11 @@
+# This file should be encrypted with Ansible Vault
+# Run: ansible-vault encrypt vars/vault.yml
+---
+postgresql_username: boundary
+postgresql_password: "{{ vault_postgresql_password }}"
+postgresql_database: boundary
+postgresql_replication_user: repl_user
+postgresql_replication_password: "{{ vault_postgresql_replication_password }}"
+boundary_root_key: "{{ vault_boundary_root_key }}"
+boundary_worker_auth_key: "{{ vault_boundary_worker_auth_key }}"
+boundary_recovery_key: "{{ vault_boundary_recovery_key }}"

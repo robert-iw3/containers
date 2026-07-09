@@ -1,0 +1,174 @@
+version: '3'
+
+volumes:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
+  sonarqube-temp:
+  sonarqube-db:
+  postgresql-data:
+  sonarqube-postgres-backups:
+
+networks:
+  sonarnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${SONARQUBE_SUBNET}
+          gateway: ${SONARQUBE_GATEWAY}
+  traefik:
+    external: true
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - .env
+
+services:
+  postgres:
+    <<: *common-vars-apps
+    image: ${POSTGRESQL_IMAGE}
+    container_name: ${POSTGRESQL_CONTAINER_NAME}
+    hostname: ${POSTGRESQL_HOSTNAME}
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - sonarqube-db:/bitnami/postgresql:z
+      - postgresql-data:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h $(echo $POSTGRES_IPv4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      sonarnet:
+        ipv4_address: ${POSTGRES_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  sonarqube:
+    <<: *common-vars-apps
+    image: ${SONARQUBE_IMAGE}
+    container_name: ${SONARQUBE_CONTAINER_NAME}
+    hostname: ${SONARQUBE_HOSTNAME}
+    ports:
+      - 9000:9000
+    environment:
+      SONAR_JDBC_URL: "jdbc:postgresql://$(echo $POSTGRES_IPv4)/$(echo $POSTGRESQL_DATABASE)"
+      SONAR_JDBC_USERNAME: ${POSTGRESQL_USERNAME}
+      SONAR_JDBC_PASSWORD: ${POSTGRESQL_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - sonarqube-data:/opt/sonarqube/data:Z
+      - sonarqube-extensions:/opt/sonarqube/extensions:Z
+      - sonarqube-logs:/opt/sonarqube/logs:Z
+      - sonarqube-temp:/opt/sonarqube/temp:Z
+    healthcheck:
+      test: ["CMD", "wget", "http://$(echo $SONARQUBE_IPv4):9000/","--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    ulimits:
+      nproc: 8192
+      nofile:
+        soft: 65536
+        hard: 131072
+      postgres:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
+    networks:
+      sonarnet:
+        ipv4_address: ${SONARQUBE_IPv4}
+      traefik:
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sonarqube.rule=Host(`sonarqube.io`)"
+        - "traefik.http.routers.sonarqube.service=sonarqube"
+        - "traefik.http.routers.sonarqube.entrypoints=websecure"
+        - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+        - "traefik.http.routers.sonarqube.tls=true"
+        - "traefik.http.routers.sonarqube.tls.certresolver=letsencrypt"
+        - "traefik.http.services.sonarqube.loadbalancer.passhostheader=true"
+        - "traefik.http.routers.sonarqube.middlewares=compresstraefik"
+        - "traefik.http.middlewares.compresstraefik.compress=true"
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backups:
+    <<: *common-vars-apps
+    image: ${POSTGRESQL_IMAGE}
+    container_name: ${BACKUP_POSTGRESQL_CONTAINER_NAME}
+    hostname: ${BACKUP_POSTGRESQL_HOSTNAME}
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        && while true; do
+        pg_dump
+        -h postgres-sonarqube.io
+        -p 5432
+        -d "${POSTGRESQL_DATABASE}"
+        -U "${POSTGRESQL_USERNAME} | gzip > /srv/sonarqube-postgres/backups/sonarqube-postgres-backup-$$(date "+%Y-%m-%d_%H-%M").gz
+        && find /srv/sonarqube-postgres/backups -type f -mtime +7 | xargs rm -f;
+        sleep 24h; done
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - sonarqube-db:/bitnami/postgresql:z
+      - sonarqube-postgres-backups:/srv/sonarqube-postgres/backups:Z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: ${POSTGRESQL_HOSTNAME}
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+    ports:
+      - 5432:5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sonarqube:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h $(echo $BACKUP_POSTGRESQL_IPv4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      sonarnet:
+        ipv4_address: ${BACKUP_POSTGRESQL_IPv4}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

@@ -1,0 +1,90 @@
+zap-dast:
+  stage: test
+  image: registry.gitlab.com/gitlab-org/security-products/zaproxy
+  allow_failure: true
+  tags:
+    - security
+  services: []
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - if [ -z $DAST_WEB_SITE ]; then echo "Please configure DAST_WEB_SITE env variable" && exit 1; fi
+    - mkdir /zap/wrk/
+    - /zap/zap-baseline.py -J gitlab-dast-zap-report.json -t $DAST_WEB_SITE || true
+    - cp /zap/wrk/gitlab-dast-zap-report.json .
+  artifacts:
+    paths:
+      - gitlab-dast-zap-report.json
+    reports:
+      dast: gitlab-dast-zap-report.json
+nuclei-dast:
+  stage: test
+  image: docker.io/projectdiscovery/nuclei:latest
+  allow_failure: true
+  tags:
+    - security
+  services: []
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - if [ -z $DAST_WEB_SITE ]; then echo "Please configure DAST_WEB_SITE env variable" && exit 1; fi
+    - DATE=$(date +"%Y%m%d")
+    - TARGET="$DAST_WEB_SITE"
+    - THREADS=35
+    - mkdir -p /nuclei/report-${TARGET}
+    - nuclei -ut
+    - nuclei -c ${THREADS} -ni -u ${TARGET} -json -o /nuclei-${TARGET}-${DATE}.json || true
+  artifacts:
+    paths:
+      - nuclei-${TARGET}-${DATE}.json
+    reports:
+      dast: nuclei-${TARGET}-${DATE}.json
+wapiti-dast:
+  stage: test
+  image: quay.io/almalinuxorg/9-minimal
+  allow_failure: true
+  tags:
+    - security
+  services: []
+  script:
+    - if [ -z $DAST_WEB_SITE ]; then echo "Please configure DAST_WEB_SITE env variable" && exit 1; fi
+    - DATE="$(date +'%Y%m%d')"
+    - TARGET="$DAST_WEB_SITE"
+    - WAPITI_VER="3.1.7"
+    - microdnf install -y yum-utils
+    - microdnf install -y epel-release
+    - dnf config-manager --set-enabled crb
+    - /usr/bin/crb enable
+    - microdnf update -y
+    - microdnf install -y
+      bash
+      python3-pip
+      python3-setuptools
+      python3-pip-wheel
+      python3-devel
+      make
+      automake
+      gcc
+      g++
+      subversion
+      cargo
+      wget
+      unzip
+    - wget --progress=bar:force https://github.com/wapiti-scanner/wapiti/archive/refs/tags/${WAPITI_VER}.zip
+    - unzip ${WAPITI_VER}.zip
+    - cd wapiti-${WAPITI_VER}
+    - python3 -m venv wapiti3
+    - . wapiti3/bin/activate
+    - python3 -m pip install --upgrade pip
+    - python3 -m pip install .
+    - cp -r /wapiti-${WAPITI_VER}/wapiti3/lib/python3.9/ /usr/lib/python3.9/
+    - cp /wapiti-${WAPITI_VER}/bin/wapiti /usr/local/bin/
+    - cp /wapiti-${WAPITI_VER}/bin/wapiti-getcookie /usr/local/bin/
+    - chmod 755 /usr/local/bin/wapiti /usr/local/bin/wapiti-getcookie
+    - wapiti --update
+    - wapiti -v2 -u ${TARGET} -f json -o /wapiti-${TARGET}-${DATE}.json || true
+  artifacts:
+    paths:
+      - wapiti-${TARGET}-${DATE}.json
+    reports:
+      dast: wapiti-${TARGET}-${DATE}.json

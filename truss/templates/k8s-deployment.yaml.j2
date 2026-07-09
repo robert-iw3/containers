@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ container_name }}
+  namespace: default
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: {{ container_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ container_name }}
+    spec:
+      containers:
+      - name: {{ container_name }}
+        image: {{ container_image }}:{{ truss_version }}
+        ports:
+        - containerPort: {{ container_port }}
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            cpu: "{{ resources.cpu }}"
+            memory: {{ resources.memory }}
+          requests:
+            cpu: "{{ resources.cpu | regex_replace('([0-9]+)', '\\1/2') }}"
+            memory: {{ resources.memory | regex_replace('([0-9]+)', '\\1/2') }}"
+        env:
+        - name: TRUSS_ENV
+          value: "{{ truss_env }}"
+        - name: MODEL_NAME
+          value: "{{ model_name }}"
+        - name: MAX_LENGTH
+          value: "{{ max_length | default('128') }}"
+        - name: PIPELINE_TYPE
+          value: "{{ pipeline_type | default('text-generation') }}"
+        volumeMounts:
+        - name: model-volume
+          mountPath: {{ model_dir }}
+          readOnly: true
+        - name: data-volume
+          mountPath: {{ data_dir }}
+        - name: logs-volume
+          mountPath: {{ logs_dir }}
+        livenessProbe:
+          httpGet:
+            path: /v1/models/model
+            port: {{ container_port }}
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/models/model
+            port: {{ container_port }}
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      volumes:
+      - name: model-volume
+        emptyDir: {}
+      - name: data-volume
+        emptyDir: {}
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ container_name }}-service
+  namespace: default
+spec:
+  selector:
+    app: {{ container_name }}
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: {{ container_port }}
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ container_name }}-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ container_name }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector: {}
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+    ports:
+    - protocol: TCP
+      port: {{ container_port }}
+  egress:
+  - to:
+    - podSelector: {}
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+    ports:
+    - protocol: TCP
+      port: {{ container_port }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ container_name }}-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ container_name }}
+  minReplicas: {{ replicas | default(1) }}
+  maxReplicas: {{ (replicas | default(1) | int * 2) | default(2) }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

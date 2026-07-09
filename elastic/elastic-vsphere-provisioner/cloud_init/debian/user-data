@@ -1,0 +1,42 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: {{ timezone }}
+  identity:
+    hostname: {{ hostname }}
+    username: {{ ssh_user }}
+    password: "$6$rounds=4096${{ ssh_password }}"
+  ssh:
+    install-server: yes
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: no
+        addresses: [{{ ip }}/24]
+        gateway4: {{ gateway }}
+        nameservers:
+          addresses: [{{ nameservers }}]
+  storage:
+    layout:
+      name: lvm
+  packages:
+    - {{ packages }}
+  late-commands:
+    - curtin in-target --target=/target -- apt update
+    - curtin in-target --target=/target -- apt upgrade -y
+    - curtin in-target --target=/target -- apt install -y podman docker.io ufw
+    - curtin in-target --target=/target -- usermod -aG docker {{ ssh_user }}
+    - curtin in-target --target=/target -- usermod -aG podman {{ ssh_user }}
+    - curtin in-target --target=/target -- systemctl enable podman.socket
+    - curtin in-target --target=/target -- ufw default deny incoming
+    - curtin in-target --target=/target -- ufw default allow outgoing
+    - curtin in-target --target=/target -- ufw allow from {{ allowed_subnet }} to any port 22
+    - curtin in-target --target=/target -- ufw allow from {{ allowed_subnet }} to any port 9200
+    - curtin in-target --target=/target -- ufw allow from {{ allowed_subnet }} to any port 9300
+    - curtin in-target --target=/target -- ufw allow from {{ allowed_subnet }} to any port 5601
+    - curtin in-target --target=/target -- ufw allow from {{ allowed_subnet }} to any port 8220
+    - curtin in-target --target=/target -- ufw --force enable

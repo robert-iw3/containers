@@ -1,0 +1,80 @@
+<form version="1.1">
+  <label>Sandfly Security Sandfly Investigation</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="t_time" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="t_sandfly" searchWhenChanged="true">
+      <label>Sandflies</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>sandfly_name</fieldForLabel>
+      <fieldForValue>sandfly_name</fieldForValue>
+      <search>
+        <query>`sandfly_search`
+| lookup sandflies.csv sandfly_name as data.name OUTPUT sandfly_name
+| dedup sandfly_name
+| sort by sandfly_name
+| table sandfly_name</query>
+        <earliest>$t_time.earliest$</earliest>
+        <latest>$t_time.latest$</latest>
+      </search>
+    </input>
+    <input type="multiselect" token="t_status" searchWhenChanged="true">
+      <label>Status</label>
+      <choice value="alert">Alerts</choice>
+      <choice value="pass">Passed</choice>
+      <choice value="error">Errors</choice>
+      <default>alert</default>
+      <initialValue>alert</initialValue>
+      <valuePrefix>data.status="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Total Sandfly Instances</title>
+        <search>
+          <query>`sandfly_search` data.name=$t_sandfly$ $t_status$
+| rename data.name as Sandfly
+| stats count</query>
+          <earliest>$t_time.earliest$</earliest>
+          <latest>$t_time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <table>
+        <title>Sandfly Instances</title>
+        <search>
+          <query>`sandfly_search` data.name=$t_sandfly$ $t_status$
+| rename data.name as Sandfly
+| stats count by Sandfly
+| sort - count</query>
+          <earliest>$t_time.earliest$</earliest>
+          <latest>$t_time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">search?q=%60sandfly_search%60%20data.name%3D%22$row.Sandfly$%22%20$t_status$&amp;earliest=$t_time.earliest$&amp;latest=$t_time.latest$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

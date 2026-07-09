@@ -1,0 +1,19 @@
+name: Deploy Gitea
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Run Ansible playbook
+      run: |
+        ansible-playbook -i inventory deploy_gitea.yml
+      env:
+        VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+        VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+        BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        USE_LETSENCRYPT: ${{ secrets.USE_LETSENCRYPT | default('true') }}

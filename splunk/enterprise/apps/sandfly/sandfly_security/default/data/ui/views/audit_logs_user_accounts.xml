@@ -1,0 +1,135 @@
+<form version="1.1" theme="light">
+  <label>Audit Logs - User Accounts</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>User Accounts Created</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created user*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>User Accounts Deleted</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="deleted user*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="created user*"
+| rex field=audit_log.message "'\s*(?&lt;t_username&gt;[^']+?)\s*'"
+| rename t_username as NewUserName
+| eval CreatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| table TimeStamp NewUserName CreatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="deleted user*"
+| rex field=audit_log.message "'\s*(?&lt;t_username&gt;[^']+?)\s*'"
+| rename t_username as UserName
+| eval DeletedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| table TimeStamp UserName DeletedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>Passwords Changed</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="changed password for*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>User Account Details Updated</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="updated user*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="changed password for*"
+| rex field=audit_log.message "\s*(?&lt;t_username&gt;[\S]+)$"
+| rename t_username as UserName
+| eval ChangedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| table TimeStamp UserName ChangedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="updated user*"
+| rex field=audit_log.message "\s*(?&lt;t_username&gt;[\S]+)$"
+| rename t_username as UserName
+| eval UpdatedByUser='audit_log.username'
+| eval TimeStamp=strftime(_time,"%x %r")
+| table TimeStamp UserName UpdatedByUser</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

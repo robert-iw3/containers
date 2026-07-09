@@ -1,0 +1,50 @@
+---
+driver:
+  name: podman
+
+platforms:
+  - name: nomad-server-1
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    network: nomad-molecule
+    capabilities:
+      - SYS_ADMIN
+    groups:
+      - nomad_servers
+  - name: nomad-server-2
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    network: nomad-molecule
+    capabilities:
+      - SYS_ADMIN
+    groups:
+      - nomad_servers
+  - name: nomad-server-3
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    network: nomad-molecule
+    capabilities:
+      - SYS_ADMIN
+    groups:
+      - nomad_servers
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    group_vars:
+      all:
+        nomad_server_enabled: true
+        nomad_client_enabled: false
+        nomad_bootstrap_expect: 3
+        nomad_podman_enabled: false
+        nomad_manage_host_settings: false
+        nomad_gossip_key: "cg8StVXbQJ0gPvMd9o7yrg=="
+        nomad_snapshot_enabled: true
+
+verifier:
+  name: ansible

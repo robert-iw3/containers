@@ -1,0 +1,81 @@
+---
+nomad_version: "2.0.3"
+nomad_architecture: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+nomad_download_url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_linux_{{ nomad_architecture }}.zip"
+nomad_checksum_url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_SHA256SUMS"
+nomad_install_dir: "/usr/local/bin"
+nomad_config_dir: "/etc/nomad.d"
+nomad_data_dir: "/opt/nomad/data"
+nomad_log_dir: "/var/log/nomad"
+nomad_user: "nomad"
+nomad_group: "nomad"
+nomad_bind_addr: "{{ ansible_default_ipv4.address | default('0.0.0.0') }}"
+nomad_region: "global"
+nomad_datacenter: "dc1"
+nomad_server_enabled: false
+nomad_client_enabled: false
+nomad_bootstrap_expect: 3
+
+nomad_acl_enabled: true
+
+nomad_tls_enabled: true
+nomad_tls_ca_file: "{{ nomad_config_dir }}/ca.pem"
+nomad_tls_cert_file: "{{ nomad_config_dir }}/nomad-cert.pem"
+nomad_tls_key_file: "{{ nomad_config_dir }}/nomad-key.pem"
+nomad_tls_generate: true
+nomad_tls_common_name: "{{ inventory_hostname }}"
+# Extra externally-reachable SANs (e.g. LB VIP); cluster node addresses are added automatically.
+nomad_tls_extra_sans: []
+nomad_tls_days: 365
+
+# Must be supplied by the operator (ansible-vault or -e); no safe default since every server needs the same key.
+nomad_gossip_encryption_enabled: true
+nomad_gossip_key: ""
+
+nomad_consul_enabled: false
+nomad_consul_address: "127.0.0.1:8500"
+nomad_consul_grpc_address: "127.0.0.1:8503"
+
+# Must be supplied by the operator, same as nomad_gossip_key above.
+nomad_vault_enabled: false
+nomad_vault_version: "2.0.2"
+nomad_vault_download_url: "https://releases.hashicorp.com/vault/{{ nomad_vault_version }}/vault_{{ nomad_vault_version }}_linux_{{ nomad_architecture }}.zip"
+nomad_vault_checksum_url: "https://releases.hashicorp.com/vault/{{ nomad_vault_version }}/vault_{{ nomad_vault_version }}_SHA256SUMS"
+nomad_vault_address: "https://127.0.0.1:8200"
+nomad_vault_token: ""
+
+nomad_podman_enabled: true
+nomad_podman_socket_path: "/run/user/{{ ansible_user_uid }}/podman/podman.sock"
+nomad_podman_volumes_enabled: true
+
+nomad_docker_enabled: false
+nomad_docker_allow_privileged: false
+
+nomad_telemetry_enabled: true
+nomad_telemetry_prometheus: true
+nomad_service_discovery_enabled: true
+nomad_service_name: "nomad"
+nomad_ulimits_nofile: 65536
+nomad_ulimits_nproc: 4096
+
+# Extra sources allowed to reach the HTTP API; cluster nodes are always allowed automatically.
+nomad_allowed_ips: ["127.0.0.1"]
+
+nomad_snapshot_enabled: true
+nomad_snapshot_dir: "/opt/nomad/snapshots"
+nomad_snapshot_retention: 7
+nomad_snapshot_on_calendar: "daily"
+# Optional S3 destination for off-box snapshot copies (requires aws cli on the servers).
+nomad_snapshot_s3_bucket: ""
+
+nomad_host_hardening_enabled: false
+# Disable only in containers/CI where sysctl, swap, chrony, grub, and firewall changes are impossible.
+nomad_manage_host_settings: true
+
+nomad_logrotate_maxsize: "100M"
+nomad_logrotate_rotate: 5
+nomad_subuid_start: 100000
+nomad_subuid_range: 65536
+nomad_subgid_start: 100000
+nomad_subgid_range: 65536
+nomad_minimum_podman_version: "4.0.0"

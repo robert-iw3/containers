@@ -1,0 +1,51 @@
+---
+services:
+  nessus:
+    container_name: nessus
+    image: tenableofficial/nessus:10.8.4
+    hostname: nessus.testing.io
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      USERNAME_FILE: /run/secrets/nessus_username
+      PASSWORD_FILE: /run/secrets/nessus_password
+      ACTIVATION_CODE_FILE: /run/secrets/activation_code
+      AUTO_UPDATE: all
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_RESOURCE
+    networks:
+      - tenable
+    ports:
+      - 8834:8834
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - nessus_data:/opt/nessus/var/nessus:Z
+      - ./exports:/home/nessus/artifacts:z
+    secrets:
+      - nessus_username
+      - nessus_password
+      - activation_code
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8834"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  tenable:
+    name: tenable
+    driver: bridge
+
+volumes:
+  nessus_data:
+
+secrets:
+  nessus_username:
+    file: ./secrets/nessus_username.txt
+  nessus_password:
+    file: ./secrets/nessus_password.txt
+  activation_code:
+    file: ./secrets/activation_code.txt

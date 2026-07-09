@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanko
+  namespace: hanko
+  labels:
+    app: hanko
+spec:
+  ports:
+    - name: public
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: admin
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+  selector:
+    app: hanko
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hanko
+  namespace: hanko
+  labels:
+    app: hanko
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hanko
+  template:
+    metadata:
+      labels:
+        app: hanko
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: hanko
+          image: ${CONTAINER_REGISTRY}/hanko-backend:${TAG:-latest}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          env:
+            - name: PASSWORD_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+              readOnly: true
+            - name: tls-certs
+              mountPath: /etc/tls
+              readOnly: true
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          ports:
+            - containerPort: 8000
+              name: public
+            - containerPort: 8001
+              name: admin
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+      volumes:
+        - name: config
+          configMap:
+            name: hanko-config
+        - name: tls-certs
+          secret:
+            secretName: hanko-tls
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: hanko
+                topologyKey: kubernetes.io/hostname

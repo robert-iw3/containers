@@ -1,0 +1,931 @@
+{
+   "template":{
+      "description":"This template illustrates how to use the ExecuteScript processor with Groovy to perform JSON-to-JSON transformations",
+      "name":"GroovyJsonToJsonExample",
+      "snippet":{
+         "connections":[
+            {
+               "id":"09e8aa98-c9b8-43f0-afbd-513f1d417061",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"8e8aa799-d1ab-4f97-ab35-b06a5a104ae2",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"b52a6649-9570-4db5-8541-d5c0302007c0",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"b032a9c3-c1d7-4e62-9646-25fe680a0957",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"13b95f46-0fd8-476e-8c36-364f42aedb95",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"8e8aa799-d1ab-4f97-ab35-b06a5a104ae2",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"78269281-c4c0-4a33-9016-9db64260d55b",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"b52a6649-9570-4db5-8541-d5c0302007c0",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"1850baea-ee67-4f67-88e3-8247b50ad722",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            },
+            {
+               "id":"c9c8f320-5db0-42e9-b5c4-f66480bb7a60",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "backPressureDataSizeThreshold":"0 MB",
+               "backPressureObjectThreshold":"0",
+               "destination":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"704217df-488e-4229-bacc-f613fdab76fa",
+                  "type":"PROCESSOR"
+               },
+               "flowFileExpiration":"0 sec",
+               "labelIndex":"1",
+               "name":"",
+               "selectedRelationships":"success",
+               "source":{
+                  "groupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+                  "id":"13b95f46-0fd8-476e-8c36-364f42aedb95",
+                  "type":"PROCESSOR"
+               },
+               "zIndex":"0"
+            }
+         ],
+         "processors":[
+            {
+               "id":"704217df-488e-4229-bacc-f613fdab76fa",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "position":{
+                  "x":"612.0",
+                  "y":"500.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Directory",
+                           "value":{
+                              "description":"The directory to which files should be written. You may use expression language such as /aa/bb/${path}",
+                              "displayName":"Directory",
+                              "dynamic":"false",
+                              "name":"Directory",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Conflict Resolution Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"replace",
+                                    "value":"replace"
+                                 },
+                                 {
+                                    "displayName":"ignore",
+                                    "value":"ignore"
+                                 },
+                                 {
+                                    "displayName":"fail",
+                                    "value":"fail"
+                                 }
+                              ],
+                              "defaultValue":"fail",
+                              "description":"Indicates what should happen when a file with the same name already exists in the output directory",
+                              "displayName":"Conflict Resolution Strategy",
+                              "dynamic":"false",
+                              "name":"Conflict Resolution Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Create Missing Directories",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"true",
+                              "description":"If true, then missing destination directories will be created. If false, flowfiles are penalized and sent to failure.",
+                              "displayName":"Create Missing Directories",
+                              "dynamic":"false",
+                              "name":"Create Missing Directories",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum File Count",
+                           "value":{
+                              "description":"Specifies the maximum number of files that can exist in the output directory",
+                              "displayName":"Maximum File Count",
+                              "dynamic":"false",
+                              "name":"Maximum File Count",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Last Modified Time",
+                           "value":{
+                              "description":"Sets the lastModifiedTime on the output file to the value of this attribute.  Format must be yyyy-MM-dd'T'HH:mm:ssZ.  You may also use expression language such as ${file.lastModifiedTime}.",
+                              "displayName":"Last Modified Time",
+                              "dynamic":"false",
+                              "name":"Last Modified Time",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Permissions",
+                           "value":{
+                              "description":"Sets the permissions on the output file to the value of this attribute.  Format must be either UNIX rwxrwxrwx with a - in place of denied permissions (e.g. rw-r--r--) or an octal number (e.g. 644).  You may also use expression language such as ${file.permissions}.",
+                              "displayName":"Permissions",
+                              "dynamic":"false",
+                              "name":"Permissions",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Owner",
+                           "value":{
+                              "description":"Sets the owner on the output file to the value of this attribute.  You may also use expression language such as ${file.owner}.",
+                              "displayName":"Owner",
+                              "dynamic":"false",
+                              "name":"Owner",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Group",
+                           "value":{
+                              "description":"Sets the group on the output file to the value of this attribute.  You may also use expression language such as ${file.group}.",
+                              "displayName":"Group",
+                              "dynamic":"false",
+                              "name":"Group",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Directory",
+                           "value":"data/out"
+                        },
+                        {
+                           "key":"Conflict Resolution Strategy",
+                           "value":"replace"
+                        },
+                        {
+                           "key":"Create Missing Directories"
+                        },
+                        {
+                           "key":"Maximum File Count"
+                        },
+                        {
+                           "key":"Last Modified Time"
+                        },
+                        {
+                           "key":"Permissions"
+                        },
+                        {
+                           "key":"Owner"
+                        },
+                        {
+                           "key":"Group"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"PutFile",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"Files that could not be written to the output directory for some reason are transferred to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "description":"Files that have been successfully written to the output directory are transferred to this relationship",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.PutFile"
+            },
+            {
+               "id":"13b95f46-0fd8-476e-8c36-364f42aedb95",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "position":{
+                  "x":"610.0",
+                  "y":"300.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Script Engine",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"ECMAScript",
+                                    "value":"ECMAScript"
+                                 },
+                                 {
+                                    "displayName":"Groovy",
+                                    "value":"Groovy"
+                                 },
+                                 {
+                                    "displayName":"lua",
+                                    "value":"lua"
+                                 },
+                                 {
+                                    "displayName":"python",
+                                    "value":"python"
+                                 },
+                                 {
+                                    "displayName":"ruby",
+                                    "value":"ruby"
+                                 }
+                              ],
+                              "defaultValue":"ECMAScript",
+                              "description":"The engine to execute scripts",
+                              "displayName":"Script Engine",
+                              "dynamic":"false",
+                              "name":"Script Engine",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Script File",
+                           "value":{
+                              "description":"Path to script file to execute. Only one of Script File or Script Body may be used",
+                              "displayName":"Script File",
+                              "dynamic":"false",
+                              "name":"Script File",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Script Body",
+                           "value":{
+                              "description":"Body of script to execute. Only one of Script File or Script Body may be used",
+                              "displayName":"Script Body",
+                              "dynamic":"false",
+                              "name":"Script Body",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Module Directory",
+                           "value":{
+                              "description":"Comma-separated list of paths to files and/or directories which contain modules required by the script.",
+                              "displayName":"Module Directory",
+                              "dynamic":"false",
+                              "name":"Module Directory",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Script Engine",
+                           "value":"Groovy"
+                        },
+                        {
+                           "key":"Script File"
+                        },
+                        {
+                           "key":"Script Body",
+                           "value":"import org.apache.commons.io.IOUtils\nimport java.nio.charset.*\n\ndef flowFile = session.get();\nif (flowFile == null) {\n    return;\n}\ndef slurper = new groovy.json.JsonSlurper()\n\nflowFile = session.write(flowFile,\n        { inputStream, outputStream ->\n            def text = IOUtils.toString(inputStream, StandardCharsets.UTF_8)\n            def obj = slurper.parseText(text)\n   \t    def builder = new groovy.json.JsonBuilder()\n\t\tbuilder.call { \n  \t\t   'Range' 5 \n  \t\t   'Rating' \"${obj.rating.primary.value}\"\n  \t\t   'SecondaryRatings' {\n      \t\t\tobj.rating.findAll {it.key != \"primary\"}.each {k,v ->\n         \t\t   \"$k\" {\n             \t\t   \t'Id' \"$k\"\n             \t\t   \t'Range' 5\n             \t\t   \t'Value' v.value\n         \t\t   }\n      \t\t   \t}\n  \t\t   }\n\t   }\n           outputStream.write(builder.toPrettyString().getBytes(StandardCharsets.UTF_8)) \n        } as StreamCallback)\nflowFile = session.putAttribute(flowFile, \"filename\", flowFile.getAttribute('filename').tokenize('.')[0]+'_translated.json')\nsession.transfer(flowFile, ExecuteScript.REL_SUCCESS)"
+                        },
+                        {
+                           "key":"Module Directory"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"JSON-to-JSON conversion",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles that failed to be processed",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that were successfully processed",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"false",
+               "type":"org.apache.nifi.processors.script.ExecuteScript"
+            },
+            {
+               "id":"8e8aa799-d1ab-4f97-ab35-b06a5a104ae2",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "position":{
+                  "x":"614.0979461669922",
+                  "y":"134.66497802734375"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Delete Attributes Expression",
+                           "value":{
+                              "description":"Regular expression for attributes to be deleted from flowfiles.",
+                              "displayName":"Delete Attributes Expression",
+                              "dynamic":"false",
+                              "name":"Delete Attributes Expression",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"filename",
+                           "value":{
+                              "description":"",
+                              "displayName":"filename",
+                              "dynamic":"true",
+                              "name":"filename",
+                              "required":"false",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Delete Attributes Expression"
+                        },
+                        {
+                           "key":"filename",
+                           "value":"input.json"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Add dummy filename",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"All FlowFiles are routed to this relationship",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+            },
+            {
+               "id":"b52a6649-9570-4db5-8541-d5c0302007c0",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "position":{
+                  "x":"611.0",
+                  "y":"-24.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression",
+                           "value":{
+                              "defaultValue":"(?s:^.*$)",
+                              "description":"The Search Value to search for in the FlowFile content. Only used for 'Literal Replace' and 'Regex Replace' matching strategies",
+                              "displayName":"Search Value",
+                              "dynamic":"false",
+                              "name":"Regular Expression",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":{
+                              "defaultValue":"$1",
+                              "description":"The value to insert using the 'Replacement Strategy'. Using \"Regex Replace\" back-references to Regular Expression capturing groups are supported, but back-references that reference capturing groups that do not exist in the regular expression will be treated as literal value. Back References may also be referenced using the Expression Language, as '$1', '$2', etc. The single-tick marks MUST be included, as these variables are not \"Standard\" attribute names (attribute names must be quoted unless they contain only numbers, letters, and _).",
+                              "displayName":"Replacement Value",
+                              "dynamic":"false",
+                              "name":"Replacement Value",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"true"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "defaultValue":"UTF-8",
+                              "description":"The Character Set in which the file is encoded",
+                              "displayName":"Character Set",
+                              "dynamic":"false",
+                              "name":"Character Set",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Maximum Buffer Size",
+                           "value":{
+                              "defaultValue":"1 MB",
+                              "description":"Specifies the maximum amount of data to buffer (per file or per line, depending on the Evaluation Mode) in order to apply the replacement. If 'Entire Text' (in Evaluation Mode) is selected and the FlowFile is larger than this value, the FlowFile will be routed to 'failure'. In 'Line-by-Line' Mode, if a single line is larger than this value, the FlowFile will be routed to 'failure'. A default value of 1 MB is provided, primarily for 'Entire Text' mode. In 'Line-by-Line' Mode, a value such as 8 KB or 16 KB is suggested. This value is ignored if the <Replacement Strategy> property is set to one of: Append, Prepend, Always Replace",
+                              "displayName":"Maximum Buffer Size",
+                              "dynamic":"false",
+                              "name":"Maximum Buffer Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Replacement Strategy",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "description":"Insert the Replacement Value at the beginning of the FlowFile or the beginning of each line (depending on the Evaluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be prepended to each line. For \"Entire Text\" evaluation mode, the value will be prepended to the entire text.",
+                                    "displayName":"Prepend",
+                                    "value":"Prepend"
+                                 },
+                                 {
+                                    "description":"Insert the Replacement Value at the end of the FlowFile or the end of each line (depending on the Evluation Mode). For \"Line-by-Line\" Evaluation Mode, the value will be appended to each line. For \"Entire Text\" evaluation mode, the value will be appended to the entire text.",
+                                    "displayName":"Append",
+                                    "value":"Append"
+                                 },
+                                 {
+                                    "description":"Interpret the Search Value as a Regular Expression and replace all matches with the Replacement Value. The Replacement Value may reference Capturing Groups used in the Search Value by using a dollar-sign followed by the Capturing Group number, such as $1 or $2. If the Search Value is set to .* then everything is replaced without even evaluating the Regular Expression.",
+                                    "displayName":"Regex Replace",
+                                    "value":"Regex Replace"
+                                 },
+                                 {
+                                    "description":"Search for all instances of the Search Value and replace the matches with the Replacement Value.",
+                                    "displayName":"Literal Replace",
+                                    "value":"Literal Replace"
+                                 },
+                                 {
+                                    "description":"Always replaces the entire line or the entire contents of the FlowFile (depending on the value of the <Evaluation Mode> property) and does not bother searching for any value. When this strategy is chosen, the <Search Value> property is ignored.",
+                                    "displayName":"Always Replace",
+                                    "value":"Always Replace"
+                                 }
+                              ],
+                              "defaultValue":"Regex Replace",
+                              "description":"The strategy for how and what to replace within the FlowFile's text content.",
+                              "displayName":"Replacement Strategy",
+                              "dynamic":"false",
+                              "name":"Replacement Strategy",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Evaluation Mode",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Line-by-Line",
+                                    "value":"Line-by-Line"
+                                 },
+                                 {
+                                    "displayName":"Entire text",
+                                    "value":"Entire text"
+                                 }
+                              ],
+                              "defaultValue":"Entire text",
+                              "description":"Run the 'Replacement Strategy' against each line separately (Line-by-Line) or buffer the entire file into memory (Entire Text) and run against that.",
+                              "displayName":"Evaluation Mode",
+                              "dynamic":"false",
+                              "name":"Evaluation Mode",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Regular Expression"
+                        },
+                        {
+                           "key":"Replacement Value",
+                           "value":"{\n\t\"rating\": {\n\t\t\"primary\": {\n\t\t\t\"value\": 3\n\t\t},\n\t\t\"quality\": {\n\t\t\t\"value\": 3\n\t\t},\n\t\t\"metric\": {\n\t\t\t\"value\": 6\n\t\t}\n\t}\n}"
+                        },
+                        {
+                           "key":"Character Set"
+                        },
+                        {
+                           "key":"Maximum Buffer Size"
+                        },
+                        {
+                           "key":"Replacement Strategy"
+                        },
+                        {
+                           "key":"Evaluation Mode"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Set JSON contents",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "description":"FlowFiles that could not be updated are routed to this relationship",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"false",
+                     "description":"FlowFiles that have been successfully processed are routed to this relationship. This includes both FlowFiles that had text replaced and those that did not.",
+                     "name":"success"
+                  }
+               ],
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"true",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.ReplaceText"
+            },
+            {
+               "id":"1850baea-ee67-4f67-88e3-8247b50ad722",
+               "parentGroupId":"67fb1165-c100-47df-bde3-aa0a4f57af67",
+               "position":{
+                  "x":"614.0",
+                  "y":"-189.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "defaultConcurrentTasks":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"1"
+                        },
+                        {
+                           "key":"EVENT_DRIVEN",
+                           "value":"0"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"1"
+                        }
+                     ]
+                  },
+                  "defaultSchedulingPeriod":{
+                     "entry":[
+                        {
+                           "key":"TIMER_DRIVEN",
+                           "value":"0 sec"
+                        },
+                        {
+                           "key":"CRON_DRIVEN",
+                           "value":"* * * * * ?"
+                        }
+                     ]
+                  },
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":{
+                              "description":"The size of the file that will be used",
+                              "displayName":"File Size",
+                              "dynamic":"false",
+                              "name":"File Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Batch Size",
+                           "value":{
+                              "defaultValue":"1",
+                              "description":"The number of FlowFiles to be transferred in each invocation",
+                              "displayName":"Batch Size",
+                              "dynamic":"false",
+                              "name":"Batch Size",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Data Format",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"Binary",
+                                    "value":"Binary"
+                                 },
+                                 {
+                                    "displayName":"Text",
+                                    "value":"Text"
+                                 }
+                              ],
+                              "defaultValue":"Binary",
+                              "description":"Specifies whether the data should be Text or Binary",
+                              "displayName":"Data Format",
+                              "dynamic":"false",
+                              "name":"Data Format",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        },
+                        {
+                           "key":"Unique FlowFiles",
+                           "value":{
+                              "allowableValues":[
+                                 {
+                                    "displayName":"true",
+                                    "value":"true"
+                                 },
+                                 {
+                                    "displayName":"false",
+                                    "value":"false"
+                                 }
+                              ],
+                              "defaultValue":"false",
+                              "description":"If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles will get the same content but this offers much higher throughput",
+                              "displayName":"Unique FlowFiles",
+                              "dynamic":"false",
+                              "name":"Unique FlowFiles",
+                              "required":"true",
+                              "sensitive":"false",
+                              "supportsEl":"false"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"File Size",
+                           "value":"0B"
+                        },
+                        {
+                           "key":"Batch Size"
+                        },
+                        {
+                           "key":"Data Format",
+                           "value":"Text"
+                        },
+                        {
+                           "key":"Unique FlowFiles"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"5 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"Empty FlowFile",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "description":"",
+                  "name":"success"
+               },
+               "state":"STOPPED",
+               "style":"",
+               "supportsEventDriven":"false",
+               "supportsParallelProcessing":"true",
+               "type":"org.apache.nifi.processors.standard.GenerateFlowFile"
+            }
+         ]
+      },
+      "timestamp":"02/10/2019 10:48:37 EST"
+   }
+}

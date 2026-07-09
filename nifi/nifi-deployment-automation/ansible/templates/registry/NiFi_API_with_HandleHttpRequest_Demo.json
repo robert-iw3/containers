@@ -1,0 +1,532 @@
+{
+	"template": {
+		"description": "Learn to use NiFi to create an API using HandleHttpRequest and HandleHttpResponse",
+		"groupId": "079ebd4a-0174-1000-1a19-65f95bc5bd18",
+		"name": "NiFi API with HandleHttpRequest Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "5dc8c1a7-082a-36e6-0000-000000000000",
+				"parentGroupId": "728b5747-980f-33fe-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "2aca75ca-bab9-3b38-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "496.0",
+								"y": "576.0"
+							},
+							"destination": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b64781ac-44ce-3d89-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b905d317-d7d9-3535-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "44911add-e9b9-3691-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "59e85798-97d7-3b14-0000-000000000000",
+								"id": "a532a563-f58b-3c4a-0000-000000000000",
+								"type": "INPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b54c9f24-c49d-37e8-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "4ac0aefe-869e-3ccd-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "736.0",
+								"y": "576.0"
+							},
+							"destination": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b64781ac-44ce-3d89-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "0",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b905d317-d7d9-3535-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "e20b8721-2c0d-3722-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+								"id": "b905d317-d7d9-3535-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"source": {
+								"groupId": "59e85798-97d7-3b14-0000-000000000000",
+								"id": "e59ca0f1-02f8-33c4-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"zIndex": "0"
+						}
+					],
+					"controllerServices": {
+						"id": "71bf76ce-893c-3e2a-0000-000000000000",
+						"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+						"bundle": {
+							"artifact": "nifi-http-context-map-nar",
+							"group": "org.apache.nifi",
+							"version": "1.12.0"
+						},
+						"comments": "",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Maximum Outstanding Requests",
+									"value": {
+										"name": "Maximum Outstanding Requests"
+									}
+								},
+								{
+									"key": "Request Expiration",
+									"value": {
+										"name": "Request Expiration"
+									}
+								}
+							]
+						},
+						"name": "StandardHttpContextMap",
+						"persistsState": "false",
+						"properties": {
+							"entry": [
+								{
+									"key": "Maximum Outstanding Requests"
+								},
+								{
+									"key": "Request Expiration"
+								}
+							]
+						},
+						"state": "ENABLED",
+						"type": "org.apache.nifi.http.StandardHttpContextMap"
+					},
+					"outputPorts": {
+						"id": "b64781ac-44ce-3d89-0000-000000000000",
+						"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+						"position": {
+							"x": "512.0",
+							"y": "616.0"
+						},
+						"concurrentlySchedulableTaskCount": "1",
+						"name": "output",
+						"state": "STOPPED",
+						"type": "OUTPUT_PORT",
+						"validationErrors": "'Port 'output'' is invalid because Port has no outgoing connections"
+					},
+					"processGroups": {
+						"id": "59e85798-97d7-3b14-0000-000000000000",
+						"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+						"position": {
+							"x": "424.0",
+							"y": "184.0"
+						},
+						"comments": "",
+						"contents": {
+							"connections": {
+								"id": "44c450eb-f326-37d2-0000-000000000000",
+								"parentGroupId": "59e85798-97d7-3b14-0000-000000000000",
+								"backPressureDataSizeThreshold": "1 GB",
+								"backPressureObjectThreshold": "10000",
+								"destination": {
+									"groupId": "59e85798-97d7-3b14-0000-000000000000",
+									"id": "e59ca0f1-02f8-33c4-0000-000000000000",
+									"type": "OUTPUT_PORT"
+								},
+								"flowFileExpiration": "0 sec",
+								"labelIndex": "1",
+								"loadBalanceCompression": "DO_NOT_COMPRESS",
+								"loadBalancePartitionAttribute": "",
+								"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+								"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+								"name": "",
+								"source": {
+									"groupId": "59e85798-97d7-3b14-0000-000000000000",
+									"id": "a532a563-f58b-3c4a-0000-000000000000",
+									"type": "INPUT_PORT"
+								},
+								"zIndex": "0"
+							},
+							"inputPorts": {
+								"id": "a532a563-f58b-3c4a-0000-000000000000",
+								"parentGroupId": "59e85798-97d7-3b14-0000-000000000000",
+								"position": {
+									"x": "538.9999986288185",
+									"y": "117.00000000000009"
+								},
+								"concurrentlySchedulableTaskCount": "1",
+								"name": "input",
+								"state": "STOPPED",
+								"type": "INPUT_PORT"
+							},
+							"outputPorts": {
+								"id": "e59ca0f1-02f8-33c4-0000-000000000000",
+								"parentGroupId": "59e85798-97d7-3b14-0000-000000000000",
+								"position": {
+									"x": "536.0",
+									"y": "376.0"
+								},
+								"concurrentlySchedulableTaskCount": "1",
+								"name": "output",
+								"state": "STOPPED",
+								"type": "OUTPUT_PORT"
+							}
+						},
+						"flowfileConcurrency": "UNBOUNDED",
+						"flowfileOutboundPolicy": "STREAM_WHEN_AVAILABLE",
+						"name": "Process Api Request",
+						"variables": ""
+					},
+					"processors": [
+						{
+							"id": "b54c9f24-c49d-37e8-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"position": {
+								"x": "440.0",
+								"y": "-16.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Listening Port",
+											"value": {
+												"name": "Listening Port"
+											}
+										},
+										{
+											"key": "Hostname",
+											"value": {
+												"name": "Hostname"
+											}
+										},
+										{
+											"key": "SSL Context Service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.ssl.RestrictedSSLContextService",
+												"name": "SSL Context Service"
+											}
+										},
+										{
+											"key": "HTTP Context Map",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+												"name": "HTTP Context Map"
+											}
+										},
+										{
+											"key": "Allowed Paths",
+											"value": {
+												"name": "Allowed Paths"
+											}
+										},
+										{
+											"key": "Default URL Character Set",
+											"value": {
+												"name": "Default URL Character Set"
+											}
+										},
+										{
+											"key": "Allow GET",
+											"value": {
+												"name": "Allow GET"
+											}
+										},
+										{
+											"key": "Allow POST",
+											"value": {
+												"name": "Allow POST"
+											}
+										},
+										{
+											"key": "Allow PUT",
+											"value": {
+												"name": "Allow PUT"
+											}
+										},
+										{
+											"key": "Allow DELETE",
+											"value": {
+												"name": "Allow DELETE"
+											}
+										},
+										{
+											"key": "Allow HEAD",
+											"value": {
+												"name": "Allow HEAD"
+											}
+										},
+										{
+											"key": "Allow OPTIONS",
+											"value": {
+												"name": "Allow OPTIONS"
+											}
+										},
+										{
+											"key": "Additional HTTP Methods",
+											"value": {
+												"name": "Additional HTTP Methods"
+											}
+										},
+										{
+											"key": "Client Authentication",
+											"value": {
+												"name": "Client Authentication"
+											}
+										},
+										{
+											"key": "container-queue-size",
+											"value": {
+												"name": "container-queue-size"
+											}
+										},
+										{
+											"key": "multipart-request-max-size",
+											"value": {
+												"name": "multipart-request-max-size"
+											}
+										},
+										{
+											"key": "multipart-read-buffer-size",
+											"value": {
+												"name": "multipart-read-buffer-size"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Listening Port",
+											"value": "80"
+										},
+										{
+											"key": "Hostname"
+										},
+										{
+											"key": "SSL Context Service"
+										},
+										{
+											"key": "HTTP Context Map",
+											"value": "71bf76ce-893c-3e2a-0000-000000000000"
+										},
+										{
+											"key": "Allowed Paths"
+										},
+										{
+											"key": "Default URL Character Set",
+											"value": "UTF-8"
+										},
+										{
+											"key": "Allow GET",
+											"value": "true"
+										},
+										{
+											"key": "Allow POST",
+											"value": "true"
+										},
+										{
+											"key": "Allow PUT",
+											"value": "true"
+										},
+										{
+											"key": "Allow DELETE",
+											"value": "true"
+										},
+										{
+											"key": "Allow HEAD",
+											"value": "false"
+										},
+										{
+											"key": "Allow OPTIONS",
+											"value": "false"
+										},
+										{
+											"key": "Additional HTTP Methods"
+										},
+										{
+											"key": "Client Authentication",
+											"value": "No Authentication"
+										},
+										{
+											"key": "container-queue-size",
+											"value": "50"
+										},
+										{
+											"key": "multipart-request-max-size",
+											"value": "1 MB"
+										},
+										{
+											"key": "multipart-read-buffer-size",
+											"value": "512 KB"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "HandleHttpRequest",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.HandleHttpRequest"
+						},
+						{
+							"id": "b905d317-d7d9-3535-0000-000000000000",
+							"parentGroupId": "5dc8c1a7-082a-36e6-0000-000000000000",
+							"position": {
+								"x": "448.0",
+								"y": "416.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.12.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "HTTP Status Code",
+											"value": {
+												"name": "HTTP Status Code"
+											}
+										},
+										{
+											"key": "HTTP Context Map",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+												"name": "HTTP Context Map"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "HTTP Status Code",
+											"value": "200"
+										},
+										{
+											"key": "HTTP Context Map",
+											"value": "71bf76ce-893c-3e2a-0000-000000000000"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "HandleHttpResponse",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.HandleHttpResponse"
+						}
+					]
+				},
+				"flowfileConcurrency": "UNBOUNDED",
+				"flowfileOutboundPolicy": "STREAM_WHEN_AVAILABLE",
+				"name": "NiFi API with HandleHttpRequest Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "08/27/2020 08:23:24 EDT",
+		"_encoding-version": "1.3"
+	}
+}

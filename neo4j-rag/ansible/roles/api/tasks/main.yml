@@ -1,0 +1,15 @@
+---
+- name: Ensure api Dockerfile exists
+  copy:
+    src: "{{ project_dir }}/api.Dockerfile"
+    dest: "{{ project_dir }}/api.Dockerfile"
+    mode: "0644"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure api files exist
+  copy:
+    src: "{{ project_dir }}/{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+    mode: "0644"
+  loop: "{{ python_services | selectattr('name', 'equalto', 'api') | first | attr('service_files') }}"
+  when: orchestrator in ['docker', 'podman']

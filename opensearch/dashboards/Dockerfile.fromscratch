@@ -1,0 +1,117 @@
+# syntax=docker/dockerfile:1
+# opensearch-dashboards: is the user interface that lets you visualize your OpenSearch data and run and scale your OpenSearch clusters.
+
+ARG repo="quay.io/almalinuxorg" \
+    base_image="10-minimal" \
+    image_hash="90ebfbc522494d47532cf87a3332fcccf12a5b922026722a02a26e823718ff19"
+
+FROM ${repo}/${base_image}@sha256:${image_hash} AS base
+
+ARG UID=1000
+ARG GID=1000
+ARG OPENSEARCH_DASHBOARDS_HOME=/usr/share/opensearch-dashboards
+
+RUN \
+    microdnf install -y yum-utils epel-release shadow-utils; \
+    groupadd -g "$GID" opensearch-dashboards; \
+    adduser -u "$UID" -g "$GID" -d "$OPENSEARCH_DASHBOARDS_HOME" opensearch-dashboards; \
+    microdnf update -y; \
+    dnf config-manager --set-enabled crb; \
+    /usr/bin/crb enable; \
+    microdnf install -y \
+        curl \
+        nss \
+        xorg-x11-fonts-100dpi \
+        xorg-x11-fonts-75dpi \
+        xorg-x11-utils \
+        xorg-x11-fonts-cyrillic \
+        xorg-x11-fonts-Type1 \
+        xorg-x11-fonts-misc \
+        fontconfig \
+        freetype \
+        tar \
+        gzip \
+        openssl \
+        which; \
+    microdnf clean all
+
+FROM base AS builder
+
+ARG UID=1000
+ARG GID=1000
+ARG VERSION
+ARG TEMP_DIR=/tmp/opensearch-dashboards
+ARG OPENSEARCH_DASHBOARDS_HOME=/usr/share/opensearch-dashboards
+ARG OPENSEARCH_DASHBOARDS_VERSION="3.2.0"
+
+RUN \
+    microdnf install -y \
+        tar \
+        gzip \
+        git \
+        shadow-utils \
+        which; \
+    microdnf clean all; \
+    groupadd -g "$GID" opensearch-dashboards; \
+    adduser -u "$UID" -g "$GID" -d "$OPENSEARCH_DASHBOARDS_HOME" opensearch-dashboards; \
+    mkdir "$TEMP_DIR"; \
+    mkdir -p /usr/share; \
+    git clone --depth 1 --recurse-submodules --shallow-submodules --single-branch --branch \
+    "${OPENSEARCH_DASHBOARDS_VERSION}" https://github.com/opensearch-project/OpenSearch-Dashboards "$TEMP_DIR"; \
+    chown -R "${UID}":"${GID}" /usr/share/opensearch-dashboards
+
+RUN \
+    tar -xzpf "$TEMP_DIR"/opensearch-dashboards-`uname -p`.tgz -C $OPENSEARCH_DASHBOARDS_HOME --strip-components=1; \
+    MAJOR_VERSION_ENTRYPOINT=`echo $VERSION | cut -d. -f1`; \
+    MAJOR_VERSION_YML=`echo $VERSION | cut -d. -f1`; \
+    echo $MAJOR_VERSION_ENTRYPOINT; echo $MAJOR_VERSION_YML; \
+    if ! (ls $TEMP_DIR | grep -E "opensearch-dashboards-docker-entrypoint-.*.x.sh" | grep $MAJOR_VERSION_ENTRYPOINT); then MAJOR_VERSION_ENTRYPOINT="default"; fi; \
+    if ! (ls $TEMP_DIR | grep -E "opensearch_dashboards-.*.x.yml" | grep $MAJOR_VERSION_YML); then MAJOR_VERSION_YML="default"; fi; \
+    cp -v $TEMP_DIR/opensearch-dashboards-docker-entrypoint-$MAJOR_VERSION_ENTRYPOINT.x.sh $OPENSEARCH_DASHBOARDS_HOME/opensearch-dashboards-docker-entrypoint.sh; \
+    cp -v $TEMP_DIR/opensearch_dashboards-$MAJOR_VERSION_YML.x.yml $OPENSEARCH_DASHBOARDS_HOME/config/opensearch_dashboards.yml; \
+    cp -v $TEMP_DIR/opensearch.example.org.* $OPENSEARCH_DASHBOARDS_HOME/config/; \
+    echo "server.host: '0.0.0.0'" >> $OPENSEARCH_DASHBOARDS_HOME/config/opensearch_dashboards.yml; \
+    ls -l $OPENSEARCH_DASHBOARDS_HOME; \
+    rm -rf $TEMP_DIR
+
+FROM base
+
+ARG UID=1000
+ARG GID=1000
+ARG OPENSEARCH_DASHBOARDS_HOME=/usr/share/opensearch-dashboards
+ARG TINI_VERSION="v0.19.0"
+
+COPY --from=builder --chown=$UID:$GID $OPENSEARCH_DASHBOARDS_HOME $OPENSEARCH_DASHBOARDS_HOME
+
+WORKDIR "$OPENSEARCH_DASHBOARDS_HOME"
+
+ENV PATH="$PATH:$OPENSEARCH_DASHBOARDS_HOME/bin"
+
+RUN \
+    tini_bin="" ; \
+    case "$(arch)" in \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    esac ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin} ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin}.sha256sum ; \
+    sha256sum -c ${tini_bin}.sha256sum ; \
+    rm ${tini_bin}.sha256sum ; \
+    mv ${tini_bin} /usr/bin/tini ; \
+    chmod 0555 /usr/bin/tini; \
+    dnf config-manager --set-disabled crb; \
+    /usr/bin/crb disable; \
+    microdnf remove -y \
+        yum-utils \
+        epel-release; \
+    microdnf clean all; \
+    rm -rf /var/cache/dnf /var/cache/yum /tmp/* /var/tmp/*; \
+    truncate -s 0 /var/log/*log
+
+COPY --chmod=755 entrypoint.sh /usr/local/bin/
+
+EXPOSE 5601
+USER "$UID"
+ENTRYPOINT ["/bin/tini", "--"]
+CMD [ "/usr/local/bin/entrypoint.sh" ]

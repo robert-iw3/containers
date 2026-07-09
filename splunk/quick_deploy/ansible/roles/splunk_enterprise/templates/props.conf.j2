@@ -1,0 +1,11 @@
+{% for input in vendor_inputs %}
+[{{ input.sourcetype }}]
+SHOULD_LINEMERGE = false
+INDEXED_EXTRACTIONS = none
+category = {{ input.cim_model }}
+EVAL-dest = if(isnotnull(dest_ip), dest_ip, dest)
+EVAL-src = if(isnotnull(src_ip), src_ip, src)
+{% for field in input.fields %}
+FIELDALIAS-{{ input.sourcetype }}_{{ field }} = {{ field }} AS {{ field }}
+{% endfor %}
+{% endfor %}

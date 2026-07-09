@@ -1,0 +1,109 @@
+services:
+
+  os01:
+    image: docker.io/opensearchproject/opensearch:${OS_VERSION}
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      memlock:
+        soft: -1
+        hard: -1
+    container_name: ${OS_NODE1}
+    environment:
+      - node.name=${OS_NODE1}
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms${OS_JAVA_MEM} -Xmx${OS_JAVA_MEM}"
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - discovery.type=single-node
+      # - cluster.name=os-arkime-cluster
+      # - cluster.initial_cluster_manager_nodes=$OS_NODE1
+      # - discovery.seed_hosts=$OS_NODE2
+    volumes:
+      - os01_data:/usr/share/opensearch/data:Z
+    networks:
+      - arkime
+    #network_mode: host
+    #depends_on:
+    #  - nginx
+    cap_add:
+      - sys_nice
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+# os02:
+#   image: opensearchproject/opensearch:$OS_VERSION
+#   ulimits:
+#     nofile:
+#       soft: 65535
+#       hard: 65535
+#     memlock:
+#       soft: -1
+#       hard: -1
+#   container_name: $OS_NODE2
+#   environment:
+#     - node.name=$OS_NODE2
+#     - bootstrap.memory_lock=true
+#     - "OPENSEARCH_JAVA_OPTS=-Xms$OS_JAVA_MEM -Xmx$OS_JAVA_MEM"
+#     - DISABLE_SECURITY_PLUGIN=true
+#     - DISABLE_INSTALL_DEMO_CONFIG=true
+#     - cluster.name=os-arkime-cluster
+#     - discovery.seed_hosts=$OS_NODE1
+#   volumes:
+#     - os02_data:/usr/share/opensearch/data:Z
+#   networks:
+#     - arkime-os
+#   cap_add:
+#      - sys_nice
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu]
+
+  arkime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arkime
+    depends_on:
+      - os01
+      # - os02
+    environment:
+      - OS_HOST=${OS_NODE1}
+      - OS_PORT=9200
+    ports:
+      - 8005:8005
+      # wise
+      # - 8081:8081
+    volumes:
+      - arkime_config:/data/config:Z
+      - arkime_logs:/data/logs:Z
+      - ${PCAP_DIR}:/data/pcap:Z
+      #- ${EVE_DIR}/eve.json:/data/suricata/eve.json:Z
+    networks:
+      - arkime
+    # to enable traffic capture
+    #cap_add:
+    #  - net_admin
+    #  - net_raw
+    #  - sys_nice
+    #network_mode: host
+
+volumes:
+  arkime_config:
+  arkime_logs:
+  os01_data:
+  # os02_data:
+
+networks:
+  arkime:
+    driver: bridge

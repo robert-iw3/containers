@@ -1,0 +1,672 @@
+{
+  "id": "cribl-internal_rm_conflicts",
+  "conf": {
+    "output": "default",
+    "streamtags": [],
+    "groups": {
+      "NwzcZU": {
+        "name": "Parity between Worker and Leader Logs",
+        "index": 0,
+        "disabled": false,
+        "description": "Worker logs are through Internal Logs source, Leader are through File Monitor Source. This group will ensure parity"
+      },
+      "j4Eqzf": {
+        "name": "Remove Conflicts on logs",
+        "description": "Prevent conflicts with Elasticsearch mappings",
+        "index": 1,
+        "disabled": false
+      },
+      "Xci0x7": {
+        "name": "Clean data",
+        "description": "Place events at the right index and make sure to remove any unnecessary fields",
+        "index": 2
+      }
+    },
+    "asyncFuncTimeout": 1000,
+    "functions": [
+      {
+        "filter": "_raw",
+        "conf": {
+          "mode": "extract",
+          "type": "json",
+          "srcField": "_raw"
+        },
+        "id": "serde",
+        "groupId": "NwzcZU",
+        "disabled": false,
+        "description": "Parse _raw if it exists"
+      },
+      {
+        "filter": "source",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "sourcetype",
+              "value": "source.match(/(\\/cribl\\.log$)|(\\/cribl\\d\\.log$)/) ? \"cribl:log\" : sourcetype"
+            },
+            {
+              "disabled": false,
+              "value": "source.match(/(\\/access\\.log$)|(\\/access\\d\\.log$)/) ? \"cribl:access\" : sourcetype",
+              "name": "sourcetype"
+            },
+            {
+              "disabled": false,
+              "name": "sourcetype",
+              "value": "source.match(/(\\/ui-access\\.log$)|(\\/ui-access\\d\\.log$)/) ? \"cribl:ui-access\" : sourcetype"
+            },
+            {
+              "disabled": false,
+              "name": "sourcetype",
+              "value": "source.match(/(\\/notifications\\.log$)|(\\/notifications\\d\\.log$)/) ? \"cribl:notifications\" : sourcetype"
+            },
+            {
+              "disabled": false,
+              "name": "sourcetype",
+              "value": "source.match(/(\\/audit\\.log$)|(\\/audit\\d\\.log$)/) ? \"cribl:audit\" : sourcetype"
+            },
+            {
+              "disabled": false,
+              "name": "sourcetype",
+              "value": "source.match(/cribl_stderr\\.log$/) ? \"cribl:stderr\" : sourcetype"
+            }
+          ]
+        },
+        "id": "eval",
+        "groupId": "NwzcZU"
+      },
+      {
+        "filter": "_raw",
+        "conf": {
+          "remove": [
+            "_raw"
+          ]
+        },
+        "id": "eval",
+        "groupId": "NwzcZU",
+        "disabled": false
+      },
+      {
+        "id": "comment",
+        "filter": "true",
+        "conf": {
+          "comment": "Conflicts found in the same logging channel"
+        },
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "error && typeof error !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "error",
+              "value": "JSON.parse(`{\"message\": \"${error}\"}`)"
+            }
+          ]
+        },
+        "description": "error field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "filter": "reason && typeof reason !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "reason",
+              "value": "JSON.parse(`{\"name\": \"${reason}\"}`)"
+            }
+          ]
+        },
+        "id": "eval",
+        "description": "reason field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"tls\"] !== undefined && typeof tls !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "tls",
+              "value": "JSON.parse(`{\"enabled\": ${tls}}`)"
+            }
+          ]
+        },
+        "description": "TLS field: sometimes a boolean and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "channel == \"func:aggregation\" && __e[\"fields2add\"] !== undefined",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "fields2add",
+              "value": "fields2add.filter(Boolean)"
+            }
+          ]
+        },
+        "groupId": "j4Eqzf",
+        "description": "fields2add: sometimes an array with different values, strings or booleans. This removes the booleans and preserves the strings",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "channel.startsWith(\"output:\") && __e[\"excludeFields\"] !== undefined && Array.isArray(excludeFields) && typeof excludeFields[0] === \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "excludeFields",
+              "value": "JSON.parse(`{\"fieldname\": ${excludeFields}}`)"
+            }
+          ]
+        },
+        "groupId": "j4Eqzf",
+        "description": "excludeFields: an array of objects but sometimes a string",
+        "disabled": false
+      },
+      {
+        "id": "comment",
+        "filter": "true",
+        "conf": {
+          "comment": "Conflicts found in different logging channels"
+        },
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "response && typeof response !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "response",
+              "value": "JSON.parse(`{\"message\": ${response}}`)"
+            }
+          ]
+        },
+        "description": "response field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "data && typeof data !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "data",
+              "value": "JSON.parse(`{\"message\": ${data}}`)"
+            }
+          ]
+        },
+        "description": "data field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "errors && typeof errors == \"number\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "errors",
+              "value": "JSON.parse(`{\"number\": ${errors}}`)"
+            }
+          ]
+        },
+        "description": "errors field: sometimes a number and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "all && typeof all == \"number\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "all",
+              "value": "JSON.parse(`{\"values\": ${all}}`)"
+            }
+          ]
+        },
+        "description": "Prevent mapping conflicts for the all field",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"ancestors\"] !== undefined && typeof ancestors == \"boolean\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "ancestors",
+              "value": "ancestors ? 1 : 0"
+            }
+          ]
+        },
+        "description": "ancestors field: sometimes a boolean and sometimes a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"dropped\"] !== undefined && typeof dropped == \"boolean\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "dropped",
+              "value": "dropped ? 1 : 0"
+            }
+          ]
+        },
+        "description": "dropped field: sometimes a boolean (preview channel) and sometimes a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"enabled\"] !== undefined && typeof enabled == \"boolean\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "enabled",
+              "value": "enabled ? 1 : 0"
+            }
+          ]
+        },
+        "description": "enabled field: sometimes a boolean and sometimes a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"keepAlive\"] !== undefined && typeof keepAlive == \"boolean\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "keepAlive",
+              "value": "keepAlive ? 1 : 0"
+            }
+          ]
+        },
+        "description": "keepAlive field: sometimes a boolean and sometimes a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "__e[\"toDo\"] !== undefined  && typeof toDo !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "toDo",
+              "value": "JSON.parse(`{\"name\": ${toDo}}`)"
+            }
+          ]
+        },
+        "description": "toDo field: sometimes null and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "err && err.reason && typeof err.reason == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "err.reason",
+              "value": "JSON.parse(`{\"message\": ${err.reason}}`)"
+            }
+          ]
+        },
+        "description": "err.reason field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "err && err.req && typeof err.req == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "err.req",
+              "value": "JSON.parse(`{\"body\": ${err.req}}`)"
+            }
+          ]
+        },
+        "description": "err.req field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "error && error.reason && typeof error.reason == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "error.reason",
+              "value": "JSON.parse(`{\"message\": ${error.reason}}`)"
+            }
+          ]
+        },
+        "description": "error.reason field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "result && result.error && typeof result.error == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "result.error",
+              "value": "JSON.parse(`{\"message\": ${result.error}}`)"
+            }
+          ]
+        },
+        "description": "result.error field: sometimes object, sometimes string",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "reason && reason.req && typeof reason.req == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "reason.req",
+              "value": "JSON.parse(`{\"name\": ${reason.req}}`)"
+            }
+          ]
+        },
+        "description": "sometimes this value is text and sometimes its an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "endpoint && typeof endpoint !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "endpoint",
+              "value": "JSON.parse(`{\"url\": ${endpoint}}`)"
+            }
+          ]
+        },
+        "description": "endpoint field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "pack && typeof pack !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "pack",
+              "value": "JSON.parse(`{\"name\": ${pack}}`)"
+            }
+          ]
+        },
+        "description": "pack field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "filter": "reason && reason.reason && reason.reason.reason && typeof reason.reason.reason != \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "reason.reason.reason",
+              "value": "JSON.parse(`{\"message\": ${reason.reason.reason}}`)"
+            }
+          ]
+        },
+        "id": "eval",
+        "description": "sometimes this value is text and sometimes its an object",
+        "disabled": false,
+        "groupId": "j4Eqzf"
+      },
+      {
+        "filter": "reason && reason.reason && typeof reason.reason != \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "reason.reason",
+              "value": "JSON.parse(`{\"message\": ${reason.reason}}`)"
+            }
+          ]
+        },
+        "id": "eval",
+        "description": "sometimes this value is text and sometimes its an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "filter": "status && typeof status == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "status",
+              "value": "JSON.parse(`{\"name\": ${status}}`)"
+            }
+          ]
+        },
+        "id": "eval",
+        "groupId": "j4Eqzf",
+        "description": "status field: sometimes object, sometimes string, sometimes number. when string, we want an object. numbers will be changed later",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "first && typeof first !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "first",
+              "value": "JSON.parse(`{\"__offset\": ${first}}`)"
+            }
+          ]
+        },
+        "description": "first field: sometimes a string and sometimes an object, but would benefit from being a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "memory && typeof memory !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "memory",
+              "value": "JSON.parse(`{\"size\": ${memory}}`)"
+            }
+          ]
+        },
+        "description": "memory field: sometimes a number and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "req && typeof req !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "req",
+              "value": "JSON.parse(`{\"name\": ${req}}`)"
+            }
+          ]
+        },
+        "description": "req field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "file && typeof file !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "file",
+              "value": "JSON.parse(`{\"name\": ${file}}`)"
+            }
+          ]
+        },
+        "description": "file field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "opts && opts.period && typeof opts.period == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "opts.period",
+              "value": "Number(opts.period.match(/\\d*/)[0])"
+            }
+          ]
+        },
+        "description": "sometimes this value is \"60\" and sometimes its \"60s\". would be good to turn this into a number",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "metricsGCPeriod && typeof metricsGCPeriod == \"string\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "metricsGCPeriod",
+              "value": "Number(metricsGCPeriod.match(/\\d*/)[0])"
+            }
+          ]
+        },
+        "groupId": "j4Eqzf",
+        "description": "sometimes this value is \"60\" and sometimes its \"60s\". would be good to turn this into a number",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "provider && typeof provider !== \"object\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "provider",
+              "value": "JSON.parse(`{\"name\": ${provider}}`)"
+            }
+          ]
+        },
+        "description": "provider field: sometimes a string and sometimes an object",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "eval",
+        "filter": "timestamp && typeof timestamp == \"object\" && timestamp.length && timestamp.type",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "timestampLength",
+              "value": "timestamp.length"
+            },
+            {
+              "disabled": false,
+              "name": "timestampType",
+              "value": "timestamp.type"
+            }
+          ],
+          "remove": [
+            "timestamp"
+          ]
+        },
+        "description": "timestamp field: sometimes an object and sometimes a string. These same events also contain other timestamp* fields in different formats.",
+        "groupId": "j4Eqzf",
+        "disabled": false
+      },
+      {
+        "id": "comment",
+        "filter": "true",
+        "conf": {
+          "comment": "Change fields to become compatible with ECS: https://github.com/elastic/ecs/blob/main/generated/csv/fields.csv"
+        },
+        "groupId": "Xci0x7"
+      },
+      {
+        "filter": "status && typeof status == \"number\"",
+        "conf": {
+          "add": [
+            {
+              "disabled": false,
+              "name": "http",
+              "value": "JSON.parse(`{\"response\":{\"status_code\": ${status}}}`)"
+            }
+          ],
+          "remove": [
+            "status"
+          ]
+        },
+        "id": "eval",
+        "groupId": "Xci0x7"
+      },
+      {
+        "id": "comment",
+        "filter": "true",
+        "conf": {
+          "comment": "Set index/remove fields"
+        },
+        "groupId": "Xci0x7"
+      },
+      {
+        "filter": "true",
+        "conf": {
+          "remove": [
+            "cribl_*"
+          ]
+        },
+        "id": "eval",
+        "groupId": "Xci0x7"
+      }
+    ]
+  }
+}

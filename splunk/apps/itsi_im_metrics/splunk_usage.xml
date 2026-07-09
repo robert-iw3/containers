@@ -1,0 +1,155 @@
+<form version="1.1">
+  <label>Splunk Cloud Usage</label>
+  <description></description>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 24 hours</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>License Usage (GB)</title>
+        <search>
+          <query>
+| tstats summariesonly=true allow_old_summaries=true sum(Server.Licenser.Daily_Usage.gb) AS GB FROM datamodel=Splunk_Internal.Server WHERE index=_internal nodename=Server.Licenser.Daily_Usage BY host, _time span=1d
+| join host type=inner
+  [| tstats summariesonly=true allow_old_summaries=true latest(Server.Licenser.Entitlements.ingest_license) AS Licensed FROM datamodel=Splunk_Internal.Server WHERE index IN ("summary", "_cmc_summary") nodename=Server.Licenser.Entitlements host="*.splunkcloud.com" BY host]
+| eval GB=round(GB,1)
+| fields - host
+            </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+          <refresh>1h</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">Licensed</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Storage Usage (TB)</title>
+        <search>
+          <query>
+| tstats summariesonly=true allow_old_summaries=true latest(Server.Licenser.Entitlements.ddas) AS ddas, latest(Server.Licenser.Entitlements.ddas_used) AS ddas_used FROM datamodel=Splunk_Internal.Server WHERE index IN ("summary", "_cmc_summary") nodename=Server.Licenser.Entitlements host="*.splunkcloud.com" BY _time span=1d
+| eval TB=round(ddas_used/1024, 1), Licensed=round(ddas/1024)
+| table _time, TB, Licensed
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+          <refresh>1h</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">Licensed</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top Indexes by Ingest</title>
+        <search>
+          <query>
+| tstats summariesonly=true allow_old_summaries=true sum(Server.Licenser.Index_Usage.gb) AS GB FROM datamodel=Splunk_Internal.Server WHERE index=_internal nodename=Server.Licenser.Index_Usage host="*.splunkcloud.com" BY Server.idx, _time span=1d
+| rename Server.idx AS index
+| eval GB=round(GB,1)
+| timechart sum(GB) BY index span=1d cont=0 limit=top5
+| fields - OTHER
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>@d</latest>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">GB</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Indexes by Storage</title>
+        <search>
+          <query>
+| dbinspect index=* timeformat=%s
+| dedup bucketId sortby -modTime
+| eval rawSizeGB=round(rawSize/pow(1024,3))
+| stats sum(rawSizeGB) AS GB BY index
+| table index, GB
+| sort -GB
+| head 10
+          </query>
+          <earliest>0</earliest>
+          <refresh>1h</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Throughput by Index</title>
+        <search>
+          <query>
+| tstats summariesonly=true allow_old_summaries=true count FROM datamodel=Splunk_Internal.Server WHERE index=_internal nodename=Server.Metrics.Index_Thruput host="*.splunkcloud.com" Server.Metrics.Index_Thruput.series!="_*" BY Server.kb, Server.Metrics.Index_Thruput.series, _time span=1s
+| rename Server.Metrics.Index_Thruput.* AS *, Server.* AS *
+| timechart minspan=30s limit=top5 per_second(kb) AS kb BY series
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">KB/s</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <table>
+        <title>Top Universal Forwarders by Ingest</title>
+        <search>
+          <query>
+| tstats summariesonly=true allow_old_summaries=true sum(Server.kb) AS sum_kb, avg(Server.Metrics.Tcpin_Connections.tcp_Bps) AS avg_tcp_bps, avg(Server.Metrics.Tcpin_Connections.tcp_eps) AS avg_tcp_eps, latest(Server.Metrics.Tcpin_Connections.version) AS version, latest(Server.Metrics.Tcpin_Connections.os) AS os FROM datamodel=Splunk_Internal.Server WHERE index=_internal nodename=Server.Metrics.Tcpin_Connections Server.Metrics.Tcpin_Connections.fwd_type="uf" BY Server.Metrics.Tcpin_Connections.source_host
+| rename Server.Metrics.Tcpin_Connections.* AS *, Server.* AS *
+| eval sum_mb=round(sum_kb/1024),avg_tcp_kbps=round(avg_tcp_bps/1024), avg_tcp_eps=round(avg_tcp_eps)
+| table source_host, version, os, sum_mb, avg_tcp_kbps, avg_tcp_eps
+| sort -sum_mb
+| head 10
+| rename source_host as Instance, version as Version, os as OS, sum_mb as "Total MB", avg_tcp_kbps as "Average KB/s", avg_tcp_eps as "Average Events/s"
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>1h</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

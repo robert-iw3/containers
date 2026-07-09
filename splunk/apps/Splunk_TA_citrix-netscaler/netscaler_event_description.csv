@@ -1,0 +1,591 @@
+event_source,event_name,severity,event_description
+,,14.1,https://developer-docs.netscaler.com/en-us/netscaler-syslog-message-reference/current-release
+TCP,CONN_DELINK,INFO,When a server side and a client side TCP connection is delinked.These are the connections which are being tracked by netscaler like HTTP
+TCP,CONN_TERMINATE,INFO,When a TCP connection terminates.The logged data indicates the number of bytes transmitted and received over the connection and lso the connection start and end time
+TCP,OTHERCONN_DELINK,INFO,"When a server side and a client side TCP connection is delinked.These are the connections which are not being tracked by netscaler like FTP,telnet etc"
+TCP,NAT_CONN_DELINK,INFO,When a server side and a client side TCP connection for RNAT are delinked we need to log the connection information
+TCP,NAT_OTHERCONN_DELINK,INFO,When a server side and a client side TCP connection for RNAT are delinked we need to log the connection information
+ACL,ACL_PKT_LOG,INFO,ACL Packet Log
+ACL,ACL6_PKT_LOG,INFO,ACL6 Packet Log
+LSN,LSN_SESSION,INFO,Info of LSN session created
+LSN,LSN_EIM_MAPPING,INFO,Info of LSN Endpoint independent mapping created
+LSN,LSN_ADDR_MAPPING,INFO,Info of LSN Address dependent mapping created
+LSN,LSN_ADDRPORT_MAPPING,INFO,Info of LSN Address and Port dependent mapping created
+LSN,PPTP_LOG,INFO,Info of PPTP connection
+LSN,LSN_PORTBLOCK,INFO,Info of LSN Portblock mappings
+LSN,LSN_DETERMINISTIC,INFO,Info of LSN Portblock mappings
+ALG,ALG_SIP_PARSE_PACKET_EVENT,ERROR,Error of SIP packet parsing
+ALG,ALG_SDP_PARSE_PACKET_EVENT,ERROR,Error of SDP packet parsing
+ALG,ALG_SIP_ERROR_PACKET_EVENT,ERROR,Error of SIP protocol
+ALG,ALG_DHT_ERROR_PACKET_EVENT,ERROR,Error of SIP ALG DHT
+ALG,ALG_SIP_GENERATE_ERROR_PACKET_EVENT,ERROR,Error of SIP generate
+ALG,ALG_SIP_INFO_PACKET_EVENT,INFO,Info of SIP packet
+ALG,ALG_SIP_INFO_DELETE_CALL_PACKET_EVENT,INFO,Info of SIP call deletion
+ALG,ALG_RTSP_INFO_PACKET_EVENT,INFO,Info of RTSP packet
+ALG,ALG_RTSP_INFO_DELETE_CALL_PACKET_EVENT,INFO,Info of RTSP call deletion
+ALG,ALG_RTSP_PARSE_PACKET_EVENT,ERROR,Error of RTSP packet parsing
+ALG,ALG_RTSP_ALG_PACKET_EVENT,ERROR,Error of RTSP ALG
+ALG,ALG_RTSP_DHT_PACKET_EVENT,ERROR,Error of RTSP DHT
+DNS,DNS_QUERY,INFO,Information of DNS queries recieved by the DNS endpoints on NetScaler
+DNS,DNS_RESPONSE,INFO,Information of DNS responses served by the DNS endpoints on NetScaler to clients
+DNS,DNS_ERROR,INFO,Information of errors encountered during DNS packet processing on NetScaler
+SUBSCRIBER,SESSION_EVENT,INFO,Subscriber Session Event Info
+SUBSCRIBER,SESSION_FAILURE,ERROR,Subscriber Session Failure Info
+SSLI,INTERCEPT_LOG,INFO,SSL Interception Success Log
+SSLI,BYPASS_LOG,INFO,SSL Interception Bypass Log
+SSLI,DROPPED_LOG,INFO,SSL Interception Dropped Log
+URLFILT,URLFILT_LOG,INFO,URL filtering Log
+CI,ICAP_LOG,INFO,ICAP transaction Log.
+CI,ICAPC_LOG,INFO,ICAP custom log.
+CI,INLINE_INSPECTION_LOG,INFO,Inline Inspection transaction Log.
+CI,TRAFFIC_MIRROR_LOG,INFO,Traffic Mirror transaction Log.
+AAA,LOGIN_FAILED,WARNING,When the aaa module failed to login the user.The reason for failure is indicated in the message
+AAA,EXTRACTED_GROUPS,INFO,After a user logs in the group for the user has been extracted
+UI,CMD_EXECUTED,INFO,Logs the NSCLI/GUI command executed in NetScaler
+SSLVPN,LOGIN,INFO,SSLVPN login succeeds
+SSLVPN,LOGOUT,INFO,SSLVPN session logs out.Logout method is captured in the message
+SSLVPN,ICASTART,INFO,ICA application launch has started
+SSLVPN,ICAEND_CONNSTAT,INFO,ICA application has terminated
+SSLVPN,TCPCONNSTAT,INFO,Logs the TCP connection related information for a connection belonging to a SSLVPN session
+SSLVPN,TCPCONN_TIMEDOUT,INFO,An SSLVPN connection timed out.The information about the connection start and end time the amount of data transferred and received are present in the message date
+SSLVPN,UDPFLOWSTAT,INFO,"When a UDP flow , within a SSLVPN session, terminates"
+SSLVPN,HTTPREQUEST,INFO,A SSLVPN session receives a HTTP request
+SSLVPN,NONHTTP_RESOURCEACCESS_DENIED,NOTICE,A non-http resource access is denied by policy engine. The denied policy name is captured in the log message.
+SSLVPN,HTTP_RESOURCEACCESS_DENIED,NOTICE,A http resource access is denied by policy engine. The denied policy name is captured in the log message.
+SSLVPN,LICLMT_REACHED,INFO,SSLVPN license limit reached
+SSLVPN,CLISEC_CHECK,ERROR,"Logs with severity ERROR when client security check for a SSLVPN session fails, otherwise logs with severity DEBUG"
+SSLVPN,CLISEC_EXP_EVAL,ERROR,"Logs with severity ERROR when client security expression evaluates to False, otherwise logs with severity DEBUG"
+SSLVPN,STA_VALIDATE_RESP,INFO,After a user logs into SSLVPN and the group for the user has been extracted
+SSLVPN,REMOVE_SESSION_DEBUG,DEBUG,Gives debug information of session before removing session intentionally
+EVENT,ALERTSTARTED,ALERT,When SNMP module starts an alarm (usually when the value of a monitored attribute crosses the threshold value
+EVENT,ALERTENDED,ALERT,When SNMP module stops an alarm (usually when the value of a monitored attribute returns to normal state)
+EVENT,STARTSYS,INFO,When NetScaler starts
+EVENT,STARTCPU,INFO,When a particular CPU starts
+EVENT,DEVICEDOWN,NOTICE,Whenever a device is down
+EVENT,DEVICEOFS,NOTICE,Whenever a device is out of service
+EVENT,DEVICEUP,NOTICE,Whenever a device is up
+EVENT,NICSTART,NOTICE,When the network interface is started
+EVENT,NICSTOP,NOTICE,When the network interface is stopped
+EVENT,NICHANG,NOTICE,When the network interface is in hung state
+EVENT,NICRESET,NOTICE,When the network interface is reset
+EVENT,NICMIGRATE,NOTICE,When an interface is bound or unbound from a channel
+EVENT,STOPSYS,INFO,When the NetScaler system is stopped
+EVENT,FREEBADMEM,EMERGENCY,When bad memory is freed (internal error)
+EVENT,FREEDUPMEM,EMERGENCY,When duplicate memory free occurs (internal error)
+EVENT,FREEEXTMEM,EMERGENCY,When memory is freed from a wrong pool (internal error)
+EVENT,PROPSUCCESS,INFO,When HA propagation is successful
+EVENT,PROPFAIL,ALERT,When HA propagation fails
+EVENT,STATECHANGE,0,HA State has changed.The string along with the message gives more information
+EVENT,CLSTATECHANGE,0,Cluster State has changed.The string along with the message gives more information
+EVENT,CACHESTARTFLUSH,INFO,When cache flush starts
+EVENT,CACHESTOPFLUSH,INFO,When cache flush is complete
+EVENT,MONITORTH,INFO,The monitor bound to the service has hit threshold limit
+EVENT,MONITORDOWN,INFO,The monitor bound to the service is down.
+EVENT,MONITORUP,INFO,The monitor bound to the service is up.
+EVENT,ROUTEDOWN,INFO,When the route is down
+EVENT,ROUTEUP,INFO,When the route is up
+EVENT,VRID6DOWN,INFO,When the vrid changes state to backup
+EVENT,VRIDDOWN,INFO,When the vrid changes state to backup
+EVENT,VRIDUP,INFO,When the vrid changes state to master
+EVENT,VRIDINIT,INFO,When the vrid changes state to init
+EVENT,VIPRHIUP,INFO,When the rhi state of vip changes to up
+EVENT,VIPRHIDOWN,INFO,When the rhi state of vip changes to down
+EVENT,STARTSAVECONFIG,INFO,When save configuration started
+EVENT,STOPSAVECONFIG,INFO,When save configuration has stopped
+EVENT,CONFIGSTART,INFO,When NetScaler starts to read the configuration from ns.conf file (during boot-up)
+EVENT,CONFIGEND,INFO,When NetScaler has completed reading the configuration from ns.conf file (during boot-up)
+EVENT,NICLACPSC,NOTICE,
+EVENT,NICLOW_THROUGHPUT,NOTICE,When an interface's throughput is less than the min required
+EVENT,NICNORMAL_THROUGHPUT,NOTICE,When an interface's throughput is equal or greater than the min required
+EVENT,NICPOWERON,NOTICE,When an interface is powered on
+EVENT,NICPOWEROFF,NOTICE,When an interface is powered off
+EVENT,DHCPSVRERR,INFO,When the DHCP server sends an invalid setting
+EVENT,DHCPCAQUIRE,INFO,When the DHCP client aquires a lease
+EVENT,DHCPCRELEASE,INFO,When the DHCP client releases a lease
+EVENT,DHCPCDEPENDPBR,INFO,When the DHCP lease is released and a PBR is dependent on the lease ip
+EVENT,ROUTE6DOWN,INFO,When the route6 is down
+EVENT,ROUTE6UP,INFO,When the route6 is up
+EVENT,MEPDOWN,NOTICE,Mep is down.
+EVENT,MEPUP,NOTICE,Mep is up.
+EVENT,BACKUPMEPDOWN,NOTICE,Backup Mep is down.
+EVENT,BACKUPMEPUP,NOTICE,Backup Mep is up.
+EVENT,NWMEPDOWN,NOTICE,Network metric Mep is down.
+EVENT,NWMEPUP,NOTICE,Network metric Mep is up.
+EVENT,BACKUPMEP6DOWN,NOTICE,Backup ipv6 Mep is down.
+EVENT,BACKUPMEP6UP,NOTICE,Backup ipv6 Mep is up.
+EVENT,UNKNOWN,DEBUG,
+SSLLOG,SSL_HANDSHAKE_FAILURE,DEBUG,SSL HandShake Failure
+SSLLOG,SSL_HANDSHAKE_SUCCESS,DEBUG,SSL HandShake Success
+SSLLOG,SSL_CERT_EXPIRY_IMMINENT,NOTICE,SSL Certificate Expiry Imminent
+SSLLOG,SSL_HANDSHAKE_ISSUERNAME,DEBUG,SSL Client Certificate IssueName
+SSLLOG,SSL_HANDSHAKE_SUBJECTNAME,DEBUG,SSL Client Certificate SubjectName
+SSLLOG,SSL_CRL_UPDATE_SUCCESS,NOTICE,SSL CRL Update Success
+SSLLOG,SSL_CRL_UPDATE_FAILURE,NOTICE,SSL CRL Update Failure
+SSLLOG,SSL_OCSPURL_RESOLVE_SUCCESS,DEBUG,SSL OCSPURL Resolve Success
+SSLLOG,SSL_OCSPURL_RESOLVE_FAILURE,DEBUG,SSL OCSPURL Resolve Failure
+SSLLOG,SSL_OCSPRESPONSE_SUCCESS,DEBUG,SSL OCSPResponse Success
+SSLLOG,SSL_OCSPRESPONSE_FAILURE,DEBUG,SSL OCSPResponse Failure
+APPFW,APPFW_STARTURL,INFO,AppFw StartURL violation
+APPFW,APPFW_MULTIPLE_HEADER,INFO,AppFw Multiple Header violation
+APPFW,APPFW_XMLPAYLOAD_CONTENT_TYPE_MISMATCH,INFO,AppFw Infer Content-Type Payload violation
+APPFW,APPFW_LOGEXPRESSION,INFO,AppFw Log Expression details
+APPFW,APPFW_DENYURL,INFO,AppFw DenyURL violation
+APPFW,APPFW_CONTENT_TYPE,INFO,AppFw Content-type violation
+APPFW,APPFW_REFERER_HEADER,INFO,AppFw Referer header violation
+APPFW,APPFW_CSRF_TAG,INFO,AppFw CSRF tag violation
+APPFW,APPFW_XSS,INFO,AppFw XSS violation
+APPFW,APPFW_XML_XSS,WARNING,AppFw XSS violation in XML
+APPFW,APPFW_SQL,INFO,AppFw SQL Injection violation
+APPFW,APPFW_SQL_GRAM,INFO,AppFw SQL Injection violation reported by SQL Grammar
+APPFW,APPFW_XML_SQL,WARNING,AppFw SQL Injection violation in XML
+APPFW,APPFW_CMD,INFO,AppFw CMD Injection violation
+APPFW,APPFW_CMD_GRAM,INFO,AppFw CMD Injection violation reported by CMD Grammar
+APPFW,APPFW_COOKIE,INFO,AppFw Cookie Consistency violation
+APPFW,APPFW_FIELDCONSISTENCY,INFO,AppFw Field Consistency violation
+APPFW,APPFW_FILE_UPLOAD_TYPE,INFO,AppFw File Upload Type violation
+APPFW,APPFW_BUFFEROVERFLOW_URL,INFO,AppFw Buffer Overflow violation in URL
+APPFW,APPFW_BUFFEROVERFLOW_COOKIE,INFO,AppFw Buffer Overflow violation in Cookie
+APPFW,APPFW_BUFFEROVERFLOW_HDR,INFO,AppFw Buffer Overflow violation in HTTP Headers
+APPFW,APPFW_BUFFEROVERFLOW_QUERY,INFO,AppFw Buffer Overflow violation in Query string
+APPFW,APPFW_BUFFEROVERFLOW_TOTAL_HDR,INFO,AppFw Buffer Overflow violation in total HTTP header length
+APPFW,APPFW_FIELDFORMAT,INFO,AppFw Field Format violation
+APPFW,APPFW_SAFECOMMERCE,INFO,AppFw Safe Commerce violation
+APPFW,APPFW_SAFECOMMERCE_XFORM,INFO,AppFw Safe Commerce violation detected and transformed
+APPFW,APPFW_SAFEOBJECT,INFO,AppFw Safe Object violation
+APPFW,APPFW_POLICY_HIT,INFO,AppFw profile invoked
+APPFW,APPFW_POLICY_HIT_BUILTIN,INFO,AppFw built-in profile invoked
+APPFW,APPFW_MAX_UPLOADS,INFO,File uploads exceed the allowed number
+APPFW,APPFW_SIGNATURE_MATCH,INFO,AppFw signature violation
+APPFW,AF_BIND_TO_PROFILE,INFO,AppFw rule bound to HTML profile
+APPFW,AF_BIND_XML_TO_PROFILE,INFO,AppFw rule bound to XML profile
+APPFW,AF_ADD_FIELDTYPE,INFO,Add an AppFw Field Type
+APPFW,AF_ADD_PROFILE,INFO,Add an AppFw profile
+APPFW,AF_RM_FIELDTYPE,INFO,Remove an Appfw Field Type
+APPFW,AF_RM_PROFILE,INFO,Remove an AppFw profile
+APPFW,AF_ADD_CFFIELD,INFO,Add a confidential field
+APPFW,AF_RM_CFFIELD,INFO,Remove a confidential field
+APPFW,AF_400_RESP,INFO,AppFw Request error. Generated 400 Response
+APPFW,AF_5XX_RESP,INFO,Server Error. Generated 5XX Response
+APPFW,AF_RESPONSE_PARSE_ERR,INFO,Response parse error
+APPFW,AF_MEMORY_ERR,WARNING,Memory allocation request for %lu bytes failed
+APPFW,AF_ORIGIN_SERVER_RESP_MISMATCH_ERR,WARNING,Origin server sent a response but AppFw needed something different
+APPFW,AF_MALFORMED_REQ_ERR,INFO,Malformed request
+APPFW,AF_UTHREAD_STACK_ERR,ERROR,Appsecure uthread at 0x%x had a stack error
+APPFW,AF_SIGNATURE_ERR,INFO,Signature error
+APPFW,AF_STREAM_MSG_ERR,WARNING,Stream message error
+APPFW,AF_GENERIC_ERR_WITH_URL,WARNING,Generic error with URL
+APPFW,APPFW_XML_ATTACHMENT_FOUND,WARNING,Attachment Found in the XML Message.
+APPFW,APPFW_XML_ATTACHMENT_ERR_CALLBACK_NULL,WARNING,XML Attachment CallBack is NULL but HTTP message is MIME Attachment message.
+APPFW,APPFW_XML_ATTACHMENT_ERR_INVALIDHEADER,WARNING,String %s is supposed to be MIME Header. But it is not according to the format of Mime Header HeaderName:HeaderValue
+APPFW,APPFW_XML_ATTACHMENT_ERR_INVALID_HEADER,WARNING,HTTP Content type should be 'application/xop+xml' or '^(text
+APPFW,APPFW_XML_ATTACHMENT_ERR_BOUNDARY_MISMATCH,WARNING,Boundary mismatch in mime message.
+APPFW,APPFW_XML_ERR_NO_ATTACHMENT_BOUNDARY,WARNING,The message having content-type as 'Multipart/Related' and not having a boundary is invalid.
+APPFW,APPFW_XML_ATTACHMENT_ERR_MAX_SIZE,WARNING,XML Message has an Attachment with size greater than the Configured Max Attachment Size.
+APPFW,APPFW_XML_ATTACHMENT_ERR_CONTENT_TYPE,WARNING,XML Message has an Attachment with Illegal Content-Type
+APPFW,APPFW_XML_DDOS_ERR_MSG_SEND_FAIL,WARNING,AppFw XML DDoS Send Fail Error.
+APPFW,APPFW_XML_DOS_ERR_CHAR_DATA_LENGTH,WARNING,Exceeds max character data length.
+APPFW,APPFW_XML_DOS_ERR_DTD,WARNING,DTD present in the XML message.
+APPFW,APPFW_XML_DOS_ERR_EXT_ENTITY,WARNING,External entities present in the XML message.
+APPFW,APPFW_XML_DOS_ERR_MAX,WARNING,AppFw XML DoS Maximum Error
+APPFW,APPFW_XML_DOS_ERR_MAX_ATTRIBUTES,WARNING,Element '%s' exceeds maximum attributes per element.
+APPFW,APPFW_XML_DOS_ERR_MAX_ATTRIBUTE_NAME_LENGTH,WARNING,In element '%s' an attribute exceeds maximum name length.
+APPFW,APPFW_XML_DOS_ERR_MAX_ATTRIBUTE_VALUE_LENGTH,WARNING,In element '%s' attribute '%s' exceeds maximum attribute value length.
+APPFW,APPFW_XML_DOS_ERR_MAX_ELEMENTS,WARNING,Element '%s' exceeds maximum elements per message.
+APPFW,APPFW_XML_DOS_ERR_MAX_ELEMENT_CHILDREN,WARNING,Parent of element '%s' exceeds maximum children at element '%s'.
+APPFW,APPFW_XML_DOS_ERR_MAX_ELEMENT_DEPTH,WARNING,Element '%s' exceeds maximum element depth.
+APPFW,APPFW_XML_DOS_ERR_MAX_ELEMENT_NAME_LENGTH,WARNING,Element '%s' exceeds maximum element name length.
+APPFW,APPFW_XML_DOS_ERR_MAX_FILE_SIZE,WARNING,Message size exceeds max size.
+APPFW,APPFW_XML_DOS_ERR_MAX_NODES,WARNING,Node '%s' exceeds maximum nodes per message.
+APPFW,APPFW_XML_DOS_ERR_MIN_FILE_SIZE,WARNING,Message size less than min size.
+APPFW,APPFW_XML_ERR_NOT_WELLFORMED,WARNING,Message is not a well-formed XML.
+APPFW,APPFW_XML_DOS_ERR_PI,WARNING,Processing instructions present in the XML message.
+APPFW,APPFW_XML_DOS_ERR_MAX_NAMESPACES,WARNING,Element '%s' exceeds maximum active namespaces.
+APPFW,APPFW_XML_DOS_ERR_MAX_NAMESPACEURI_LENGTH,WARNING,In element '%s' a namespace exceeds maximum uri length.
+APPFW,APPFW_XML_DOS_ERR_MAX_ENTITY_EXPANSION_DEPTH,WARNING,Exceeds max entity expansion depth
+APPFW,APPFW_XML_DOS_ERR_MAX_ENTITY_EXPANSIONS,WARNING,Exceeds max number of entity expansions
+APPFW,APPFW_XML_DOS_ERR_MAX_SOAPARRAY_SIZE,WARNING,Exceeds max total SOAP array size
+APPFW,APPFW_XML_DOS_ERR_MAX_SOAPARRAY_RANK,WARNING,Exceeds max SOAP array rank
+APPFW,APPFW_XML_ERR_CUSTOM,WARNING,AppFw XML internal error
+APPFW,APPFW_XML_ERR_DDOS_CONNECT_TO_SERVER_FAILED,WARNING,AppFw XML DDoS Connect to Server Failed.
+APPFW,APPFW_XML_ERR_DDOS_INTERATION_SOCKET_OPEN_FAIL,WARNING,AppFw XML DDoS Interaction socket open Failed.
+APPFW,APPFW_XML_ERR_DDOS_INVALID_CONFIG_FILE,WARNING,AppFw XML DDoS Invalid Config File.
+APPFW,APPFW_XML_ERR_DDOS_NO_FOLDER_INSTALLATION_PATH,WARNING,AppFw XML DDoS No Folder Installation Path.
+APPFW,APPFW_XML_ERR_DDOS_OPEN_CONFIG_FILE_FAIL,WARNING,AppFw XML DDoS Failure to Open Config File.
+APPFW,APPFW_XML_ERR_DOS_TRIGGERED,WARNING,Denial of Service Error.
+APPFW,APPFW_XML_ERR_ENV_NOT_SET,WARNING,Environment variable QTHOME not set.
+APPFW,APPFW_XML_ERR_HASH_INSERT,WARNING,Problems inserting a namespace into the hash table.
+APPFW,APPFW_XML_ERR_HASH_LOOKUP,WARNING,Problems getting the key of a namespace from the hash table.
+APPFW,APPFW_XML_ERR_INITIALIZING_TOKENIZER,WARNING,Unable to initialize XML tokenizer.
+APPFW,APPFW_XML_ERR_INVALID_FILE,WARNING,Unable to open the file.
+APPFW,APPFW_XML_ERR_INVALID_STATE,WARNING,AppFw XML Internal State Invalid.
+APPFW,APPFW_XML_ERR_INVALID_XPATH,WARNING,Invalid XPath.
+APPFW,APPFW_XML_ERR_LOW_MEMORY,WARNING,AppFw XML Low memory.
+APPFW,APPFW_XML_ERR_CHARDATA_LIMIT_EXCEEDED,WARNING,AppFw XML character data size exceeds the limit of 30MB
+APPFW,APPFW_XML_ERR_MALFORMED_ADDRESS,WARNING,Malformed address
+APPFW,APPFW_XML_ERR_NO_DIME,WARNING,"NS-XML APPFW supports SwA and MTOM SOAP attachments, but attachment with this message is DIME."
+APPFW,APPFW_XML_ERR_OPERATION_CALLBACK,WARNING,Problems registering callbacks for operations.
+APPFW,APPFW_XML_ERR_PREFIX_LENGTH_EXCEEDED,WARNING,"Prefix length %d exceeded, encountered length is %d."
+APPFW,APPFW_XML_ERR_READ_FAILED,WARNING,AppFw XML Read Failure
+APPFW,APPFW_XML_ERR_STREAM_POP,WARNING,Problems during pop of the node out of the XML stream.
+APPFW,APPFW_XML_ERR_STREAM_PUSH,WARNING,Problems during push of the node into the XML stream.
+APPFW,APPFW_XML_ERR_UNSUPPORTED_PORT,WARNING,Port in address %s is greater than 65535.
+APPFW,APPFW_XML_ERR_UNSUPPORTED_PROTOCOL,WARNING,Unsupported protocol
+APPFW,APPFW_XML_ERR_VALIDATION_FAILED,WARNING,AppFw XML Validation Failed
+APPFW,APPFW_XML_PACKET_PROCESSING_ERR_CONTEXT_NULL,WARNING,AppFw XML Context is NULL.
+APPFW,APPFW_XML_PACKET_PROCESSING_ERR_CONTEXT_STATE_NULL,WARNING,Context user state is NULL; internal error.
+APPFW,APPFW_XML_PACKET_PROCESSING_ERR_MESSAGE_CONFIG_NULL,WARNING,Message config struct is NULL.
+APPFW,APPFW_XML_VALIDATION_ERR_ABSTRACT_ELEMENT,WARNING,Cannot instantiate abstract element
+APPFW,APPFW_XML_VALIDATION_ERR_ABSTRACT_TYPE,WARNING,"Cannot instantiate abstract type '%s', for element '%s'."
+APPFW,APPFW_XML_VALIDATION_ERR_ADDHEADERS,WARNING,Additional soap header %s present in soap message.
+APPFW,APPFW_XML_VALIDATION_ERR_ATTRIBUTE_MAX_OCCURS,WARNING,Attribute '%s' appears more than once in element '%s'.
+APPFW,APPFW_XML_VALIDATION_ERR_ATTRIBUTE_MIN_OCCURS,WARNING,Required attribute missing in element
+APPFW,APPFW_XML_VALIDATION_ERR_COMPILED_WSDL,WARNING,Compiled WSDL file is corrupt.
+APPFW,APPFW_XML_VALIDATION_ERR_CONTENT_MODEL_VIOLATED,WARNING,Content model of element '%s' not satisfied.
+APPFW,APPFW_XML_VALIDATION_ERR_CORRUPT_COMPILED_WSDL,WARNING,Compiled WSDL file is corrupt.
+APPFW,APPFW_XML_VALIDATION_ERR_CORRUPT_SCHEMA,WARNING,Error compiling the schema
+APPFW,APPFW_XML_VALIDATION_ERR_DATATYPE_ENGINE_INIT,WARNING,Initialization of the datatype engine failed.
+APPFW,APPFW_XML_VALIDATION_ERR_INTERNAL,WARNING,Internal corruption of WSDL in-memory structure.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_ATTRIBUTE,WARNING,Attribute '%s' is invalid.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_COMBINATION,WARNING,Invalid configuration for soap validation.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_COMPILED_WSDL,WARNING,Not able to open compiled WSDL.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_CONTENT_MODEL,WARNING,Element '%s' has invalid content model.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_DATATYPE,WARNING,Data type is invalid.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_ELEMENT,WARNING,Invalid element.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_FILE,WARNING,Not able to open the file.
+APPFW,APPFW_XML_VALIDATION_ERR_INVALID_TYPE_SUBSTITUTION,WARNING,"Did not get expected type for element '%s', got '%s'."
+APPFW,APPFW_XML_VALIDATION_ERR_LOADING,WARNING,Unable to load validation engine.
+APPFW,APPFW_XML_VALIDATION_ERR_MAX,WARNING,AppFw XML Validation Max Error.
+APPFW,APPFW_XML_VALIDATION_ERR_NOSERVICEURL,WARNING,Service Url is not present or NULL.
+APPFW,APPFW_XML_VALIDATION_ERR_NOT_SUPPORTED,WARNING,Feature not supported.
+APPFW,APPFW_XML_VALIDATION_ERR_SOAP_BODY,WARNING,Soap Body structure check failed.
+APPFW,APPFW_XML_VALIDATION_ERR_SOAP_ENVELOPE,WARNING,Soap Envelope structure check failed.
+APPFW,APPFW_XML_VALIDATION_ERR_SOAP_HEADER,WARNING,Soap Header structure check failed.
+APPFW,APPFW_XML_VALIDATION_ERR_UNBOUNDED_PREFIX,WARNING,Prefix '%s' is unbounded.
+APPFW,APPFW_XML_VALIDATION_LOAD_ERR_CONTENTS_CANNOT_BE_NIL,WARNING,Element '%s' cannot be nil.
+APPFW,APPFW_XML_VALIDATION_LOAD_ERR_NIL_WITH_CONTENTS,WARNING,"Element '%s' is nil, cannot have contents."
+APPFW,APPFW_XML_VALIDATION_ERR_REX_STACK_OVERFLOW,WARNING,Level of recursion more than maximum allowed depth.
+APPFW,APPFW_XML_VALIDATION_ERR_REX_STACK_EMPTY,WARNING,Trying to pop from an empty stack.
+APPFW,APPFW_XML_VALIDATION_ERR_SOAPBODY_EMPTY,WARNING,Both SOAP Body and SOAP Header are empty in the SOAP request.
+APPFW,APPFW_XML_GENERIC_ERR_EMPTYBODY_REQ,WARNING,Request body is empty in the XML request.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_ELEMENT_INVALID_DATATYPE_VALUE,WARNING,Value should be of type '%s'.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_ELEMENT_INVALID_LOCATION,WARNING,Element '%s' cannot appears at this location.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_FACET_MISMATCH,WARNING,Facet mismatch.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_FAILED,WARNING,AppFw XML Validator Load Failed.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_ATTRIBUTE_VALUE,WARNING,Attribute '%s' has invalid value '%s'.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_DATATYPE,WARNING,Invalid schema datatype.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_SCHEMA_NODE_TYPE,WARNING,Invalid schema node type.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_VALUE_FOR_FIXED,WARNING,Value '%s' does not match FIXED constraint '%s'.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_GT_MAX,WARNING,List length is greater than max allowed.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_INVALID,WARNING,List length is invalid.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_LT_MIN,WARNING,List length is lesser than min allowed.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_MAX,WARNING,AppFw XML Validation Maximum Load Error.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_REQUIRED_ATTRIBUTE,WARNING,Missing require attribute '%s' in element '%s'.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_SCHEMA_COMPILATION,WARNING,Error code in the compiled Schema is being ignored.
+APPFW,APPFW_XML_VALIDATOR_LOAD_ERR_WSDL_COMPILATION,WARNING,Error code in the compiled WSDL is being ignored.
+APPFW,APPFW_XML_WSI_ERR_ACCELEMENTNAMESPACED,WARNING,R2735: A MESSAGE described with an rpc-literal binding MUST place the part accessor elements for parameters and return value in no namespace. Element '%s' must be unqualified.
+APPFW,APPFW_XML_WSI_ERR_ARRAYTYPE,WARNING,R2113: A MESSAGE containing serialized arrays MUST NOT include the soapenc:arrayType attribute. Element '%s' must not include the soapenc:arrayType attribute.
+APPFW,APPFW_XML_WSI_ERR_BAD_ENV_NAMESPACE,WARNING,R1015: A RECEIVER MUST generate a fault if they encounter a message whose document element has a local name of "Envelope" but a namespace name that is not "http://schemas.xmlsoap.org/soap/envelope/" or "http://www.w3.org/2003/05/soap-envelope". We got namespace '%s' in SOAP Request.
+APPFW,APPFW_XML_WSI_ERR_BINDINGFAULTRESP,WARNING,"R2740: The response envelope contained soap:Fault element(s), but they were not defined in the WSDL description. Element '%s' should be defined as soap:fault in WSDL description."
+APPFW,APPFW_XML_WSI_ERR_BODY_CHILD_NAMESPACE,WARNING,R1014: The children of the soap:Body element in a MESSAGE MUST be namespace qualified. Unqualified children of soap:Body is '%s'.
+APPFW,APPFW_XML_WSI_ERR_BODY_ENV_NAMESPACE,WARNING,"BP1201: The envelope does not use SOAP 1.1 or SOAP 1.2, i.e. does not have a document element named "Envelope" or a namespace value of http://schemas.xmlsoap.org/soap/envelope/ or http://www.w3.org/2003/05/soap-envelope. We got namespace '%s'."
+APPFW,APPFW_XML_WSI_ERR_CHILDAFTERBODY,WARNING,R1011: A MESSAGE MUST NOT have any element children of soap:Envelope following the soap:Body element. Element '%s' should not appear after 'soap:Body' element.
+APPFW,APPFW_XML_WSI_ERR_CLAIM_MUSTUNDERSTAND,WARNING,R0007: A SENDER MUST NOT use the soap:mustUnderstand attribute when sending a SOAP header block containing a conformance claim. soap:mustUnderstand attribute is present on element '%s'.
+APPFW,APPFW_XML_WSI_ERR_CTXT_NULL,WARNING,AppFw XML WSI Internal Context NULL
+APPFW,APPFW_XML_WSI_ERR_DOCTYPEALLOWED,WARNING,R1008: A MESSAGE MUST NOT contain a Document Type Declaration. DOCTYPE name is '%s'.
+APPFW,APPFW_XML_WSI_ERR_DOT_NOTATION,WARNING,R1031: When a MESSAGE contains a faultcode element the content of that element SHOULD NOT use of the SOAP 1.1 "dot" notation to refine the meaning of the Fault. Data '%s' should not contain 'DOT'(.) in it.
+APPFW,APPFW_XML_WSI_ERR_ENCODINGSTYLE,WARNING,R1005: A MESSAGE MUST NOT contain soap:encodingStyle attribute on any of the elements whose namespace is the same as the namespace of the qualified document element 'Envelope'. 'soap:encodingStyle' attribute should not be present on element '%s'.
+APPFW,APPFW_XML_WSI_ERR_ENCODINGSTYLECHILD,WARNING,R1006: A MESSAGE MUST NOT contain soap:encodingStyle attributes on any element that is a child of soap:Body. 'soap:encodingStyle' attribute should not be present on immidiate child '%s' of soap:Body.
+APPFW,APPFW_XML_WSI_ERR_ENCODINGSTYLEGRANDCHILD,WARNING,R1007: A MESSAGE described in an rpc-literal binding MUST NOT contain soap:encodingStyle attribute on any elements are grandchildren of soap:Body. 'soap:encodingStyle' attribute should not be present on grandchild '%s' of soap:Body.
+APPFW,APPFW_XML_WSI_ERR_ENVELEMENTSNOATTRIBUTES,WARNING,"R1032: The soap:Envelope, soap:Header, and soap:Body elements in an ENVELOPE MUST NOT have attributes in the same namespace as that of the qualified document element 'Envelope'. Attribute '%s' should not be in the same namespace as that of the qualified document element 'Envelope'."
+APPFW,APPFW_XML_WSI_ERR_ENVNONAMESPACE,WARNING,R1033: An ENVELOPE SHOULD NOT contain the namespace declaration xmlns:xml="http://www.w3.org/XML/1998/namespace".
+APPFW,APPFW_XML_WSI_ERR_GOODRESPONSE200,WARNING,R1111: An INSTANCE SHOULD use a "200 OK" HTTP status code for responses that contain a SOAP message that is not a SOAP fault. We should not get 'soap:Fault' element when HTTP response code is '200 OK'.
+APPFW,APPFW_XML_WSI_ERR_HEADER_HAS_WSICLAIM,WARNING,R0005: A MESSAGE's conformance claims MUST be carried as SOAP header blocks. Element '%s' should be immidiate children of soap:Header.
+APPFW,APPFW_XML_WSI_ERR_HTTP,WARNING,AppFw XML WSI HTTP Error
+APPFW,APPFW_XML_WSI_ERR_ISHTTPPOST,WARNING,R1132: A HTTP request MESSAGE MUST use the HTTP POST method. We got '%s' HTTP method.
+APPFW,APPFW_XML_WSI_ERR_ISUTF8OR16,WARNING,R1012: A MESSAGE MUST be serialized as either UTF-8 or UTF-16. We got encoding '%s'.
+APPFW,APPFW_XML_WSI_ERR_MSGHASALLHEADERS,WARNING,R2738: A MESSAGE MUST include all soapbind:headers specified on a wsdl:input or wsdl:output of a wsdl:operation of a wsdl:binding that describes it.Wsdl header %s is not present in soap message.
+APPFW,APPFW_XML_WSI_ERR_MUSTUNDERSTAND,WARNING,R1013: A MESSAGE containing a soap:mustUnderstand attribute MUST only use the lexical forms "0" and "1". Value of 'soap:mustUnderstand' attribute is '%s'.
+APPFW,APPFW_XML_WSI_ERR_NODEPLOYED,WARNING,Resource id of deployment is NULL.
+APPFW,APPFW_XML_WSI_ERR_NOENVELOPEWSDLMATCH,WARNING,BP1701: The envelope does not conform to the SOAP schema located at 'http://schemas.xmlsoap.org/soap/envelope/' or 'http://www.w3.org/2003/05/soap-envelope'.
+APPFW,APPFW_XML_WSI_ERR_NONPOSTREQUEST,WARNING,R1114: An INSTANCE SHOULD use a "405 Method not Allowed" HTTP status code if the request method was not "POST". We got '%d' HTTP status code.
+APPFW,APPFW_XML_WSI_ERR_NONXMLREQUEST,WARNING,R1115: An INSTANCE SHOULD use a "415 Unsupported Media Type" HTTP status code if a HTTP request message's Content-Type header field-value is not permitted by its WSDL description. we got '%d' HTTP status code.
+APPFW,APPFW_XML_WSI_ERR_NOPORTURL,WARNING,Port URL is NULL.
+APPFW,APPFW_XML_WSI_ERR_NOREQWSDLMATCH,WARNING,BP1011: The content of the request envelope does not match the wsdl:message definition.
+APPFW,APPFW_XML_WSI_ERR_NORESPWSDLMATCH,WARNING,BP1013 The content of the response envelope does not match the wsdl:message definition.
+APPFW,APPFW_XML_WSI_ERR_NOWSDLDEPLOYED,WARNING,Deployed resource is not WSDL.
+APPFW,APPFW_XML_WSI_ERR_ONEWAYRESPONSE,WARNING,"R2714: For one-way operations, an INSTANCE MUST NOT return a HTTP response that contains a SOAP envelope. Specifically, the HTTP response entity-body must be empty. we got the element soap:Envelope."
+APPFW,APPFW_XML_WSI_ERR_RESPONSESTATUS200OR202,WARNING,R1112: An INSTANCE SHOULD use either a "200 OK" or "202 Accepted" HTTP status code for a response that does do not contain a SOAP message but indicates successful HTTP outcome of a request. We got '%d' HTTP response code.
+APPFW,APPFW_XML_WSI_ERR_RESPONSEWRAPPED,WARNING,R2729: A MESSAGE described with an rpc-literal binding that is a response message MUST have a wrapper element whose name is the corresponding wsdl:operation name suffixed with the string "Response". Element name should be '%sResponse' but got '%s'.
+APPFW,APPFW_XML_WSI_ERR_SOAPACTIONHEADERMATCH,WARNING,"R2744: A HTTP request MESSAGE MUST contain a SOAPAction HTTP header field with a quoted value equal to the value of the soapAction attribute of soapbind:operation, if present in the corresponding WSDL description. Expected '%s' soapAction but got '%s' soapAction in HTTP header."
+APPFW,APPFW_XML_WSI_ERR_SOAPACTIONQUOTED,WARNING,R1109: The value of the SOAPAction HTTP header field in a HTTP request MESSAGE MUST be a quoted string. We got '%s' SOAPAction HTTP header.
+APPFW,APPFW_XML_WSI_ERR_SOAPFAULTALLOWEDCHILD,WARNING,"R1000: When a MESSAGE contains a soap:Fault element, that element MUST NOT have element children other than faultcode, faultstring, faultactor and detail. Element '%s' is not a allowed child of 'soap:Fault'."
+APPFW,APPFW_XML_WSI_ERR_SOAPFAULTCHILDQ,WARNING,R1001: When a MESSAGE contains a soap:Fault element its element children MUST be unqualified. 'soap:Fault' child '%s' should be unqualified.
+APPFW,APPFW_XML_WSI_ERR_SOAPFAULTINHTTP,WARNING,R1126: An INSTANCE MUST use a "500 Internal Server Error" HTTP status code if the response message is a SOAP Fault. We got '%s' HTTP response code.
+APPFW,APPFW_XML_WSI_ERR_SOAPFAULTNONENV,WARNING,"R1003: A RECEIVER MUST accept fault messages that have any number of qualified or unqualified attributes, including zero, appearing on the detail element. The namespace of qualified attributes can be anything other than the namespace of the qualified document element 'Envelope'. Namespace of attribute '%s' should not be the same as that of the qualified document element 'Envelope'."
+APPFW,APPFW_XML_WSI_ERR_SOAPGOODXML10,WARNING,BP1601: The soap:Envelope or soap:Body does not conform to XML 1.0. Error is '%s'.
+APPFW,APPFW_XML_WSI_ERR_STDFAULTCODE,WARNING,R1004: When a MESSAGE contains a faultcode element the content of that element SHOULD be one of the fault codes defined in SOAP 1.1 or a namespace qualified fault code. 'faultcode' '%s' is not defined in SOAP 1.1 or it is not namespace qualified.
+APPFW,APPFW_XML_WSI_ERR_USEHTTP10OR11,WARNING,R1141: A MESSAGE MUST be sent using either HTTP/1.1 or HTTP/1.0. We got HTTP version '%s'.
+APPFW,APPFW_XML_WSI_ERR_USEHTTP11,WARNING,R1140: A MESSAGE SHOULD be sent using HTTP/1.1. We got HTTP version '%s'.
+APPFW,APPFW_XML_WSI_ERR_WSICLAIMSWELLFORMED,WARNING,"R0004: A MESSAGE MAY contain conformance claims, as specified in the conformance claim schema. Either 'conformsTo' attribute is absent or 'soap:mustUnderstand' attribute is present on element '%s'."
+APPFW,APPFW_XML_WSI_ERR_WSI_LIST_NULL,WARNING,AppFw XML WSI List Null.
+APPFW,APPFW_XML_WSI_ERR_XMLPI,WARNING,R1009: A MESSAGE MUST NOT contain Processing Instructions. Name of Processing Instruction is '%s'.
+APPFW,APPFW_XML_WSI_ERR_XSINIL,WARNING,R2211: A MESSAGE described with an rpc-literal binding MUST NOT have the xsi:nil attribute with a value of "1" or "true" on the part accessors. Element '%s' must not have the xsi:nil attribute.
+APPFW,APPFW_XML_XSD_COMPILE_INIT_ERR,WARNING,Error during initialization
+APPFW,APPFW_XML_XSD_COMPILE_LOADXSD_ERR,WARNING,AppFw XML XSDLOAD Failed during Compile
+APPFW,APPFW_XML_XSD_COMPILE_NOMODEL_ERR,WARNING,No XSModel to print
+APPFW,APPFW_XML_XSD_COMPILE_PARSE_ERR,INFO,Error during parsing
+APPFW,APPFW_XML_XSD_COMPILE_UNEXPECTED_ERR,WARNING,Unexpected exception during parsing
+APPFW,APPFW_XML_ERR_SOAP_FAULT,WARNING,Message contains SOAP Fault.
+APPFW,APPFW_XML_SOAP_FAULT_CONTENTS,WARNING,Dumps the SOAP Fault contents to Audit log.
+APPFW,AF_INVALID_HTTP_HEADER,WARNING,Error while parsing HTTP headers.
+APPFW,APPFW_CCARD_MATCH_IN_SIGNATURES,INFO,Credit card violation in signatures
+APPFW,APPFW_SESSIONLIMIT,INFO,AppFw Session Limit reached
+APPFW,AF_ADD_RFCPROFILE,INFO,Add an AppFw rfc profile
+APPFW,AF_RM_RFCPROFILE,INFO,Remove an AppFw rfc profile
+APPFW,APPFW_INV_RFC,INFO,RFC syntax violation. Generated 302 Response
+APPFW,APPFW_NEW_SIGNATURE_ADDED,INFO,AppFw New Signature Added
+APPFW,APPFW_JSON_DOS_MAX_DOCUMENT_LENGTH,INFO,AppFw JSON document length exceeded
+APPFW,APPFW_JSON_DOS_MAX_CONTAINER_DEPTH,INFO,AppFw JSON document exceeds maximum container depth
+APPFW,APPFW_JSON_DOS_MAX_OBJECT_KEY_COUNT,INFO,AppFw JSON document has object that exceeds maximum key count
+APPFW,APPFW_JSON_DOS_MAX_OBJECT_KEY_LENGTH,INFO,AppFw JSON document has key in object that exceeds maximum key length
+APPFW,APPFW_JSON_DOS_MAX_ARRAY_LENGTH,INFO,AppFw JSON document has array exceeds maximum array length
+APPFW,APPFW_JSON_DOS_MAX_STRING_LENGTH,INFO,AppFw JSON document has string that exceeds maximum string length
+APPFW,APPFW_JSON_SQL,INFO,AppFw JSON document has sql violation
+APPFW,APPFW_JSON_XSS,INFO,AppFw JSON document has Cross-site script violation
+APPFW,APPFW_DEPLOY_RELAXATION_DP,INFO,AppFw relaxation about to be deployed through Dynamic Learning
+APPFW,APPFW_COOKIE_HIJACK,INFO,AppFw Cookie Hijacking violation
+APPFW,APPFW_POSTBODYLIMIT,INFO,AppFw Post Body Limit violation
+APPFW,APPFW_JSON_CMD,INFO,AppFw JSON document has command injection violation
+APPFW,APPFW_JSON_SQL_GRAM,INFO,AppFw JSON document has SQL Injection violation reported by SQL Grammar
+APPFW,APPFW_GRPC,INFO,AppFw gRPC detected an invalid request.
+APPFW,APPFW_GRPC_WEB_TEXT,INFO,AppFw grpc_web_text detected an invalid request.
+APPFW,APPFW_GRPC_WEB_JSON,INFO,AppFw grpc_web_json detected an invalid request.
+APPFW,APPFW_JSON_CMD_GRAM,INFO,AppFw JSON document has CMD Injection violation reported by CMD Grammar
+APPFW,APPFW_BLOCK_KEYWORD,INFO,AppFw Block Keyword Violation
+APPFW,APPFW_JSON_BLOCKKEYWORD,INFO,AppFw JSON Block Keyword Violation
+APPFW,APPFW_BYPASS_LIST,INFO,AppFw Bypass List Match
+APPFW,APPFW_DENY_LIST,INFO,AppFw Deny List Match
+APPFW,APPFW_REST_VALIDATION,INFO,AppFw Rest Validation Relaxation Rule
+APPFW,APPFW_GRPC_VALIDATION,INFO,AppFw gRPC Validation Relaxation Rule
+ROUTING,ZEBOS_CMD_EXECUTED,INFO,The ZebOS command executed.
+SNMP,TRAP_SENT,INFO,Trap Sent Information
+SNMP,TRAP_DROPPED,INFO,Trap Dropped information. Traps are dropped due to rate-limiting
+TRANSFORM,FILE_REQUEST,DEBUG,URL Transformation profile invoked
+TRANSFORM,REQ_PARSE_ERROR,WARNING,URL Transformation parsing error
+TRANSFORM,REQ_HEADER,DEBUG,URL Transformation in a request header
+TRANSFORM,RESP_HEADER,DEBUG,URL Transformation in a response header
+TRANSFORM,BODY_FRAG,DEBUG,URL Transformation in a response body
+TRANSFORM,ACTION_MATCH,DEBUG,URL Transformation action matched URL
+TRANSFORM,ACTION_MISMATCH,DEBUG,URL Transformation action didn't match URL
+TRANSFORM,PCRE_ERROR,WARNING,URL Transformation regex error
+TRANSFORM,REQ_WRITE_ERROR,WARNING,URL Transformation error in a request header
+APPFW_RESP,APPFW_XML_XSS,WARNING,AppFw XSS violation in XML
+APPFW_RESP,APPFW_XML_SQL,WARNING,AppFw SQL Injection violation in XML
+APPFW_RESP,APPFW_XML_ATTACHMENT_FOUND,WARNING,Attachment Found in the XML Message.
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_CALLBACK_NULL,WARNING,XML Attachment CallBack is NULL but HTTP message is MIME Attachment message.
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_INVALIDHEADER,WARNING,String %s is supposed to be MIME Header. But it is not according to the format of Mime Header HeaderName:HeaderValue
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_INVALID_HEADER,WARNING,HTTP Content type should be 'application/xop+xml' or '^(text
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_BOUNDARY_MISMATCH,WARNING,Boundary mismatch in mime message.
+APPFW_RESP,APPFW_XML_ERR_NO_ATTACHMENT_BOUNDARY,WARNING,The message having content-type as 'Multipart/Related' and not having a boundary is invalid.
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_MAX_SIZE,WARNING,XML Message has an Attachment with size greater than the Configured Max Attachment Size.
+APPFW_RESP,APPFW_XML_ATTACHMENT_ERR_CONTENT_TYPE,WARNING,XML Message has an Attachment with Illegal Content-Type
+APPFW_RESP,APPFW_XML_DDOS_ERR_MSG_SEND_FAIL,WARNING,AppFw XML DDoS Send Fail Error.
+APPFW_RESP,APPFW_XML_DOS_ERR_CHAR_DATA_LENGTH,WARNING,Exceeds max character data length.
+APPFW_RESP,APPFW_XML_DOS_ERR_DTD,WARNING,DTD present in the XML message.
+APPFW_RESP,APPFW_XML_DOS_ERR_EXT_ENTITY,WARNING,External entities present in the XML message.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX,WARNING,AppFw XML DoS Maximum Error
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ATTRIBUTES,WARNING,Element '%s' exceeds maximum attributes per element.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ATTRIBUTE_NAME_LENGTH,WARNING,In element '%s' an attribute exceeds maximum name length.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ATTRIBUTE_VALUE_LENGTH,WARNING,In element '%s' attribute '%s' exceeds maximum attribute value length.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ELEMENTS,WARNING,Element '%s' exceeds maximum elements per message.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ELEMENT_CHILDREN,WARNING,Parent of element '%s' exceeds maximum children at element '%s'.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ELEMENT_DEPTH,WARNING,Element '%s' exceeds maximum element depth.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ELEMENT_NAME_LENGTH,WARNING,Element '%s' exceeds maximum element name length.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_FILE_SIZE,WARNING,Message size exceeds max size.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_NODES,WARNING,Node '%s' exceeds maximum nodes per message.
+APPFW_RESP,APPFW_XML_DOS_ERR_MIN_FILE_SIZE,WARNING,Message size less than min size.
+APPFW_RESP,APPFW_XML_ERR_NOT_WELLFORMED,WARNING,Message is not a well-formed XML.
+APPFW_RESP,APPFW_XML_DOS_ERR_PI,WARNING,Processing instructions present in the XML message.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_NAMESPACES,WARNING,Element '%s' exceeds maximum active namespaces.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_NAMESPACEURI_LENGTH,WARNING,In element '%s' a namespace exceeds maximum uri length.
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ENTITY_EXPANSION_DEPTH,WARNING,Exceeds max entity expansion depth
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_ENTITY_EXPANSIONS,WARNING,Exceeds max number of entity expansions
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_SOAPARRAY_SIZE,WARNING,Exceeds max total SOAP array size
+APPFW_RESP,APPFW_XML_DOS_ERR_MAX_SOAPARRAY_RANK,WARNING,Exceeds max SOAP array rank
+APPFW_RESP,APPFW_XML_ERR_CUSTOM,WARNING,AppFw XML internal error
+APPFW_RESP,APPFW_XML_ERR_DDOS_CONNECT_TO_SERVER_FAILED,WARNING,AppFw XML DDoS Connect to Server Failed.
+APPFW_RESP,APPFW_XML_ERR_DDOS_INTERATION_SOCKET_OPEN_FAIL,WARNING,AppFw XML DDoS Interaction socket open Failed.
+APPFW_RESP,APPFW_XML_ERR_DDOS_INVALID_CONFIG_FILE,WARNING,AppFw XML DDoS Invalid Config File.
+APPFW_RESP,APPFW_XML_ERR_DDOS_NO_FOLDER_INSTALLATION_PATH,WARNING,AppFw XML DDoS No Folder Installation Path.
+APPFW_RESP,APPFW_XML_ERR_DDOS_OPEN_CONFIG_FILE_FAIL,WARNING,AppFw XML DDoS Failure to Open Config File.
+APPFW_RESP,APPFW_XML_ERR_DOS_TRIGGERED,WARNING,Denial of Service Error.
+APPFW_RESP,APPFW_XML_ERR_ENV_NOT_SET,WARNING,Environment variable QTHOME not set.
+APPFW_RESP,APPFW_XML_ERR_HASH_INSERT,WARNING,Problems inserting a namespace into the hash table.
+APPFW_RESP,APPFW_XML_ERR_HASH_LOOKUP,WARNING,Problems getting the key of a namespace from the hash table.
+APPFW_RESP,APPFW_XML_ERR_INITIALIZING_TOKENIZER,WARNING,Unable to initialize XML tokenizer.
+APPFW_RESP,APPFW_XML_ERR_INVALID_FILE,WARNING,Unable to open the file.
+APPFW_RESP,APPFW_XML_ERR_INVALID_STATE,WARNING,AppFw XML Internal State Invalid.
+APPFW_RESP,APPFW_XML_ERR_INVALID_XPATH,WARNING,Invalid XPath.
+APPFW_RESP,APPFW_XML_ERR_LOW_MEMORY,WARNING,AppFw XML Low memory.
+APPFW_RESP,APPFW_XML_ERR_CHARDATA_LIMIT_EXCEEDED,WARNING,AppFw XML character data size exceeds the limit of 30MB
+APPFW_RESP,APPFW_XML_ERR_MALFORMED_ADDRESS,WARNING,Malformed address
+APPFW_RESP,APPFW_XML_ERR_NO_DIME,WARNING,"NS-XML APPFW supports SwA and MTOM SOAP attachments, but attachment with this message is DIME."
+APPFW_RESP,APPFW_XML_ERR_OPERATION_CALLBACK,WARNING,Problems registering callbacks for operations.
+APPFW_RESP,APPFW_XML_ERR_PREFIX_LENGTH_EXCEEDED,WARNING,"Prefix length %d exceeded, encountered length is %d."
+APPFW_RESP,APPFW_XML_ERR_READ_FAILED,WARNING,AppFw XML Read Failure
+APPFW_RESP,APPFW_XML_ERR_STREAM_POP,WARNING,Problems during pop of the node out of the XML stream.
+APPFW_RESP,APPFW_XML_ERR_STREAM_PUSH,WARNING,Problems during push of the node into the XML stream.
+APPFW_RESP,APPFW_XML_ERR_UNSUPPORTED_PORT,WARNING,Port in address %s is greater than 65535.
+APPFW_RESP,APPFW_XML_ERR_UNSUPPORTED_PROTOCOL,WARNING,Unsupported protocol
+APPFW_RESP,APPFW_XML_ERR_VALIDATION_FAILED,WARNING,AppFw XML Validation Failed
+APPFW_RESP,APPFW_XML_PACKET_PROCESSING_ERR_CONTEXT_NULL,WARNING,AppFw XML Context is NULL.
+APPFW_RESP,APPFW_XML_PACKET_PROCESSING_ERR_CONTEXT_STATE_NULL,WARNING,Context user state is NULL; internal error.
+APPFW_RESP,APPFW_XML_PACKET_PROCESSING_ERR_MESSAGE_CONFIG_NULL,WARNING,Message config struct is NULL.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_ABSTRACT_ELEMENT,WARNING,Cannot instantiate abstract element
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_ABSTRACT_TYPE,WARNING,"Cannot instantiate abstract type '%s', for element '%s'."
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_ADDHEADERS,WARNING,Additional soap header %s present in soap message.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_ATTRIBUTE_MAX_OCCURS,WARNING,Attribute '%s' appears more than once in element '%s'.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_ATTRIBUTE_MIN_OCCURS,WARNING,Required attribute missing in element
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_COMPILED_WSDL,WARNING,Compiled WSDL file is corrupt.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_CONTENT_MODEL_VIOLATED,WARNING,Content model of element '%s' not satisfied.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_CORRUPT_COMPILED_WSDL,WARNING,Compiled WSDL file is corrupt.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_CORRUPT_SCHEMA,WARNING,Error compiling the schema
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_DATATYPE_ENGINE_INIT,WARNING,Initialization of the datatype engine failed.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INTERNAL,WARNING,Internal corruption of WSDL in-memory structure.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_ATTRIBUTE,WARNING,Attribute '%s' is invalid.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_COMBINATION,WARNING,Invalid configuration for soap validation.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_COMPILED_WSDL,WARNING,Not able to open compiled WSDL.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_CONTENT_MODEL,WARNING,Element '%s' has invalid content model.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_DATATYPE,WARNING,Data type is invalid.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_ELEMENT,WARNING,Invalid element.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_FILE,WARNING,Not able to open the file.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_INVALID_TYPE_SUBSTITUTION,WARNING,"Did not get expected type for element '%s', got '%s'."
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_LOADING,WARNING,Unable to load validation engine.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_MAX,WARNING,AppFw XML Validation Max Error.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_NOSERVICEURL,WARNING,Service Url is not present or NULL.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_NOT_SUPPORTED,WARNING,Feature not supported.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_SOAP_BODY,WARNING,Soap Body structure check failed.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_SOAP_ENVELOPE,WARNING,Soap Envelope structure check failed.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_SOAP_HEADER,WARNING,Soap Header structure check failed.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_UNBOUNDED_PREFIX,WARNING,Prefix '%s' is unbounded.
+APPFW_RESP,APPFW_XML_VALIDATION_LOAD_ERR_CONTENTS_CANNOT_BE_NIL,WARNING,Element '%s' cannot be nil.
+APPFW_RESP,APPFW_XML_VALIDATION_LOAD_ERR_NIL_WITH_CONTENTS,WARNING,"Element '%s' is nil, cannot have contents."
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_REX_STACK_OVERFLOW,WARNING,Level of recursion more than maximum allowed depth.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_REX_STACK_EMPTY,WARNING,Trying to pop from an empty stack.
+APPFW_RESP,APPFW_XML_VALIDATION_ERR_SOAPBODY_EMPTY,WARNING,Both SOAP Body and SOAP Header are empty in the SOAP request.
+APPFW_RESP,APPFW_XML_GENERIC_ERR_EMPTYBODY_REQ,WARNING,Request body is empty in the XML request.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_ELEMENT_INVALID_DATATYPE_VALUE,WARNING,Value should be of type '%s'.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_ELEMENT_INVALID_LOCATION,WARNING,Element '%s' cannot appears at this location.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_FACET_MISMATCH,WARNING,Facet mismatch.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_FAILED,WARNING,AppFw XML Validator Load Failed.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_ATTRIBUTE_VALUE,WARNING,Attribute '%s' has invalid value '%s'.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_DATATYPE,WARNING,Invalid schema datatype.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_SCHEMA_NODE_TYPE,WARNING,Invalid schema node type.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_INVALID_VALUE_FOR_FIXED,WARNING,Value '%s' does not match FIXED constraint '%s'.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_GT_MAX,WARNING,List length is greater than max allowed.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_INVALID,WARNING,List length is invalid.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_LIST_LENGTH_LT_MIN,WARNING,List length is lesser than min allowed.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_MAX,WARNING,AppFw XML Validation Maximum Load Error.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_REQUIRED_ATTRIBUTE,WARNING,Missing require attribute '%s' in element '%s'.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_SCHEMA_COMPILATION,WARNING,Error code in the compiled Schema is being ignored.
+APPFW_RESP,APPFW_XML_VALIDATOR_LOAD_ERR_WSDL_COMPILATION,WARNING,Error code in the compiled WSDL is being ignored.
+APPFW_RESP,APPFW_XML_WSI_ERR_ACCELEMENTNAMESPACED,WARNING,R2735: A MESSAGE described with an rpc-literal binding MUST place the part accessor elements for parameters and return value in no namespace. Element '%s' must be unqualified.
+APPFW_RESP,APPFW_XML_WSI_ERR_ARRAYTYPE,WARNING,R2113: A MESSAGE containing serialized arrays MUST NOT include the soapenc:arrayType attribute. Element '%s' must not include the soapenc:arrayType attribute.
+APPFW_RESP,APPFW_XML_WSI_ERR_BAD_ENV_NAMESPACE,WARNING,R1015: A RECEIVER MUST generate a fault if they encounter a message whose document element has a local name of "Envelope" but a namespace name that is not "http://schemas.xmlsoap.org/soap/envelope/" or "http://www.w3.org/2003/05/soap-envelope". We got namespace '%s' in SOAP Request.
+APPFW_RESP,APPFW_XML_WSI_ERR_BINDINGFAULTRESP,WARNING,"R2740: The response envelope contained soap:Fault element(s), but they were not defined in the WSDL description. Element '%s' should be defined as soap:fault in WSDL description."
+APPFW_RESP,APPFW_XML_WSI_ERR_BODY_CHILD_NAMESPACE,WARNING,R1014: The children of the soap:Body element in a MESSAGE MUST be namespace qualified. Unqualified children of soap:Body is '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_BODY_ENV_NAMESPACE,WARNING,"BP1201: The envelope does not use SOAP 1.1 or SOAP 1.2, i.e. does not have a document element named "Envelope" or a namespace value of http://schemas.xmlsoap.org/soap/envelope/ or http://www.w3.org/2003/05/soap-envelope. We got namespace '%s'."
+APPFW_RESP,APPFW_XML_WSI_ERR_CHILDAFTERBODY,WARNING,R1011: A MESSAGE MUST NOT have any element children of soap:Envelope following the soap:Body element. Element '%s' should not appear after 'soap:Body' element.
+APPFW_RESP,APPFW_XML_WSI_ERR_CLAIM_MUSTUNDERSTAND,WARNING,R0007: A SENDER MUST NOT use the soap:mustUnderstand attribute when sending a SOAP header block containing a conformance claim. soap:mustUnderstand attribute is present on element '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_CTXT_NULL,WARNING,AppFw XML WSI Internal Context NULL
+APPFW_RESP,APPFW_XML_WSI_ERR_DOCTYPEALLOWED,WARNING,R1008: A MESSAGE MUST NOT contain a Document Type Declaration. DOCTYPE name is '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_DOT_NOTATION,WARNING,R1031: When a MESSAGE contains a faultcode element the content of that element SHOULD NOT use of the SOAP 1.1 "dot" notation to refine the meaning of the Fault. Data '%s' should not contain 'DOT'(.) in it.
+APPFW_RESP,APPFW_XML_WSI_ERR_ENCODINGSTYLE,WARNING,R1005: A MESSAGE MUST NOT contain soap:encodingStyle attribute on any of the elements whose namespace is the same as the namespace of the qualified document element 'Envelope'. 'soap:encodingStyle' attribute should not be present on element '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_ENCODINGSTYLECHILD,WARNING,R1006: A MESSAGE MUST NOT contain soap:encodingStyle attributes on any element that is a child of soap:Body. 'soap:encodingStyle' attribute should not be present on immidiate child '%s' of soap:Body.
+APPFW_RESP,APPFW_XML_WSI_ERR_ENCODINGSTYLEGRANDCHILD,WARNING,R1007: A MESSAGE described in an rpc-literal binding MUST NOT contain soap:encodingStyle attribute on any elements are grandchildren of soap:Body. 'soap:encodingStyle' attribute should not be present on grandchild '%s' of soap:Body.
+APPFW_RESP,APPFW_XML_WSI_ERR_ENVELEMENTSNOATTRIBUTES,WARNING,"R1032: The soap:Envelope, soap:Header, and soap:Body elements in an ENVELOPE MUST NOT have attributes in the same namespace as that of the qualified document element 'Envelope'. Attribute '%s' should not be in the same namespace as that of the qualified document element 'Envelope'."
+APPFW_RESP,APPFW_XML_WSI_ERR_ENVNONAMESPACE,WARNING,R1033: An ENVELOPE SHOULD NOT contain the namespace declaration xmlns:xml="http://www.w3.org/XML/1998/namespace".
+APPFW_RESP,APPFW_XML_WSI_ERR_GOODRESPONSE200,WARNING,R1111: An INSTANCE SHOULD use a "200 OK" HTTP status code for responses that contain a SOAP message that is not a SOAP fault. We should not get 'soap:Fault' element when HTTP response code is '200 OK'.
+APPFW_RESP,APPFW_XML_WSI_ERR_HEADER_HAS_WSICLAIM,WARNING,R0005: A MESSAGE's conformance claims MUST be carried as SOAP header blocks. Element '%s' should be immidiate children of soap:Header.
+APPFW_RESP,APPFW_XML_WSI_ERR_HTTP,WARNING,AppFw XML WSI HTTP Error
+APPFW_RESP,APPFW_XML_WSI_ERR_ISHTTPPOST,WARNING,R1132: A HTTP request MESSAGE MUST use the HTTP POST method. We got '%s' HTTP method.
+APPFW_RESP,APPFW_XML_WSI_ERR_ISUTF8OR16,WARNING,R1012: A MESSAGE MUST be serialized as either UTF-8 or UTF-16. We got encoding '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_MSGHASALLHEADERS,WARNING,R2738: A MESSAGE MUST include all soapbind:headers specified on a wsdl:input or wsdl:output of a wsdl:operation of a wsdl:binding that describes it.Wsdl header %s is not present in soap message.
+APPFW_RESP,APPFW_XML_WSI_ERR_MUSTUNDERSTAND,WARNING,R1013: A MESSAGE containing a soap:mustUnderstand attribute MUST only use the lexical forms "0" and "1". Value of 'soap:mustUnderstand' attribute is '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_NODEPLOYED,WARNING,Resource id of deployment is NULL.
+APPFW_RESP,APPFW_XML_WSI_ERR_NOENVELOPEWSDLMATCH,WARNING,BP1701: The envelope does not conform to the SOAP schema located at 'http://schemas.xmlsoap.org/soap/envelope/' or 'http://www.w3.org/2003/05/soap-envelope'.
+APPFW_RESP,APPFW_XML_WSI_ERR_NONPOSTREQUEST,WARNING,R1114: An INSTANCE SHOULD use a "405 Method not Allowed" HTTP status code if the request method was not "POST". We got '%d' HTTP status code.
+APPFW_RESP,APPFW_XML_WSI_ERR_NONXMLREQUEST,WARNING,R1115: An INSTANCE SHOULD use a "415 Unsupported Media Type" HTTP status code if a HTTP request message's Content-Type header field-value is not permitted by its WSDL description. we got '%d' HTTP status code.
+APPFW_RESP,APPFW_XML_WSI_ERR_NOPORTURL,WARNING,Port URL is NULL.
+APPFW_RESP,APPFW_XML_WSI_ERR_NOREQWSDLMATCH,WARNING,BP1011: The content of the request envelope does not match the wsdl:message definition.
+APPFW_RESP,APPFW_XML_WSI_ERR_NORESPWSDLMATCH,WARNING,BP1013 The content of the response envelope does not match the wsdl:message definition.
+APPFW_RESP,APPFW_XML_WSI_ERR_NOWSDLDEPLOYED,WARNING,Deployed resource is not WSDL.
+APPFW_RESP,APPFW_XML_WSI_ERR_ONEWAYRESPONSE,WARNING,"R2714: For one-way operations, an INSTANCE MUST NOT return a HTTP response that contains a SOAP envelope. Specifically, the HTTP response entity-body must be empty. we got the element soap:Envelope."
+APPFW_RESP,APPFW_XML_WSI_ERR_RESPONSESTATUS200OR202,WARNING,R1112: An INSTANCE SHOULD use either a "200 OK" or "202 Accepted" HTTP status code for a response that does do not contain a SOAP message but indicates successful HTTP outcome of a request. We got '%d' HTTP response code.
+APPFW_RESP,APPFW_XML_WSI_ERR_RESPONSEWRAPPED,WARNING,R2729: A MESSAGE described with an rpc-literal binding that is a response message MUST have a wrapper element whose name is the corresponding wsdl:operation name suffixed with the string "Response". Element name should be '%sResponse' but got '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPACTIONHEADERMATCH,WARNING,"R2744: A HTTP request MESSAGE MUST contain a SOAPAction HTTP header field with a quoted value equal to the value of the soapAction attribute of soapbind:operation, if present in the corresponding WSDL description. Expected '%s' soapAction but got '%s' soapAction in HTTP header."
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPACTIONQUOTED,WARNING,R1109: The value of the SOAPAction HTTP header field in a HTTP request MESSAGE MUST be a quoted string. We got '%s' SOAPAction HTTP header.
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPFAULTALLOWEDCHILD,WARNING,"R1000: When a MESSAGE contains a soap:Fault element, that element MUST NOT have element children other than faultcode, faultstring, faultactor and detail. Element '%s' is not a allowed child of 'soap:Fault'."
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPFAULTCHILDQ,WARNING,R1001: When a MESSAGE contains a soap:Fault element its element children MUST be unqualified. 'soap:Fault' child '%s' should be unqualified.
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPFAULTINHTTP,WARNING,R1126: An INSTANCE MUST use a "500 Internal Server Error" HTTP status code if the response message is a SOAP Fault. We got '%s' HTTP response code.
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPFAULTNONENV,WARNING,"R1003: A RECEIVER MUST accept fault messages that have any number of qualified or unqualified attributes, including zero, appearing on the detail element. The namespace of qualified attributes can be anything other than the namespace of the qualified document element 'Envelope'. Namespace of attribute '%s' should not be the same as that of the qualified document element 'Envelope'."
+APPFW_RESP,APPFW_XML_WSI_ERR_SOAPGOODXML10,WARNING,BP1601: The soap:Envelope or soap:Body does not conform to XML 1.0. Error is '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_STDFAULTCODE,WARNING,R1004: When a MESSAGE contains a faultcode element the content of that element SHOULD be one of the fault codes defined in SOAP 1.1 or a namespace qualified fault code. 'faultcode' '%s' is not defined in SOAP 1.1 or it is not namespace qualified.
+APPFW_RESP,APPFW_XML_WSI_ERR_USEHTTP10OR11,WARNING,R1141: A MESSAGE MUST be sent using either HTTP/1.1 or HTTP/1.0. We got HTTP version '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_USEHTTP11,WARNING,R1140: A MESSAGE SHOULD be sent using HTTP/1.1. We got HTTP version '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_WSICLAIMSWELLFORMED,WARNING,"R0004: A MESSAGE MAY contain conformance claims, as specified in the conformance claim schema. Either 'conformsTo' attribute is absent or 'soap:mustUnderstand' attribute is present on element '%s'."
+APPFW_RESP,APPFW_XML_WSI_ERR_WSI_LIST_NULL,WARNING,AppFw XML WSI List Null.
+APPFW_RESP,APPFW_XML_WSI_ERR_XMLPI,WARNING,R1009: A MESSAGE MUST NOT contain Processing Instructions. Name of Processing Instruction is '%s'.
+APPFW_RESP,APPFW_XML_WSI_ERR_XSINIL,WARNING,R2211: A MESSAGE described with an rpc-literal binding MUST NOT have the xsi:nil attribute with a value of "1" or "true" on the part accessors. Element '%s' must not have the xsi:nil attribute.
+APPFW_RESP,APPFW_XML_XSD_COMPILE_INIT_ERR,WARNING,Error during initialization
+APPFW_RESP,APPFW_XML_XSD_COMPILE_LOADXSD_ERR,WARNING,AppFw XML XSDLOAD Failed during Compile
+APPFW_RESP,APPFW_XML_XSD_COMPILE_NOMODEL_ERR,WARNING,No XSModel to print
+APPFW_RESP,APPFW_XML_XSD_COMPILE_PARSE_ERR,INFO,Error during parsing
+APPFW_RESP,APPFW_XML_XSD_COMPILE_UNEXPECTED_ERR,WARNING,Unexpected exception during parsing
+APPFW_RESP,APPFW_XML_ERR_SOAP_FAULT,WARNING,Message contains SOAP Fault.
+APPFW_RESP,APPFW_XML_SOAP_FAULT_CONTENTS,WARNING,Dumps the SOAP Fault contents to Audit log.
+APPFW_RESP,AF_INVALID_HTTP_HEADER,WARNING,Error while parsing HTTP headers.
+APPFW_RESP,APPFW_CCARD_MATCH_IN_SIGNATURES,INFO,Credit card violation in signatures
+AAATM,LOGIN,INFO,Login to AAA TM vserver succeeds
+AAATM,LOGOUT,INFO,AAA TM session logged out
+AAATM,HTTPREQUEST,DEBUG,A AAA TM session receives a HTTP request
+AAATM,HTTP_RESOURCEACCESS_DENIED,NOTICE,A http resource access is denied by policy engine. The denied policy name is captured in the log message.
+NSIP6,IPV6_DUPLICATED,INFO,IPv6 address got duplicated.
+ICA,SESSION_SETUP,DEBUG,ICA session setup
+ICA,CHANNEL_UPDATE,DEBUG,ICA channel update
+ICA,SESSION_UPDATE,DEBUG,ICA session update
+ICA,L7_LATENCY_UPDATE,DEBUG,ICA L7 latency update
+ICA,SESSION_TERMINATE,DEBUG,ICA session terminate
+ICA,NETWORK_UPDATE,DEBUG,ICA network update
+ICA,APPLICATION_LAUNCH,DEBUG,ICA application launch
+ICA,APPLICATION_TERMINATE,DEBUG,ICA application terminate
+RDP,RDP_EVENT,DEBUG,RDP event
+RDP,RDP_CONNECTION_EVENT,DEBUG,RDP connection event
+CLI,CMD_EXECUTED,INFO,Logs the NSCLI/GUI command executed in NetScaler
+GUI,CMD_EXECUTED,INFO,Logs the NSCLI/GUI command executed in NetScaler
+API,CMD_EXECUTED,INFO,Logs the NSCLI/GUI command executed in NetScaler
+CONSOLE,CMD_EXECUTED,INFO,Logs the NSCLI/GUI command executed in NetScaler
+BOT,BOT_WHITELIST,INFO,Bot whitelist
+BOT,BOT_BLACKLIST,INFO,Bot blacklist
+BOT,BOT_IPREP,INFO,Bot iprep
+BOT,BOT_DEVICE_FINGERPRINT,INFO,Bot Device FingerPrint
+BOT,BOT_RATE_LIMIT,INFO,Bot Rate Limit
+BOT,BOT_STATIC_SIGNATURE,INFO,Bot static signature log.
+BOT,BOT_SIG_AUTO_UPDATE,INFO,Bot signature auto update log.
+BOT,BOT_TRAP_URL,INFO,Bot Trap URL.
+BOT,BOT_CAPTCHA,INFO,Bot Captcha
+BOT,BOT_TPS,INFO,Bot TPS.
+BOT,BOT_LOGEXPRESSION,INFO,Bot Log Expression.
+ROUTING,PAL,VARIABLE,
+PITBOSS,PITBOSS,INFO,Pitboss watch is added on a process with the process id pid
+PITBOSS,PITBOSS,INFO,Pitboss watch is deleted on a process with the process id pid
+PITBOSS,PB_SYSTEM_RESTART,ALERT,Process with pid has reached maximum number of restarts.Therefore the systemis being restarted
+PITBOSS,PB_PROCESS_RESTART,ALERT,Process with pid is being restarted.The message indicates the number of times the process has been restarted
+ROUTING,ROUTE_ADVERTISED,INFO,Route Advertised
+ROUTING,ROUTE_WITHDRAWN,INFO,Route Withdrawn
+ROUTING,ROUTE_RELEARN, ,Route Relearnt
+ROUTING,ROUTE_HASTATE,INFO,HA state change
+CVPN,CVPN_INPUT_URL,DEBUG,The input URL before rewriting
+CVPN,CVPN_REWRITTEN_URL,DEBUG,The rewritten url
+CVPN,CVPN_PCRE_ERROR,DEBUG,PCRE Error
+CVPN,CVPN_MATCHED_URL,DEBUG,The matched url

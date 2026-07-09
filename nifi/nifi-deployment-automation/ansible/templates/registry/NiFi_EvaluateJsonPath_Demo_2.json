@@ -1,0 +1,573 @@
+{
+	"template": {
+		"description": "In this demo we split a json, then evaluate an id within an array.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "NiFi EvaluateJsonPath Demo 2",
+		"snippet": {
+			"processGroups": {
+				"id": "69f90c88-bcb8-34c3-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "533b7ad7-ab04-3a4c-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "7e9a26af-71c7-3604-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1201c17e-195b-36cf-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "63964880-55ab-3659-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "981.000087492193",
+								"y": "-38.00000747909306"
+							},
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1b7277b6-a862-3de7-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "cba9e674-9a65-3529-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "640019bb-5821-39c4-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "1270.0000069614955",
+								"y": "398.0"
+							},
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "7e9a26af-71c7-3604-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "unmatched",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1201c17e-195b-36cf-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "94e76236-3389-3ca5-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1201c17e-195b-36cf-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "split",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "cba9e674-9a65-3529-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "aa4cbffa-890d-3d32-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "798.0000069614955",
+								"y": "393.0"
+							},
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "7e9a26af-71c7-3604-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1201c17e-195b-36cf-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "b3a1a65d-369c-39af-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "1b7277b6-a862-3de7-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "original",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "cba9e674-9a65-3529-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "d742e6d4-dacd-341e-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "cba9e674-9a65-3529-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "69f90c88-bcb8-34c3-0000-000000000000",
+								"id": "d423b1a6-ca80-351e-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"labels": [
+						{
+							"id": "131a8df8-3d8f-39b5-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "796.52732950358",
+								"y": "589.6893862507336"
+							},
+							"height": "140.85916137695312",
+							"label": "Notice use of Output Port for Errors\nLeave these routed during testing and\nthen auto terminate later, or route the\noutput port to an  Error Notification Handler.",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "492.9417724609375"
+						},
+						{
+							"id": "3bcb1b42-35c0-3d4e-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "1418.72410684733",
+								"y": "-75.81935798907352"
+							},
+							"height": "140.85916137695312",
+							"label": "Notice use of Output Port for Errors\nLeave these routed during testing and\nthen auto terminate later, or route the\noutput port to an  Error Notification Handler.",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "492.9417724609375"
+						},
+						{
+							"id": "43d3356b-5d4d-3570-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "421.07500348155736",
+								"y": "-525.1239186379282"
+							},
+							"height": "229.98016357421875",
+							"label": "Notice schedule here set to 10 secs.\nThis allows start, stop on Generate Flow\nto switch flow on.  Do not leave this\nprocessor On.  Only toggle to generate\na single flow file, and test it through flow.\nWhen testing complete, evaluate required\ntiming to start and run flow for production.",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "478.8073425292969"
+						}
+					],
+					"outputPorts": [
+						{
+							"id": "1b7277b6-a862-3de7-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "1138.000087492193",
+								"y": "-21.000005571744396"
+							},
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Error",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Error'' is invalid because Output connection for port 'Error' is not defined."
+						},
+						{
+							"id": "7e9a26af-71c7-3604-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "920.0000069614955",
+								"y": "490.0"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Output",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Output'' is invalid because Output connection for port 'Output' is not defined."
+						}
+					],
+					"processors": [
+						{
+							"id": "1201c17e-195b-36cf-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "843.0000069614955",
+								"y": "172.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": {
+												"name": "Destination"
+											}
+										},
+										{
+											"key": "Return Type",
+											"value": {
+												"name": "Return Type"
+											}
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": {
+												"name": "Path Not Found Behavior"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										},
+										{
+											"key": "id",
+											"value": {
+												"name": "id"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": "flowfile-attribute"
+										},
+										{
+											"key": "Return Type",
+											"value": "auto-detect"
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": "ignore"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										},
+										{
+											"key": "id",
+											"value": "$.history[0].id"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "EvaluateJsonPath",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "unmatched"
+								}
+							],
+							"state": "RUNNING",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+						},
+						{
+							"id": "cba9e674-9a65-3529-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "511.0000874921931",
+								"y": "-31.000009386441718"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "JsonPath Expression",
+											"value": {
+												"name": "JsonPath Expression"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "JsonPath Expression",
+											"value": "$.alarm"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "SplitJson",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "split"
+								}
+							],
+							"state": "RUNNING",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.SplitJson"
+						},
+						{
+							"id": "d423b1a6-ca80-351e-0000-000000000000",
+							"parentGroupId": "69f90c88-bcb8-34c3-0000-000000000000",
+							"position": {
+								"x": "502.71515588727675",
+								"y": "-266.8975372314453"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": "{\n\t\"alarm\": [{\n\t\t\t\"systemTime\": \"2020-05-21T13:57:50.444Z\",\n\t\t\t\"environment\": \" \",\n\t\t\t\"schdul\": \"system\",\n\t\t\t\"group\": \"Unknown\",\n\t\t\t\"history\": [{\n\t\t\t\t\"schdul\": \"system\",\n\t\t\t\t\"href\": \"https://abc.avw.com/api/alarm/46fe72b1-8999-4cde-a9e1-a3e19e31a471\",\n\t\t\t\t\"id\": \"2345-3456-1234-qwer-12e3f\",\n\t\t\t\t\"resource\": \"critical\",\n\t\t\t\t\"current\": \"open\",\n\t\t\t\t\"updateTime\": \"2020-05-21T13:57:50.444Z\",\n\t\t\t\t\"value\": \"--\"\n\t\t\t}],\n\t\t\t\"href\": \"https://abc.avw.com/api/alarm/46fe72b1-8999-4cde-a9e1-a3e19e31a471\",\n\t\t\t\"id\": \"2345-3456-1234-qwer-12e3f\",\n\t\t\t\"lastReceiveId\": \"2345-3456-1234-qwer-12e3f\",\n\t\t\t\"previousSeverity\": \"indeterminate\",\n\t\t\t\"rawData\": null,\n\t\t\t\"receiveTime\": \"2020-05-21T13:57:50.450Z\",\n\t\t\t\"repeat\": false,\n\t\t\t\"service\": [\n\t\t\t\t\"example.com\"\n\t\t\t],\n\t\t\t\"resource\": \"critical\",\n\t\t\t\"current\": \"open\",\n\t\t\t\"text\": \" \",\n\t\t\t\"timeout\": 86400,\n\t\t\t\"trendIndication\": \"moreSevere\",\n\t\t\t\"type\": \"excepbnbntionAlert\",\n\t\t\t\"updateTime\": \"2020-05-21T13:57:50.450Z\",\n\t\t\t\"value\": \"--\"\n\t\t},\n\t\t{\n\t\t\t\"systemTime\": \"2020-05-21T13:57:50.444Z\",\n\t\t\t\"environment\": \" \",\n\t\t\t\"schdul\": \"system\",\n\t\t\t\"group\": \"Unknown\",\n\t\t\t\"history\": [{\n\t\t\t\t\"schdul\": \"system\",\n\t\t\t\t\"href\": \"https://abc.avw.com/api/alarm/2345-3456-2345-qwer-12e3f\",\n\t\t\t\t\"id\": \"2345-3456-2345-qwer-12e3f\",\n\t\t\t\t\"resource\": \"critical\",\n\t\t\t\t\"current\": \"open\",\n\t\t\t\t\"updateTime\": \"2020-05-21T13:57:50.444Z\",\n\t\t\t\t\"value\": \"--\"\n\t\t\t}],\n\t\t\t\"href\": \"https://abc.avw.com/api/alarm/2345-3456-2345-qwer-12e3f\",\n\t\t\t\"id\": \"2345-3456-2345-qwer-12e3f\",\n\t\t\t\"lastReceiveId\": \"2345-3456-1234-qwer-12e3f\",\n\t\t\t\"rawData\": null,\n\t\t\t\"receiveTime\": \"2020-05-21T13:57:50.450Z\",\n\t\t\t\"repeat\": false,\n\t\t\t\"service\": [\n\t\t\t\t\"example.com\"\n\t\t\t],\n\t\t\t\"resource\": \"critical\",\n\t\t\t\"current\": \"open\",\n\t\t\t\"text\": \" \",\n\t\t\t\"timeout\": 86400,\n\t\t\t\"trendIndication\": \"moreSevere\",\n\t\t\t\"type\": \"excepbnbntionAlert\",\n\t\t\t\"updateTime\": \"2020-05-21T13:57:50.450Z\",\n\t\t\t\"value\": \"--\"\n\t\t}\n\t],\n\t\"autoRefresh\": true,\n\t\"lastTime\": \"2020-05-21T13:57:50.450Z\",\n\t\"more\": false,\n\t\"page\": 1,\n\t\"pageSize\": 1000,\n\t\"pages\": 1,\n\t\"resourceCounts\": {\n\t\t\"critical\": 2\n\t},\n\t\"current\": \"ok\",\n\t\"currentCounts\": {\n\t\t\"open\": 2\n\t},\n\t\"total\": 2\n}"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "10 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						}
+					]
+				},
+				"name": "NiFI EvaluateJsonPath Demo 2",
+				"variables": ""
+			}
+		},
+		"timestamp": "05/22/2020 12:21:02 UTC",
+		"_encoding-version": "1.2"
+	}
+}

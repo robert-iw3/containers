@@ -1,0 +1,12 @@
+server.name: kibana
+server.host: "0.0.0.0"
+elasticsearch.hosts: [{{ elasticsearch_hosts }}]
+elasticsearch.username: kibana_system
+elasticsearch.password: {{ kibana_password }}
+elasticsearch.ssl.certificateAuthorities: /usr/share/kibana/config/certs/ca/ca.crt
+server.ssl.enabled: true
+server.ssl.certificate: /usr/share/kibana/config/certs/kibana/kibana.crt
+server.ssl.key: /usr/share/kibana/config/certs/kibana/kibana.key
+xpack.security.encryptionKey: {{ encryption_key }}
+xpack.reporting.encryptionKey: {{ reporting_key }}
+xpack.encryptedSavedObjects.encryptionKey: {{ eso_key }}

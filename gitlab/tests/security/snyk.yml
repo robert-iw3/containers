@@ -1,0 +1,35 @@
+sast-snyk:
+  stage: test
+  image: docker.io/docker:latest
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_REGISTRY:
+    DOCKER_IMAGE:
+    DOCKER_TAG:
+    SNYK_TOKEN:
+  script:
+    - docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+    - docker run --rm -it
+        --env SNYK_TOKEN
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        snyk/snyk:docker snyk test --json
+        --docker $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG > gl-snyk-code-test-$DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG.json
+    - docker run --rm -it
+        --env SNYK_TOKEN
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        snyk/snyk:docker snyk container monitor
+        --docker $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+    - docker run --rm -it
+        --env SNYK_TOKEN
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        snyk/snyk:docker snyk container sbom --format=spdx2.3+json
+        --docker $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG > gl-snyk-sbom-$DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG.json
+  artifacts:
+    paths:
+      - gl-snyk-code-test-$DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG.json
+      - gl-snyk-sbom-$DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG.json

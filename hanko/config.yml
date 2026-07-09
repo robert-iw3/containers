@@ -1,0 +1,60 @@
+database:
+  user: "{{ vault_secret('secret/hanko', 'db_username') }}"
+  password: "{{ vault_secret('secret/hanko', 'db_password') }}"
+  host: postgres-hanko.hanko.svc.cluster.local
+  port: 5432
+  dialect: postgres
+  ssl:
+    enabled: true
+    mode: verify-full
+    ca: /etc/tls/ca.crt
+passcode:
+  email:
+    from_address: no-reply@hanko.io
+  smtp:
+    host: mailslurper.hanko.svc.cluster.local
+    port: 2500
+    tls: true
+    auth:
+      user: "{{ vault_secret('secret/hanko', 'smtp_user') }}"
+      password: "{{ vault_secret('secret/hanko', 'smtp_password') }}"
+secrets:
+  keys:
+    - "{{ vault_secret('secret/hanko', 'jwt_secret') }}"
+service:
+  name: Hanko Authentication Service
+webauthn:
+  relying_party:
+    id: your-domain.com
+    name: Hanko Authentication
+    origins:
+      - "https://hanko.your-domain.com"
+      - "http://localhost:9500" # For development
+session:
+  cookie:
+    secure: true
+    http_only: true
+    same_site: strict
+    max_age: 86400
+server:
+  public:
+    cors:
+      allow_origins:
+        - "https://hanko.your-domain.com"
+        - "http://localhost:9500" # For development
+      allow_methods:
+        - GET
+        - POST
+        - OPTIONS
+      allow_headers:
+        - Authorization
+        - Content-Type
+    rate_limit:
+      enabled: true
+      requests: 100
+      per: 60s
+  tls:
+    enabled: true
+    cert: /etc/tls/tls.crt
+    key: /etc/tls/tls.key
+    ca: /etc/tls/ca.crt

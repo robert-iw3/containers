@@ -1,0 +1,965 @@
+{
+	"template": {
+		"description": "Learn to use the UnpackContent process to open and merge compressed data sources.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "UnpackContent Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "15d94750-2e37-356a-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "03cd9101-4b6a-3803-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "6fbb29e8-6f28-3865-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "f0b34912-0fc1-3e39-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "3f4b3c31-71ab-3a34-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "1123.0200830712556",
+								"y": "454.6799182071941"
+							},
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "6fbb29e8-6f28-3865-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "original",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "12d4670c-c6f5-3a30-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "40df52b5-2e8c-390c-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "f0b34912-0fc1-3e39-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "9da9c1f1-00c0-35be-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "5caf7f3e-52d8-33d5-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "938.6000391259431",
+								"y": "163.49995604899095"
+							},
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "118a780b-e200-360c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "f0b34912-0fc1-3e39-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "716e00eb-f4af-3f13-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "1361.4997583642244",
+								"y": "456.71992675211595"
+							},
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "2d554625-aef6-3698-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "merged",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "12d4670c-c6f5-3a30-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "7f7cbb26-74b7-3213-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "12d4670c-c6f5-3a30-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "118a780b-e200-360c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "85d77754-0089-3597-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "394.99997198727124",
+								"y": "272.49995604899095"
+							},
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "6fbb29e8-6f28-3865-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "original",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "f0b34912-0fc1-3e39-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "d96a62b8-66b8-3c28-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "6fbb29e8-6f28-3865-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "12d4670c-c6f5-3a30-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "ef1229d1-05e0-353d-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "933.479736328125",
+								"y": "281.0199279785156"
+							},
+							"destination": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "6fbb29e8-6f28-3865-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "0",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "15d94750-2e37-356a-0000-000000000000",
+								"id": "118a780b-e200-360c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"labels": {
+						"id": "6089579b-930a-3769-0000-000000000000",
+						"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+						"position": {
+							"x": "367.5600659814119",
+							"y": "576.2199304046885"
+						},
+						"height": "139.41915893554688",
+						"label": "Notice use of Output Port for Errors & Originals\nLeave these routed during testing and\nthen auto terminate later, or route the\noutput port to an  Error Notification Handler.",
+						"style": {
+							"entry": {
+								"key": "font-size",
+								"value": "24px"
+							}
+						},
+						"width": "566.3817749023438"
+					},
+					"outputPorts": [
+						{
+							"id": "2d554625-aef6-3698-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "1235.8801123681305",
+								"y": "554.6199181976573"
+							},
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "output",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'output'' is invalid because Output connection for port 'output' is not defined."
+						},
+						{
+							"id": "6fbb29e8-6f28-3865-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "506.99997198727124",
+								"y": "502.99995604899095"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "errors",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'errors'' is invalid because Output connection for port 'errors' is not defined."
+						}
+					],
+					"processors": [
+						{
+							"id": "118a780b-e200-360c-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "1067.5999719872711",
+								"y": "99.69996367838547"
+							},
+							"bundle": {
+								"artifact": "nifi-hadoop-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Hadoop Configuration Resources",
+											"value": {
+												"name": "Hadoop Configuration Resources"
+											}
+										},
+										{
+											"key": "kerberos-credentials-service",
+											"value": {
+												"identifiesControllerService": "org.apache.nifi.kerberos.KerberosCredentialsService",
+												"name": "kerberos-credentials-service"
+											}
+										},
+										{
+											"key": "Kerberos Principal",
+											"value": {
+												"name": "Kerberos Principal"
+											}
+										},
+										{
+											"key": "Kerberos Keytab",
+											"value": {
+												"name": "Kerberos Keytab"
+											}
+										},
+										{
+											"key": "Kerberos Relogin Period",
+											"value": {
+												"name": "Kerberos Relogin Period"
+											}
+										},
+										{
+											"key": "Additional Classpath Resources",
+											"value": {
+												"name": "Additional Classpath Resources"
+											}
+										},
+										{
+											"key": "Directory",
+											"value": {
+												"name": "Directory"
+											}
+										},
+										{
+											"key": "Conflict Resolution Strategy",
+											"value": {
+												"name": "Conflict Resolution Strategy"
+											}
+										},
+										{
+											"key": "Block Size",
+											"value": {
+												"name": "Block Size"
+											}
+										},
+										{
+											"key": "IO Buffer Size",
+											"value": {
+												"name": "IO Buffer Size"
+											}
+										},
+										{
+											"key": "Replication",
+											"value": {
+												"name": "Replication"
+											}
+										},
+										{
+											"key": "Permissions umask",
+											"value": {
+												"name": "Permissions umask"
+											}
+										},
+										{
+											"key": "Remote Owner",
+											"value": {
+												"name": "Remote Owner"
+											}
+										},
+										{
+											"key": "Remote Group",
+											"value": {
+												"name": "Remote Group"
+											}
+										},
+										{
+											"key": "Compression codec",
+											"value": {
+												"name": "Compression codec"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Hadoop Configuration Resources",
+											"value": "${hadoopConfigurationResources}"
+										},
+										{
+											"key": "kerberos-credentials-service"
+										},
+										{
+											"key": "Kerberos Principal"
+										},
+										{
+											"key": "Kerberos Keytab"
+										},
+										{
+											"key": "Kerberos Relogin Period",
+											"value": "4 hours"
+										},
+										{
+											"key": "Additional Classpath Resources"
+										},
+										{
+											"key": "Directory",
+											"value": "/tmp/nifi/"
+										},
+										{
+											"key": "Conflict Resolution Strategy",
+											"value": "fail"
+										},
+										{
+											"key": "Block Size"
+										},
+										{
+											"key": "IO Buffer Size"
+										},
+										{
+											"key": "Replication"
+										},
+										{
+											"key": "Permissions umask"
+										},
+										{
+											"key": "Remote Owner"
+										},
+										{
+											"key": "Remote Group"
+										},
+										{
+											"key": "Compression codec",
+											"value": "NONE"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "PutHDFS",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.hadoop.PutHDFS"
+						},
+						{
+							"id": "12d4670c-c6f5-3a30-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "1060.5998865380525",
+								"y": "289.0399340763347"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Merge Strategy",
+											"value": {
+												"name": "Merge Strategy"
+											}
+										},
+										{
+											"key": "Merge Format",
+											"value": {
+												"name": "Merge Format"
+											}
+										},
+										{
+											"key": "Attribute Strategy",
+											"value": {
+												"name": "Attribute Strategy"
+											}
+										},
+										{
+											"key": "Correlation Attribute Name",
+											"value": {
+												"name": "Correlation Attribute Name"
+											}
+										},
+										{
+											"key": "mergecontent-metadata-strategy",
+											"value": {
+												"name": "mergecontent-metadata-strategy"
+											}
+										},
+										{
+											"key": "Minimum Number of Entries",
+											"value": {
+												"name": "Minimum Number of Entries"
+											}
+										},
+										{
+											"key": "Maximum Number of Entries",
+											"value": {
+												"name": "Maximum Number of Entries"
+											}
+										},
+										{
+											"key": "Minimum Group Size",
+											"value": {
+												"name": "Minimum Group Size"
+											}
+										},
+										{
+											"key": "Maximum Group Size",
+											"value": {
+												"name": "Maximum Group Size"
+											}
+										},
+										{
+											"key": "Max Bin Age",
+											"value": {
+												"name": "Max Bin Age"
+											}
+										},
+										{
+											"key": "Maximum number of Bins",
+											"value": {
+												"name": "Maximum number of Bins"
+											}
+										},
+										{
+											"key": "Delimiter Strategy",
+											"value": {
+												"name": "Delimiter Strategy"
+											}
+										},
+										{
+											"key": "Header File",
+											"value": {
+												"name": "Header File"
+											}
+										},
+										{
+											"key": "Footer File",
+											"value": {
+												"name": "Footer File"
+											}
+										},
+										{
+											"key": "Demarcator File",
+											"value": {
+												"name": "Demarcator File"
+											}
+										},
+										{
+											"key": "Compression Level",
+											"value": {
+												"name": "Compression Level"
+											}
+										},
+										{
+											"key": "Keep Path",
+											"value": {
+												"name": "Keep Path"
+											}
+										},
+										{
+											"key": "Tar Modified Time",
+											"value": {
+												"name": "Tar Modified Time"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Merge Strategy",
+											"value": "Defragment"
+										},
+										{
+											"key": "Merge Format",
+											"value": "Binary Concatenation"
+										},
+										{
+											"key": "Attribute Strategy",
+											"value": "Keep Only Common Attributes"
+										},
+										{
+											"key": "Correlation Attribute Name"
+										},
+										{
+											"key": "mergecontent-metadata-strategy",
+											"value": "Do Not Merge Uncommon Metadata"
+										},
+										{
+											"key": "Minimum Number of Entries",
+											"value": "1"
+										},
+										{
+											"key": "Maximum Number of Entries",
+											"value": "1000"
+										},
+										{
+											"key": "Minimum Group Size",
+											"value": "0 B"
+										},
+										{
+											"key": "Maximum Group Size"
+										},
+										{
+											"key": "Max Bin Age"
+										},
+										{
+											"key": "Maximum number of Bins",
+											"value": "5"
+										},
+										{
+											"key": "Delimiter Strategy",
+											"value": "Filename"
+										},
+										{
+											"key": "Header File"
+										},
+										{
+											"key": "Footer File"
+										},
+										{
+											"key": "Demarcator File"
+										},
+										{
+											"key": "Compression Level",
+											"value": "1"
+										},
+										{
+											"key": "Keep Path",
+											"value": "false"
+										},
+										{
+											"key": "Tar Modified Time",
+											"value": "${file.lastModifiedTime}"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "MergeContent",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "merged"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "original"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.MergeContent"
+						},
+						{
+							"id": "9da9c1f1-00c0-35be-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "446.00001471188057",
+								"y": "-123.5000354156239"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Input Directory",
+											"value": {
+												"name": "Input Directory"
+											}
+										},
+										{
+											"key": "File Filter",
+											"value": {
+												"name": "File Filter"
+											}
+										},
+										{
+											"key": "Path Filter",
+											"value": {
+												"name": "Path Filter"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Keep Source File",
+											"value": {
+												"name": "Keep Source File"
+											}
+										},
+										{
+											"key": "Recurse Subdirectories",
+											"value": {
+												"name": "Recurse Subdirectories"
+											}
+										},
+										{
+											"key": "Polling Interval",
+											"value": {
+												"name": "Polling Interval"
+											}
+										},
+										{
+											"key": "Ignore Hidden Files",
+											"value": {
+												"name": "Ignore Hidden Files"
+											}
+										},
+										{
+											"key": "Minimum File Age",
+											"value": {
+												"name": "Minimum File Age"
+											}
+										},
+										{
+											"key": "Maximum File Age",
+											"value": {
+												"name": "Maximum File Age"
+											}
+										},
+										{
+											"key": "Minimum File Size",
+											"value": {
+												"name": "Minimum File Size"
+											}
+										},
+										{
+											"key": "Maximum File Size",
+											"value": {
+												"name": "Maximum File Size"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Input Directory",
+											"value": "/tmp/nifi/"
+										},
+										{
+											"key": "File Filter",
+											"value": "[^\\.].*.zip"
+										},
+										{
+											"key": "Path Filter"
+										},
+										{
+											"key": "Batch Size",
+											"value": "10"
+										},
+										{
+											"key": "Keep Source File",
+											"value": "true"
+										},
+										{
+											"key": "Recurse Subdirectories",
+											"value": "true"
+										},
+										{
+											"key": "Polling Interval",
+											"value": "0 sec"
+										},
+										{
+											"key": "Ignore Hidden Files",
+											"value": "true"
+										},
+										{
+											"key": "Minimum File Age",
+											"value": "0 sec"
+										},
+										{
+											"key": "Maximum File Age"
+										},
+										{
+											"key": "Minimum File Size",
+											"value": "0 B"
+										},
+										{
+											"key": "Maximum File Size"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "15 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GetFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GetFile"
+						},
+						{
+							"id": "f0b34912-0fc1-3e39-0000-000000000000",
+							"parentGroupId": "15d94750-2e37-356a-0000-000000000000",
+							"position": {
+								"x": "438.99997198727124",
+								"y": "92.99995604899095"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Packaging Format",
+											"value": {
+												"name": "Packaging Format"
+											}
+										},
+										{
+											"key": "File Filter",
+											"value": {
+												"name": "File Filter"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Packaging Format",
+											"value": "zip"
+										},
+										{
+											"key": "File Filter",
+											"value": ".*"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UnpackContent",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "success"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.UnpackContent"
+						}
+					]
+				},
+				"name": "UnpackContent Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "06/22/2020 20:39:31 UTC",
+		"_encoding-version": "1.2"
+	}
+}

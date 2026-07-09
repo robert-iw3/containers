@@ -1,0 +1,72 @@
+---
+- name: Check prerequisites
+  command: "{{ item }} --version"
+  loop:
+    - "{{ 'podman' if deployment_type == 'podman' else 'docker' }}"
+    - python3
+    - kubectl
+  when: deployment_type in ['docker', 'podman', 'kubernetes']
+  register: prereq_check
+  ignore_errors: yes
+
+- name: Fail if prerequisites are missing
+  fail:
+    msg: "Required tool {{ item.item }} is not installed"
+  when: item.failed
+  loop: "{{ prereq_check.results }}"
+
+- name: Ensure reports directory exists
+  file:
+    path: "{{ kube_bench_reports_dir | default('/tmp/kube-bench-reports') }}"
+    state: directory
+    mode: '0750'
+    owner: "{{ ansible_user | default('nobody') }}"
+  changed_when: false
+
+- name: Copy kube-bench config
+  template:
+    src: config.yaml.j2
+    dest: /etc/kube-bench/config.yaml
+    mode: '0640'
+    owner: "{{ ansible_user | default('nobody') }}"
+    backup: yes
+  register: config_copy
+
+- name: Copy orchestrator script
+  copy:
+    src: kube_bench_orchestrator.py
+    dest: "{{ kube_bench_dir | default('/opt/kube-bench') }}/kube_bench_orchestrator.py"
+    mode: '0750'
+    owner: "{{ ansible_user | default('nobody') }}"
+    backup: yes
+  register: script_copy
+
+- name: Build kube-bench image
+  command: "{{ item }} build -t kube-bench:latest -f {{ kube_bench_dir | default('/opt/kube-bench') }}/docker/{{ 'Dockerfile.ubi9-fips' if fips_enabled | default(false) else 'Dockerfile' }}"
+  args:
+    chdir: "{{ kube_bench_dir | default('/opt/kube-bench') }}"
+  with_items:
+    - "{{ 'podman' if deployment_type == 'podman' else 'docker' }}"
+  when: deployment_type in ['docker', 'podman', 'kubernetes']
+  register: build_result
+  changed_when: build_result.rc == 0
+
+- name: Run kube-bench orchestrator
+  command: python3 {{ kube_bench_dir | default('/opt/kube-bench') }}/kube_bench_orchestrator.py
+  environment:
+    KUBE_BENCH_CONFIG: /etc/kube-bench/config.yaml
+    KUBE_BENCH_SIGNATURE: "{{ kube_bench_signature | default('') }}"
+  register: scan_result
+  when: config_copy.changed or script_copy.changed or build_result.changed
+
+- name: Copy Kubernetes job spec (when deployment_type is kubernetes)
+  template:
+    src: kube_bench_job.yaml.j2
+    dest: "/tmp/kube-bench-job-{{ inventory_hostname }}.yaml"
+    mode: '0640'
+    backup: yes
+  when: deployment_type == 'kubernetes'
+
+- name: Apply Kubernetes job (when deployment_type is kubernetes)
+  command: kubectl apply -f "/tmp/kube-bench-job-{{ inventory_hostname }}.yaml"
+  when: deployment_type == 'kubernetes'

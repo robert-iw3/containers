@@ -1,0 +1,25 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+  networks:
+    - elastic
+
+services:
+  ha-proxy:
+    <<: *common-vars-apps
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ha-proxy
+    user: root
+    volumes:
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+      #- /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+      - ./certs:/certs
+    ports:
+      - 80:80
+      - 443:443

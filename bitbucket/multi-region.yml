@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bitbucket-ingress
+  namespace: bitbucket
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    external-dns.alpha.kubernetes.io/hostname: bitbucket.global.dev.io
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  rules:
+  - host: bitbucket.global.dev.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bitbucket
+            port:
+              number: 7990
+  tls:
+  - hosts:
+    - bitbucket.global.dev.io
+    secretName: bitbucket-tls

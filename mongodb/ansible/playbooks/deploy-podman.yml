@@ -1,0 +1,117 @@
+---
+- name: Deploy MongoDB with Podman
+  hosts: servers
+  become: yes
+  gather_facts: yes
+  vars:
+    mongodb_image: "{{ image | default('localhost/mongodb:8.0') }}"
+    data_path: "{{ data_path | default('/host/data') }}"
+    keyfile_path: "{{ keyfile_path | default('/etc/mongodb-keyfile') }}"
+    root_username: "{{ root_username | default('admin') }}"
+    init_replset: "{{ init_replset | default('') }}"
+    db_type: "{{ db_type | default('standalone') }}"
+    enable_firewall: true
+  vars_prompt:
+    - name: vault_mongo_password
+      prompt: Enter MongoDB root password (use Vault in prod)
+      private: yes
+      when: not ansible_vault_password_file is defined
+  collections:
+    - containers.podman
+  tasks:
+    - name: Install Podman and buildah
+      package:
+        name:
+          - podman
+          - buildah
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: mongodb
+        group: mongodb
+      loop:
+        - "{{ data_path }}"
+        - /var/log/mongodb
+
+    - name: Copy merged config
+      copy:
+        src: "{{ playbook_dir }}/../merged_mongod.conf"  # From Python
+        dest: /etc/mongod.conf
+        mode: '0644'
+
+    - name: Copy keyfile securely
+      copy:
+        src: "{{ keyfile_path }}"
+        dest: /etc/mongodb-keyfile
+        mode: '0400'
+        owner: mongodb
+        group: mongodb
+      no_log: true
+
+    - name: Build MongoDB image
+      containers.podman.podman_image:
+        name: "{{ mongodb_image }}"
+        path: "{{ playbook_dir }}/../"
+        dockerfile: Dockerfile
+        state: present
+        build:
+          extra_args:
+            - --cpus=1
+
+    - name: Allow MongoDB port in firewall
+      ufw:
+        rule: allow
+        port: '27017'
+        proto: tcp
+      when: enable_firewall
+      notify: Reload ufw
+
+    - name: Run MongoDB Podman container
+      containers.podman.podman_container:
+        name: "mongodb-{{ db_type }}-{{ inventory_hostname_short }}"
+        image: "{{ mongodb_image }}"
+        state: started
+        restart_policy: always
+        cpu_shares: 1024
+        memory_limit: 2g
+        ports:
+          - "27017:27017"
+        volumes:
+          - "{{ data_path }}:/data/db:Z"
+          - "/etc/mongod.conf:/etc/mongod.conf:ro:Z"
+          - "/etc/mongodb-keyfile:/etc/mongod-keyfile:ro:Z"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "{{ root_username }}"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongo_password }}"
+          MONGO_INITDB_REPLSET: "{{ init_replset }}"
+        command: "--config /etc/mongod.conf"
+        security_opt:
+          - label=disable
+        user: 999:999
+      register: podman_result
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      when: podman_result.changed
+
+    - name: Display replica init instructions
+      debug:
+        msg: |
+          For replica set, run on primary: podman exec -it mongodb-{{ db_type }}-{{ groups['servers'][0] }} mongosh --eval "rs.initiate({_id: '{{ init_replset }}', members: [{_id: 0, host: '{{ ansible_default_ipv4.address }}:27017'}]})"
+      when: init_replset != '' and inventory_hostname == groups['servers'][0]
+
+  handlers:
+    - name: Reload ufw
+      ufw:
+        state: reloaded
+      when: enable_firewall

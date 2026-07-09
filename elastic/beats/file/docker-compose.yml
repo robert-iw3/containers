@@ -1,0 +1,29 @@
+x-common-vars-apps: &common-vars-apps
+  networks:
+    - elastic
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+
+services:
+  filebeat:
+    <<: *common-vars-apps
+    build:
+      context: .
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    command:
+      - -e
+      - --strict.perms=false
+    volumes:
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro,Z
+      - /var/lib/containers:/var/lib/docker:ro
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+    environment:
+      FILEBEAT_INTERNAL_PASSWORD: ${FILEBEAT_INTERNAL_PASSWORD:-}
+      BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy

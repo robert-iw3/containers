@@ -1,0 +1,82 @@
+---
+- name: Deploy CSV Connectors for Splunk and Elasticsearch
+  hosts: localhost
+  vars:
+    config_file: "{{ config_file | default('deploy_config.yaml') }}"
+  tasks:
+    - name: Install dependencies
+      package:
+        name:
+          - rust
+          - cargo
+          - docker
+          - podman
+          - kubectl
+          - ansible
+          - musl-dev
+          - libgcc
+        state: present
+      become: true
+
+    - name: Install Ansible Docker collection
+      command: ansible-galaxy collection install community.docker
+      changed_when: false
+
+    - name: Copy configuration files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ item }}"
+        mode: '0644'
+      loop:
+        - deploy_config.yaml
+        - docker-compose.yml
+        - Dockerfile
+        - schemas.yaml
+        - src/main.rs
+        - src/handler.rs
+        - src/schema.rs
+        - src/sender.rs
+        - csv-splunk-deployment.yaml
+        - csv-elasticsearch-deployment.yaml
+        - csv-pvc.yaml
+        - deploy_csv_connectors.rs
+        - Cargo.toml
+
+    - name: Read deployment method
+      slurp:
+        src: "{{ config_file }}"
+      register: config_content
+
+    - name: Parse config
+      set_fact:
+        deployment_method: "{{ (config_content.content | b64decode | from_yaml).deployment.method }}"
+
+    - name: Build Rust project
+      command: cargo build --release
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: deployment_method in ['docker', 'podman', 'kubernetes']
+
+    - name: Deploy with Docker
+      command: docker-compose up -d --build
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: deployment_method == 'docker'
+
+    - name: Deploy with Podman
+      command: podman-compose up -d --build
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: deployment_method == 'podman'
+
+    - name: Deploy with Kubernetes
+      command: cargo run --release --bin deploy_csv_connectors -- --config {{ config_file }}
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: deployment_method == 'kubernetes'
+
+    - name: Cleanup
+      command: cargo run --release --bin deploy_csv_connectors -- --config {{ config_file }} --cleanup
+      args:
+        chdir: "{{ playbook_dir }}"
+      when: cleanup | default(false) | bool

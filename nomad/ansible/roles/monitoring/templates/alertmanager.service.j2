@@ -1,0 +1,20 @@
+[Unit]
+Description=Alertmanager (podman)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStartPre=-/usr/bin/podman rm -f alertmanager
+ExecStart=/usr/bin/podman run --name alertmanager --rm \
+  -p {{ alertmanager_port }}:9093 \
+  -v {{ monitoring_data_dir }}/alertmanager/config:/etc/alertmanager:ro,Z \
+  -v {{ monitoring_data_dir }}/alertmanager/data:/alertmanager:Z \
+  {{ alertmanager_image }} \
+  --config.file=/etc/alertmanager/alertmanager.yml \
+  --storage.path=/alertmanager
+ExecStop=/usr/bin/podman stop alertmanager
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

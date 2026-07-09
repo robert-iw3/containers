@@ -1,0 +1,9 @@
+<form class="form-horizontal form-complex">
+    <label class="control-label" for="launch_remediation_scan_account">Tenable SC Account</label>
+        <div class="controls">
+        <splunk-search-dropdown name="action.launch_remediation_scan.param.account_name" id="launch_remediation_scan_account"
+            search = "| rest /servicesNS/nobody/TA-tenable/configs/conf-ta_tenable_account splunk_server=local | search tenable_account_type=*securitycenter* | table title"
+            label-field="title" value-field="title" />
+        <span class="help-block">Tenable SC Account to use.</span>
+        </div>
+</form>

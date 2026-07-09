@@ -1,0 +1,31 @@
+---
+- name: Create project directory
+  file:
+    path: "{{ project_dir }}"
+    state: directory
+
+- name: Copy files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+  loop:
+    - deploy.py
+    - .env
+    - kubernetes/
+
+- name: Deploy via Kubernetes
+  when: inventory_hostname in groups['k8s']
+  block:
+    - name: Generate certs
+      command: python3 {{ project_dir }}/deploy.py --generate-certs
+    - name: Seal secrets
+      command: bash {{ project_dir }}/seal-secret.sh
+    - name: Apply manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ project_dir }}/kubernetes/{{ item }}"
+      loop:
+        - rbac.yaml
+        - networkpolicy.yaml
+        - elastic-k8s.yml
+        - ingress.yaml

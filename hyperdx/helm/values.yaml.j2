@@ -1,0 +1,30 @@
+clickhouse:
+  enabled: {{ 'false' if use_external_clickhouse else 'true' }}
+otel:
+  enabled: {{ 'false' if use_external_otel else 'true' }}
+  clickhouseEndpoint: {{ external_clickhouse.host if use_external_clickhouse else "tcp://ch-server:9000" }}
+hyperdx:
+  apiKey: {{ api_key }}
+  otelExporterEndpoint: {{ external_otel_endpoint if use_external_otel else "http://otel-collector:4318" }}
+  defaultConnections: |
+    [
+      {
+        "name": "Local ClickHouse",
+        "host": "{{ external_clickhouse.host if use_external_clickhouse else 'http://ch-server:8123' }}",
+        "username": "{{ external_clickhouse.username }}",
+        "password": "{{ external_clickhouse.password or clickhouse_api_password }}"
+      }
+    ]
+  betaChOtelJsonSchemaEnabled: {{ 'true' if enable_json_schema else 'false' }}
+ingress:
+  enabled: true
+  host: {{ domain }}
+  tls:
+    enabled: true
+    tlsSecretName: "hyperdx-tls"
+replicaCount: 1
+clickhouse:
+  replicaCount: 1
+persistence:
+  enabled: true
+  size: 20Gi

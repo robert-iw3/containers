@@ -1,0 +1,20 @@
+endpoint_configs:
+{% for endpoint in kube_bench_endpoints %}
+  - endpoint: {{ endpoint.name }}
+    timeout: {{ endpoint.timeout | default(300) }}
+{% endfor %}
+reports_dir: {{ kube_bench_reports_dir | default('/tmp/kube-bench-reports') }}
+log_file: {{ kube_bench_log_file | default('/var/log/kube_bench_scan.log') }}
+deployment_type: {{ kube_bench_deployment_type | default('podman') }}
+max_concurrent_scans: {{ kube_bench_max_concurrent | default(2) }}
+report_formats:
+{% for format in kube_bench_report_formats | default(['txt', 'json', 'xml', 'html']) %}
+  - {{ format }}
+{% endfor %}
+timeout: {{ kube_bench_timeout | default(300) }}
+kubectl_path: {{ kube_bench_kubectl_path | default('/usr/local/bin/kubectl') }}
+kubeconfig_path: {{ kube_bench_kubeconfig_path | default('~/.kube/config') }}
+extra_args:
+{% for arg in kube_bench_extra_args | default(['--benchmark', 'cis-1.8']) %}
+  - {{ arg }}
+{% endfor %}

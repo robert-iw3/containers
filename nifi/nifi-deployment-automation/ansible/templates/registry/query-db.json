@@ -1,0 +1,299 @@
+{
+   "template":{
+      "description":"",
+      "groupId":"e203534b-0157-1000-4ebf-d99709df8080",
+      "name":"query-db",
+      "snippet":{
+         "connections":{
+            "id":"e23fcadc-0157-1000-0000-000000000000",
+            "parentGroupId":"e203534b-0157-1000-0000-000000000000",
+            "backPressureDataSizeThreshold":"1 GB",
+            "backPressureObjectThreshold":"10000",
+            "destination":{
+               "groupId":"e203534b-0157-1000-0000-000000000000",
+               "id":"e23fb4f3-0157-1000-0000-000000000000",
+               "type":"PROCESSOR"
+            },
+            "flowFileExpiration":"0 sec",
+            "labelIndex":"1",
+            "name":"",
+            "selectedRelationships":"success",
+            "source":{
+               "groupId":"e203534b-0157-1000-0000-000000000000",
+               "id":"e22b0614-0157-1000-0000-000000000000",
+               "type":"PROCESSOR"
+            },
+            "zIndex":"0"
+         },
+         "controllerServices":{
+            "id":"e22cacac-0157-1000-0000-000000000000",
+            "parentGroupId":"e203534b-0157-1000-0000-000000000000",
+            "comments":"",
+            "descriptors":{
+               "entry":[
+                  {
+                     "key":"Database Connection URL",
+                     "value":{
+                        "name":"Database Connection URL"
+                     }
+                  },
+                  {
+                     "key":"Database Driver Class Name",
+                     "value":{
+                        "name":"Database Driver Class Name"
+                     }
+                  },
+                  {
+                     "key":"database-driver-locations",
+                     "value":{
+                        "name":"database-driver-locations"
+                     }
+                  },
+                  {
+                     "key":"Database User",
+                     "value":{
+                        "name":"Database User"
+                     }
+                  },
+                  {
+                     "key":"Password",
+                     "value":{
+                        "name":"Password"
+                     }
+                  },
+                  {
+                     "key":"Max Wait Time",
+                     "value":{
+                        "name":"Max Wait Time"
+                     }
+                  },
+                  {
+                     "key":"Max Total Connections",
+                     "value":{
+                        "name":"Max Total Connections"
+                     }
+                  }
+               ]
+            },
+            "name":"Postgres Pool",
+            "properties":{
+               "entry":[
+                  {
+                     "key":"Database Connection URL",
+                     "value":"jdbc:postgresql://postgres/foo"
+                  },
+                  {
+                     "key":"Database Driver Class Name",
+                     "value":"org.postgresql.Driver"
+                  },
+                  {
+                     "key":"database-driver-locations",
+                     "value":"/opt/nifi/lib/postgresql-9.4.1211.jar"
+                  },
+                  {
+                     "key":"Database User",
+                     "value":"foo"
+                  },
+                  {
+                     "key":"Password"
+                  },
+                  {
+                     "key":"Max Wait Time"
+                  },
+                  {
+                     "key":"Max Total Connections"
+                  }
+               ]
+            },
+            "state":"ENABLED",
+            "type":"org.apache.nifi.dbcp.DBCPConnectionPool"
+         },
+         "processors":[
+            {
+               "id":"e22b0614-0157-1000-0000-000000000000",
+               "parentGroupId":"e203534b-0157-1000-0000-000000000000",
+               "position":{
+                  "x":"0.0",
+                  "y":"0.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Database Connection Pooling Service",
+                           "value":{
+                              "identifiesControllerService":"org.apache.nifi.dbcp.DBCPService",
+                              "name":"Database Connection Pooling Service"
+                           }
+                        },
+                        {
+                           "key":"db-fetch-db-type",
+                           "value":{
+                              "name":"db-fetch-db-type"
+                           }
+                        },
+                        {
+                           "key":"Table Name",
+                           "value":{
+                              "name":"Table Name"
+                           }
+                        },
+                        {
+                           "key":"Columns to Return",
+                           "value":{
+                              "name":"Columns to Return"
+                           }
+                        },
+                        {
+                           "key":"Maximum-value Columns",
+                           "value":{
+                              "name":"Maximum-value Columns"
+                           }
+                        },
+                        {
+                           "key":"Max Wait Time",
+                           "value":{
+                              "name":"Max Wait Time"
+                           }
+                        },
+                        {
+                           "key":"Fetch Size",
+                           "value":{
+                              "name":"Fetch Size"
+                           }
+                        },
+                        {
+                           "key":"qdbt-max-rows",
+                           "value":{
+                              "name":"qdbt-max-rows"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Database Connection Pooling Service",
+                           "value":"e22cacac-0157-1000-0000-000000000000"
+                        },
+                        {
+                           "key":"db-fetch-db-type",
+                           "value":"Generic"
+                        },
+                        {
+                           "key":"Table Name",
+                           "value":"bar"
+                        },
+                        {
+                           "key":"Columns to Return"
+                        },
+                        {
+                           "key":"Maximum-value Columns"
+                        },
+                        {
+                           "key":"Max Wait Time",
+                           "value":"0 seconds"
+                        },
+                        {
+                           "key":"Fetch Size",
+                           "value":"0"
+                        },
+                        {
+                           "key":"qdbt-max-rows",
+                           "value":"0"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"QueryDatabaseTable",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "name":"success"
+               },
+               "style":"",
+               "type":"org.apache.nifi.processors.standard.QueryDatabaseTable"
+            },
+            {
+               "id":"e23fb4f3-0157-1000-0000-000000000000",
+               "parentGroupId":"e203534b-0157-1000-0000-000000000000",
+               "position":{
+                  "x":"571.0",
+                  "y":"0.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"JSON container options",
+                           "value":{
+                              "name":"JSON container options"
+                           }
+                        },
+                        {
+                           "key":"Wrap Single Record",
+                           "value":{
+                              "name":"Wrap Single Record"
+                           }
+                        },
+                        {
+                           "key":"Avro schema",
+                           "value":{
+                              "name":"Avro schema"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"JSON container options",
+                           "value":"array"
+                        },
+                        {
+                           "key":"Wrap Single Record",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Avro schema"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ConvertAvroToJSON",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "name":"success"
+                  }
+               ],
+               "style":"",
+               "type":"org.apache.nifi.processors.avro.ConvertAvroToJSON"
+            }
+         ]
+      },
+      "timestamp":"10/20/2022 15:04:25 UTC",
+      "_encoding-version":"1.2"
+   }
+}

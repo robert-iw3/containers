@@ -1,0 +1,196 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defguard
+  namespace: defguard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: defguard
+  template:
+    metadata:
+      labels:
+        app: defguard
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: core
+        image: ghcr.io/defguard/defguard:current
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 50055
+          name: grpc
+        envFrom:
+        - secretRef:
+            name: defguard-secrets
+        env:
+        - name: DEFGUARD_COOKIE_INSECURE
+          value: "false"
+        - name: DEFGUARD_COOKIE_DOMAIN
+          value: "example.com"
+        - name: DEFGUARD_LOG_LEVEL
+          value: "info"
+        - name: DEFGUARD_DB_HOST
+          value: "defguard-db"
+        - name: DEFGUARD_DB_PORT
+          value: "5432"
+        - name: DEFGUARD_URL
+          value: "https://example.com:8000"
+        - name: DEFGUARD_GRPC_TLS
+          value: "true"
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+          readOnly: true
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      - name: gateway
+        image: ghcr.io/defguard/gateway:latest
+        ports:
+        - containerPort: 50051
+          protocol: UDP
+          name: wireguard
+        envFrom:
+        - secretRef:
+            name: defguard-secrets
+        env:
+        - name: DEFGUARD_GRPC_URL
+          value: "https://localhost:50055"
+        - name: DEFGUARD_STATS_PERIOD
+          value: "60"
+        - name: RUST_LOG
+          value: "info"
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+          readOnly: true
+        resources:
+          limits:
+            cpu: "0.4"
+            memory: "256Mi"
+          requests:
+            cpu: "0.2"
+            memory: "128Mi"
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      - name: proxy
+        image: ghcr.io/defguard/defguard-proxy:current
+        ports:
+        - containerPort: 8080
+          name: proxy
+        env:
+        - name: DEFGUARD_PROXY_UPSTREAM_GRPC_URL
+          value: "https://localhost:50055/"
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+          readOnly: true
+        resources:
+          limits:
+            cpu: "0.3"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: certs
+        secret:
+          secretName: defguard-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defguard-db
+  namespace: defguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: defguard-db
+  template:
+    metadata:
+      labels:
+        app: defguard-db
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: db
+        image: postgres:18-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        envFrom:
+        - secretRef:
+            name: defguard-secrets
+        env:
+        - name: POSTGRES_DB
+          value: "defguard"
+        - name: POSTGRES_USER
+          value: "defguard"
+        - name: POSTGRES_INITDB_ARGS
+          value: "--data-checksums"
+        volumeMounts:
+        - name: db-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          limits:
+            cpu: "0.3"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "defguard"]
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "defguard"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: db-storage
+        persistentVolumeClaim:
+          claimName: defguard-db-pvc

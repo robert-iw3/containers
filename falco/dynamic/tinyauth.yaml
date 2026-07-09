@@ -1,0 +1,23 @@
+http:
+  routers:
+    tinyauth:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`tinyauth.local`, `www.tinyauth.local`)"
+      middlewares:
+        - secured
+      tls:
+        certificates:
+          - certFile: /secrets/tinyauth.crt
+            keyFile: /secrets/tinyauth.key
+      service: tinyauth
+  services:
+    tinyauth:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3000"
+        passHostHeader: true
+        healthCheck:
+          path: /status
+          interval: 10s
+          timeout: 3s

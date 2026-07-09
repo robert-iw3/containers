@@ -1,0 +1,29 @@
+global
+    log /dev/log local0
+    maxconn 4096
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+    errorfile 503 /usr/local/etc/haproxy/errors/503.http
+
+frontend http-in
+    bind *:{{ haproxy_http_port }}
+    redirect scheme https code 301 if !{ ssl_fc }
+
+frontend https-in
+    bind *:{{ haproxy_https_port }} ssl crt /certs/redmine.pem ca-file /certs/ca.crt
+    option forwardfor
+    acl host_redmine hdr(host) -i redmine.io
+    use_backend redmine-backend if host_redmine
+
+backend redmine-backend
+    server redmine redmine:{{ redmine_port }} check ssl verify required ca-file /certs/ca.crt

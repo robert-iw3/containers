@@ -1,0 +1,72 @@
+# Example: API Gateway, multiple SQL containers, and routing
+
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "3000:3000"  # Expose API
+    environment:
+      SQL_USER: sa
+      SQL_PASSWORD: YourStrong!Passw0rd
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT_SECRET: your_jwt_secret  # For auth
+    depends_on:
+      - redis
+      - sql1
+      - sql2
+    deploy:  # For swarm or compose scaling
+      replicas: 2  # Scale gateway instances for high traffic
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    networks:
+      - sql-net
+
+  redis:  # For dynamic shard mapping and caching
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sql-net
+
+  sql1:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+    ports:
+      - "1434:1433"
+    volumes:
+      - sql1-data:/var/opt/mssql
+    networks:
+      - sql-net
+
+  sql2:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+    ports:
+      - "1435:1433"
+    volumes:
+      - sql2-data:/var/opt/mssql
+    networks:
+      - sql-net
+
+  # Add more sqlN for horizontal scaling
+
+volumes:
+  redis-data:
+  sql1-data:
+  sql2-data:
+
+networks:
+  sql-net:

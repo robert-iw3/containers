@@ -1,0 +1,32 @@
+version: '3'
+
+networks:
+  grafana:
+    name: grafana
+    driver: bridge
+
+services:
+  wallarm-node:
+    image: docker.io/wallarm/node:latest
+    container_name: wallarm-node
+    hostname: wallarm-node-api.dev
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      WALLARM_API_HOST: ${WALLARM_API_HOST}
+      WALLARM_API_TOKEN: ${WALLARM_API_TOKEN}
+      WALLARM_API_CA_VERIFY: ${WALLARM_API_CA_VERIFY}
+      WALLARM_MODE: ${WALLARM_MODE}
+      NGINX_PORT: ${NGINX_PORT}
+      WALLARM_LABELS: ${WALLARM_LABELS}
+      NGINX_BACKEND: ${NGINX_BACKEND}
+    healthcheck:
+      test: ["CMD", "wget", "http://grafana.io:80/","--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - grafana

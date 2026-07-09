@@ -1,0 +1,30 @@
+apiVersion: crd.projectcalico.org/v3
+kind: HostEndpoint
+metadata:
+  name: vpnclient-eth0
+  labels:
+    role: vpnclient
+    environment: production
+spec:
+  interfaceName: "*"
+  node: kube-07
+  expectedIPs: ["172.176.176.2"]
+---
+apiVersion: crd.projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: vpn-rules
+spec:
+  selector: "role == 'vpnclient'"
+  order: 0
+  applyOnForward: true
+  preDNAT: true
+  ingress:
+  - action: Deny
+    protocol: TCP
+    destination:
+      ports: [6379]
+  - action: Allow
+    protocol: UDP
+    destination:
+      ports: [53, 67]

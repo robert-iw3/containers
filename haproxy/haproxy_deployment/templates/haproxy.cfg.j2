@@ -1,0 +1,56 @@
+global
+  log stdout format raw daemon {{ log_level | default('info') }}
+  pidfile /run/haproxy.pid
+  maxconn {{ maxconn | default(10000) }}
+  server-state-file /var/lib/haproxy/server-state
+  stats socket /var/run/haproxy-stats.sock mode 600 level admin
+  ssl-default-bind-ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+  ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+defaults
+  mode http
+  log global
+  option httplog
+  option dontlognull
+  option http-server-close
+  option redispatch
+  retries 3
+  timeout http-request 10s
+  timeout queue 30s
+  timeout connect 5s
+  timeout client 30s
+  timeout server 30s
+  timeout http-keep-alive 10s
+  timeout check 5s
+  maxconn {{ maxconn | default(10000) }}
+  fullconn {{ fullconn | default(5000) }}
+  load-server-state-from-file global
+  errorfile 400 /usr/local/etc/haproxy/errors/400.http
+  errorfile 403 /usr/local/etc/haproxy/errors/403.http
+  errorfile 408 /usr/local/etc/haproxy/errors/408.http
+  errorfile 500 /usr/local/etc/haproxy/errors/500.http
+  errorfile 502 /usr/local/etc/haproxy/errors/502.http
+  errorfile 503 /usr/local/etc/haproxy/errors/503.http
+  errorfile 504 /usr/local/etc/haproxy/errors/504.http
+  option httpchk
+  stats enable
+  stats uri /stats
+  stats refresh 30s
+  stats show-node
+
+{% for service in services | default([{'name': 'default', 'backend': 'localhost', 'port': 8080}]) %}
+backend {{ service.name }}
+  balance {{ service.balance | default('roundrobin') }}
+  stick-table type ip size 1m expire 30m
+  stick on src
+  server-template {{ service.name }}-srv {{ service.num_servers | default(100) }} {{ service.backend }}:{{ service.port }} check
+  {% if service.health_check %}
+  option httpchk {{ service.health_check.method }} {{ service.health_check.path }}
+  {% endif %}
+  http-response set-header X-Session-Rate %[sess_rate]
+  http-response set-header X-SSL-Enabled %[ssl_fc]
+
+frontend {{ service.name }}-frontend
+  bind :::{{ service.port }} v4v6 ssl crt /usr/local/etc/haproxy/certs/haproxy.pem
+  default_backend {{ service.name }}
+{% endfor %}

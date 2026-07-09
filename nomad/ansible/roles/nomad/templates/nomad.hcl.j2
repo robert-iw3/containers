@@ -1,0 +1,101 @@
+# Nomad configuration
+data_dir = "{{ nomad_data_dir }}"
+log_level = "INFO"
+bind_addr = "{{ nomad_bind_addr }}"
+region = "{{ nomad_region }}"
+datacenter = "{{ nomad_datacenter }}"
+
+{% if nomad_tls_enabled %}
+tls {
+  http = true
+  rpc = true
+  ca_file = "{{ nomad_tls_ca_file }}"
+  cert_file = "{{ nomad_tls_cert_file }}"
+  key_file = "{{ nomad_tls_key_file }}"
+}
+{% endif %}
+
+{% if nomad_acl_enabled %}
+acl {
+  enabled = true
+  token_ttl = "30m"
+  policy_ttl = "3h"
+}
+{% endif %}
+
+{% if nomad_server_enabled %}
+server {
+  enabled = true
+  bootstrap_expect = {{ nomad_bootstrap_expect }}
+  {% if nomad_gossip_encryption_enabled %}
+  encrypt = "{{ nomad_gossip_key }}"
+  {% endif %}
+  server_join {
+    retry_join = [
+      {% for host in groups['nomad_servers'] if hostvars[host]['inventory_hostname'] != inventory_hostname %}
+      "{{ hostvars[host]['nomad_bind_addr'] }}:4648"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+    retry_max = 0
+    retry_interval = "15s"
+  }
+}
+{% endif %}
+
+{% if nomad_client_enabled %}
+client {
+  enabled = true
+  servers = [
+    {% for host in groups['nomad_servers'] %}
+    "{{ hostvars[host]['nomad_bind_addr'] }}:4647"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+
+{% if nomad_podman_enabled %}
+plugin "nomad-driver-podman" {
+  config {
+    enabled = true
+    socket_path = "{{ nomad_podman_socket_path }}"
+    volumes_enabled = {{ nomad_podman_volumes_enabled | to_json }}
+  }
+}
+{% endif %}
+{% if nomad_docker_enabled %}
+plugin "docker" {
+  config {
+    allow_privileged = {{ nomad_docker_allow_privileged | to_json }}
+  }
+}
+{% endif %}
+{% endif %}
+
+{% if nomad_consul_enabled %}
+consul {
+  address = "{{ nomad_consul_address }}"
+  grpc_address = "{{ nomad_consul_grpc_address }}"
+  auto_advertise = true
+  server_auto_join = {{ nomad_server_enabled | to_json }}
+  client_auto_join = {{ nomad_client_enabled | to_json }}
+}
+{% endif %}
+
+{% if nomad_vault_enabled %}
+vault {
+  enabled = true
+  address = "{{ nomad_vault_address }}"
+  create_from_role = "nomad-cluster"
+}
+{% endif %}
+
+{% if nomad_telemetry_enabled %}
+telemetry {
+  collection_interval = "1s"
+  disable_hostname = true
+  {% if nomad_telemetry_prometheus %}
+  prometheus_metrics = true
+  publish_allocation_metrics = true
+  publish_node_metrics = true
+  {% endif %}
+}
+{% endif %}

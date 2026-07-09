@@ -1,0 +1,108 @@
+plugins {
+    id 'java'
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+group = 'com.hopla'
+version = '2.2.0'
+
+// Allow external AI providers
+def externalAIEnabled = false
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'net.portswigger.burp.extensions:montoya-api:2025.4'
+    implementation 'org.yaml:snakeyaml:2.4'
+    implementation 'com.google.code.gson:gson:2.13.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation "org.commonmark:commonmark:0.24.0"
+}
+
+jar{
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+tasks.named('jar') {
+    archiveFileName.set("${project.name}.jar")
+}
+
+
+tasks.withType(Jar).configureEach {
+    destinationDirectory.set(file("$rootDir/releases/"))
+}
+
+
+// Encrypt payload to avoid anti-virus alert
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
+import java.nio.file.Files
+
+def keyString = "1234567890123456" // 16 bytes
+
+tasks.register('encryptResource') {
+    def inputFile = file('src/main/resources/default-payloads.yaml')
+    def outputDir = layout.buildDirectory.dir("encryptedResources")
+    def outputFile = outputDir.map { it.file("default-payloads.enc.yaml") }
+
+    inputs.file(inputFile)
+    outputs.file(outputFile)
+
+    doLast {
+        println "Encrypting ${inputFile} to ${outputFile.get().asFile}"
+
+        byte[] keyBytes = keyString.getBytes('UTF-8')
+        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES")
+
+        Cipher cipher = Cipher.getInstance("AES")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+
+        byte[] data = Files.readAllBytes(inputFile.toPath())
+        byte[] encrypted = cipher.doFinal(data)
+
+        outputFile.get().asFile.parentFile.mkdirs()
+        Files.write(outputFile.get().asFile.toPath(), encrypted)
+    }
+}
+
+tasks.register('updateVersion') {
+
+    def constantsFile = file('src/main/java/com/hopla/Constants.java')
+    def newVersion = project.version.toString()
+    def content = constantsFile.getText("UTF-8")
+    def updated = content.replaceAll(
+            /(?m)(public static final String VERSION\s*=\s*")[^"]*(";)/,
+            "\$1${newVersion}\$2"
+    )
+    constantsFile.write(updated, "UTF-8")
+    println "Updated Constants.java to version ${newVersion}"
+}
+
+tasks.register('externalAI') {
+
+    def constantsFile = file('src/main/java/com/hopla/Constants.java')
+    def content = constantsFile.getText("UTF-8")
+    def updated = content.replaceAll(
+            /(?m)(public static final boolean EXTERNAL_AI\s*=\s*)(true|false)(\s*;)/,
+            "\$1${externalAIEnabled}\$3"
+    )
+    constantsFile.write(updated, "UTF-8")
+    println "Updated Constants.java to EXTERNAL_AI ${externalAIEnabled}"
+}
+
+processResources {
+    dependsOn encryptResource
+    dependsOn updateVersion
+    dependsOn externalAI
+    from(layout.buildDirectory.dir("encryptedResources")) {
+        include "default-payloads.enc.yaml"
+        into ''
+    }
+    exclude "default-payloads.yaml"
+}

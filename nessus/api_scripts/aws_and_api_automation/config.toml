@@ -1,0 +1,17 @@
+[nessus]
+base_url = "https://127.0.0.1:8834"  # Nessus server URL
+verify_ssl = false  # Set to true for production with valid certs
+access_key_param = "/nessus/access_key"  # SSM param paths
+secret_key_param = "/nessus/secret_key"
+username_param = "/nessus/username"
+password_param = "/nessus/password"
+public_base_url_param = "/nessus/public_base_url"
+
+[aws]
+region = "us-east-1"  # Default AWS region
+log_group = "/gds/nessus-scans"  # CloudWatch log group
+
+[scan]
+policy_template = "scan_config/standard_scan_template.json"
+scan_config = "scan_config/scan.toml"
+export_days_ago = 5  # For recent scan exports

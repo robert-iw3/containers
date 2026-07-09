@@ -1,0 +1,239 @@
+---
+- name: Deploy Enterprise Sharded MongoDB
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    mongodb_image: "{{ image | default('mongodb:8.0-enterprise') }}"
+    data_path: "{{ data_path | default('/host/data') }}"
+    keyfile_path: "{{ keyfile_path | default('/etc/mongodb-keyfile') }}"
+    root_username: "{{ root_username | default('admin') }}"
+    init_replset: "{{ init_replset | default('configReplSet') }}"
+    db_type: "{{ db_type | default('enterprise-sharded') }}"
+    num_shards: "{{ num_shards | default(10) }}"
+    num_replicas: "{{ num_replicas | default(3) }}"
+    num_tenants: "{{ num_tenants | default(100) }}"
+    shard_storage_gb: "{{ shard_storage_gb | default(100) }}"
+    enable_firewall: true
+  vars_prompt:
+    - name: vault_mongo_password
+      prompt: Enter MongoDB root password (use Vault in prod)
+      private: yes
+      when: not ansible_vault_password_file is defined
+  collections:
+    - containers.podman
+  tasks:
+    - name: Install Podman and buildah
+      package:
+        name:
+          - podman
+          - buildah
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Create directories for configsvr
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0750'
+        owner: mongodb
+        group: mongodb
+      loop:
+        - "{{ data_path }}/configdb"
+        - /var/log/mongodb
+
+    - name: Copy merged config for configsvr
+      copy:
+        src: "{{ playbook_dir }}/../merged_mongod.conf"
+        dest: /etc/mongod-configsvr.conf
+        mode: '0644'
+
+    - name: Copy keyfile securely
+      copy:
+        src: "{{ keyfile_path }}"
+        dest: /etc/mongodb-keyfile
+        mode: '0400'
+        owner: mongodb
+        group: mongodb
+      no_log: true
+
+    - name: Copy tenant-init.js
+      copy:
+        src: "{{ playbook_dir }}/../tenant-init.js"
+        dest: /docker-entrypoint-initdb.d/tenant-init.js
+        mode: '0644'
+        owner: mongodb
+        group: mongodb
+
+    - name: Build MongoDB image
+      containers.podman.podman_image:
+        name: "{{ mongodb_image }}"
+        path: "{{ playbook_dir }}/../"
+        dockerfile: Dockerfile
+        state: present
+        build:
+          extra_args:
+            - --cpus=1
+
+    - name: Allow MongoDB ports in firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '27017'  # mongos/shards
+        - '27019'  # configsvr
+      when: enable_firewall
+      notify: Reload ufw
+
+    - name: Run Config Server containers
+      containers.podman.podman_container:
+        name: "mongodb-configsvr-{{ item }}-{{ inventory_hostname_short }}"
+        image: "{{ mongodb_image }}"
+        state: started
+        restart_policy: always
+        cpu_shares: 1024
+        memory_limit: 2g
+        ports:
+          - "{{ 27019 + (item | int) * 10 }}:27019"
+        volumes:
+          - "{{ data_path }}/configdb/{{ item }}:/data/configdb:Z"
+          - "/etc/mongod-configsvr.conf:/etc/mongod.conf:ro:Z"
+          - "/etc/mongodb-keyfile:/etc/mongod-keyfile:ro:Z"
+          - "/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro:Z"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "{{ root_username }}"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongo_password }}"
+          MONGO_INITDB_REPLSET: "{{ init_replset }}"
+        command: "--config /etc/mongod.conf --configsvr"
+        security_opt:
+          - label=disable
+        user: 999:999
+      loop: "{{ range(0, 3) | list }}"  # 3 configsvr nodes
+      register: configsvr_result
+
+    - name: Wait for Config Servers to be ready
+      wait_for:
+        port: 27019
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      when: configsvr_result.changed
+
+    - name: Initialize Config Server replica set
+      command: >-
+        podman exec mongodb-configsvr-0-{{ inventory_hostname_short }} mongosh --eval
+        "rs.initiate({_id: '{{ init_replset }}', members: [
+        {_id: 0, host: '{{ ansible_default_ipv4.address }}:27019'},
+        {_id: 1, host: '{{ ansible_default_ipv4.address }}:27029'},
+        {_id: 2, host: '{{ ansible_default_ipv4.address }}:27039'} ]})"
+      when: inventory_hostname == groups['servers'][0] and configsvr_result.changed
+
+    - name: Create shard directories
+      file:
+        path: "{{ data_path }}/shard{{ item }}"
+        state: directory
+        mode: '0750'
+        owner: mongodb
+        group: mongodb
+      loop: "{{ range(0, num_shards) | list }}"
+
+    - name: Run Shard containers
+      containers.podman.podman_container:
+        name: "mongodb-shard{{ shard_idx }}-{{ item }}-{{ inventory_hostname_short }}"
+        image: "{{ mongodb_image }}"
+        state: started
+        restart_policy: always
+        cpu_shares: 1024
+        memory_limit: 2g
+        ports:
+          - "{{ 27017 + (item | int) * 10 + (shard_idx | int) * 100 }}:27017"
+        volumes:
+          - "{{ data_path }}/shard{{ shard_idx }}/{{ item }}:/data/db:Z"
+          - "/etc/mongod-configsvr.conf:/etc/mongod.conf:ro:Z"  # Reuse merged config, override in env
+          - "/etc/mongodb-keyfile:/etc/mongod-keyfile:ro:Z"
+          - "/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro:Z"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "{{ root_username }}"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongo_password }}"
+          MONGO_INITDB_REPLSET: "shard{{ shard_idx }}"
+        command: "--config /etc/mongod.conf --shardsvr"
+        security_opt:
+          - label=disable
+        user: 999:999
+      loop: "{{ range(0, num_replicas) | list }}"
+      loop_control:
+        loop_var: item
+      with_sequence: start=0 end={{ num_shards - 1 }}
+      vars:
+        shard_idx: "{{ item }}"
+      register: shard_result
+
+    - name: Wait for Shards to be ready
+      wait_for:
+        port: "{{ 27017 + (item | int) * 100 }}"
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      loop: "{{ range(0, num_shards) | list }}"
+      when: shard_result.changed
+
+    - name: Initialize Shard replica sets
+      command: >-
+        podman exec mongodb-shard{{ item }}-0-{{ inventory_hostname_short }} mongosh --eval
+        "rs.initiate({_id: 'shard{{ item }}', members: [
+        {_id: 0, host: '{{ ansible_default_ipv4.address }}:{{ 27017 + (item | int) * 100 }}'},
+        {_id: 1, host: '{{ ansible_default_ipv4.address }}:{{ 27027 + (item | int) * 100 }}'},
+        {_id: 2, host: '{{ ansible_default_ipv4.address }}:{{ 27037 + (item | int) * 100 }}'} ]})"
+      loop: "{{ range(0, num_shards) | list }}"
+      when: inventory_hostname == groups['servers'][0] and shard_result.changed
+
+    - name: Run Mongos containers
+      containers.podman.podman_container:
+        name: "mongodb-mongos-{{ item }}-{{ inventory_hostname_short }}"
+        image: "{{ mongodb_image }}"
+        state: started
+        restart_policy: always
+        cpu_shares: 1024
+        memory_limit: 2g
+        ports:
+          - "{{ 27017 + (item | int) * 10 + 10000 }}:27017"
+        volumes:
+          - "/etc/mongod-configsvr.conf:/etc/mongod.conf:ro:Z"  # Reuse config
+          - "/etc/mongodb-keyfile:/etc/mongod-keyfile:ro:Z"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "{{ root_username }}"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongo_password }}"
+        command: "--config /etc/mongod.conf --mongos"
+        security_opt:
+          - label=disable
+        user: 999:999
+      loop: "{{ range(0, 3) | list }}"  # 3 mongos routers
+      register: mongos_result
+
+    - name: Wait for Mongos to be ready
+      wait_for:
+        port: "{{ 27017 + (item | int) * 10 + 10000 }}"
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      loop: "{{ range(0, 3) | list }}"
+      when: mongos_result.changed
+
+    - name: Add shards to cluster
+      command: podman exec mongodb-mongos-0-{{ inventory_hostname_short }} mongosh --eval "sh.addShard('shard{{ item }}/mongodb-shard{{ item }}-0-{{ inventory_hostname_short }}:{{ 27017 + (item | int) * 100 }}')"
+      loop: "{{ range(0, num_shards) | list }}"
+      when: inventory_hostname == groups['servers'][0] and shard_result.changed
+
+    - name: Verify tenant initialization
+      command: podman exec mongodb-mongos-0-{{ inventory_hostname_short }} mongosh -u {{ root_username }} -p {{ vault_mongo_password }} --authenticationDatabase admin --eval "db.getSiblingDB('tenant_1').data.findOne()"
+      when: num_tenants > 0 and mongos_result.changed
+      register: tenant_check
+      failed_when: tenant_check.rc != 0
+
+  handlers:
+    - name: Reload ufw
+      ufw:
+        state: reloaded
+      when: enable_firewall

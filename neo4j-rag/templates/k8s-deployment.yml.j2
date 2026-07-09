@@ -1,0 +1,440 @@
+# Ollama LLM Deployment (with multi-tenant annotations)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm
+  template:
+    metadata:
+      labels:
+        app: llm
+      annotations:  # Prometheus monitoring
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "11434"
+    spec:
+      containers:
+      - name: llm
+        image: {{ image_registry }}/neo4j-genai-llm:latest  # Built from ollama/ollama:latest or custom
+        ports:
+        - containerPort: 11434
+        resources:
+          limits:
+            cpu: "2"
+            memory: 8Gi
+          requests:
+            cpu: "1"
+            memory: 4Gi
+        volumeMounts:
+        - mountPath: /root/.ollama
+          name: ollama-storage
+        {% if gpu_enabled %}
+        nodeSelector:
+          nvidia.com/gpu: "true"
+        {% endif %}
+        readinessProbe:
+          httpGet:
+            path: /api/tags
+            port: 11434
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
+---
+# Neo4j Database Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7474"
+    spec:
+      containers:
+      - name: database
+        image: {{ neo4j_image | default('neo4j:5.26.28') }}
+        ports:
+        - containerPort: 7474
+        - containerPort: 7687
+        env:
+        - name: NEO4J_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: neo4j-secret
+              key: auth
+        - name: NEO4J_PLUGINS
+          value: '["apoc"]'
+        - name: NEO4J_db_tx__log_rotation_retention__policy
+          value: "false"
+        - name: NEO4J_dbms_security_procedures_unrestricted
+          value: "apoc.*"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 7474
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: "1"
+            memory: 2Gi
+        volumeMounts:
+        - mountPath: /data
+          name: neo4j-storage
+      volumes:
+      - name: neo4j-storage
+        persistentVolumeClaim:
+          claimName: neo4j-pvc
+---
+# Bot Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: bot
+  template:
+    metadata:
+      labels:
+        app: bot
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8501"
+    spec:
+      serviceAccountName: genai-sa  # RBAC
+      initContainers:
+      - name: wait-database
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -z database 7687; do echo waiting for database; sleep 2; done;']
+      containers:
+      - name: bot
+        image: {{ image_registry }}/neo4j-genai-bot:latest
+        ports:
+        - containerPort: 8501
+        envFrom:
+        - configMapRef:
+            name: genai-config
+        - secretRef:
+            name: api-secrets
+        volumeMounts:
+        - mountPath: /app/embedding_model
+          name: embedding-storage
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+      volumes:
+      - name: embedding-storage
+        persistentVolumeClaim:
+          claimName: embedding-pvc
+---
+# PDF Bot Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf-bot
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: pdf-bot
+  template:
+    metadata:
+      labels:
+        app: pdf-bot
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8503"
+    spec:
+      serviceAccountName: genai-sa
+      initContainers:
+      - name: wait-database
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -z database 7687; do echo waiting for database; sleep 2; done;']
+      containers:
+      - name: pdf-bot
+        image: {{ image_registry }}/neo4j-genai-pdf-bot:latest
+        ports:
+        - containerPort: 8503
+        envFrom:
+        - configMapRef:
+            name: genai-config
+        - secretRef:
+            name: api-secrets
+        volumeMounts:
+        - mountPath: /app/embedding_model
+          name: embedding-storage
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8503
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+      volumes:
+      - name: embedding-storage
+        persistentVolumeClaim:
+          claimName: embedding-pvc
+---
+# Loader Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loader
+  template:
+    metadata:
+      labels:
+        app: loader
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8502"
+    spec:
+      serviceAccountName: genai-sa
+      initContainers:
+      - name: wait-database
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -z database 7687; do echo waiting for database; sleep 2; done;']
+      containers:
+      - name: loader
+        image: {{ image_registry }}/neo4j-genai-loader:latest
+        ports:
+        - containerPort: 8502
+        envFrom:
+        - configMapRef:
+            name: genai-config
+        volumeMounts:
+        - mountPath: /app/embedding_model
+          name: embedding-storage
+        - mountPath: /app/images
+          name: images-storage
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8502
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+      volumes:
+      - name: embedding-storage
+        persistentVolumeClaim:
+          claimName: embedding-pvc
+      - name: images-storage
+        persistentVolumeClaim:
+          claimName: images-pvc
+---
+# API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8504"
+    spec:
+      serviceAccountName: genai-sa
+      initContainers:
+      - name: wait-database
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -z database 7687; do echo waiting for database; sleep 2; done;']
+      containers:
+      - name: api
+        image: {{ image_registry }}/neo4j-genai-api:latest
+        ports:
+        - containerPort: 8504
+        envFrom:
+        - configMapRef:
+            name: genai-config
+        - secretRef:
+            name: api-secrets
+        volumeMounts:
+        - mountPath: /app/embedding_model
+          name: embedding-storage
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8504
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+      volumes:
+      - name: embedding-storage
+        persistentVolumeClaim:
+          claimName: embedding-pvc
+---
+# Front-end Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-end
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: front-end
+  template:
+    metadata:
+      labels:
+        app: front-end
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8505"
+    spec:
+      serviceAccountName: genai-sa
+      containers:
+      - name: front-end
+        image: {{ image_registry }}/neo4j-genai-front-end:latest
+        ports:
+        - containerPort: 8505
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8505
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: 512Mi
+          requests:
+            cpu: "0.25"
+            memory: 256Mi
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: genai-config
+          items:
+          - key: nginx.conf
+            path: default.conf
+---
+# Pull-model as Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pull-model
+spec:
+  template:
+    spec:
+      serviceAccountName: genai-sa
+      containers:
+      - name: pull-model
+        image: {{ image_registry }}/neo4j-genai-pull-model:latest
+        env:
+        - name: OLLAMA_BASE_URL
+          value: "http://llm:11434"
+        - name: LLM
+          valueFrom:
+            configMapKeyRef:
+              name: genai-config
+              key: LLM
+      restartPolicy: Never
+  backoffLimit: 1
+---
+# PVCs (Persistent Volumes)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neo4j-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi  # For models
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: embedding-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: images-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

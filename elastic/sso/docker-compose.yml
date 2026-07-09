@@ -1,0 +1,207 @@
+volumes:
+  elasticsearch:
+    driver: local
+  kibana:
+    driver: local
+  fleetserver:
+    driver: local
+
+secrets:
+  elasticsearch.keystore:
+    file: ./secrets/keystore/elasticsearch.keystore
+  elasticsearch.service_tokens:
+    file: ./secrets/service_tokens
+  elastic.ca:
+    file: ./certs/ca/ca.crt
+  elasticsearch.http:
+    file: ./certs/elasticsearch/elasticsearch.chain.pem
+  elasticsearch.certificate:
+    file: ./certs/elasticsearch/elasticsearch.crt
+  elasticsearch.key:
+    file: ./certs/elasticsearch/elasticsearch.key
+  kibana.certificate:
+    file: ./certs/kibana/kibana.crt
+  kibana.key:
+    file: ./certs/kibana/kibana.key
+  fleet-server.certificate:
+    file: ./certs/fleet-server/fleet-server.crt
+  fleet-server.key:
+    file: .certs/fleet-server/fleet-server.key
+
+networks:
+  elastic:
+    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ../.env
+
+services:
+  setup:
+    <<: *common-vars-apps
+    profiles:
+      - setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: elastic-setup
+    init: true
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs:z
+      - ./secrets:/secrets:z
+      - ./bootstrap.sh:/setup/bootstrap.sh:ro,Z
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD}
+      SERVICE_TOKEN: ${SERVICE_TOKEN}
+      OIDC_PROVIDER: ${OIDC_PROVIDER}
+    user: "0"
+    command: bash /setup/bootstrap.sh
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  elasticsearch:
+    <<: *common-vars-apps
+    build:
+      context: ../elasticsearch/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    container_name: elastic
+    hostname: elasticsearch
+    volumes:
+      - ../elasticsearch/config/elasticsearch-oidc.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - elasticsearch:/usr/share/elasticsearch/data:Z
+    secrets:
+      - source: elasticsearch.keystore
+        target: /usr/share/elasticsearch/config/elasticsearch.keystore
+      - source: elasticsearch.service_tokens
+        target: /usr/share/elasticsearch/config/service_tokens
+      - source: elastic.ca
+        target: /usr/share/elasticsearch/config/certs/ca.crt
+      - source: elasticsearch.http
+        target: /usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.chain.pem
+      - source: elasticsearch.certificate
+        target: /usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.crt
+      - source: elasticsearch.key
+        target: /usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.key
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx2g -Xms2g -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
+      bootstrap.memory_lock: "true"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+    networks:
+      - elastic
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 200000
+        hard: 200000
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  kibana:
+    build:
+      context: ../kibana/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    container_name: kibana
+    volumes:
+      - kibana:/usr/share/kibana/data:Z
+      - ../kibana/config/kibana-oidc.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    secrets:
+      - source: elastic.ca
+        target: config/certs/ca/ca.crt
+      - source: kibana.certificate
+        target: config/certs/kibana/kibana.crt
+      - source: kibana.key
+        target: config/certs/kibana/kibana.key
+    ports:
+      - "5601:5601"
+    env_file:
+      - ./secrets/.env.kibana.token:ro,Z
+    environment:
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_SYSTEM_PASSWORD}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elastic
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -I -s --cacert config/certs/ca/ca.crt https://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    security_opt:
+      - no-new-privileges:true
+    restart: on-failure
+
+  fleet-server:
+    <<: *common-vars-apps
+    build:
+      context: ../fleet/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    container_name: fleet-server
+    hostname: fleet-server
+    volumes:
+      - fleetserver:/usr/share/elastic-agent:Z
+      # stack monitoring
+      - /var/lib/containers:/var/lib/docker/containers:ro
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+    secrets:
+      - source: elastic.ca
+        target: /certs/ca/ca.crt
+      - source: fleet-server.certificate
+        target: /certs/fleet-server/fleet-server.crt
+      - source: fleet-server.key
+        target: /certs/fleet-server/fleet-server.key
+    ports:
+      - 8220:8220
+    user: root
+    environment:
+      FLEET_ENROLL: 1
+      FLEET_SERVER_POLICY_ID: fleet-server-policy
+      FLEET_SERVER_ENABLE: 1
+      KIBANA_FLEET_SETUP: 1
+      KIBANA_HOST: https://kibana:5601
+      FLEET_URL: https://fleet-server:8220
+      FLEET_SERVER_ELASTICSEARCH_HOST: https://elasticsearch:9200
+      FLEET_CA: /certs/ca/ca.crt
+      KIBANA_FLEET_USERNAME: elastic
+      KIBANA_FLEET_PASSWORD: ${ELASTIC_PASSWORD}
+      FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
+      FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
+      FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
+      KIBANA_FLEET_CA: /certs/ca/ca.crt
+    depends_on:
+      kibana:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elastic
+
+

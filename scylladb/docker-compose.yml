@@ -1,0 +1,129 @@
+name: scylladb
+
+networks:
+  scylla:
+    name: scylla
+    driver: bridge
+
+volumes:
+  scylla-node1:
+  scylla-node2:
+  scylla-node3:
+
+x-scylla-common: &scylla-common
+  image: scylladb/scylla:2026.1.7
+  restart: unless-stopped
+  networks:
+    - scylla
+  # Container-friendly sizing. Raise --memory / drop --overprovisioned for bare metal.
+  # --smp is per-node shard count; scale with the host.
+  healthcheck:
+    test: ["CMD-SHELL", "nodetool status | grep -E '^UN' | wc -l | grep -qE '[1-9]'"]
+    interval: 30s
+    timeout: 10s
+    retries: 10
+    start_period: 60s
+
+services:
+  scylla-node1:
+    <<: *scylla-common
+    container_name: scylla-node1
+    volumes:
+      - scylla-node1:/var/lib/scylla
+      - ./schema:/schema:ro
+    command: >
+      --seeds=scylla-node1
+      --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1
+      --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer
+      --broadcast-address scylla-node1 --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0 --broadcast-rpc-address scylla-node1
+    ports:
+      - "9042:9042"
+
+  scylla-node2:
+    <<: *scylla-common
+    container_name: scylla-node2
+    volumes:
+      - scylla-node2:/var/lib/scylla
+    command: >
+      --seeds=scylla-node1
+      --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1
+      --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer
+      --broadcast-address scylla-node2 --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0 --broadcast-rpc-address scylla-node2
+    depends_on:
+      scylla-node1:
+        condition: service_healthy
+
+  scylla-node3:
+    <<: *scylla-common
+    container_name: scylla-node3
+    volumes:
+      - scylla-node3:/var/lib/scylla
+    command: >
+      --seeds=scylla-node1
+      --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1
+      --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer
+      --broadcast-address scylla-node3 --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0 --broadcast-rpc-address scylla-node3
+    depends_on:
+      scylla-node2:
+        condition: service_healthy
+
+  # Loads the telemetry schema once the cluster is up, then exits.
+  schema-init:
+    image: scylladb/scylla:2026.1.7
+    container_name: scylla-schema-init
+    networks:
+      - scylla
+    volumes:
+      - ./schema:/schema:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        until cqlsh scylla-node1 -u cassandra -p cassandra -e "describe cluster" >/dev/null 2>&1; do
+          echo "waiting for scylla..."; sleep 5;
+        done
+        cqlsh scylla-node1 -u cassandra -p cassandra -f /schema/telemetry.cql
+        echo "schema loaded"
+    depends_on:
+      scylla-node3:
+        condition: service_healthy
+    restart: "no"
+
+  # Telemetry REST API — any app/frontend ingests and queries through this.
+  api:
+    build: ./api
+    image: scylladb-telemetry-api:latest
+    container_name: scylla-api
+    networks:
+      - scylla
+    environment:
+      - SCYLLA_CONTACT_POINTS=scylla-node1,scylla-node2,scylla-node3
+      - SCYLLA_USERNAME=cassandra
+      - SCYLLA_PASSWORD=cassandra
+      - SCYLLA_KEYSPACE=telemetry
+    ports:
+      - "8000:8000"
+    depends_on:
+      schema-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ETL worker: rolls raw_events into the metrics_1m structured aggregates.
+  etl:
+    build: ./etl
+    image: scylladb-telemetry-etl:latest
+    container_name: scylla-etl
+    networks:
+      - scylla
+    environment:
+      - SCYLLA_CONTACT_POINTS=scylla-node1,scylla-node2,scylla-node3
+      - SCYLLA_USERNAME=cassandra
+      - SCYLLA_PASSWORD=cassandra
+      - SCYLLA_KEYSPACE=telemetry
+      - ETL_INTERVAL_SECONDS=60
+    depends_on:
+      schema-init:
+        condition: service_completed_successfully
+    restart: unless-stopped

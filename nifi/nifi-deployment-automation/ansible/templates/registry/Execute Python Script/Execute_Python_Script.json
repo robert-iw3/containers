@@ -1,0 +1,704 @@
+{
+	"template": {
+		"description": "Execute Python Script",
+		"groupId": "b1e35f04-016a-1000-3d7e-a490ce4b3a59",
+		"name": "Execute Python Script",
+		"snippet": {
+			"processGroups": {
+				"id": "1d8c3757-7d2e-31fc-0000-000000000000",
+				"parentGroupId": "73bc9391-338e-3d97-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "0a7a3c50-f5f7-3cab-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "3e62b0e7-fef6-3155-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "nonzero status",
+							"source": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "ca823b76-d215-353d-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "5e1140a3-9856-36a0-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "ca823b76-d215-353d-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "ebdef5db-aff0-3f08-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "99b12ce8-5186-32d0-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "af70b1ff-de91-39c2-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "original",
+							"source": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "ca823b76-d215-353d-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "99d345dd-1c9e-3087-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "34c24f61-05c7-3db1-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "output stream",
+							"source": {
+								"groupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+								"id": "ca823b76-d215-353d-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"processors": [
+						{
+							"id": "34c24f61-05c7-3db1-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"position": {
+								"x": "868.9998618748505",
+								"y": "424.99999273059814"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "3e62b0e7-fef6-3155-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"position": {
+								"x": "516.9998618748505",
+								"y": "586.9999927305981"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "af70b1ff-de91-39c2-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"position": {
+								"x": "164.99986187485047",
+								"y": "425.99999273059814"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": {
+												"name": "Log Level"
+											}
+										},
+										{
+											"key": "Log Payload",
+											"value": {
+												"name": "Log Payload"
+											}
+										},
+										{
+											"key": "Attributes to Log",
+											"value": {
+												"name": "Attributes to Log"
+											}
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": {
+												"name": "attributes-to-log-regex"
+											}
+										},
+										{
+											"key": "Attributes to Ignore",
+											"value": {
+												"name": "Attributes to Ignore"
+											}
+										},
+										{
+											"key": "attributes-to-ignore-regex",
+											"value": {
+												"name": "attributes-to-ignore-regex"
+											}
+										},
+										{
+											"key": "Log prefix",
+											"value": {
+												"name": "Log prefix"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Log Level",
+											"value": "info"
+										},
+										{
+											"key": "Log Payload",
+											"value": "false"
+										},
+										{
+											"key": "Attributes to Log"
+										},
+										{
+											"key": "attributes-to-log-regex",
+											"value": ".*"
+										},
+										{
+											"key": "Attributes to Ignore"
+										},
+										{
+											"key": "attributes-to-ignore-regex"
+										},
+										{
+											"key": "Log prefix"
+										},
+										{
+											"key": "character-set",
+											"value": "windows-1252"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "LogAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.LogAttribute"
+						},
+						{
+							"id": "ca823b76-d215-353d-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"position": {
+								"x": "516.9998618748505",
+								"y": "221.99999273059814"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Command Arguments",
+											"value": {
+												"name": "Command Arguments"
+											}
+										},
+										{
+											"key": "Command Path",
+											"value": {
+												"name": "Command Path"
+											}
+										},
+										{
+											"key": "Ignore STDIN",
+											"value": {
+												"name": "Ignore STDIN"
+											}
+										},
+										{
+											"key": "Working Directory",
+											"value": {
+												"name": "Working Directory"
+											}
+										},
+										{
+											"key": "Argument Delimiter",
+											"value": {
+												"name": "Argument Delimiter"
+											}
+										},
+										{
+											"key": "Output Destination Attribute",
+											"value": {
+												"name": "Output Destination Attribute"
+											}
+										},
+										{
+											"key": "Max Attribute Length",
+											"value": {
+												"name": "Max Attribute Length"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Command Arguments",
+											"value": "D:/Learning/Python/pandas_script.py"
+										},
+										{
+											"key": "Command Path",
+											"value": "python"
+										},
+										{
+											"key": "Ignore STDIN",
+											"value": "false"
+										},
+										{
+											"key": "Working Directory"
+										},
+										{
+											"key": "Argument Delimiter",
+											"value": ";"
+										},
+										{
+											"key": "Output Destination Attribute"
+										},
+										{
+											"key": "Max Attribute Length",
+											"value": "256"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "ExecuteStreamCommand",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "nonzero status"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "original"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "output stream"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.ExecuteStreamCommand"
+						},
+						{
+							"id": "ebdef5db-aff0-3f08-0000-000000000000",
+							"parentGroupId": "1d8c3757-7d2e-31fc-0000-000000000000",
+							"position": {
+								"x": "514.9998618748505",
+								"y": "8.999985101203606"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.8.0"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": "{\n\t\"country\": [\"Brazil\", \"Russia\", \"India\", \"China\", \"South Africa\"],\n\t\"capital\": [\"Brasilia\", \"Moscow\", \"New Dehli\", \"Beijing\", \"Pretoria\"],\n\t\"area\": [8.516, 17.10, 3.286, 9.597, 1.221],\n\t\"population\": [200.4, 143.5, 1252, 1357, 52.98]\n}"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "60 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						}
+					]
+				},
+				"name": "Execute Python Script",
+				"variables": ""
+			}
+		},
+		"timestamp": "06/15/2022 22:05:19 IST",
+		"_encoding-version": "1.2"
+	}
+}

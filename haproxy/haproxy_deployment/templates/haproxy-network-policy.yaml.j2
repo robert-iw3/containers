@@ -1,0 +1,52 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: haproxy-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: haproxy
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    {% for service in services | default([{'name': 'default', 'backend': 'localhost', 'port': 8080}]) %}
+    - port: {{ service.port }}
+      protocol: TCP
+    {% endfor %}
+    - port: 8404
+      protocol: TCP
+    - port: 24224
+      protocol: TCP
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - port: 9090
+      protocol: TCP
+  - to:
+    - podSelector:
+        matchLabels:
+          app: fluentd
+    ports:
+    - port: 24224
+      protocol: TCP
+  - to:
+    - podSelector:
+        matchLabels:
+          app: opensearch
+    ports:
+    - port: 9200
+      protocol: TCP
+  - to:
+    {% for service in services | default([{'name': 'default', 'backend': 'localhost', 'port': 8080}]) %}
+    - ipBlock:
+        cidr: {{ service.backend | default('127.0.0.1') }}/32
+    ports:
+    - port: {{ service.port }}
+      protocol: TCP
+    {% endfor %}

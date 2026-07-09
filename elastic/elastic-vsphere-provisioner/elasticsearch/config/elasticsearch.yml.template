@@ -1,0 +1,17 @@
+cluster.name: {{ cluster_name }}
+node.name: {{ node_name }}
+network.host: 0.0.0.0
+http.port: 9200
+discovery.seed_hosts: [{{ discovery_seed_hosts }}]
+cluster.initial_master_nodes: [{{ initial_master_nodes }}]
+
+xpack.security.enabled: true
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key: certs/{{ node_name }}/{{ node_name }}.key
+xpack.security.http.ssl.certificate: certs/{{ node_name }}/{{ node_name }}.chain.pem
+xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.key: certs/{{ node_name }}/{{ node_name }}.key
+xpack.security.transport.ssl.certificate: certs/{{ node_name }}/{{ node_name }}.crt
+xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt

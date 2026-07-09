@@ -1,0 +1,110 @@
+---
+# === SETUP: Generate Certs with Real IPs ===
+- name: Set IP facts
+  set_fact:
+    es_ips: "{{ groups['elasticsearch'] | map('extract', hostvars, 'ansible_host') | join(',') }}"
+    kibana_ip: "{{ hostvars[groups['kibana'][0]]['ansible_host'] }}"
+
+- name: Run setup with real IPs (Docker)
+  docker_container:
+    name: elastic-setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - /opt/elastic/setup/entrypoint.sh:/entrypoint.sh:ro
+      - /opt/elastic/certs:/usr/share/elasticsearch/config/certs:z
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      KIBANA_SYSTEM_PASSWORD: "{{ kibana_password }}"
+      ES_IPS: "{{ es_ips }}"
+      KIBANA_IP: "{{ kibana_ip }}"
+      FLEET_IP: "{{ kibana_ip }}"
+    command: /entrypoint.sh
+    state: started
+  when: container_runtime == "docker"
+  become: yes
+
+- name: Run setup with real IPs (Podman)
+  containers.podman.podman_container:
+    name: elastic-setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}
+    volumes:
+      - /opt/elastic/setup/entrypoint.sh:/entrypoint.sh:ro
+      - /opt/elastic/certs:/usr/share/elasticsearch/config/certs:z
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      KIBANA_SYSTEM_PASSWORD: "{{ kibana_password }}"
+      ES_IPS: "{{ es_ips }}"
+      KIBANA_IP: "{{ kibana_ip }}"
+      FLEET_IP: "{{ kibana_ip }}"
+    command: /entrypoint.sh
+    state: started
+  when: container_runtime == "podman"
+  become: yes
+
+# === ELASTICSEARCH (Podman) ===
+- name: Deploy Elasticsearch (Podman)
+  containers.podman.podman_container:
+    name: elasticsearch
+    image: "docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - "{{ data_dir }}:/usr/share/elasticsearch/data"
+      - "{{ certs_dir }}:/usr/share/elasticsearch/config/certs:ro"
+      - "{{ playbook_dir }}/../elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro"
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      node.name: "{{ inventory_hostname }}"
+      cluster.name: "{{ cluster_name }}"
+      cluster.initial_master_nodes: "{{ groups['elasticsearch'] | join(',') }}"
+      discovery.seed_hosts: "{{ groups['elasticsearch'] | join(',') }}"
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+      xpack.security.http.ssl.certificate: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.chain.pem"
+      xpack.security.http.ssl.certificate_authorities: "certs/ca/ca.crt"
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+      xpack.security.transport.ssl.certificate: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.crt"
+      xpack.security.transport.ssl.certificate_authorities: "certs/ca/ca.crt"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "podman"
+  become: yes
+
+# === ELASTICSEARCH (Docker) ===
+- name: Deploy Elasticsearch (Docker)
+  docker_container:
+    name: elasticsearch
+    image: "docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - "{{ data_dir }}:/usr/share/elasticsearch/data"
+      - "{{ certs_dir }}:/usr/share/elasticsearch/config/certs:ro"
+      - "{{ playbook_dir }}/../elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro"
+    env:
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      node.name: "{{ inventory_hostname }}"
+      cluster.name: "{{ cluster_name }}"
+      cluster.initial_master_nodes: "{{ groups['elasticsearch'] | join(',') }}"
+      discovery.seed_hosts: "{{ groups['elasticsearch'] | join(',') }}"
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+      xpack.security.http.ssl.certificate: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.chain.pem"
+      xpack.security.http.ssl.certificate_authorities: "certs/ca/ca.crt"
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+      xpack.security.transport.ssl.certificate: "certs/{{ inventory_hostname }}/{{ inventory_hostname }}.crt"
+      xpack.security.transport.ssl.certificate_authorities: "certs/ca/ca.crt"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "docker"
+  become: yes

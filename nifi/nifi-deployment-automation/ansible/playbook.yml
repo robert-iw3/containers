@@ -1,0 +1,420 @@
+---
+- name: Deploy Apache NiFi with Podman and systemd
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    network_interface: eth0
+    ansible_control_node_network: 10.0.77.0/24
+    subnet_allow_fw_traffic: 192.168.1.0/24 # Narrowed from 10.0.0.0/8 for security
+    podman_systemd_user: nifi
+    podman_systemd_network: nifi
+    podman_systemd_unit_path: /etc/systemd/system
+    podman_systemd_file: container-nifi.service
+    podman_systemd_description: Apache NiFi Podman Container
+    podman_systemd_volumes: nifi:/opt/nifi:Z
+    nifi_username: admin
+    nifi_password: "{{ vault_nifi_password | default('securePassword123') }}" # Managed by vault
+    jks_password: "{{ vault_jks_password | default('secureKeystore123') }}" # Managed by vault
+    memory: 8g
+    cpus: 2
+    ulimit: "memlock=-1:-1"
+    certs_dir: /opt/nifi/certs
+    sysctl_settings:
+      - { name: net.ipv4.ip_unprivileged_port_start, value: '443' }
+      - { name: vm.max_map_count, value: '262144' }
+      - { name: vm.swappiness, value: '1' }
+      - { name: net.ipv4.tcp_retries2, value: '5' }
+      - { name: net.core.rmem_default, value: '31457280' }
+      - { name: net.core.rmem_max, value: '12582912' }
+      - { name: net.core.wmem_default, value: '31457280' }
+      - { name: net.core.wmem_max, value: '12582912' }
+      - { name: net.core.somaxconn, value: '65535' }
+      - { name: net.core.netdev_max_backlog, value: '65536' }
+      - { name: net.core.optmem_max, value: '25165824' }
+      - { name: net.ipv4.tcp_rmem, value: '8192 87380 16777216' }
+      - { name: net.ipv4.udp_rmem_min, value: '16384' }
+      - { name: net.ipv4.tcp_wmem, value: '8192 65536 16777216' }
+      - { name: net.ipv4.udp_wmem_min, value: '16384' }
+    firewalld_rules:
+      - 'rule family="ipv4" source address="{{ ansible_control_node_network }}" port port="22" protocol="tcp" accept'
+      - 'rule family="ipv4" source address="{{ subnet_allow_fw_traffic }}" port port="8443" protocol="tcp" accept'
+  tasks:
+    - name: Install required packages
+      ansible.builtin.package:
+        name:
+          - podman
+          - podman-compose
+          - java-11-openjdk
+          - firewalld
+          - certbot
+        state: present
+
+    - name: Configure system sysctl settings
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-nifi.conf # Isolated sysctl file
+        sysctl_set: true
+        state: present
+        reload: true
+      loop: "{{ sysctl_settings }}"
+
+    - name: Configure journald for persistent logging
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/journald.conf
+        regexp: '^Storage='
+        line: 'Storage=persistent'
+        state: present
+      notify: Restart journald
+
+    - name: Create NiFi user and group
+      ansible.builtin.user:
+        name: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        groups: systemd-journal,wheel
+        append: yes
+        system: yes
+        create_home: yes
+        shell: /bin/bash
+        state: present
+      register: nifi_user
+
+    - name: Configure subuid and subgid for NiFi user
+      ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        regexp: "^nifi:.*"
+        line: "nifi:165536:65536"
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - { path: /etc/subuid }
+        - { path: /etc/subgid }
+
+    - name: Enable lingering for NiFi user
+      ansible.builtin.command:
+        cmd: "loginctl enable-linger {{ podman_systemd_user }}"
+        creates: "/var/lib/systemd/linger/{{ podman_systemd_user }}"
+      become: yes
+
+    - name: Allow passwordless sudo for NiFi user
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/nifi
+        state: present
+        line: "{{ podman_systemd_user }} ALL=(ALL) NOPASSWD:ALL"
+        create: yes
+        mode: '0440'
+        validate: '/usr/sbin/visudo -cf %s'
+
+    - name: Generate Let’s Encrypt certificate
+      ansible.builtin.command:
+        cmd: "certbot certonly --standalone -d nifi.example.com --non-interactive --agree-tos --email admin@example.com"
+        creates: "/etc/letsencrypt/live/nifi.example.com/fullchain.pem"
+      register: certbot_result
+
+    - name: Create certificates directory
+      ansible.builtin.file:
+        path: "{{ certs_dir }}/{{ item }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+      loop:
+        - ca
+        - client
+        - nifi
+      when: certbot_result is failed # Fallback to self-signed if certbot fails
+
+    - name: Generate CA private key (fallback)
+      community.crypto.openssl_privatekey:
+        path: "{{ certs_dir }}/ca/key.pem"
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0600'
+      register: ca_private_key
+      when: certbot_result is failed
+
+    - name: Generate CA certificate signing request (fallback)
+      community.crypto.openssl_csr:
+        path: "{{ certs_dir }}/ca/csr.pem"
+        privatekey_path: "{{ ca_private_key.filename }}"
+        common_name: "NiFi CA"
+        use_common_name_for_san: false
+        basic_constraints:
+          - CA:TRUE
+        basic_constraints_critical: true
+        key_usage:
+          - keyCertSign
+        key_usage_critical: true
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0600'
+      register: ca_csr
+      when: certbot_result is failed
+
+    - name: Generate self-signed CA certificate (fallback)
+      community.crypto.x509_certificate:
+        path: "{{ certs_dir }}/ca/cert.pem"
+        csr_path: "{{ ca_csr.filename }}"
+        privatekey_path: "{{ ca_private_key.filename }}"
+        provider: selfsigned
+        ownca_not_after: "+3650d"
+        ownca_not_before: "-1d"
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0644'
+      register: ca_certificate
+      when: certbot_result is failed
+
+    - name: Generate NiFi private key (fallback)
+      community.crypto.openssl_privatekey:
+        path: "{{ certs_dir }}/nifi/key.pem"
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0600'
+      register: nifi_private_key
+      when: certbot_result is failed
+
+    - name: Generate NiFi certificate signing request (fallback)
+      community.crypto.openssl_csr:
+        path: "{{ certs_dir }}/nifi/csr.pem"
+        privatekey_path: "{{ nifi_private_key.filename }}"
+        country_name: US
+        organization_name: nifi
+        organizational_unit_name: contained
+        common_name: nifi
+        subject_alt_name:
+          - IP:127.0.0.1
+          - DNS:localhost
+          - DNS:nifi
+          - DNS:nifi.example.com
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0600'
+      register: nifi_csr
+      when: certbot_result is failed
+
+    - name: Sign NiFi certificate (fallback)
+      community.crypto.x509_certificate:
+        path: "{{ certs_dir }}/nifi/cert.pem"
+        provider: ownca
+        csr_path: "{{ nifi_csr.filename }}"
+        ownca_path: "{{ ca_certificate.filename }}"
+        ownca_privatekey_path: "{{ ca_private_key.filename }}"
+        ownca_not_after: "+1825d"
+        ownca_not_before: "-1d"
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0644'
+      register: nifi_cert
+      when: certbot_result is failed
+
+    - name: Create NiFi keystore
+      community.general.java_keystore:
+        name: nifi
+        certificate_path: "{{ certbot_result is success | ternary('/etc/letsencrypt/live/nifi.example.com/fullchain.pem', nifi_cert.filename) }}"
+        private_key_path: "{{ certbot_result is success | ternary('/etc/letsencrypt/live/nifi.example.com/privkey.pem', nifi_private_key.filename) }}"
+        password: "{{ jks_password }}"
+        dest: "{{ certs_dir }}/nifi/nifi-keystore.jks"
+        owner: "{{ podman_systemd_user }}"
+        group: "{{ podman_systemd_user }}"
+        mode: '0600'
+
+    - name: Create NiFi truststore
+      ansible.builtin.command:
+        cmd: "keytool -import -file {{ certbot_result is success | ternary('/etc/letsencrypt/live/nifi.example.com/fullchain.pem', ca_certificate.filename) }} -alias nifi_ca -keystore {{ certs_dir }}/nifi/truststore.jks -noprompt -storepass {{ jks_password }}"
+        creates: "{{ certs_dir }}/nifi/truststore.jks"
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Create Podman network
+      containers.podman.podman_network:
+        name: "{{ podman_systemd_network }}"
+        internal: true # Enhanced isolation
+        state: present
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Create NiFi volume
+      containers.podman.podman_volume:
+        name: "{{ podman_systemd_volumes | split(':') | first }}"
+        state: present
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Build NiFi image
+      containers.podman.podman_image:
+        name: nifi
+        tag: latest
+        path: ../
+        build:
+          cache: no
+          force_rm: true
+          format: oci
+          annotation:
+            app: nifi
+            function: data-wrangling
+            info: Apache NiFi for data processing
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Clean up build environment
+      ansible.builtin.command:
+        cmd: "podman image prune -f"
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Deploy NiFi container
+      containers.podman.podman_container:
+        name: nifi
+        image: nifi:latest
+        hostname: nifi.example.com
+        state: started
+        volumes:
+          - "{{ podman_systemd_volumes }}"
+          - "{{ certs_dir }}:/opt/certs:Z"
+        env:
+          SINGLE_USER_CREDENTIALS_USERNAME: "{{ nifi_username }}"
+          SINGLE_USER_CREDENTIALS_PASSWORD: "{{ nifi_password }}"
+          AUTH: tls
+          KEYSTORE_PATH: /opt/certs/nifi/nifi-keystore.jks
+          KEYSTORE_TYPE: JKS
+          KEYSTORE_PASSWORD: "{{ jks_password }}"
+          TRUSTSTORE_PATH: /opt/certs/nifi/truststore.jks
+          TRUSTSTORE_PASSWORD: "{{ jks_password }}"
+          TRUSTSTORE_TYPE: JKS
+          INITIAL_ADMIN_IDENTITY: 'CN=nifi, O=nifi, OU=contained, C=US'
+          NIFI_PROMETHEUS_METRICS_ENABLE: "true"
+        ports:
+          - "8443:8443"
+          - "9100:9100" # For Prometheus node-exporter
+        network: "{{ podman_systemd_network }}"
+        security_opt: no-new-privileges:true
+        restart_policy: on-failure
+        memory: "{{ memory }}"
+        cpus: "{{ cpus }}"
+        ulimit: "{{ ulimit }}"
+        healthcheck:
+          test: ["CMD", "curl", "-f", "-k", "https://localhost:8443/nifi"]
+          interval: 30s
+          timeout: 10s
+          retries: 3
+        labels:
+          PODMAN_SYSTEMD_UNIT: "{{ podman_systemd_file }}"
+          io.containers.autoupdate: registry
+          process: nifi
+        generate_systemd:
+          path: "/home/{{ podman_systemd_user }}/.config/systemd/user"
+          new: true
+      become_user: "{{ podman_systemd_user }}"
+      register: result
+      until: result is success
+      retries: 3
+      delay: 5
+
+    - name: Deploy Prometheus node-exporter
+      containers.podman.podman_container:
+        name: node-exporter
+        image: prom/prometheus-node-exporter:latest
+        state: started
+        ports:
+          - "9100:9100"
+        network: "{{ podman_systemd_network }}"
+        labels:
+          PODMAN_SYSTEMD_UNIT: "container-node-exporter.service"
+          io.containers.autoupdate: registry
+        generate_systemd:
+          path: "/home/{{ podman_systemd_user }}/.config/systemd/user"
+          new: true
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Create systemd unit directory
+      ansible.builtin.file:
+        path: "{{ podman_systemd_unit_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create NiFi systemd service unit
+      ansible.builtin.template:
+        src: systemd-unit.j2
+        dest: "{{ podman_systemd_unit_path }}/{{ podman_systemd_file }}"
+        mode: '0644'
+      notify: Reload systemd and restart NiFi
+
+    - name: Create node-exporter systemd service unit
+      ansible.builtin.template:
+        src: systemd-unit.j2
+        dest: "{{ podman_systemd_unit_path }}/container-node-exporter.service"
+        mode: '0644'
+        vars:
+          podman_systemd_name: node-exporter
+          podman_systemd_description: Prometheus Node Exporter for NiFi
+          podman_systemd_image: prom/prometheus-node-exporter:latest
+          podman_systemd_ports: ["9100:9100"]
+          podman_systemd_volumes: []
+          podman_systemd_environment: {}
+      notify: Reload systemd and restart node-exporter
+
+    - name: Enable and start services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      loop:
+        - "{{ podman_systemd_file }}"
+        - container-node-exporter.service
+
+    - name: Enable Podman auto-update timer
+      ansible.builtin.systemd:
+        name: podman-auto-update.timer
+        enabled: yes
+        scope: user
+      become_user: "{{ podman_systemd_user }}"
+
+    - name: Schedule NiFi backup to S3
+      ansible.builtin.cron:
+        name: nifi_backup
+        minute: "0"
+        hour: "2"
+        job: "podman run --rm -v {{ podman_systemd_volumes | split(':') | first }}:/opt/nifi amazon/aws-cli s3 cp /opt/nifi s3://bucket/nifi-backup-$(date +%Y%m%d).tar.gz --recursive"
+        user: "{{ podman_systemd_user }}"
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Configure firewalld zone and rules
+      ansible.posix.firewalld:
+        zone: drop
+        rich_rule: "{{ item }}"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop: "{{ firewalld_rules }}"
+
+    - name: Restrict sudo for NiFi user
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/nifi
+        line: "{{ podman_systemd_user }} ALL=(ALL) NOPASSWD:/usr/bin/podman,/bin/systemctl"
+        validate: '/usr/sbin/visudo -cf %s'
+
+  handlers:
+    - name: Restart journald
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: restarted
+
+    - name: Reload systemd and restart NiFi
+      ansible.builtin.systemd:
+        name: "{{ podman_systemd_file }}"
+        state: restarted
+        daemon_reload: yes
+
+    - name: Reload systemd and restart node-exporter
+      ansible.builtin.systemd:
+        name: container-node-exporter.service
+        state: restarted
+        daemon_reload: yes

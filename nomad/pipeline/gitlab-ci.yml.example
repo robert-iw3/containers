@@ -1,0 +1,32 @@
+# Copy into your .gitlab-ci.yml (or include: it). CI/CD variables required:
+#   NOMAD_ADDR        https://<nomad-server-or-lb>:4646
+#   NOMAD_TOKEN       (masked) ACL token allowed to submit jobs
+#   NOMAD_CACERT_B64  base64 of the cluster CA
+#   GHCR_USERNAME / GHCR_TOKEN  registry credentials
+stages: [build, deploy]
+
+variables:
+  APP_DIR: myapp
+  APP_NAME: myapp
+  IMAGE: ghcr.io/example-org/containers/myapp:$CI_COMMIT_SHA
+
+build-image:
+  stage: build
+  image: quay.io/podman/stable:latest
+  script:
+    - podman login ghcr.io -u "$GHCR_USERNAME" -p "$GHCR_TOKEN"
+    - python3 nomad/pipeline/ship.py build "$APP_DIR" --image "$IMAGE"
+    - python3 nomad/pipeline/ship.py push --image "$IMAGE"
+  rules:
+    - changes: ["myapp/**/*"]
+
+deploy-nomad:
+  stage: deploy
+  image: python:3.12-slim
+  script:
+    - echo "$NOMAD_CACERT_B64" | base64 -d > /tmp/nomad-ca.pem
+    - export NOMAD_CACERT=/tmp/nomad-ca.pem
+    - python3 nomad/pipeline/ship.py deploy --image "$IMAGE" --name "$APP_NAME" --port 8080
+  needs: [build-image]
+  rules:
+    - changes: ["myapp/**/*"]

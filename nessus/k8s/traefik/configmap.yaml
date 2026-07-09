@@ -1,0 +1,130 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-configmap
+data:
+  traefik.yaml: |
+    #global:
+    #  checkNewVersion: true
+    #  sendAnonymousUsage: false
+    #api:
+    #  insecure: false
+    #  dashboard: true
+    entryPoints:
+      web:
+        address: ":80"
+      websecure:
+        address: ":443"
+    providers:
+      kubernetesIngress:
+        ingressEndpoint:
+          publishedService: "traefik/traefik-service"
+      file:
+        directory: /etc/traefik/dynamic
+        watch: true
+    #serversTransport:
+    #  insecureSkipVerify: true
+    log:
+      filePath: "/var/log/traefik/nessus/traefik.log"
+      format: json
+      level: INFO
+    accessLog:
+      filePath: "/var/log/traefik/nessus/access.log"
+      format: json
+      filters:
+        statusCodes:
+          - "204-299"
+          - "400-499"
+          - "500-599"
+        retryAttempts: true
+        minDuration: "10ms"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-configmap-dynamic
+data:
+  nessus-config.yaml: |
+    http:
+      routers:
+        nessus:
+          entryPoints:
+            - "websecure"
+          rule: "Host(`nessus.testing.io`, `www.nessus.testing.io`)"
+          middlewares:
+            - secured
+          tls: {}
+          service: nessus
+      services:
+        nessus:
+          loadBalancer:
+            servers:
+              - url: "https://nessus.testing.io:8834"
+            passHostHeader: true
+            healthCheck:
+              path: /status
+              interval: 10s
+              timeout: 3s
+      middlewares:
+        443-redirect:
+          redirectScheme:
+            scheme: https
+            port: "8834"
+            permanent: true
+        nessus-headers:
+          headers:
+            accessControlAllowMethods:
+              - GET
+              - POST
+            accessControlMaxAge: 100
+            frameDeny: true
+            browserXssFilter: true
+            contentTypeNosniff: true
+            forceSTSHeader: true
+            stsIncludeSubdomains: true
+            stsPreload: true
+            stsSeconds: 15552000
+            customFrameOptionsValue: SAMEORIGIN
+            customRequestHeaders:
+              X-Forwarded-Proto: https
+        nessus-whitelist:
+          ipWhiteList:
+            sourceRange:
+            #configure only to accept from certain subnets, more acl's
+              - "192.168.0.0/16"
+        secured:
+          chain:
+            middlewares:
+              - nessus-whitelist
+              - nessus-headers
+              - 443-redirect
+  nessus-tls.yaml: |
+    tls:
+      certificates:
+        - certFile: "/traefik/certs/nessus.testing.io.crt"
+          keyFile: "/traefik/certs/nessus.testing.io.key"
+          stores:
+            - default
+      options:
+        default:
+          minVersion: VersionTLS12
+          cipherSuites:
+            - TLS_AES_128_GCM_SHA256
+            - TLS_AES_256_GCM_SHA384
+            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    #     tlsv13force:
+    #       minVersion: VersionTLS13
+    # https://pkg.go.dev/crypto/tls#CurveID
+    #       curvePreferences:
+    #         - CurveP521
+    #         - CurveP384
+    #     sniStrict: true
+      stores:
+        default:
+          defaultCertificate:
+            certFile: "/traefik/certs/nessus.testing.io.crt"
+            keyFile: "/traefik/certs/nessus.testing.io.key"

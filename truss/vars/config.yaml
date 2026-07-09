@@ -1,0 +1,39 @@
+---
+# User-configurable variables for model deployment
+truss_user: truss
+truss_group: truss
+truss_user_id: 65535
+truss_group_id: 65535
+truss_version: latest
+truss_port: 8080
+truss_env: production
+container_name: truss-model
+container_image: truss-model
+container_port: 8000
+model_dir: /truss/model
+data_dir: /truss/data
+logs_dir: /truss/logs
+truss_config_dir: /truss
+model_name: "user/specified-model"  # e.g., meta-llama/Llama-2-7b
+python_version: "3.11"
+python_image_hash: "sha256:required"  # Replace with specific hash
+max_length: 128
+pipeline_type: "text-generation"  # e.g., text-generation, text-classification
+replicas: 1
+model_requirements:
+  - torch==2.3.0
+  - transformers==4.38.2
+  - peft==0.10.0
+  - accelerate==0.28.0
+  - bitsandbytes==0.43.0
+  - sentencepiece==0.2.0
+  - einops==0.7.0
+  - scipy==1.12.0
+resources:
+  cpu: "4"
+  memory: 16Gi
+  accelerator: A100
+use_kubernetes: false
+use_podman: false
+model_class_name: Model
+model_description: Generic Truss Model Deployment

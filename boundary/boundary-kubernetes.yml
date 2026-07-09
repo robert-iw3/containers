@@ -1,0 +1,396 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: boundary
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: boundary
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: boundary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: docker.io/bitnami/postgresql:latest
+        env:
+        - name: POSTGRESQL_REPLICATION_MODE
+          value: master
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-password
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-database
+        - name: POSTGRESQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-replication-user
+        - name: POSTGRESQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-replication-password
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /bitnami/postgresql
+        resources:
+          limits:
+            memory: "2048Mi"
+            cpu: "1"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: boundary
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boundary-controller
+  namespace: boundary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boundary-controller
+  template:
+    metadata:
+      labels:
+        app: boundary-controller
+    spec:
+      containers:
+      - name: boundary
+        image: boundary:latest
+        command: ["boundary", "server", "-config", "/boundary/config.hcl"]
+        env:
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-password
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-database
+        - name: BOUNDARY_POSTGRES_URL
+          value: "postgresql://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@postgres.boundary.svc.cluster.local:5432/$(POSTGRESQL_DATABASE)?sslmode=disable"
+        - name: BOUNDARY_ROOT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: boundary-root-key
+        - name: BOUNDARY_WORKER_AUTH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: boundary-worker-auth-key
+        - name: BOUNDARY_RECOVERY_KEY
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: boundary-recovery-key
+        ports:
+        - containerPort: 9200
+        - containerPort: 9201
+        volumeMounts:
+        - name: config
+          mountPath: /boundary/config.hcl
+          subPath: config.hcl
+        resources:
+          limits:
+            memory: "2048Mi"
+            cpu: "1"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: 9200
+          initialDelaySeconds: 10
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: 9200
+          initialDelaySeconds: 5
+          periodSeconds: 3
+      volumes:
+      - name: config
+        configMap:
+          name: boundary-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boundary-controller
+  namespace: boundary
+spec:
+  selector:
+    app: boundary-controller
+  ports:
+  - name: api
+    port: 9200
+    targetPort: 9200
+  - name: cluster
+    port: 9201
+    targetPort: 9201
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boundary-worker
+  namespace: boundary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boundary-worker
+  template:
+    metadata:
+      labels:
+        app: boundary-worker
+    spec:
+      containers:
+      - name: boundary
+        image: boundary:latest
+        command: ["boundary", "server", "-config", "/boundary/config.hcl"]
+        env:
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-password
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: postgresql-database
+        - name: BOUNDARY_POSTGRES_URL
+          value: "postgresql://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@postgres.boundary.svc.cluster.local:5432/$(POSTGRESQL_DATABASE)?sslmode=disable"
+        - name: BOUNDARY_WORKER_AUTH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: boundary-secrets
+              key: boundary-worker-auth-key
+        ports:
+        - containerPort: 9202
+        volumeMounts:
+        - name: config
+          mountPath: /boundary/config.hcl
+          subPath: config.hcl
+        resources:
+          limits:
+            memory: "2048Mi"
+            cpu: "1"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          tcpSocket:
+            port: 9202
+          initialDelaySeconds: 10
+          periodSeconds: 3
+        readinessProbe:
+          tcpSocket:
+            port: 9202
+          initialDelaySeconds: 5
+          periodSeconds: 3
+      volumes:
+      - name: config
+        configMap:
+          name: boundary-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boundary-worker
+  namespace: boundary
+spec:
+  selector:
+    app: boundary-worker
+  ports:
+  - name: proxy
+    port: 9202
+    targetPort: 9202
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: boundary-network-policy
+  namespace: boundary
+spec:
+  podSelector:
+    matchLabels:
+      app: boundary-controller
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: boundary
+    ports:
+    - protocol: TCP
+      port: 9200
+    - protocol: TCP
+      port: 9201
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: boundary-worker-network-policy
+  namespace: boundary
+spec:
+  podSelector:
+    matchLabels:
+      app: boundary-worker
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: boundary
+    ports:
+    - protocol: TCP
+      port: 9202
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: boundary-controller
+    ports:
+    - protocol: TCP
+      port: 9201
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: boundary-config
+  namespace: boundary
+data:
+  config.hcl: |
+    disable_mlock = false
+    controller {
+      name = "demo-controller"
+      description = "A default controller for demonstration"
+      database {
+        url = "env://BOUNDARY_POSTGRES_URL"
+      }
+      public_cluster_addr = "boundary-controller.boundary.svc.cluster.local:9201"
+    }
+    worker {
+      name = "demo-worker"
+      description = "A default worker for demonstration"
+      controllers = ["boundary-controller.boundary.svc.cluster.local:9201"]
+    }
+    listener "tcp" {
+      address = "0.0.0.0:9200"
+      purpose = "api"
+      tls_cert_file = "/boundary/tls/cert.pem"
+      tls_key_file = "/boundary/tls/key.pem"
+    }
+    listener "tcp" {
+      address = "0.0.0.0:9201"
+      purpose = "cluster"
+      tls_cert_file = "/boundary/tls/cert.pem"
+      tls_key_file = "/boundary/tls/key.pem"
+    }
+    listener "tcp" {
+      address = "0.0.0.0:9202"
+      purpose = "proxy"
+      tls_cert_file = "/boundary/tls/cert.pem"
+      tls_key_file = "/boundary/tls/key.pem"
+    }
+    kms "aead" {
+      purpose = "root"
+      aead_type = "aes-gcm"
+      key = "env://BOUNDARY_ROOT_KEY"
+      key_id = "global_root"
+    }
+    kms "aead" {
+      purpose = "worker-auth"
+      aead_type = "aes-gcm"
+      key = "env://BOUNDARY_WORKER_AUTH_KEY"
+      key_id = "global_worker-auth"
+    }
+    kms "aead" {
+      purpose = "recovery"
+      aead_type = "aes-gcm"
+      key = "env://BOUNDARY_RECOVERY_KEY"
+      key_id = "global_recovery"
+    }

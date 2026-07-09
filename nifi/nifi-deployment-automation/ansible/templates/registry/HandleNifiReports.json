@@ -1,0 +1,1669 @@
+{
+	"template": {
+		"description": "",
+		"name": "HandleNifiReports",
+		"snippet": {
+			"connections": [
+				{
+					"id": "27a178e3-3e6a-45dc-9e31-f1b5b9082b0b",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "e58e0b99-96a4-466c-8b5d-b113c45e9ee4",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "split",
+					"source": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "63a5237f-f25b-407c-a677-4207c7959099",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "af3f6cd7-3d72-4c6d-a00e-773f7ec2657f",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "94b8eab5-ee3c-470d-845b-cf5c70840bb7",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "matched",
+					"source": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "e58e0b99-96a4-466c-8b5d-b113c45e9ee4",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "3eab570c-c088-4c8e-85f2-31f137d56694",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "c5a94d4c-c2bb-40de-a827-244e74528fe4",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "d2c79bcd-8566-456d-919b-0a60d1412bf9",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "7aa45385-1a84-4acb-b246-c8c39d719462",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "ae0e311a-95aa-4e2e-bbff-c338653e57c3",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "94b8eab5-ee3c-470d-845b-cf5c70840bb7",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "67410f20-94d8-4563-b8fb-2bce631df756",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"backPressureDataSizeThreshold": "0 MB",
+					"backPressureObjectThreshold": "0",
+					"destination": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "63a5237f-f25b-407c-a677-4207c7959099",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "d2c79bcd-8566-456d-919b-0a60d1412bf9",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"controllerServices": {
+				"id": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37",
+				"descriptors": {
+					"entry": [
+						{
+							"key": "Maximum Outstanding Requests",
+							"value": {
+								"defaultValue": "5000",
+								"description": "The maximum number of HTTP requests that can be outstanding at any one time. Any attempt to register an additional HTTP Request will cause an error",
+								"displayName": "Maximum Outstanding Requests",
+								"dynamic": "false",
+								"name": "Maximum Outstanding Requests",
+								"required": "true",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						},
+						{
+							"key": "Request Expiration",
+							"value": {
+								"defaultValue": "1 min",
+								"description": "Specifies how long an HTTP Request should be left unanswered before being evicted from the cache and being responded to with a Service Unavailable status code",
+								"displayName": "Request Expiration",
+								"dynamic": "false",
+								"name": "Request Expiration",
+								"required": "true",
+								"sensitive": "false",
+								"supportsEl": "false"
+							}
+						}
+					]
+				},
+				"name": "StandardHttpContextMap",
+				"properties": {
+					"entry": [
+						{
+							"key": "Maximum Outstanding Requests"
+						},
+						{
+							"key": "Request Expiration"
+						}
+					]
+				},
+				"referencingComponents": [
+					{
+						"activeThreadCount": "0",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Listening Port",
+									"value": {
+										"defaultValue": "80",
+										"description": "The Port to listen on for incoming HTTP requests",
+										"displayName": "Listening Port",
+										"dynamic": "false",
+										"name": "Listening Port",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Hostname",
+									"value": {
+										"description": "The Hostname to bind to. If not specified, will bind to all hosts",
+										"displayName": "Hostname",
+										"dynamic": "false",
+										"name": "Hostname",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"description": "The SSL Context Service to use in order to secure the server. If specified, the server will accept only HTTPS requests; otherwise, the server will accept only HTTP requests",
+										"displayName": "SSL Context Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardHttpContextMap",
+											"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+										},
+										"description": "The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+										"displayName": "HTTP Context Map",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+										"name": "HTTP Context Map",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allowed Paths",
+									"value": {
+										"description": "A Regular Expression that specifies the valid HTTP Paths that are allowed in the incoming URL Requests. If this value is specified and the path of the HTTP Requests does not match this Regular Expression, the Processor will respond with a 404: NotFound",
+										"displayName": "Allowed Paths",
+										"dynamic": "false",
+										"name": "Allowed Paths",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Default URL Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "The character set to use for decoding URL parameters if the HTTP Request does not supply one",
+										"displayName": "Default URL Character Set",
+										"dynamic": "false",
+										"name": "Default URL Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow GET",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP GET Method",
+										"displayName": "Allow GET",
+										"dynamic": "false",
+										"name": "Allow GET",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow POST",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP POST Method",
+										"displayName": "Allow POST",
+										"dynamic": "false",
+										"name": "Allow POST",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow PUT",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP PUT Method",
+										"displayName": "Allow PUT",
+										"dynamic": "false",
+										"name": "Allow PUT",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow DELETE",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP DELETE Method",
+										"displayName": "Allow DELETE",
+										"dynamic": "false",
+										"name": "Allow DELETE",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow HEAD",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "Allow HTTP HEAD Method",
+										"displayName": "Allow HEAD",
+										"dynamic": "false",
+										"name": "Allow HEAD",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow OPTIONS",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "Allow HTTP OPTIONS Method",
+										"displayName": "Allow OPTIONS",
+										"dynamic": "false",
+										"name": "Allow OPTIONS",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Additional HTTP Methods",
+									"value": {
+										"description": "A comma-separated list of non-standard HTTP Methods that should be allowed",
+										"displayName": "Additional HTTP Methods",
+										"dynamic": "false",
+										"name": "Additional HTTP Methods",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Client Authentication",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Processor will not authenticate clients. Anyone can communicate with this Processor anonymously",
+												"displayName": "No Authentication",
+												"value": "No Authentication"
+											},
+											{
+												"description": "Processor will try to verify the client but if unable to verify will allow the client to communicate anonymously",
+												"displayName": "Want Authentication",
+												"value": "Want Authentication"
+											},
+											{
+												"description": "Processor will reject communications from any client unless the client provides a certificate that is trusted by the TrustStorespecified in the SSL Context Service",
+												"displayName": "Need Authentication",
+												"value": "Need Authentication"
+											}
+										],
+										"defaultValue": "No Authentication",
+										"description": "Specifies whether or not the Processor should authenticate clients. This value is ignored if the <SSL Context Service> Property is not specified or the SSL Context provided uses only a KeyStore and not a TrustStore.",
+										"displayName": "Client Authentication",
+										"dynamic": "false",
+										"name": "Client Authentication",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "d2c79bcd-8566-456d-919b-0a60d1412bf9",
+						"name": "Incoming Ambari report",
+						"properties": {
+							"entry": [
+								{
+									"key": "Listening Port",
+									"value": "8680"
+								},
+								{
+									"key": "Hostname",
+									"value": "localhost"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+								},
+								{
+									"key": "Allowed Paths"
+								},
+								{
+									"key": "Default URL Character Set"
+								},
+								{
+									"key": "Allow GET"
+								},
+								{
+									"key": "Allow POST"
+								},
+								{
+									"key": "Allow PUT"
+								},
+								{
+									"key": "Allow DELETE"
+								},
+								{
+									"key": "Allow HEAD"
+								},
+								{
+									"key": "Allow OPTIONS"
+								},
+								{
+									"key": "Additional HTTP Methods"
+								},
+								{
+									"key": "Client Authentication"
+								}
+							]
+						},
+						"referenceType": "Processor",
+						"state": "STOPPED",
+						"type": "org.apache.nifi.processors.standard.HandleHttpRequest"
+					},
+					{
+						"activeThreadCount": "0",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "HTTP Status Code",
+									"value": {
+										"description": "The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+										"displayName": "HTTP Status Code",
+										"dynamic": "false",
+										"name": "HTTP Status Code",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardHttpContextMap",
+											"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+										},
+										"description": "The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+										"displayName": "HTTP Context Map",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+										"name": "HTTP Context Map",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"groupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+						"id": "c5a94d4c-c2bb-40de-a827-244e74528fe4",
+						"name": "Respond OK",
+						"properties": {
+							"entry": [
+								{
+									"key": "HTTP Status Code",
+									"value": "200"
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+								}
+							]
+						},
+						"referenceType": "Processor",
+						"state": "STOPPED",
+						"type": "org.apache.nifi.processors.standard.HandleHttpResponse"
+					}
+				],
+				"state": "ENABLED",
+				"type": "org.apache.nifi.http.StandardHttpContextMap"
+			},
+			"processors": [
+				{
+					"id": "63a5237f-f25b-407c-a677-4207c7959099",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "-154.91758313489458",
+						"y": "310.8938600052136"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "JsonPath Expression",
+									"value": {
+										"description": "A JsonPath expression that indicates the array element to split into JSON/scalar fragments.",
+										"displayName": "JsonPath Expression",
+										"dynamic": "false",
+										"name": "JsonPath Expression",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Null Value Representation",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "empty string",
+												"value": "empty string"
+											},
+											{
+												"displayName": "the string 'null'",
+												"value": "the string 'null'"
+											}
+										],
+										"defaultValue": "empty string",
+										"description": "Indicates the desired representation of JSON Path expressions resulting in a null value.",
+										"displayName": "Null Value Representation",
+										"dynamic": "false",
+										"name": "Null Value Representation",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "JsonPath Expression",
+									"value": "$.metrics"
+								},
+								{
+									"key": "Null Value Representation"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Split Metrics into FlowFiles",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "If a FlowFile fails processing for any reason (for example, the FlowFile is not valid JSON or the specified path does not exist), it will be routed to this relationship",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "The original FlowFile that was split into segments. If the FlowFile fails processing, nothing will be sent to this relationship",
+							"name": "original"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "All segments of the original FlowFile will be routed to this relationship",
+							"name": "split"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.SplitJson"
+				},
+				{
+					"id": "ae0e311a-95aa-4e2e-bbff-c338653e57c3",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "390.366136375585",
+						"y": "638.5290248050975"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Log Level",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "trace",
+												"value": "trace"
+											},
+											{
+												"displayName": "debug",
+												"value": "debug"
+											},
+											{
+												"displayName": "info",
+												"value": "info"
+											},
+											{
+												"displayName": "warn",
+												"value": "warn"
+											},
+											{
+												"displayName": "error",
+												"value": "error"
+											}
+										],
+										"defaultValue": "info",
+										"description": "The Log Level to use when logging the Attributes",
+										"displayName": "Log Level",
+										"dynamic": "false",
+										"name": "Log Level",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log Payload",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "If true, the FlowFile's payload will be logged, in addition to its attributes; otherwise, just the Attributes will be logged.",
+										"displayName": "Log Payload",
+										"dynamic": "false",
+										"name": "Log Payload",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Log",
+									"value": {
+										"description": "A comma-separated list of Attributes to Log. If not specified, all attributes will be logged.",
+										"displayName": "Attributes to Log",
+										"dynamic": "false",
+										"name": "Attributes to Log",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Attributes to Ignore",
+									"value": {
+										"description": "A comma-separated list of Attributes to ignore. If not specified, no attributes will be ignored.",
+										"displayName": "Attributes to Ignore",
+										"dynamic": "false",
+										"name": "Attributes to Ignore",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Log prefix",
+									"value": {
+										"description": "Log prefix appended to the log lines. It helps to distinguish the output of multiple LogAttribute processors.",
+										"displayName": "Log prefix",
+										"dynamic": "false",
+										"name": "Log prefix",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Log Level"
+								},
+								{
+									"key": "Log Payload"
+								},
+								{
+									"key": "Attributes to Log",
+									"value": "metric.name,metric.hostname,metric.timestamp,metric.value"
+								},
+								{
+									"key": "Attributes to Ignore"
+								},
+								{
+									"key": "Log prefix"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Log metric attributes",
+					"relationships": {
+						"autoTerminate": "true",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.LogAttribute"
+				},
+				{
+					"id": "94b8eab5-ee3c-470d-845b-cf5c70840bb7",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "-147.16424642685274",
+						"y": "638.4473839428657"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression",
+									"value": {
+										"description": "Regular expression for attributes to be deleted from flowfiles.",
+										"displayName": "Delete Attributes Expression",
+										"dynamic": "false",
+										"name": "Delete Attributes Expression",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "metric.value",
+									"value": {
+										"description": "",
+										"displayName": "metric.value",
+										"dynamic": "true",
+										"name": "metric.value",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Delete Attributes Expression"
+								},
+								{
+									"key": "metric.value",
+									"value": "${metric.value:substring( 2,${metric.value:length():minus(2)} )}"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Get the metric's value",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All FlowFiles are routed to this relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+				},
+				{
+					"id": "e58e0b99-96a4-466c-8b5d-b113c45e9ee4",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "-151.6933427238622",
+						"y": "482.85369433764663"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Destination",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "flowfile-content",
+												"value": "flowfile-content"
+											},
+											{
+												"displayName": "flowfile-attribute",
+												"value": "flowfile-attribute"
+											}
+										],
+										"defaultValue": "flowfile-content",
+										"description": "Indicates whether the results of the JsonPath evaluation are written to the FlowFile content or a FlowFile attribute; if using attribute, must specify the Attribute Name property. If set to flowfile-content, only one JsonPath may be specified, and the property name is ignored.",
+										"displayName": "Destination",
+										"dynamic": "false",
+										"name": "Destination",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Return Type",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "auto-detect",
+												"value": "auto-detect"
+											},
+											{
+												"displayName": "json",
+												"value": "json"
+											},
+											{
+												"displayName": "scalar",
+												"value": "scalar"
+											}
+										],
+										"defaultValue": "auto-detect",
+										"description": "Indicates the desired return type of the JSON Path expressions.  Selecting 'auto-detect' will set the return type to 'json' for a Destination of 'flowfile-content', and 'scalar' for a Destination of 'flowfile-attribute'.",
+										"displayName": "Return Type",
+										"dynamic": "false",
+										"name": "Return Type",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Path Not Found Behavior",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "warn",
+												"value": "warn"
+											},
+											{
+												"displayName": "ignore",
+												"value": "ignore"
+											}
+										],
+										"defaultValue": "ignore",
+										"description": "Indicates how to handle missing JSON path expressions when destination is set to 'flowfile-attribute'. Selecting 'warn' will generate a warning when a JSON path expression is not found.",
+										"displayName": "Path Not Found Behavior",
+										"dynamic": "false",
+										"name": "Path Not Found Behavior",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Null Value Representation",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "empty string",
+												"value": "empty string"
+											},
+											{
+												"displayName": "the string 'null'",
+												"value": "the string 'null'"
+											}
+										],
+										"defaultValue": "empty string",
+										"description": "Indicates the desired representation of JSON Path expressions resulting in a null value.",
+										"displayName": "Null Value Representation",
+										"dynamic": "false",
+										"name": "Null Value Representation",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "metric.hostname",
+									"value": {
+										"description": "",
+										"displayName": "metric.hostname",
+										"dynamic": "true",
+										"name": "metric.hostname",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "metric.name",
+									"value": {
+										"description": "",
+										"displayName": "metric.name",
+										"dynamic": "true",
+										"name": "metric.name",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "metric.timestamp",
+									"value": {
+										"description": "",
+										"displayName": "metric.timestamp",
+										"dynamic": "true",
+										"name": "metric.timestamp",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "metric.value",
+									"value": {
+										"description": "",
+										"displayName": "metric.value",
+										"dynamic": "true",
+										"name": "metric.value",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Destination",
+									"value": "flowfile-attribute"
+								},
+								{
+									"key": "Return Type",
+									"value": "json"
+								},
+								{
+									"key": "Path Not Found Behavior",
+									"value": "warn"
+								},
+								{
+									"key": "Null Value Representation"
+								},
+								{
+									"key": "metric.hostname",
+									"value": "$.hostname"
+								},
+								{
+									"key": "metric.name",
+									"value": "$.metricname"
+								},
+								{
+									"key": "metric.timestamp",
+									"value": "$.timestamp"
+								},
+								{
+									"key": "metric.value",
+									"value": "$.metrics.*"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Get Metric info as attributes",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles are routed to this relationship when the JsonPath cannot be evaluated against the content of the FlowFile; for instance, if the FlowFile is not valid JSON",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"description": "FlowFiles are routed to this relationship when the JsonPath is successfully evaluated and the FlowFile is modified as a result",
+							"name": "matched"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles are routed to this relationship when the JsonPath does not match the content of the FlowFile and the Destination is set to flowfile-content",
+							"name": "unmatched"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "true",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+				},
+				{
+					"id": "d2c79bcd-8566-456d-919b-0a60d1412bf9",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "-157.06709063937382",
+						"y": "106.6915002126737"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Listening Port",
+									"value": {
+										"defaultValue": "80",
+										"description": "The Port to listen on for incoming HTTP requests",
+										"displayName": "Listening Port",
+										"dynamic": "false",
+										"name": "Listening Port",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Hostname",
+									"value": {
+										"description": "The Hostname to bind to. If not specified, will bind to all hosts",
+										"displayName": "Hostname",
+										"dynamic": "false",
+										"name": "Hostname",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"description": "The SSL Context Service to use in order to secure the server. If specified, the server will accept only HTTPS requests; otherwise, the server will accept only HTTP requests",
+										"displayName": "SSL Context Service",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardHttpContextMap",
+											"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+										},
+										"description": "The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+										"displayName": "HTTP Context Map",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+										"name": "HTTP Context Map",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allowed Paths",
+									"value": {
+										"description": "A Regular Expression that specifies the valid HTTP Paths that are allowed in the incoming URL Requests. If this value is specified and the path of the HTTP Requests does not match this Regular Expression, the Processor will respond with a 404: NotFound",
+										"displayName": "Allowed Paths",
+										"dynamic": "false",
+										"name": "Allowed Paths",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Default URL Character Set",
+									"value": {
+										"defaultValue": "UTF-8",
+										"description": "The character set to use for decoding URL parameters if the HTTP Request does not supply one",
+										"displayName": "Default URL Character Set",
+										"dynamic": "false",
+										"name": "Default URL Character Set",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow GET",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP GET Method",
+										"displayName": "Allow GET",
+										"dynamic": "false",
+										"name": "Allow GET",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow POST",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP POST Method",
+										"displayName": "Allow POST",
+										"dynamic": "false",
+										"name": "Allow POST",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow PUT",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP PUT Method",
+										"displayName": "Allow PUT",
+										"dynamic": "false",
+										"name": "Allow PUT",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow DELETE",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "true",
+										"description": "Allow HTTP DELETE Method",
+										"displayName": "Allow DELETE",
+										"dynamic": "false",
+										"name": "Allow DELETE",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow HEAD",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "Allow HTTP HEAD Method",
+										"displayName": "Allow HEAD",
+										"dynamic": "false",
+										"name": "Allow HEAD",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Allow OPTIONS",
+									"value": {
+										"allowableValues": [
+											{
+												"displayName": "true",
+												"value": "true"
+											},
+											{
+												"displayName": "false",
+												"value": "false"
+											}
+										],
+										"defaultValue": "false",
+										"description": "Allow HTTP OPTIONS Method",
+										"displayName": "Allow OPTIONS",
+										"dynamic": "false",
+										"name": "Allow OPTIONS",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Additional HTTP Methods",
+									"value": {
+										"description": "A comma-separated list of non-standard HTTP Methods that should be allowed",
+										"displayName": "Additional HTTP Methods",
+										"dynamic": "false",
+										"name": "Additional HTTP Methods",
+										"required": "false",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								},
+								{
+									"key": "Client Authentication",
+									"value": {
+										"allowableValues": [
+											{
+												"description": "Processor will not authenticate clients. Anyone can communicate with this Processor anonymously",
+												"displayName": "No Authentication",
+												"value": "No Authentication"
+											},
+											{
+												"description": "Processor will try to verify the client but if unable to verify will allow the client to communicate anonymously",
+												"displayName": "Want Authentication",
+												"value": "Want Authentication"
+											},
+											{
+												"description": "Processor will reject communications from any client unless the client provides a certificate that is trusted by the TrustStorespecified in the SSL Context Service",
+												"displayName": "Need Authentication",
+												"value": "Need Authentication"
+											}
+										],
+										"defaultValue": "No Authentication",
+										"description": "Specifies whether or not the Processor should authenticate clients. This value is ignored if the <SSL Context Service> Property is not specified or the SSL Context provided uses only a KeyStore and not a TrustStore.",
+										"displayName": "Client Authentication",
+										"dynamic": "false",
+										"name": "Client Authentication",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Listening Port",
+									"value": "8680"
+								},
+								{
+									"key": "Hostname",
+									"value": "localhost"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+								},
+								{
+									"key": "Allowed Paths"
+								},
+								{
+									"key": "Default URL Character Set"
+								},
+								{
+									"key": "Allow GET"
+								},
+								{
+									"key": "Allow POST"
+								},
+								{
+									"key": "Allow PUT"
+								},
+								{
+									"key": "Allow DELETE"
+								},
+								{
+									"key": "Allow HEAD"
+								},
+								{
+									"key": "Allow OPTIONS"
+								},
+								{
+									"key": "Additional HTTP Methods"
+								},
+								{
+									"key": "Client Authentication"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Incoming Ambari report",
+					"relationships": {
+						"autoTerminate": "false",
+						"description": "All content that is received is routed to the 'success' relationship",
+						"name": "success"
+					},
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.HandleHttpRequest"
+				},
+				{
+					"id": "c5a94d4c-c2bb-40de-a827-244e74528fe4",
+					"parentGroupId": "b8cbae40-4019-4c69-b185-df812e88e5be",
+					"position": {
+						"x": "375.19744400406313",
+						"y": "101.97166752234247"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"defaultConcurrentTasks": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "1"
+								},
+								{
+									"key": "EVENT_DRIVEN",
+									"value": "0"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "1"
+								}
+							]
+						},
+						"defaultSchedulingPeriod": {
+							"entry": [
+								{
+									"key": "TIMER_DRIVEN",
+									"value": "0 sec"
+								},
+								{
+									"key": "CRON_DRIVEN",
+									"value": "* * * * * ?"
+								}
+							]
+						},
+						"descriptors": {
+							"entry": [
+								{
+									"key": "HTTP Status Code",
+									"value": {
+										"description": "The HTTP Status Code to use when responding to the HTTP Request. See Section 10 of RFC 2616 for more information.",
+										"displayName": "HTTP Status Code",
+										"dynamic": "false",
+										"name": "HTTP Status Code",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "true"
+									}
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": {
+										"allowableValues": {
+											"displayName": "StandardHttpContextMap",
+											"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+										},
+										"description": "The HTTP Context Map Controller Service to use for caching the HTTP Request Information",
+										"displayName": "HTTP Context Map",
+										"dynamic": "false",
+										"identifiesControllerService": "org.apache.nifi.http.HttpContextMap",
+										"name": "HTTP Context Map",
+										"required": "true",
+										"sensitive": "false",
+										"supportsEl": "false"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "HTTP Status Code",
+									"value": "200"
+								},
+								{
+									"key": "HTTP Context Map",
+									"value": "bc09bb31-fbf8-44ef-8115-0351fe2e4e37"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "Respond OK",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles will be routed to this Relationship if the Processor is unable to respond to the requestor. This may happen, for instance, if the connection times out or if NiFi is restarted before responding to the HTTP Request.",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"description": "FlowFiles will be routed to this Relationship after the response has been successfully sent to the requestor",
+							"name": "success"
+						}
+					],
+					"state": "STOPPED",
+					"style": "",
+					"supportsEventDriven": "false",
+					"supportsParallelProcessing": "true",
+					"type": "org.apache.nifi.processors.standard.HandleHttpResponse"
+				}
+			]
+		},
+		"timestamp": "01/06/2022 14:14:44 EST"
+	}
+}

@@ -1,0 +1,68 @@
+{%- macro podman_run() -%}
+
+/usr/bin/podman container run
+--conmon-pidfile=%t/user/{{ podman_systemd_uid }}/%n.pid
+--cidfile=%t/user/{{ podman_systemd_uid }}/%n.ctr-id
+--rm
+--replace
+--name {{ podman_systemd_name }}
+--log-driver journald
+--read-only={{ podman_systemd_readonly }}
+
+{%- for var, value in podman_systemd_environment.items() %}
+ --env {{ var }}={{ value }}
+{% endfor -%}
+
+{%- for port in podman_systemd_ports %}
+ --publish {{ port }}
+{% endfor -%}
+
+{%- for volume in podman_systemd_volumes %}
+ --volume {{ volume }}
+{% endfor -%}
+
+{%- if podman_systemd_network is defined %}
+ --network {{ podman_systemd_network }}
+{% endif -%}
+
+{%- if podman_systemd_device is defined %}
+ --device {{ podman_systemd_device }}
+{% endif -%}
+
+{% endmacro -%}
+
+
+{{ podman_systemd_comment | comment }}
+
+[Unit]
+Description={{ podman_systemd_description }}
+Documentation=man:podman-generate-systemd(1)
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+{% for var, value in podman_systemd_environment.items() %}
+Environment={{ var }}={{ value }}
+{% endfor %}
+Restart=on-failure
+TimeoutStopSec=70
+KillMode=mixed
+KillSignal=SIGINT
+LimitNOFILE=65536
+LimitRTPRIO=99
+CPUWeight=100
+SuccessExitStatus=51 52
+RestartPreventExitStatus=51
+RestartForceExitStatus=52
+User={{ podman_systemd_user }}
+ExecStartPre=/bin/rm -f %t/user/{{ podman_systemd_uid }}/%n.pid %t/user/{{ podman_systemd_uid }}/%n.ctr-id
+ExecStart={{ podman_run() | replace('\n', ' ') | trim }} {{ podman_systemd_image }}
+ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/user/{{ podman_systemd_uid }}/%n.ctr-id
+ExecStopPost=/usr/bin/podman rm -f --ignore --cidfile=%t/user/{{ podman_systemd_uid }}/%n.ctr-id
+Type=simple
+PIDFile=%t/user/{{ podman_systemd_uid }}/%n.pid
+
+[Install]
+WantedBy=default.target

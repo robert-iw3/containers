@@ -1,0 +1,28 @@
+deployment_type: docker  # docker, podman, kubernetes
+hyperdx_version: 2-beta  # Updated to v2
+api_port: 8000
+app_port: 8080
+app_url: http://localhost
+log_level: info
+otel_endpoint: http://localhost:4318
+use_external_clickhouse: false
+external_clickhouse:
+  host: http://external-ch:8123
+  username: default
+  password: ""
+use_external_otel: false
+external_otel_endpoint: http://external-otel:4318
+api_key: ""
+usage_stats_enabled: false
+domain: example.com
+cert_type: self-signed  # self-signed, letsencrypt, csr
+email: ""  # For letsencrypt
+k8s_namespace: default
+k8s_release_name: my-hyperdx
+target_dir: /opt/hyperdx
+clickhouse_agg_password: ""
+clickhouse_wrk_password: ""
+clickhouse_api_password: ""
+mongo_password: ""
+use_all_in_one: false  # Use v2 all-in-one image for local
+enable_json_schema: false  # v2 JSON schema support

@@ -1,0 +1,71 @@
+{
+	admin off
+}
+
+(default) {
+	encode zstd gzip
+	log {
+		output stdout
+		format console
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+	}
+	ratelimit {
+		limit 100r/s
+		burst 200
+	}
+}
+
+(default_proxy_config) {
+	header_up X-Real-IP {http.request.remote.host}
+}
+
+(litellm_proxy) {
+	route /openai/v1/* {
+		uri strip_prefix /openai
+		reverse_proxy http://litellm:4000 {
+			header_up Authorization "Bearer {http.request.header.X-Token-User-Email}"
+		}
+	}
+}
+
+http://litellm.{$FQDN} {
+	import default
+	reverse_proxy http://litellm:4000 {
+		import default_proxy_config
+	}
+}
+
+http://webui.{$FQDN}:80 {
+	import default
+	reverse_proxy http://open-webui:8080 {
+		import default_proxy_config
+	}
+}
+
+http://yakgpt.{$FQDN} {
+	import default
+	reverse_proxy http://yakgpt:3000 {
+		import default_proxy_config
+	}
+}
+
+http://nextchat.{$FQDN} {
+	import default
+	import litellm_proxy
+	reverse_proxy http://nextchat:3000 {
+		import default_proxy_config
+	}
+}
+
+http://chat.{$FQDN} {
+	import default
+	import litellm_proxy
+	reverse_proxy http://ollama-webui:8080 {
+		import default_proxy_config
+	}
+}

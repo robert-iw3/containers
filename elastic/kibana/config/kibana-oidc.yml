@@ -1,0 +1,86 @@
+---
+## Default Kibana configuration from Kibana base image.
+## https://github.com/elastic/kibana/blob/main/src/dev/build/tasks/os_packages/docker_generator/templates/kibana_yml.template.ts
+#
+server.name: kibana
+server.host: 0.0.0.0
+elasticsearch.hosts: [ https://elasticsearch:9200 ]
+
+monitoring.ui.container.elasticsearch.enabled: true
+#monitoring.ui.container.logstash.enabled: true
+
+server.ssl.enabled: true
+elasticsearch.serviceAccountToken: "${KIBANA_SERVICE_ACCOUNT_TOKEN}"
+elasticsearch.ssl.certificateAuthorities: [ config/certs/ca/ca.crt ]
+server.ssl.certificate: config/certs/kibana/kibana.crt
+server.ssl.key: config/certs/kibana/kibana.key
+
+## Fleet
+## https://www.elastic.co/guide/en/kibana/current/fleet-settings-kb.html
+#
+xpack.fleet.agents.fleet_server.hosts: [ https://fleet-server:8220 ]
+
+xpack.fleet.outputs:
+  - id: fleet-default-output
+    name: default
+    type: elasticsearch
+    hosts: [ https://elasticsearch:9200 ]
+    # openssl x509 -fingerprint -sha256 -noout -in tls/kibana/elasticsearch-ca.pem (colons removed)
+    ca_trusted_fingerprint: ED9BD2CAADD6E8FB06FE2C1840B880CDEC35C590D3380FF792B2B3DC67E753EB
+    is_default: true
+    is_default_monitoring: true
+
+xpack.fleet.packages:
+  - name: fleet_server
+    version: latest
+  - name: system
+    version: latest
+  - name: elastic_agent
+    version: latest
+
+xpack.fleet.agentPolicies:
+  - name: Fleet Server policy
+    id: fleet-server-policy
+    description: Fleet Server policy
+    monitoring_enabled:
+      - logs
+      - metrics
+    package_policies:
+      - name: fleet_server-1
+        package:
+          name: fleet_server
+      - name: system-1
+        package:
+          name: system
+      - name: elastic_agent-1
+        package:
+          name: elastic_agent
+
+## X-Pack security credentials
+#
+
+xpack.security.authc.providers:
+  basic.basic1:
+    order: 0
+    description: "Log in with Basic Authentication"
+    icon: "logoElastic"
+  oidc.authentik:
+    order: 1
+    realm: authentik
+    description: "Log in with Authentik SSO"
+    icon: "https://camo.githubusercontent.com/261798df437e834bdad3097d89dcd83d412df1305690a16b9376304c6934506d/68747470733a2f2f676f61757468656e74696b2e696f2f696d672f69636f6e5f746f705f6272616e645f636f6c6f75722e737667"
+#  oidc.oidc2:
+#    order: 2
+#    realm: oidc2
+#    description: "Log in with Keycloak SSO"
+#    icon: "logoWeb"
+
+## Encryption keys (optional but highly recommended)
+##
+## Generate with either
+##  $ docker container run --rm docker.elastic.co/kibana/kibana:9.1.4 bin/kibana-encryption-keys generate
+##  $ openssl rand -hex 36
+##
+## https://www.elastic.co/guide/en/kibana/current/using-kibana-with-security.html
+## https://www.elastic.co/guide/en/kibana/current/kibana-encryption-keys.html
+#

@@ -1,0 +1,16 @@
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: block-icmp
+spec:
+  order: 200
+  selector: all()
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+    protocol: ICMP
+  egress:
+  - action: Deny
+    protocol: ICMP

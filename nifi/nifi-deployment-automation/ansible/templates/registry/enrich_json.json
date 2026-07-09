@@ -1,0 +1,748 @@
+{
+	"template": {
+		"description": "use ExecuteScript to enrich JSON data using Python",
+		"groupId": "1bcc17e9-0158-1000-d368-a854cfec3d46",
+		"name": "enrich_json",
+		"snippet": {
+			"connections": [
+				{
+					"id": "01581001-4f5b-1bce-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "01581000-4f5b-1bce-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "1bcd21f7-0158-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "1bce1774-0158-1000-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "1bcd21f7-0158-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "c4ff71c0-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "1bce786b-0158-1000-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "1bce4f5b-0158-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "failure",
+					"source": {
+						"groupId": "1bcc17e9-0158-1000-0000-000000000000",
+						"id": "1bcd21f7-0158-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"processors": [
+				{
+					"id": "c4ff71c0-0157-1000-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"position": {
+						"x": "0.0",
+						"y": "0.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "bootstrap.servers",
+									"value": {
+										"name": "bootstrap.servers"
+									}
+								},
+								{
+									"key": "security.protocol",
+									"value": {
+										"name": "security.protocol"
+									}
+								},
+								{
+									"key": "sasl.kerberos.service.name",
+									"value": {
+										"name": "sasl.kerberos.service.name"
+									}
+								},
+								{
+									"key": "ssl.context.service",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "ssl.context.service"
+									}
+								},
+								{
+									"key": "topic",
+									"value": {
+										"name": "topic"
+									}
+								},
+								{
+									"key": "group.id",
+									"value": {
+										"name": "group.id"
+									}
+								},
+								{
+									"key": "auto.offset.reset",
+									"value": {
+										"name": "auto.offset.reset"
+									}
+								},
+								{
+									"key": "key-attribute-encoding",
+									"value": {
+										"name": "key-attribute-encoding"
+									}
+								},
+								{
+									"key": "message-demarcator",
+									"value": {
+										"name": "message-demarcator"
+									}
+								},
+								{
+									"key": "max.poll.records",
+									"value": {
+										"name": "max.poll.records"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "bootstrap.servers",
+									"value": "kafka:9092"
+								},
+								{
+									"key": "security.protocol",
+									"value": "PLAINTEXT"
+								},
+								{
+									"key": "sasl.kerberos.service.name"
+								},
+								{
+									"key": "ssl.context.service"
+								},
+								{
+									"key": "topic",
+									"value": "foo"
+								},
+								{
+									"key": "group.id",
+									"value": "grp0"
+								},
+								{
+									"key": "auto.offset.reset",
+									"value": "latest"
+								},
+								{
+									"key": "key-attribute-encoding",
+									"value": "utf-8"
+								},
+								{
+									"key": "message-demarcator"
+								},
+								{
+									"key": "max.poll.records",
+									"value": "10000"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ConsumeKafka",
+					"relationships": {
+						"autoTerminate": "false",
+						"name": "success"
+					},
+					"style": "",
+					"type": "org.apache.nifi.processors.kafka.pubsub.ConsumeKafka"
+				},
+				{
+					"id": "01581000-4f5b-1bce-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"position": {
+						"x": "2.0",
+						"y": "396.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "FlowFile Success Iterations",
+									"value": {
+										"name": "FlowFile Success Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Failure Iterations",
+									"value": {
+										"name": "FlowFile Failure Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Iterations",
+									"value": {
+										"name": "FlowFile Rollback Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Yield Iterations",
+									"value": {
+										"name": "FlowFile Rollback Yield Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Penalty Iterations",
+									"value": {
+										"name": "FlowFile Rollback Penalty Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Exception Iterations",
+									"value": {
+										"name": "FlowFile Exception Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Exception Class",
+									"value": {
+										"name": "FlowFile Exception Class"
+									}
+								},
+								{
+									"key": "No FlowFile Skip Iterations",
+									"value": {
+										"name": "No FlowFile Skip Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Exception Iterations",
+									"value": {
+										"name": "No FlowFile Exception Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Yield Iterations",
+									"value": {
+										"name": "No FlowFile Yield Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Exception Class",
+									"value": {
+										"name": "No FlowFile Exception Class"
+									}
+								},
+								{
+									"key": "Write Iterations",
+									"value": {
+										"name": "Write Iterations"
+									}
+								},
+								{
+									"key": "Content Size",
+									"value": {
+										"name": "Content Size"
+									}
+								},
+								{
+									"key": "@OnScheduled Pause Time",
+									"value": {
+										"name": "@OnScheduled Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnScheduled called",
+									"value": {
+										"name": "Fail When @OnScheduled called"
+									}
+								},
+								{
+									"key": "@OnUnscheduled Pause Time",
+									"value": {
+										"name": "@OnUnscheduled Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnUnscheduled called",
+									"value": {
+										"name": "Fail When @OnUnscheduled called"
+									}
+								},
+								{
+									"key": "@OnStopped Pause Time",
+									"value": {
+										"name": "@OnStopped Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnStopped called",
+									"value": {
+										"name": "Fail When @OnStopped called"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "FlowFile Success Iterations",
+									"value": "1"
+								},
+								{
+									"key": "FlowFile Failure Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Yield Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Penalty Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Exception Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Exception Class",
+									"value": "java.lang.RuntimeException"
+								},
+								{
+									"key": "No FlowFile Skip Iterations",
+									"value": "1"
+								},
+								{
+									"key": "No FlowFile Exception Iterations",
+									"value": "0"
+								},
+								{
+									"key": "No FlowFile Yield Iterations",
+									"value": "0"
+								},
+								{
+									"key": "No FlowFile Exception Class",
+									"value": "java.lang.RuntimeException"
+								},
+								{
+									"key": "Write Iterations",
+									"value": "0"
+								},
+								{
+									"key": "Content Size",
+									"value": "1 KB"
+								},
+								{
+									"key": "@OnScheduled Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnScheduled called",
+									"value": "false"
+								},
+								{
+									"key": "@OnUnscheduled Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnUnscheduled called",
+									"value": "false"
+								},
+								{
+									"key": "@OnStopped Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnStopped called",
+									"value": "false"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "DebugFlow",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "success"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.standard.DebugFlow"
+				},
+				{
+					"id": "1bcd21f7-0158-1000-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"position": {
+						"x": "3.0",
+						"y": "198.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Script Engine",
+									"value": {
+										"name": "Script Engine"
+									}
+								},
+								{
+									"key": "Script File",
+									"value": {
+										"name": "Script File"
+									}
+								},
+								{
+									"key": "Script Body",
+									"value": {
+										"name": "Script Body"
+									}
+								},
+								{
+									"key": "Module Directory",
+									"value": {
+										"name": "Module Directory"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Script Engine",
+									"value": "python"
+								},
+								{
+									"key": "Script File",
+									"value": "/scripts/enrich.py"
+								},
+								{
+									"key": "Script Body"
+								},
+								{
+									"key": "Module Directory"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ExecuteScript",
+					"relationships": [
+						{
+							"autoTerminate": "false",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"name": "success"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.script.ExecuteScript"
+				},
+				{
+					"id": "1bce4f5b-0158-1000-0000-000000000000",
+					"parentGroupId": "1bcc17e9-0158-1000-0000-000000000000",
+					"position": {
+						"x": "583.0",
+						"y": "268.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "FlowFile Success Iterations",
+									"value": {
+										"name": "FlowFile Success Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Failure Iterations",
+									"value": {
+										"name": "FlowFile Failure Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Iterations",
+									"value": {
+										"name": "FlowFile Rollback Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Yield Iterations",
+									"value": {
+										"name": "FlowFile Rollback Yield Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Rollback Penalty Iterations",
+									"value": {
+										"name": "FlowFile Rollback Penalty Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Exception Iterations",
+									"value": {
+										"name": "FlowFile Exception Iterations"
+									}
+								},
+								{
+									"key": "FlowFile Exception Class",
+									"value": {
+										"name": "FlowFile Exception Class"
+									}
+								},
+								{
+									"key": "No FlowFile Skip Iterations",
+									"value": {
+										"name": "No FlowFile Skip Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Exception Iterations",
+									"value": {
+										"name": "No FlowFile Exception Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Yield Iterations",
+									"value": {
+										"name": "No FlowFile Yield Iterations"
+									}
+								},
+								{
+									"key": "No FlowFile Exception Class",
+									"value": {
+										"name": "No FlowFile Exception Class"
+									}
+								},
+								{
+									"key": "Write Iterations",
+									"value": {
+										"name": "Write Iterations"
+									}
+								},
+								{
+									"key": "Content Size",
+									"value": {
+										"name": "Content Size"
+									}
+								},
+								{
+									"key": "@OnScheduled Pause Time",
+									"value": {
+										"name": "@OnScheduled Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnScheduled called",
+									"value": {
+										"name": "Fail When @OnScheduled called"
+									}
+								},
+								{
+									"key": "@OnUnscheduled Pause Time",
+									"value": {
+										"name": "@OnUnscheduled Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnUnscheduled called",
+									"value": {
+										"name": "Fail When @OnUnscheduled called"
+									}
+								},
+								{
+									"key": "@OnStopped Pause Time",
+									"value": {
+										"name": "@OnStopped Pause Time"
+									}
+								},
+								{
+									"key": "Fail When @OnStopped called",
+									"value": {
+										"name": "Fail When @OnStopped called"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "FlowFile Success Iterations",
+									"value": "1"
+								},
+								{
+									"key": "FlowFile Failure Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Yield Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Rollback Penalty Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Exception Iterations",
+									"value": "0"
+								},
+								{
+									"key": "FlowFile Exception Class",
+									"value": "java.lang.RuntimeException"
+								},
+								{
+									"key": "No FlowFile Skip Iterations",
+									"value": "1"
+								},
+								{
+									"key": "No FlowFile Exception Iterations",
+									"value": "0"
+								},
+								{
+									"key": "No FlowFile Yield Iterations",
+									"value": "0"
+								},
+								{
+									"key": "No FlowFile Exception Class",
+									"value": "java.lang.RuntimeException"
+								},
+								{
+									"key": "Write Iterations",
+									"value": "0"
+								},
+								{
+									"key": "Content Size",
+									"value": "1 KB"
+								},
+								{
+									"key": "@OnScheduled Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnScheduled called",
+									"value": "false"
+								},
+								{
+									"key": "@OnUnscheduled Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnUnscheduled called",
+									"value": "false"
+								},
+								{
+									"key": "@OnStopped Pause Time",
+									"value": "0 sec"
+								},
+								{
+									"key": "Fail When @OnStopped called",
+									"value": "false"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "DebugFlow",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "success"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.standard.DebugFlow"
+				}
+			]
+		},
+		"timestamp": "10/31/2022 19:12:57 UTC",
+		"_encoding-version": "1.3"
+	}
+}

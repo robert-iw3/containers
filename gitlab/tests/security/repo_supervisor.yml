@@ -1,0 +1,17 @@
+repo supervisor:
+  stage: test
+  image: docker.io/node:20.9.0-alpine3.18
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - enter here
+  artifacts:
+    paths:
+      - r-s.json
+    reports:
+      container_scanning: r-s.json

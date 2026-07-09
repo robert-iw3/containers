@@ -1,0 +1,640 @@
+{
+	"template": {
+		"description": "Examples of NiFi Expression Language for timestamps.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "Working with TimeStamps",
+		"snippet": {
+			"processGroups": {
+				"id": "4e0c6aba-9d07-3662-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "327df7f2-0572-3b74-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "dc042902-d5bf-3999-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "d5882b4d-b039-3b92-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "34265928-d699-3b0d-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "d5882b4d-b039-3b92-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "04a6b5ba-8c38-3e13-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "5b1bb715-3402-3955-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "0a66dd26-2395-3221-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "3f540095-ad6c-3cb8-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "6cc359c1-9184-300c-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "04a6b5ba-8c38-3e13-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "d59bdf88-0599-38c2-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "75f42710-54c3-32dd-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "3f540095-ad6c-3cb8-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "4e0c6aba-9d07-3662-0000-000000000000",
+								"id": "d59bdf88-0599-38c2-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"labels": [
+						{
+							"id": "8bf6afcd-627a-3a81-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "908.0000062582519",
+								"y": "274.00004580277607"
+							},
+							"height": "54.0",
+							"label": "Unix Timestamp",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "205.0"
+						},
+						{
+							"id": "fbc4a077-0983-3add-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "313.0000062582519",
+								"y": "268.00004580277607"
+							},
+							"height": "55.04246520996094",
+							"label": "Today / Yesterday from Now",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "430.17259216308594"
+						}
+					],
+					"outputPorts": [
+						{
+							"id": "0a66dd26-2395-3221-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "379.00023657580823",
+								"y": "607.0"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "output",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'output'' is invalid because Output connection for port 'output' is not defined."
+						},
+						{
+							"id": "dc042902-d5bf-3999-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "802.0000062582519",
+								"y": "756.0000458027761"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "output2",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'output2'' is invalid because Output connection for port 'output2' is not defined."
+						}
+					],
+					"processors": [
+						{
+							"id": "04a6b5ba-8c38-3e13-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "749.0000062582519",
+								"y": "343.00004580277607"
+							},
+							"bundle": {
+								"artifact": "nifi-update-attribute-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression",
+											"value": {
+												"name": "Delete Attributes Expression"
+											}
+										},
+										{
+											"key": "Store State",
+											"value": {
+												"name": "Store State"
+											}
+										},
+										{
+											"key": "Stateful Variables Initial Value",
+											"value": {
+												"name": "Stateful Variables Initial Value"
+											}
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": {
+												"name": "canonical-value-lookup-cache-size"
+											}
+										},
+										{
+											"key": "input",
+											"value": {
+												"name": "input"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression"
+										},
+										{
+											"key": "Store State",
+											"value": "Do not store state"
+										},
+										{
+											"key": "Stateful Variables Initial Value"
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": "100"
+										},
+										{
+											"key": "input",
+											"value": "1589379890"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UpdateAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+						},
+						{
+							"id": "3f540095-ad6c-3cb8-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "331.00023657580823",
+								"y": "341.0"
+							},
+							"bundle": {
+								"artifact": "nifi-update-attribute-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression",
+											"value": {
+												"name": "Delete Attributes Expression"
+											}
+										},
+										{
+											"key": "Store State",
+											"value": {
+												"name": "Store State"
+											}
+										},
+										{
+											"key": "Stateful Variables Initial Value",
+											"value": {
+												"name": "Stateful Variables Initial Value"
+											}
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": {
+												"name": "canonical-value-lookup-cache-size"
+											}
+										},
+										{
+											"key": "daybefore",
+											"value": {
+												"name": "daybefore"
+											}
+										},
+										{
+											"key": "today",
+											"value": {
+												"name": "today"
+											}
+										},
+										{
+											"key": "yesterday",
+											"value": {
+												"name": "yesterday"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression"
+										},
+										{
+											"key": "Store State",
+											"value": "Do not store state"
+										},
+										{
+											"key": "Stateful Variables Initial Value"
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": "100"
+										},
+										{
+											"key": "daybefore",
+											"value": "${now():minus(86400000):minus(86400000):format('MM-dd-yyyy hh:mm:ss') }"
+										},
+										{
+											"key": "today",
+											"value": "${now():format('MM-dd-yyyy hh:mm:ss') }"
+										},
+										{
+											"key": "yesterday",
+											"value": "${now():minus(86400000):format('MM-dd-yyyy hh:mm:ss') }"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UpdateAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+						},
+						{
+							"id": "d5882b4d-b039-3b92-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "754.0000062582519",
+								"y": "536.0000458027761"
+							},
+							"bundle": {
+								"artifact": "nifi-update-attribute-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression",
+											"value": {
+												"name": "Delete Attributes Expression"
+											}
+										},
+										{
+											"key": "Store State",
+											"value": {
+												"name": "Store State"
+											}
+										},
+										{
+											"key": "Stateful Variables Initial Value",
+											"value": {
+												"name": "Stateful Variables Initial Value"
+											}
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": {
+												"name": "canonical-value-lookup-cache-size"
+											}
+										},
+										{
+											"key": "test1",
+											"value": {
+												"name": "test1"
+											}
+										},
+										{
+											"key": "test2",
+											"value": {
+												"name": "test2"
+											}
+										},
+										{
+											"key": "test3",
+											"value": {
+												"name": "test3"
+											}
+										},
+										{
+											"key": "test4",
+											"value": {
+												"name": "test4"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression"
+										},
+										{
+											"key": "Store State",
+											"value": "Do not store state"
+										},
+										{
+											"key": "Stateful Variables Initial Value"
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": "100"
+										},
+										{
+											"key": "test1",
+											"value": "${input:format('MM-dd-yyyy hh:mm:ss') }"
+										},
+										{
+											"key": "test2",
+											"value": "${input:multiply(1000):format('MM-dd-yyyy hh:mm:ss') }"
+										},
+										{
+											"key": "test3",
+											"value": "${input:multiply(1000):format('yyyy') }"
+										},
+										{
+											"key": "test4",
+											"value": "${input:multiply(1000):format('yyyy', 'GMT') }"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UpdateAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+						},
+						{
+							"id": "d59bdf88-0599-38c2-0000-000000000000",
+							"parentGroupId": "4e0c6aba-9d07-3662-0000-000000000000",
+							"position": {
+								"x": "564.0002365758082",
+								"y": "-45.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "15 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						}
+					]
+				},
+				"name": "Working with TimeStamps",
+				"variables": ""
+			}
+		},
+		"timestamp": "05/13/2020 20:03:41 UTC",
+		"_encoding-version": "1.2"
+	}
+}

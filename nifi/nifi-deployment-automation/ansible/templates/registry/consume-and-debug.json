@@ -1,0 +1,296 @@
+{
+   "template":{
+      "description":"",
+      "groupId":"c4fee2d1-0157-1000-bd3a-b14d61f8dc7c",
+      "name":"consume-and-debug",
+      "snippet":{
+         "connections":{
+            "id":"c50d246a-0157-1000-0000-000000000000",
+            "parentGroupId":"c4fee2d1-0157-1000-0000-000000000000",
+            "backPressureDataSizeThreshold":"1 GB",
+            "backPressureObjectThreshold":"10000",
+            "destination":{
+               "groupId":"c4fee2d1-0157-1000-0000-000000000000",
+               "id":"c50c8a34-0157-1000-0000-000000000000",
+               "type":"PROCESSOR"
+            },
+            "flowFileExpiration":"0 sec",
+            "labelIndex":"1",
+            "name":"",
+            "selectedRelationships":"success",
+            "source":{
+               "groupId":"c4fee2d1-0157-1000-0000-000000000000",
+               "id":"c4ff71c0-0157-1000-0000-000000000000",
+               "type":"PROCESSOR"
+            },
+            "zIndex":"0"
+         },
+         "processors":[
+            {
+               "id":"c4ff71c0-0157-1000-0000-000000000000",
+               "parentGroupId":"c4fee2d1-0157-1000-0000-000000000000",
+               "position":{
+                  "x":"0.0",
+                  "y":"0.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"bootstrap.servers",
+                           "value":{
+                              "name":"bootstrap.servers"
+                           }
+                        },
+                        {
+                           "key":"security.protocol",
+                           "value":{
+                              "name":"security.protocol"
+                           }
+                        },
+                        {
+                           "key":"sasl.kerberos.service.name",
+                           "value":{
+                              "name":"sasl.kerberos.service.name"
+                           }
+                        },
+                        {
+                           "key":"ssl.context.service",
+                           "value":{
+                              "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                              "name":"ssl.context.service"
+                           }
+                        },
+                        {
+                           "key":"topic",
+                           "value":{
+                              "name":"topic"
+                           }
+                        },
+                        {
+                           "key":"group.id",
+                           "value":{
+                              "name":"group.id"
+                           }
+                        },
+                        {
+                           "key":"auto.offset.reset",
+                           "value":{
+                              "name":"auto.offset.reset"
+                           }
+                        },
+                        {
+                           "key":"key-attribute-encoding",
+                           "value":{
+                              "name":"key-attribute-encoding"
+                           }
+                        },
+                        {
+                           "key":"message-demarcator",
+                           "value":{
+                              "name":"message-demarcator"
+                           }
+                        },
+                        {
+                           "key":"max.poll.records",
+                           "value":{
+                              "name":"max.poll.records"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"bootstrap.servers",
+                           "value":"kafka:9092"
+                        },
+                        {
+                           "key":"security.protocol",
+                           "value":"PLAINTEXT"
+                        },
+                        {
+                           "key":"sasl.kerberos.service.name"
+                        },
+                        {
+                           "key":"ssl.context.service"
+                        },
+                        {
+                           "key":"topic",
+                           "value":"foo"
+                        },
+                        {
+                           "key":"group.id",
+                           "value":"grp0"
+                        },
+                        {
+                           "key":"auto.offset.reset",
+                           "value":"latest"
+                        },
+                        {
+                           "key":"key-attribute-encoding",
+                           "value":"utf-8"
+                        },
+                        {
+                           "key":"message-demarcator"
+                        },
+                        {
+                           "key":"max.poll.records",
+                           "value":"10000"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"ConsumeKafka",
+               "relationships":{
+                  "autoTerminate":"false",
+                  "name":"success"
+               },
+               "style":"",
+               "type":"org.apache.nifi.processors.kafka.pubsub.ConsumeKafka"
+            },
+            {
+               "id":"c50c8a34-0157-1000-0000-000000000000",
+               "parentGroupId":"c4fee2d1-0157-1000-0000-000000000000",
+               "position":{
+                  "x":"651.0",
+                  "y":"103.0"
+               },
+               "config":{
+                  "bulletinLevel":"WARN",
+                  "comments":"",
+                  "concurrentlySchedulableTaskCount":"1",
+                  "descriptors":{
+                     "entry":[
+                        {
+                           "key":"Hostname",
+                           "value":{
+                              "name":"Hostname"
+                           }
+                        },
+                        {
+                           "key":"Port",
+                           "value":{
+                              "name":"Port"
+                           }
+                        },
+                        {
+                           "key":"Max Size of Socket Send Buffer",
+                           "value":{
+                              "name":"Max Size of Socket Send Buffer"
+                           }
+                        },
+                        {
+                           "key":"Idle Connection Expiration",
+                           "value":{
+                              "name":"Idle Connection Expiration"
+                           }
+                        },
+                        {
+                           "key":"Connection Per FlowFile",
+                           "value":{
+                              "name":"Connection Per FlowFile"
+                           }
+                        },
+                        {
+                           "key":"Outgoing Message Delimiter",
+                           "value":{
+                              "name":"Outgoing Message Delimiter"
+                           }
+                        },
+                        {
+                           "key":"Timeout",
+                           "value":{
+                              "name":"Timeout"
+                           }
+                        },
+                        {
+                           "key":"SSL Context Service",
+                           "value":{
+                              "identifiesControllerService":"org.apache.nifi.ssl.SSLContextService",
+                              "name":"SSL Context Service"
+                           }
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":{
+                              "name":"Character Set"
+                           }
+                        }
+                     ]
+                  },
+                  "lossTolerant":"false",
+                  "penaltyDuration":"30 sec",
+                  "properties":{
+                     "entry":[
+                        {
+                           "key":"Hostname",
+                           "value":"debug"
+                        },
+                        {
+                           "key":"Port",
+                           "value":"80"
+                        },
+                        {
+                           "key":"Max Size of Socket Send Buffer",
+                           "value":"200 KB"
+                        },
+                        {
+                           "key":"Idle Connection Expiration",
+                           "value":"5 seconds"
+                        },
+                        {
+                           "key":"Connection Per FlowFile",
+                           "value":"false"
+                        },
+                        {
+                           "key":"Outgoing Message Delimiter",
+                           "value":"\\n"
+                        },
+                        {
+                           "key":"Timeout",
+                           "value":"10 seconds"
+                        },
+                        {
+                           "key":"SSL Context Service"
+                        },
+                        {
+                           "key":"Character Set",
+                           "value":"UTF-8"
+                        }
+                     ]
+                  },
+                  "runDurationMillis":"0",
+                  "schedulingPeriod":"0 sec",
+                  "schedulingStrategy":"TIMER_DRIVEN",
+                  "yieldDuration":"1 sec"
+               },
+               "name":"PutTCP",
+               "relationships":[
+                  {
+                     "autoTerminate":"true",
+                     "name":"failure"
+                  },
+                  {
+                     "autoTerminate":"true",
+                     "name":"success"
+                  }
+               ],
+               "style":"",
+               "type":"org.apache.nifi.processors.standard.PutTCP"
+            }
+         ]
+      },
+      "timestamp":"10/14/2019 21:27:24 UTC",
+      "_encoding-version":"1.2"
+   }
+}

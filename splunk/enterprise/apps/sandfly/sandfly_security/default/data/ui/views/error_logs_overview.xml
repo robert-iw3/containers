@@ -1,0 +1,161 @@
+<form version="1.1" theme="light">
+  <label>Error Logs Overview</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-30d@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_log_mode" searchWhenChanged="true">
+      <label>Log Mode</label>
+      <choice value="summary">Summary</choice>
+      <choice value="detailed">Detailed</choice>
+      <default>summary</default>
+      <initialValue>summary</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Error Logs - Last 30 Days</title>
+      <single>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$ earliest=-30d@d
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Error Logs - Today</title>
+      <single>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$ earliest=@d
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Error Logs by Error Type over Time Range</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$
+| rex field=error_log.error_msg "(?&lt;t_error_tag&gt;[^:]*)"
+| timechart count by t_error_tag</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Error Logs over Time Range by Error Type</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$
+| rex field=error_log.error_msg "(?&lt;t_error_tag&gt;[^:]*)"
+| stats count by t_error_tag</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Error Logs over Time Range by Target Address</title>
+      <chart>
+        <search>
+          <query>`sandfly_search_errors` log_mode=summary
+| stats count by error_log.hostname</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Error Logs</title>
+      <input type="dropdown" token="tok_host_id" searchWhenChanged="true">
+        <label>Hostname (Target Address)</label>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>target_name</fieldForLabel>
+        <fieldForValue>target_id</fieldForValue>
+        <search>
+          <query>`sandfly_search_errors` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ log_mode=$tok_log_mode$
+| dedup error_log.host_id
+| rex field=error_log.error_msg "(?&lt;t_error_tag&gt;[^:]*)"
+| search t_error_tag="$tok_error_type$"
+| lookup sandfly_hosts.csv host_id AS error_log.host_id OUTPUTNEW os_info_node
+| eval os_info_node = if(isnull(os_info_node) OR len(os_info_node)==0, "&lt;unknown&gt;", os_info_node)
+| eval target_id = 'error_log.host_id'
+| eval target_name = os_info_node + " (" + 'error_log.hostname' + ")"
+| table target_id target_name
+| sort target_name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_error_type" searchWhenChanged="true">
+        <label>Error Type</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>t_error_tag</fieldForLabel>
+        <fieldForValue>t_error_tag</fieldForValue>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$ earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ error_log.host_id="$tok_host_id$"
+| rex field=error_log.error_msg "(?&lt;t_error_tag&gt;[^:]*)"
+| dedup t_error_tag
+| sort t_error_tag</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_errors` log_mode=$tok_log_mode$ error_log.host_id="$tok_host_id$"
+| rex field=error_log.error_msg "(?&lt;t_error_tag&gt;[^:]*)"
+| rex field=error_log.error_msg "[^:]:\s(?&lt;t_error_data&gt;.*)"
+| eval t_error_data = if(isnull(t_error_data) OR len(t_error_data)==0, t_error_tag, t_error_data)
+| search t_error_tag="$tok_error_type$"
+| eval TimeStamp=strftime(_time,"%x %r")
+| sort - _time
+| lookup sandfly_hosts.csv host_id AS error_log.host_id OUTPUTNEW os_info_node
+| eval os_info_node = if(isnull(os_info_node) OR len(os_info_node)==0, "&lt;unknown&gt;", os_info_node)
+| table TimeStamp t_error_tag os_info_node error_log.hostname error_log.ip_addr error_log.queue_name t_error_data
+| rename t_error_tag as ErrorType
+| rename error_log.hostname as "Target Address"
+| rename error_log.ip_addr as IP_Address
+| rename os_info_node as "Host Name"
+| rename error_log.queue_name as QueueName
+| rename t_error_data as ErrorData</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

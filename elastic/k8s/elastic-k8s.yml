@@ -1,0 +1,1133 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: elastic
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastic-config
+  namespace: elastic
+data:
+  elasticsearch.yml: |-
+    cluster.name: "elastic-cluster"
+    network.host: 0.0.0.0
+    cluster.initial_master_nodes:
+      - elasticsearch-0
+      - elasticsearch-1
+      - elasticsearch-2
+    discovery.seed_hosts:
+      - elasticsearch-0
+      - elasticsearch-1
+      - elasticsearch-2
+    xpack.license.self_generated.type: trial
+    xpack.security.enabled: true
+    xpack.security.authc.api_key.enabled: true
+    xpack.security.http.ssl.enabled: true
+    xpack.security.http.ssl.key: certs/elasticsearch/elasticsearch.key
+    xpack.security.http.ssl.certificate: certs/elasticsearch/elasticsearch.chain.pem
+    xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+    xpack.security.http.ssl.verification_mode: certificate
+    xpack.security.http.ssl.client_authentication: optional
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.transport.ssl.key: certs/elasticsearch/elasticsearch.key
+    xpack.security.transport.ssl.certificate: certs/elasticsearch/elasticsearch.crt
+    xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.client_authentication: optional
+  kibana.yml: |-
+    server.name: kibana
+    server.host: 0.0.0.0
+    elasticsearch.hosts: [ https://elasticsearch:9200 ]
+    monitoring.ui.container.elasticsearch.enabled: true
+    #monitoring.ui.container.logstash.enabled: true
+    server.ssl.enabled: true
+    elasticsearch.ssl.verificationMode: none
+    elasticsearch.ssl.certificateAuthorities: [ config/certs/ca/ca.crt ]
+    server.ssl.certificate: config/certs/kibana/kibana.crt
+    server.ssl.key: config/certs/kibana/kibana.key
+    ## Fleet
+    ## https://www.elastic.co/guide/en/kibana/current/fleet-settings-kb.html
+    #
+    xpack.fleet.agents.fleet_server.hosts: [ https://fleet-server:8220 ]
+    xpack.fleet.outputs:
+      - id: fleet-default-output
+        name: default
+        type: elasticsearch
+        hosts: [ https://elasticsearch:9200 ]
+        # openssl x509 -fingerprint -sha256 -noout -in tls/kibana/elasticsearch-ca.pem (colons removed)
+        ca_trusted_fingerprint: ED9BD2CAADD6E8FB06FE2C1840B880CDEC35C590D3380FF792B2B3DC67E753EB
+        is_default: true
+        is_default_monitoring: true
+    xpack.fleet.packages:
+      - name: fleet_server
+        version: latest
+      - name: system
+        version: latest
+      - name: elastic_agent
+        version: latest
+    xpack.fleet.agentPolicies:
+      - name: Fleet Server policy
+        id: fleet-server-policy
+        description: Fleet Server policy
+        monitoring_enabled:
+          - logs
+          - metrics
+        package_policies:
+          - name: fleet_server-1
+            package:
+              name: fleet_server
+          - name: system-1
+            package:
+              name: system
+          - name: elastic_agent-1
+            package:
+              name: elastic_agent
+  entrypoint.sh: |-
+    #!/usr/bin/env bash
+
+    set -eu
+    set -o pipefail
+
+    source "${BASH_SOURCE[0]%/*}"/lib.sh
+
+
+    # --------------------------------------------------------
+    # Users declarations
+
+    declare -A users_passwords
+    users_passwords=(
+      [logstash_internal]="${LOGSTASH_INTERNAL_PASSWORD:-}"
+      [kibana_system]="${KIBANA_SYSTEM_PASSWORD:-}"
+      [metricbeat_internal]="${METRICBEAT_INTERNAL_PASSWORD:-}"
+      [filebeat_internal]="${FILEBEAT_INTERNAL_PASSWORD:-}"
+      [heartbeat_internal]="${HEARTBEAT_INTERNAL_PASSWORD:-}"
+      [monitoring_internal]="${MONITORING_INTERNAL_PASSWORD:-}"
+      [beats_system]="${BEATS_SYSTEM_PASSWORD=:-}"
+    )
+
+    declare -A users_roles
+    users_roles=(
+      [logstash_internal]='logstash_writer'
+      [metricbeat_internal]='metricbeat_writer'
+      [filebeat_internal]='filebeat_writer'
+      [heartbeat_internal]='heartbeat_writer'
+      [monitoring_internal]='remote_monitoring_collector'
+    )
+
+    # --------------------------------------------------------
+    # Roles declarations
+
+    declare -A roles_files
+    roles_files=(
+      [logstash_writer]='logstash_writer.json'
+      [metricbeat_writer]='metricbeat_writer.json'
+      [filebeat_writer]='filebeat_writer.json'
+      [heartbeat_writer]='heartbeat_writer.json'
+    )
+
+    # --------------------------------------------------------
+
+
+    log 'Waiting for availability of Elasticsearch. This can take several minutes.'
+
+    declare -i exit_code=0
+    wait_for_elasticsearch || exit_code=$?
+
+    if ((exit_code)); then
+      case $exit_code in
+        6)
+          suberr 'Could not resolve host. Is Elasticsearch running?'
+          ;;
+        7)
+          suberr 'Failed to connect to host. Is Elasticsearch healthy?'
+          ;;
+        28)
+          suberr 'Timeout connecting to host. Is Elasticsearch healthy?'
+          ;;
+        *)
+          suberr "Connection to Elasticsearch failed. Exit code: ${exit_code}"
+          ;;
+      esac
+
+      exit $exit_code
+    fi
+
+    sublog 'Elasticsearch is running'
+
+    log 'Waiting for initialization of built-in users'
+
+    wait_for_builtin_users || exit_code=$?
+
+    if ((exit_code)); then
+      suberr 'Timed out waiting for condition'
+      exit $exit_code
+    fi
+
+    sublog 'Built-in users were initialized'
+
+    for role in "${!roles_files[@]}"; do
+      log "Role '$role'"
+
+      declare body_file
+      body_file="${BASH_SOURCE[0]%/*}/roles/${roles_files[$role]:-}"
+      if [[ ! -f "${body_file:-}" ]]; then
+        sublog "No role body found at '${body_file}', skipping"
+        continue
+      fi
+
+      sublog 'Creating/updating'
+      ensure_role "$role" "$(<"${body_file}")"
+    done
+
+    for user in "${!users_passwords[@]}"; do
+      log "User '$user'"
+      if [[ -z "${users_passwords[$user]:-}" ]]; then
+        sublog 'No password defined, skipping'
+        continue
+      fi
+
+      declare -i user_exists=0
+      user_exists="$(check_user_exists "$user")"
+
+      if ((user_exists)); then
+        sublog 'User exists, setting password'
+        set_user_password "$user" "${users_passwords[$user]}"
+      else
+        if [[ -z "${users_roles[$user]:-}" ]]; then
+          suberr '  No role defined, skipping creation'
+          continue
+        fi
+
+        sublog 'User does not exist, creating'
+        create_user "$user" "${users_passwords[$user]}" "${users_roles[$user]}"
+      fi
+    done
+  lib.sh: |-
+    #!/usr/bin/env bash
+
+    # Log a message.
+    function log {
+      echo "[+] $1"
+    }
+
+    # Log a message at a sub-level.
+    function sublog {
+      echo "   ⠿ $1"
+    }
+
+    # Log an error.
+    function err {
+      echo "[x] $1" >&2
+    }
+
+    # Log an error at a sub-level.
+    function suberr {
+      echo "   ⠍ $1" >&2
+    }
+
+    # Poll the 'elasticsearch' service until it responds with HTTP code 200.
+    function wait_for_elasticsearch {
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' '-w' '%{http_code}' "http://${elasticsearch_host}:9200/" )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+      local output
+
+      # retry for max 300s (60*5s)
+      for _ in $(seq 1 60); do
+        local -i exit_code=0
+        output="$(curl "${args[@]}")" || exit_code=$?
+
+        if ((exit_code)); then
+          result=$exit_code
+        fi
+
+        if [[ "${output: -3}" -eq 200 ]]; then
+          result=0
+          break
+        fi
+
+        sleep 5
+      done
+
+      if ((result)) && [[ "${output: -3}" -ne 000 ]]; then
+        echo -e "\n${output::-3}"
+      fi
+
+      return $result
+    }
+
+    # Poll the Elasticsearch users API until it returns users.
+    function wait_for_builtin_users {
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' "http://${elasticsearch_host}:9200/_security/user?pretty" )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+
+      local line
+      local -i exit_code
+      local -i num_users
+
+      # retry for max 30s (30*1s)
+      for _ in $(seq 1 30); do
+        num_users=0
+
+        # read exits with a non-zero code if the last read input doesn't end
+        # with a newline character. The printf without newline that follows the
+        # curl command ensures that the final input not only contains curl's
+        # exit code, but causes read to fail so we can capture the return value.
+        # Ref. https://unix.stackexchange.com/a/176703/152409
+        while IFS= read -r line || ! exit_code="$line"; do
+          if [[ "$line" =~ _reserved.+true ]]; then
+            (( num_users++ ))
+          fi
+        done < <(curl "${args[@]}"; printf '%s' "$?")
+
+        if ((exit_code)); then
+          result=$exit_code
+        fi
+
+        # we expect more than just the 'elastic' user in the result
+        if (( num_users > 1 )); then
+          result=0
+          break
+        fi
+
+        sleep 1
+      done
+
+      return $result
+    }
+
+    # Verify that the given Elasticsearch user exists.
+    function check_user_exists {
+      local username=$1
+
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' '-w' '%{http_code}'
+        "http://${elasticsearch_host}:9200/_security/user/${username}"
+        )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+      local -i exists=0
+      local output
+
+      output="$(curl "${args[@]}")"
+      if [[ "${output: -3}" -eq 200 || "${output: -3}" -eq 404 ]]; then
+        result=0
+      fi
+      if [[ "${output: -3}" -eq 200 ]]; then
+        exists=1
+      fi
+
+      if ((result)); then
+        echo -e "\n${output::-3}"
+      else
+        echo "$exists"
+      fi
+
+      return $result
+    }
+
+    # Set password of a given Elasticsearch user.
+    function set_user_password {
+      local username=$1
+      local password=$2
+
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' '-w' '%{http_code}'
+        "http://${elasticsearch_host}:9200/_security/user/${username}/_password"
+        '-X' 'POST'
+        '-H' 'Content-Type: application/json'
+        '-d' "{\"password\" : \"${password}\"}"
+        )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+      local output
+
+      output="$(curl "${args[@]}")"
+      if [[ "${output: -3}" -eq 200 ]]; then
+        result=0
+      fi
+
+      if ((result)); then
+        echo -e "\n${output::-3}\n"
+      fi
+
+      return $result
+    }
+
+    # Create the given Elasticsearch user.
+    function create_user {
+      local username=$1
+      local password=$2
+      local role=$3
+
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' '-w' '%{http_code}'
+        "http://${elasticsearch_host}:9200/_security/user/${username}"
+        '-X' 'POST'
+        '-H' 'Content-Type: application/json'
+        '-d' "{\"password\":\"${password}\",\"roles\":[\"${role}\"]}"
+        )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+      local output
+
+      output="$(curl "${args[@]}")"
+      if [[ "${output: -3}" -eq 200 ]]; then
+        result=0
+      fi
+
+      if ((result)); then
+        echo -e "\n${output::-3}\n"
+      fi
+
+      return $result
+    }
+
+    # Ensure that the given Elasticsearch role is up-to-date, create it if required.
+    function ensure_role {
+      local name=$1
+      local body=$2
+
+      local elasticsearch_host="${ELASTICSEARCH_HOST:-elasticsearch}"
+
+      local -a args=( '-s' '-D-' '-m15' '-w' '%{http_code}'
+        "http://${elasticsearch_host}:9200/_security/role/${name}"
+        '-X' 'POST'
+        '-H' 'Content-Type: application/json'
+        '-d' "$body"
+        )
+
+      if [[ -n "${ELASTIC_PASSWORD:-}" ]]; then
+        args+=( '-u' "elastic:${ELASTIC_PASSWORD}" )
+      fi
+
+      local -i result=1
+      local output
+
+      output="$(curl "${args[@]}")"
+      if [[ "${output: -3}" -eq 200 ]]; then
+        result=0
+      fi
+
+      if ((result)); then
+        echo -e "\n${output::-3}\n"
+      fi
+
+      return $result
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: elastic
+data:
+  config.yaml: |-
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    connectors:
+      elasticapm:
+    processors:
+      elastictrace:
+    exporters:
+      elasticsearch:
+        endpoints: ["https://elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local:9200"]
+        user: elastic
+        password: "${ELASTIC_PASSWORD}" # Populated from Secret
+        tls:
+          ca_file: /certs/ca/ca.crt
+        mapping:
+          mode: otel
+        logs_dynamic_index:
+          enabled: true
+        metrics_dynamic_index:
+          enabled: true
+        traces_dynamic_index:
+          enabled: true
+        flush:
+          interval: 1s
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [elastictrace]
+          exporters: [elasticapm, elasticsearch]
+        metrics:
+          receivers: [otlp]
+          processors: []
+          exporters: [elasticsearch]
+        metrics/aggregated:
+          receivers: [elasticapm]
+          processors: []
+          exporters: [elasticsearch]
+        logs:
+          receivers: [otlp]
+          processors: []
+          exporters: [elasticapm, elasticsearch]
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: elastic-secrets
+  namespace: elastic
+type: Opaque
+stringData:
+  ELASTIC_PASSWORD: "${ELASTIC_PASSWORD}" # Replace with actual password
+  KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD}"
+  LOGSTASH_INTERNAL_PASSWORD: "${LOGSTASH_INTERNAL_PASSWORD}"
+  METRICBEAT_INTERNAL_PASSWORD: "${METRICBEAT_INTERNAL_PASSWORD}"
+  FILEBEAT_INTERNAL_PASSWORD: "${FILEBEAT_INTERNAL_PASSWORD}"
+  HEARTBEAT_INTERNAL_PASSWORD: "${HEARTBEAT_INTERNAL_PASSWORD}"
+  MONITORING_INTERNAL_PASSWORD: "${MONITORING_INTERNAL_PASSWORD}"
+  BEATS_SYSTEM_PASSWORD: "${BEATS_SYSTEM_PASSWORD}"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi # Adjust based on needs
+  storageClassName: standard # Replace with appropriate storage class
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kibana-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi # Adjust based on needs
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fleetserver-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi # Adjust based on needs
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: certs
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi # Adjust based on needs
+  storageClassName: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-cluster
+  namespace: elastic
+spec:
+  clusterIP: None # Headless service
+  selector:
+    app: elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+    - name: transport
+      port: 9300
+      targetPort: 9300
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: elastic
+spec:
+  selector:
+    app: kibana
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+      protocol: TCP
+  type: NodePort # Consider Ingress for production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-server
+  namespace: elastic
+spec:
+  selector:
+    app: fleet-server
+  ports:
+    - name: http
+      port: 8220
+      targetPort: 8220
+      protocol: TCP
+  type: NodePort # Consider Ingress for production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: elastic
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: elastic
+spec:
+  serviceName: elasticsearch-cluster
+  replicas: 3 # Matches three Elasticsearch nodes
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+        - name: setup
+          image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+          securityContext:
+            runAsUser: 0 # Required for setup tasks
+          env:
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+            - name: KIBANA_SYSTEM_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: KIBANA_SYSTEM_PASSWORD
+            - name: LOGSTASH_INTERNAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: LOGSTASH_INTERNAL_PASSWORD
+            - name: METRICBEAT_INTERNAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: METRICBEAT_INTERNAL_PASSWORD
+            - name: FILEBEAT_INTERNAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: FILEBEAT_INTERNAL_PASSWORD
+            - name: HEARTBEAT_INTERNAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: HEARTBEAT_INTERNAL_PASSWORD
+            - name: MONITORING_INTERNAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: MONITORING_INTERNAL_PASSWORD
+            - name: BEATS_SYSTEM_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: BEATS_SYSTEM_PASSWORD
+          command:
+            - bash
+            - -c
+            - |
+              if [ -z "${ELASTIC_PASSWORD}" ]; then
+                echo "Set the ELASTIC_PASSWORD environment variable"; exit 1;
+              elif [ -z "${KIBANA_SYSTEM_PASSWORD}" ]; then
+                echo "Set the KIBANA_SYSTEM_PASSWORD environment variable"; exit 1;
+              fi;
+              if [ ! -f config/certs/ca.zip ]; then
+                echo "Creating CA";
+                bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+                unzip config/certs/ca.zip -d config/certs;
+              fi;
+              if [ ! -f config/certs/certs.zip ]; then
+                echo "Creating certs";
+                cat > config/certs/instances.yml <<EOF
+              instances:
+                - name: elasticsearch
+                  dns:
+                    - elasticsearch
+                    - localhost
+                  ip:
+                    - 127.0.0.1
+                - name: elasticsearch1
+                  dns:
+                    - elasticsearch1
+                    - localhost
+                  ip:
+                    - 127.0.0.1
+                - name: elasticsearch2
+                  dns:
+                    - elasticsearch2
+                    - localhost
+                  ip:
+                    - 127.0.0.1
+                - name: kibana
+                  dns:
+                    - kibana
+                    - localhost
+                  ip:
+                    - 127.0.0.1
+                - name: fleet-server
+                  dns:
+                    - fleet-server
+                    - localhost
+                  ip:
+                    - 127.0.0.1
+              EOF
+                bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+                unzip config/certs/certs.zip -d config/certs;
+                cat config/certs/elasticsearch/elasticsearch.crt config/certs/ca/ca.crt > config/certs/elasticsearch/elasticsearch.chain.pem
+                cat config/certs/elasticsearch1/elasticsearch1.crt config/certs/ca/ca.crt > config/certs/elasticsearch1/elasticsearch1.chain.pem
+                cat config/certs/elasticsearch2/elasticsearch2.crt config/certs/ca/ca.crt > config/certs/elasticsearch2/elasticsearch2.chain.pem
+              fi;
+              echo "Setting file permissions";
+              chown -R root:root config/certs;
+              find . -type d -exec chmod 750 {} \;
+              find . -type f -exec chmod 640 {} \;
+              echo "Waiting for Elasticsearch availability";
+              until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+              echo "Setting kibana_system password";
+              until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_SYSTEM_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+              echo "All done!";
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/certs
+            - name: config
+              mountPath: /entrypoint.sh
+              subPath: entrypoint.sh
+            - name: config
+              mountPath: /lib.sh
+              subPath: lib.sh
+            - name: config
+              mountPath: /roles
+              subPath: roles
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+          command:
+            - bash
+            - -c
+            - |
+              set -e
+              case "$HOSTNAME" in
+                elasticsearch-0) suffix= ;;
+                elasticsearch-1) suffix=1 ;;
+                *) suffix=2 ;;
+              esac
+              exec env \
+                "xpack.security.http.ssl.key=certs/elasticsearch${suffix}/elasticsearch${suffix}.key" \
+                "xpack.security.http.ssl.certificate=certs/elasticsearch${suffix}/elasticsearch${suffix}.chain.pem" \
+                "xpack.security.transport.ssl.key=certs/elasticsearch${suffix}/elasticsearch${suffix}.key" \
+                "xpack.security.transport.ssl.certificate=certs/elasticsearch${suffix}/elasticsearch${suffix}.crt" \
+                /bin/tini -- /usr/local/bin/docker-entrypoint.sh eswrapper
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+          env:
+            - name: ES_JAVA_OPTS
+              value: "-Xms2g -Xmx2g"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: elastic-cluster
+            - name: cluster.initial_master_nodes
+              value: elasticsearch-0,elasticsearch-1,elasticsearch-2
+            - name: discovery.seed_hosts
+              value: elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local,elasticsearch-1.elasticsearch-cluster.elastic.svc.cluster.local,elasticsearch-2.elasticsearch-cluster.elastic.svc.cluster.local
+            - name: bootstrap.memory_lock
+              value: "true"
+            - name: xpack.security.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.http.ssl.verification_mode
+              value: certificate
+            - name: xpack.security.http.ssl.client_authentication
+              value: optional
+            - name: xpack.security.transport.ssl.enabled
+              value: "true"
+            - name: xpack.security.transport.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.transport.ssl.verification_mode
+              value: certificate
+            - name: xpack.security.transport.ssl.client_authentication
+              value: optional
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/certs
+            - name: config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              subPath: elasticsearch.yml
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: elasticsearch-data
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+        - name: config
+          configMap:
+            name: elastic-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          env:
+            - name: ELASTICSEARCH_USERNAME
+              value: kibana_system
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: KIBANA_SYSTEM_PASSWORD
+            - name: SERVER_NAME
+              value: kibana
+            - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+              value: config/certs/ca/ca.crt
+            - name: SERVER_SSL_ENABLED
+              value: "true"
+            - name: SERVER_SSL_CERTIFICATE
+              value: config/certs/kibana/kibana.crt
+            - name: SERVER_SSL_KEY
+              value: config/certs/kibana/kibana.key
+            - name: SERVER_SSL_CERTIFICATEAUTHORITIES
+              value: config/certs/ca/ca.crt
+          ports:
+            - containerPort: 5601
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/kibana/data
+            - name: certs
+              mountPath: /usr/share/kibana/config/certs
+            - name: config
+              mountPath: /usr/share/kibana/config/kibana.yml
+              subPath: kibana.yml
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kibana-data
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+        - name: config
+          configMap:
+            name: elastic-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-server
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fleet-server
+  template:
+    metadata:
+      labels:
+        app: fleet-server
+    spec:
+      securityContext:
+        runAsUser: 0 # Required for Fleet Server
+      containers:
+        - name: fleet-server
+          image: docker.elastic.co/elastic-agent/elastic-agent:${ELASTIC_VERSION}
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          env:
+            - name: FLEET_ENROLL
+              value: "1"
+            - name: FLEET_SERVER_POLICY_ID
+              value: fleet-server-policy
+            - name: FLEET_SERVER_ENABLE
+              value: "1"
+            - name: KIBANA_FLEET_SETUP
+              value: "1"
+            - name: KIBANA_HOST
+              value: https://kibana.elastic.svc.cluster.local:5601
+            - name: FLEET_URL
+              value: https://fleet-server.elastic.svc.cluster.local:8220
+            - name: FLEET_SERVER_ELASTICSEARCH_HOST
+              value: https://elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local:9200
+            - name: FLEET_CA
+              value: /certs/ca/ca.crt
+            - name: KIBANA_FLEET_USERNAME
+              value: elastic
+            - name: KIBANA_FLEET_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+            - name: FLEET_SERVER_CERT
+              value: /certs/fleet-server/fleet-server.crt
+            - name: FLEET_SERVER_CERT_KEY
+              value: /certs/fleet-server/fleet-server.key
+            - name: FLEET_SERVER_ELASTICSEARCH_CA
+              value: /certs/ca/ca.crt
+            - name: KIBANA_FLEET_CA
+              value: /certs/ca/ca.crt
+          ports:
+            - containerPort: 8220
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elastic-agent
+            - name: certs
+              mountPath: /certs
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8220
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8220
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: fleetserver-data
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: otel-collector
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: otel-collector
+          image: docker.elastic.co/elastic-agent/elastic-otel-collector:9.2.0
+          command: ["/usr/bin/tini", "--"]
+          args: ["/usr/local/bin/docker-entrypoint", "--config=/usr/share/elastic-agent/config.yaml"]
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: "512Mi"
+            limits:
+              cpu: "0.5"
+              memory: "1Gi"
+          env:
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+          ports:
+            - containerPort: 4317
+              name: grpc
+            - containerPort: 4318
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/elastic-agent/config.yaml
+              subPath: config.yaml
+            - name: certs
+              mountPath: /certs
+          livenessProbe:
+            tcpSocket:
+              port: 4317
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 4317
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs

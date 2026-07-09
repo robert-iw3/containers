@@ -1,0 +1,27 @@
+---
+- hosts: localhost
+  vars_files:
+    - config.yaml
+  tasks:
+    - name: Generate certs
+      command: docker build -t certs:latest certs
+    - name: Run certs
+      command: docker run --rm -v ./secrets/certs:/certs --env AUTHORITY_PASSWORD={{ authority.password }} --env COMPANY={{ authority.company }} --env etc... certs:latest  # Add all envs
+
+    - name: Create secrets dir
+      file:
+        path: secrets
+        state: directory
+
+    - name: Copy certs
+      copy:
+        src: secrets/certs/falco.pem
+        dest: secrets/falco.pem
+
+    - name: Deploy to Docker
+      command: docker compose up -d --build
+      when: mode == 'docker'
+
+    - name: Deploy to K8s
+      command: ./deploy-falco-k8s.sh
+      when: mode == 'k8s'

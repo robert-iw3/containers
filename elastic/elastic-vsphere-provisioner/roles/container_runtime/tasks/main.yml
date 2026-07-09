@@ -1,0 +1,43 @@
+---
+# Container Runtime: Docker or Podman
+- name: Install Docker (Debian/Ubuntu)
+  apt:
+    name: docker.io
+    state: present
+  when: container_runtime == "docker" and ansible_os_family == "Debian"
+  become: yes
+
+- name: Install Docker (RHEL/Alma)
+  dnf:
+    name: docker
+    state: present
+  when: container_runtime == "docker" and ansible_os_family == "RedHat"
+  become: yes
+
+- name: Install Podman (Debian/Ubuntu)
+  apt:
+    name: podman
+    state: present
+  when: container_runtime == "podman" and ansible_os_family == "Debian"
+  become: yes
+
+- name: Install Podman (RHEL/Alma)
+  dnf:
+    name: podman
+    state: present
+  when: container_runtime == "podman" and ansible_os_family == "RedHat"
+  become: yes
+
+- name: Enable container runtime service
+  systemd:
+    name: "{{ 'docker' if container_runtime == 'docker' else 'podman.socket' }}"
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Add SSH user to container group
+  user:
+    name: "{{ ansible_user }}"
+    groups: "{{ 'docker' if container_runtime == 'docker' else 'podman' }}"
+    append: yes
+  become: yes

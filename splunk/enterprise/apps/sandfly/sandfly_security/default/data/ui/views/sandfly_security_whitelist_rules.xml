@@ -1,0 +1,147 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security - Whitelist Rules</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Total Whitelist Rules</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist`
+| dedup whitelist_rule.id
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Active Whitelist Rules</title>
+      <single>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.active=true
+| dedup whitelist_rule.id
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Whitelist Rules</title>
+      <input type="dropdown" token="tok_sandfly" searchWhenChanged="true">
+        <label>Sandfly</label>
+        <choice value="*">Any</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>t_sandfly</fieldForLabel>
+        <fieldForValue>t_sandfly</fieldForValue>
+        <search>
+          <query>`sandfly_search_whitelist` earliest=$tok_time1.earliest$ latest=$tok_time1.latest$ whitelist_rule.active=$tok_active$ whitelist_rule.all_hosts=$tok_all_hosts$ whitelist_rule.exclude_sandfly=$tok_type$
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| eval num_host_tags=mvcount('whitelist_rule.host_tags{}')
+| fillnull value=0 num_host_tags
+| eval scope=if(num_host_ids==0 AND num_host_tags==0, "None", "match")
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags&gt;0, "Mixed", scope)
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags==0, "Match Host IDs", scope)
+| eval scope=if(num_host_ids==0 AND num_host_tags&gt;0, "Match By Tags", scope)
+| eval scope=if('whitelist_rule.all_hosts'=="true", "All Hosts", scope)
+| search scope="$tok_scope$"
+| rename whitelist_rule.sandfly as t_sandfly
+| dedup t_sandfly
+| sort t_sandfly
+| table t_sandfly</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+      <input type="dropdown" token="tok_active" searchWhenChanged="true">
+        <label>Active</label>
+        <choice value="*">Any</choice>
+        <choice value="true">True</choice>
+        <choice value="false">False</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_all_hosts" searchWhenChanged="true">
+        <label>All Hosts</label>
+        <choice value="*">Any</choice>
+        <choice value="true">All Hosts</choice>
+        <choice value="false">Not All Hosts</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_type" searchWhenChanged="true">
+        <label>Whitelist Type</label>
+        <choice value="*">Any</choice>
+        <choice value="true">Disable Sandfly</choice>
+        <choice value="false">Match Rules</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="tok_scope" searchWhenChanged="true">
+        <label>Scope</label>
+        <choice value="*">Any</choice>
+        <choice value="All Hosts">All Hosts</choice>
+        <choice value="Match By Tags">Match By Tags</choice>
+        <choice value="Match Host IDs">Match Host IDs</choice>
+        <choice value="Mixed">Mixed</choice>
+        <choice value="None">None</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.active=$tok_active$ whitelist_rule.all_hosts=$tok_all_hosts$ whitelist_rule.exclude_sandfly=$tok_type$ whitelist_rule.sandfly="$tok_sandfly$"
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| eval num_host_tags=mvcount('whitelist_rule.host_tags{}')
+| fillnull value=0 num_host_tags
+| eval scope=if(num_host_ids==0 AND num_host_tags==0, "None", "match")
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags&gt;0, "Mixed", scope)
+| eval scope=if(num_host_ids&gt;0 AND num_host_tags==0, "Match Host IDs", scope)
+| eval scope=if(num_host_ids==0 AND num_host_tags&gt;0, "Match By Tags", scope)
+| eval scope=if('whitelist_rule.all_hosts'=="true", "All Hosts", scope)
+| search scope="$tok_scope$"
+| eval whitelist_type=if('whitelist_rule.exclude_sandfly'=="true", "Disable Sandfly", "Match Rules")
+| eval is_active=if('whitelist_rule.active'=="true","True","False")
+| table whitelist_rule.id whitelist_rule.sandfly is_active whitelist_type scope whitelist_rule.hosts_covered whitelist_rule.comment
+| rename whitelist_rule.id as "ID"
+| rename whitelist_rule.sandfly as "Sandfly"
+| rename is_active as "Active"
+| rename whitelist_type as "Whitelist Type"
+| rename scope as "Scope"
+| rename whitelist_rule.hosts_covered as "Num Of Hosts"
+| rename whitelist_rule.comment as "Comment"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Active">
+          <colorPalette type="map">{"False":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Num Of Hosts">
+          <colorPalette type="map">{"0":#DC4E41}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/sandfly_security_whitelist_rule_details?form.tok_id=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

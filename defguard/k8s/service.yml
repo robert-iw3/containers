@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: defguard
+  namespace: defguard
+spec:
+  selector:
+    app: defguard
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  - name: grpc
+    port: 50055
+    targetPort: 50055
+  - name: proxy
+    port: 8080
+    targetPort: 8080
+  - name: wireguard
+    port: 50051
+    targetPort: 50051
+    protocol: UDP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: defguard-db
+  namespace: defguard
+spec:
+  selector:
+    app: defguard-db
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP

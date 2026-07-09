@@ -1,0 +1,55 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - n8n
+
+services:
+  api-fw:
+    <<: *common-vars-apps
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-fw
+    hostname: api-fw.io
+    environment:
+      APIFW_URL: "https://0.0.0.0:8080"
+      APIFW_TLS_CERTS_PATH: /certs
+      APIFW_TLS_CERT_FILE: /certs/api-fw.crt
+      APIFW_TLS_CERT_KEY: /certs/api-fw.key
+      APIFW_API_SPECS: "/opt/resources/qdrant-api.json"
+      APIFW_SERVER_URL: "http://qdrant:6333"
+      APIFW_SERVER_MAX_CONNS_PER_HOST: "512"
+      APIFW_SERVER_READ_TIMEOUT: "5s"
+      APIFW_SERVER_WRITE_TIMEOUT: "5s"
+      APIFW_SERVER_DIAL_TIMEOUT: "200ms"
+      APIFW_REQUEST_VALIDATION: "BLOCK"
+      APIFW_RESPONSE_VALIDATION: "BLOCK"
+      # Modify allowed IP's
+      # https://wallarm.github.io/api-firewall/configuration-guides/allowlist/
+      APIFW_ALLOW_IP_FILE: '/opt/resources/allowed.iplist.db'
+      APIFW_ALLOW_IP_HEADER_NAME: 'X-Forwarded-For'
+      # Denylist: Token (create and list revoked/old JWT tokens "tokens.denylist.db")
+      # https://wallarm.github.io/api-firewall/configuration-guides/denylist-leaked-tokens/
+      #APIFW_DENYLIST_TOKENS_FILE: "/opt/resources/tokens.denylist.db"
+      #APIFW_DENYLIST_TOKENS_COOKIE_NAME: "test"
+      #APIFW_DENYLIST_TOKENS_HEADER_NAME: ""
+      #APIFW_DENYLIST_TOKENS_TRIM_BEARER_PREFIX: "true"
+      # OWASP Core RuleSet
+      # https://github.com/coreruleset/coreruleset
+      APIFW_SHADOW_API_UNKNOWN_PARAMETERS_DETECTION: "false"
+      APIFW_MODSEC_CONF_FILES: "/opt/resources/coraza.conf;/opt/resources/crs/crs-setup.conf.example"
+      APIFW_MODSEC_RULES_DIR: "/opt/resources/crs/rules/"
+    volumes:
+      - ./qdrant-api.json:/opt/resources:ro,Z
+      - ./certs:/certs:Z
+      - ./allowed.iplist.db:/opt/resources:ro,Z
+      #- ./tokens.denylist.db:/opt/resources:ro,Z
+      - ./crs:/opt/resources/crs:ro,Z
+      - ./coraza.conf:/opt/resources/coraza.conf:ro,Z
+    ports:
+      - "127.0.0.1:8080:8080"
+    stop_grace_period: 1s

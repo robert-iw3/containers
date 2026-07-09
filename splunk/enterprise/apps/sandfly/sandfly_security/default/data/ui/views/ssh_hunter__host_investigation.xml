@@ -1,0 +1,68 @@
+<form version="1.1">
+  <label>SSH Hunter - Host Investigation</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>Host Investigation</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details
+| dedup ssh_host_details.host_id
+| spath output=aaa_zones path=ssh_host_details.zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| table ssh_host_details.node_name ssh_host_details.target_address ssh_host_details.users_current ssh_host_details.users_total ssh_host_details.keys_current ssh_host_details.keys_total aaa_zones_count ssh_host_details.os_info_os_release_pretty_name ssh_host_details.tags{} ssh_host_details.key_first_seen ssh_host_details.key_last_seen ssh_host_details.results_alert ssh_host_details.results_error ssh_host_details.last_seen_ip_addr ssh_host_details.has_duplicate_keys ssh_host_details.host_id
+| rename ssh_host_details.node_name as "Hostname"
+| rename ssh_host_details.target_address as "Target Address"
+| rename ssh_host_details.users_current as "Active Users"
+| rename ssh_host_details.users_total as "Total Users"
+| rename ssh_host_details.keys_current as "Active Keys"
+| rename ssh_host_details.keys_total as "Total Keys"
+| rename aaa_zones_count as "Security Zones"
+| rename ssh_host_details.os_info_os_release_pretty_name as "OS"
+| rename ssh_host_details.tags{} as "Tags"
+| rename ssh_host_details.key_first_seen as "Keys First Seen"
+| rename ssh_host_details.key_last_seen as "Keys Last Seen"
+| rename ssh_host_details.results_alert as "Alerts"
+| rename ssh_host_details.results_error as "Errors"
+| rename ssh_host_details.last_seen_ip_addr as "Last Seen IP Address"
+| rename ssh_host_details.has_duplicate_keys as "Duplicate Keys"
+| rename ssh_host_details.host_id as host_id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Duplicate Keys">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <fields>["Hostname","Target Address","Active Users","Total Users","Active Keys","Total Keys","Security Zones","OS","Tags","Keys First Seen","Keys Last Seen","Alerts","Errors","Last Seen IP Address","Duplicate Keys"]</fields>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__host_summary?form.tok_host_id=$row.host_id$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Raw Event Details</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_host_details
+| dedup ssh_host_details.host_id</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

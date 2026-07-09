@@ -1,0 +1,116 @@
+---
+- name: Deploy Nessus Stack
+  hosts: localhost
+  become: yes
+  vars:
+    subnet: "192.168.0.0/16"
+    interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+    project_dir: "/opt/nessus-stack"
+    secrets_dir: "{{ project_dir }}/secrets"
+    certs_dir: "{{ project_dir }}/certs"
+    nginx_dir: "{{ project_dir }}/nginx"
+    exports_dir: "{{ project_dir }}/exports"
+    plugins_dir: "{{ project_dir }}/plugins"
+    output_dir: "{{ project_dir }}/output"
+    nessus_api_keys: "accessKey=your_access_key;secretKey=your_secret_key"
+
+  tasks:
+    - name: Install Podman and dependencies
+      package:
+        name:
+          - podman
+          - podman-compose
+          - firewalld
+          - openssl
+        state: present
+
+    - name: Enable and start Podman socket
+      systemd:
+        name: podman.socket
+        enabled: yes
+        state: started
+        scope: user
+      become_user: "{{ ansible_user_id }}"
+
+    - name: Create project directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ project_dir }}"
+        - "{{ secrets_dir }}"
+        - "{{ certs_dir }}"
+        - "{{ nginx_dir }}"
+        - "{{ exports_dir }}"
+        - "{{ plugins_dir }}"
+        - "{{ output_dir }}"
+
+    - name: Create secrets
+      copy:
+        content: "{{ item.content }}"
+        dest: "{{ secrets_dir }}/{{ item.name }}.txt"
+        mode: '0600'
+      loop:
+        - { name: 'nessus_username', content: 'your-username' }
+        - { name: 'nessus_password', content: 'your-password' }
+        - { name: 'activation_code', content: 'your-activation-code' }
+        - { name: 'apifw_config', content: 'apifw-config' }
+        - { name: 'nessus_api_keys', content: "{{ nessus_api_keys }}" }
+
+    - name: Generate certificates
+      shell: |
+        openssl req -x509 -nodes -days 730 -newkey rsa:2048 \
+          -keyout {{ certs_dir }}/nessus.testing.io.key \
+          -out {{ certs_dir }}/nessus.testing.io.crt \
+          -subj "/C=US/ST=XX/L=XXXX/O=Testing/CN=nessus.testing.io"
+        openssl req -x509 -nodes -days 730 -newkey rsa:2048 \
+          -keyout {{ certs_dir }}/apifw.testing.io-key.pem \
+          -out {{ certs_dir }}/apifw.testing.io.pem \
+          -subj "/C=US/ST=XX/L=XXXX/O=Testing/CN=api-fw.testing.io"
+        openssl dhparam -out {{ nginx_dir }}/dhparam.pem 2048
+        cp {{ certs_dir }}/nessus.testing.io.* {{ nginx_dir }}/
+      args:
+        creates: "{{ certs_dir }}/nessus.testing.io.crt"
+
+    - name: Copy configuration files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ project_dir }}/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: 'docker-compose.yml', dest: 'docker-compose.yml' }
+        - { src: 'nessus-api-spec.json', dest: 'nessusapi/nessus-api-spec.json' }
+        - { src: 'nginx.conf', dest: 'nginx/nginx.conf' }
+        - { src: 'ssl-params.conf', dest: 'nginx/ssl-params.conf' }
+        - { src: 'nessus-parser.py', dest: 'nessus-parser.py' }
+        - { src: 'Dockerfile-react', dest: 'Dockerfile-react' }
+        - { src: 'index.jsx', dest: 'src/index.jsx' }
+        - { src: 'package.json', dest: 'package.json' }
+
+    - name: Configure firewall
+      firewalld:
+        permanent: yes
+        immediate: yes
+        state: enabled
+        rich_rule: "{{ item }}"
+      loop:
+        - "rule family=ipv4 source address={{ subnet }} port port=443 protocol=tcp accept"
+        - "rule family=ipv4 source address={{ subnet }} port port=8834 protocol=tcp accept"
+        - "rule family=ipv4 source address={{ subnet }} port port=8088 protocol=tcp accept"
+      notify: reload firewalld
+
+    - name: Update /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 nessus.testing.io api-fw.testing.io"
+        state: present
+
+    - name: Deploy stack
+      command: podman-compose -f {{ project_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ project_dir }}"
+
+  handlers:
+    - name: reload firewalld
+      command: firewall-cmd --reload

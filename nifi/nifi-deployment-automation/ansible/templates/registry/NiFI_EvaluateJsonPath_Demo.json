@@ -1,0 +1,873 @@
+{
+	"template": {
+		"description": "Demonstration of accessing json values inside of json objects and arrays.",
+		"groupId": "7c84501d-d10c-407c-b9f3-1d80e38fe36a",
+		"name": "NIFI EvaluateJsonPath Demo",
+		"snippet": {
+			"processGroups": {
+				"id": "566cb6fc-116e-346f-0000-000000000000",
+				"parentGroupId": "46f95fe5-3024-31d8-0000-000000000000",
+				"position": {
+					"x": "0.0",
+					"y": "0.0"
+				},
+				"comments": "",
+				"contents": {
+					"connections": [
+						{
+							"id": "24d32165-c11c-3ece-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "2297.0810546875",
+								"y": "345.3634338378906"
+							},
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "35b0b9aa-7c58-3534-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "0",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "7d4045a5-11f0-3c5c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "40f1341d-d2cf-3b7a-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "6934734c-710c-30d3-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "215c19f7-5e6e-3265-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "4d0a77c8-7aca-3f52-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "35b0b9aa-7c58-3534-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "eb00606c-491b-3e83-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "6bab85e3-8b62-3881-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "c10e57db-c0c3-3150-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "failure",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "6934734c-710c-30d3-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "840db538-dd01-3aa4-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "798.0000069614955",
+								"y": "393.0"
+							},
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "c10e57db-c0c3-3150-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "6934734c-710c-30d3-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "9af6e72f-7d2f-3b97-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "eb00606c-491b-3e83-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "0",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "matched",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "7d4045a5-11f0-3c5c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "b7e1b097-22e1-300c-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "2540.787203460621",
+								"y": "347.5064916885999"
+							},
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "35b0b9aa-7c58-3534-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "unmatched",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "7d4045a5-11f0-3c5c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "be4f63f5-75ba-33c5-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"bends": {
+								"x": "1270.0000069614955",
+								"y": "398.0"
+							},
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "c10e57db-c0c3-3150-0000-000000000000",
+								"type": "OUTPUT_PORT"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "unmatched",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "6934734c-710c-30d3-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						},
+						{
+							"id": "f85398ed-f8d8-3b8c-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"backPressureDataSizeThreshold": "1 GB",
+							"backPressureObjectThreshold": "10000",
+							"destination": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "7d4045a5-11f0-3c5c-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"flowFileExpiration": "0 sec",
+							"labelIndex": "1",
+							"loadBalanceCompression": "DO_NOT_COMPRESS",
+							"loadBalancePartitionAttribute": "",
+							"loadBalanceStatus": "LOAD_BALANCE_NOT_CONFIGURED",
+							"loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+							"name": "",
+							"selectedRelationships": "success",
+							"source": {
+								"groupId": "566cb6fc-116e-346f-0000-000000000000",
+								"id": "009f80d6-e245-399e-0000-000000000000",
+								"type": "PROCESSOR"
+							},
+							"zIndex": "0"
+						}
+					],
+					"labels": [
+						{
+							"id": "0f65612e-3420-3d93-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "1597.7751678659993",
+								"y": "-8.681435720505306"
+							},
+							"height": "96.35142517089844",
+							"label": "JSON Array of Objects",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "776.712890625"
+						},
+						{
+							"id": "72b163f2-a535-3105-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "243.7536224558429",
+								"y": "22.405709131179265"
+							},
+							"height": "96.35142517089844",
+							"label": "Array inside of JSON Object",
+							"style": {
+								"entry": {
+									"key": "font-size",
+									"value": "24px"
+								}
+							},
+							"width": "776.712890625"
+						}
+					],
+					"outputPorts": [
+						{
+							"id": "35b0b9aa-7c58-3534-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "2696.000582366871",
+								"y": "440.9177160538343"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Copy of Output",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Copy of Output'' is invalid because Output connection for port 'Copy of Output' is not defined."
+						},
+						{
+							"id": "c10e57db-c0c3-3150-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "920.0000069614955",
+								"y": "490.0"
+							},
+							"comments": "",
+							"concurrentlySchedulableTaskCount": "1",
+							"name": "Output",
+							"state": "STOPPED",
+							"type": "OUTPUT_PORT",
+							"validationErrors": "'Port 'Output'' is invalid because Output connection for port 'Output' is not defined."
+						}
+					],
+					"processors": [
+						{
+							"id": "009f80d6-e245-399e-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "1597.1607386168712",
+								"y": "172.84282591711553"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": "[ {\n\t\"id\" : 57493,\n\t\"code\" : \"village1000\",\n\t\"created_by_id\" : null,\n\t\"created_date\" : \"Tue Mar 31 23:08:47 IST 2020\"\n} ]"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "10 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						},
+						{
+							"id": "215c19f7-5e6e-3265-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "229.0000069614955",
+								"y": "181.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": {
+												"name": "File Size"
+											}
+										},
+										{
+											"key": "Batch Size",
+											"value": {
+												"name": "Batch Size"
+											}
+										},
+										{
+											"key": "Data Format",
+											"value": {
+												"name": "Data Format"
+											}
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": {
+												"name": "Unique FlowFiles"
+											}
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": {
+												"name": "generate-ff-custom-text"
+											}
+										},
+										{
+											"key": "character-set",
+											"value": {
+												"name": "character-set"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "File Size",
+											"value": "0B"
+										},
+										{
+											"key": "Batch Size",
+											"value": "1"
+										},
+										{
+											"key": "Data Format",
+											"value": "Text"
+										},
+										{
+											"key": "Unique FlowFiles",
+											"value": "false"
+										},
+										{
+											"key": "generate-ff-custom-text",
+											"value": "{\n\"id1\": [{\n\"u_name\": \"aa\"\n}, {\n\"addr\": \"bb\"\n}],\n\"id2\": [{\n\"u_name\": \"cc\"\n}, {\n\"addr\": \"dd\"\n}]\n}"
+										},
+										{
+											"key": "character-set",
+											"value": "UTF-8"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "10 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "GenerateFlowFile",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.GenerateFlowFile"
+						},
+						{
+							"id": "6934734c-710c-30d3-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "843.0000069614955",
+								"y": "172.0"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": {
+												"name": "Destination"
+											}
+										},
+										{
+											"key": "Return Type",
+											"value": {
+												"name": "Return Type"
+											}
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": {
+												"name": "Path Not Found Behavior"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										},
+										{
+											"key": "id1_addr",
+											"value": {
+												"name": "id1_addr"
+											}
+										},
+										{
+											"key": "id1_uname",
+											"value": {
+												"name": "id1_uname"
+											}
+										},
+										{
+											"key": "id2_addr",
+											"value": {
+												"name": "id2_addr"
+											}
+										},
+										{
+											"key": "id2_uname",
+											"value": {
+												"name": "id2_uname"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": "flowfile-attribute"
+										},
+										{
+											"key": "Return Type",
+											"value": "auto-detect"
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": "ignore"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										},
+										{
+											"key": "id1_addr",
+											"value": "$.id1.[1].addr"
+										},
+										{
+											"key": "id1_uname",
+											"value": "$.id1.[0].u_name"
+										},
+										{
+											"key": "id2_addr",
+											"value": "$.id2.[1].addr"
+										},
+										{
+											"key": "id2_uname",
+											"value": "$.id2.[0].u_name"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "EvaluateJsonPath",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "unmatched"
+								}
+							],
+							"state": "STOPPED",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+						},
+						{
+							"id": "7d4045a5-11f0-3c5c-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "2211.160738616871",
+								"y": "163.84282591711553"
+							},
+							"bundle": {
+								"artifact": "nifi-standard-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": {
+												"name": "Destination"
+											}
+										},
+										{
+											"key": "Return Type",
+											"value": {
+												"name": "Return Type"
+											}
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": {
+												"name": "Path Not Found Behavior"
+											}
+										},
+										{
+											"key": "Null Value Representation",
+											"value": {
+												"name": "Null Value Representation"
+											}
+										},
+										{
+											"key": "created_date",
+											"value": {
+												"name": "created_date"
+											}
+										},
+										{
+											"key": "id",
+											"value": {
+												"name": "id"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Destination",
+											"value": "flowfile-attribute"
+										},
+										{
+											"key": "Return Type",
+											"value": "auto-detect"
+										},
+										{
+											"key": "Path Not Found Behavior",
+											"value": "ignore"
+										},
+										{
+											"key": "Null Value Representation",
+											"value": "empty string"
+										},
+										{
+											"key": "created_date",
+											"value": "$[0].created_date"
+										},
+										{
+											"key": "id",
+											"value": "$[0].id"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "EvaluateJsonPath",
+							"relationships": [
+								{
+									"autoTerminate": "false",
+									"name": "failure"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "matched"
+								},
+								{
+									"autoTerminate": "false",
+									"name": "unmatched"
+								}
+							],
+							"state": "RUNNING",
+							"style": "",
+							"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+						},
+						{
+							"id": "eb00606c-491b-3e83-0000-000000000000",
+							"parentGroupId": "566cb6fc-116e-346f-0000-000000000000",
+							"position": {
+								"x": "2831.929621159733",
+								"y": "168.73634508636087"
+							},
+							"bundle": {
+								"artifact": "nifi-update-attribute-nar",
+								"group": "org.apache.nifi",
+								"version": "1.9.0.3.4.1.1-4"
+							},
+							"config": {
+								"bulletinLevel": "WARN",
+								"comments": "",
+								"concurrentlySchedulableTaskCount": "1",
+								"descriptors": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression",
+											"value": {
+												"name": "Delete Attributes Expression"
+											}
+										},
+										{
+											"key": "Store State",
+											"value": {
+												"name": "Store State"
+											}
+										},
+										{
+											"key": "Stateful Variables Initial Value",
+											"value": {
+												"name": "Stateful Variables Initial Value"
+											}
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": {
+												"name": "canonical-value-lookup-cache-size"
+											}
+										},
+										{
+											"key": "created_date_timestamp",
+											"value": {
+												"name": "created_date_timestamp"
+											}
+										}
+									]
+								},
+								"executionNode": "ALL",
+								"lossTolerant": "false",
+								"penaltyDuration": "30 sec",
+								"properties": {
+									"entry": [
+										{
+											"key": "Delete Attributes Expression"
+										},
+										{
+											"key": "Store State",
+											"value": "Do not store state"
+										},
+										{
+											"key": "Stateful Variables Initial Value"
+										},
+										{
+											"key": "canonical-value-lookup-cache-size",
+											"value": "100"
+										},
+										{
+											"key": "created_date_timestamp",
+											"value": "${created_date:toDate(\"EEE MMM dd HH:mm:ss z yyyy\"):toNumber():format(\"yyyy-MM-dd HH:mm:ss.SSS\")}"
+										}
+									]
+								},
+								"runDurationMillis": "0",
+								"schedulingPeriod": "0 sec",
+								"schedulingStrategy": "TIMER_DRIVEN",
+								"yieldDuration": "1 sec"
+							},
+							"executionNodeRestricted": "false",
+							"name": "UpdateAttribute",
+							"relationships": {
+								"autoTerminate": "false",
+								"name": "success"
+							},
+							"state": "RUNNING",
+							"style": "",
+							"type": "org.apache.nifi.processors.attributes.UpdateAttribute"
+						}
+					]
+				},
+				"name": "NiFI EvaluateJsonPath Demo",
+				"variables": ""
+			}
+		},
+		"timestamp": "06/17/2020 11:39:29 UTC",
+		"_encoding-version": "1.2"
+	}
+}

@@ -1,0 +1,19 @@
+- name: Deploy SaltStack with Docker/Podman
+  hosts: docker_hosts
+  become: yes
+  tasks:
+    - name: Ensure Docker/Podman is installed
+      package:
+        name: "{{ 'podman' if platform == 'podman' else 'docker' }}"
+        state: present
+
+    - name: Copy Docker Compose file
+      copy:
+        src: "{{ playbook_dir }}/../generated/docker-compose.yml"
+        dest: /opt/saltstack/docker-compose.yml
+        mode: '0644'
+
+    - name: Deploy SaltStack stack
+      command: "{{ 'podman-compose' if platform == 'podman' else 'docker-compose' }} -f /opt/saltstack/docker-compose.yml up -d"
+      args:
+        chdir: /opt/saltstack

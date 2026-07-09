@@ -1,0 +1,47 @@
+{
+    "Server":
+    {
+        "Address":"unix:///tmp/osui.sock",
+        "LogFile":"/dev/stdout",
+        "Authentication": {
+            "Type": "tls-mutual",
+            "TLSOptions": {
+                "CACert": "/tmp/opensnitch/certs/unix-socket/ca-cert.pem",
+                "ServerCert": "/tmp/opensnitch/certs/unix-socket/server-cert.pem",
+                "ClientCert": "/tmp/opensnitch/certs/unix-socket/client-abstract-cert.pem",
+                "ClientKey": "/tmp/opensnitch/certs/unix-socket/client-key.pem",
+                "SkipVerify": false,
+                "ClientAuthType": "req-and-verify-cert"
+            }
+        }
+    },
+    "DefaultAction": "allow",
+    "DefaultDuration": "once",
+    "InterceptUnknown": false,
+    "ProcMonitorMethod": "ebpf",
+    "LogLevel": 0,
+    "LogUTC": true,
+    "LogMicro": false,
+    "Firewall": "nftables",
+    "FwOptions": {
+        "ConfigPath": "/etc/opensnitchd/system-fw.json",
+        "MonitorInterval": "25s",
+        "QueueBypass": false
+    },
+    "Rules": {
+        "Path": "/etc/opensnitchd/rules",
+        "EnableChecksums": true
+    },
+    "Ebpf": {
+        "ModulesPath": "/usr/lib/opensnitchd/ebpf"
+    },
+    "Internal": {
+        "GCPercent": 75,
+        "FlushConnsOnStart": true
+    },
+    "Stats": {
+        "MaxEvents": 150,
+        "MaxStats": 25,
+        "Workers": 6
+    }
+}

@@ -1,0 +1,72 @@
+networks:
+  magnetar:
+    name: magnetar
+    driver: bridge
+
+volumes:
+  pulsar-data:
+  pulsar-conf:
+
+services:
+  pulsar:
+    image: apachepulsar/pulsar:4.2.3
+    container_name: pulsar
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"   # Pulsar binary protocol
+      - "8080:8080"   # Admin/HTTP API
+      - "1883:1883"   # MQTT (requires the MoP .nar in ./protocols, see protocols/protocols.md)
+    environment:
+      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g
+    volumes:
+      - pulsar-data:/pulsar/data
+      - ./conf/standalone.conf:/pulsar/conf/standalone.conf
+      - ./protocols:/pulsar/protocols
+    networks:
+      - magnetar
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  pulsar-manager:
+    image: apachepulsar/pulsar-manager:v0.4.0
+    container_name: pulsar-manager
+    ports:
+      - "9527:9527"
+      - "7750:7750"
+    environment:
+      - SPRING_CONFIGURATION_FILE=/pulsar-manager/pulsar-manager/application.properties
+    depends_on:
+      pulsar:
+        condition: service_healthy
+    networks:
+      - magnetar
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus/standalone.prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - pulsar
+    networks:
+      - magnetar
+
+  grafana:
+    image: streamnative/apache-pulsar-grafana-dashboard:0.0.17
+    container_name: grafana
+    environment:
+      PULSAR_CLUSTER: "standalone"
+      PULSAR_PROMETHEUS_URL: "http://prometheus:9090"
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - magnetar

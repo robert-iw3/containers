@@ -1,0 +1,62 @@
+---
+- name: Look up the amd64/arm64 SHA256 checksum for this Vault release
+  set_fact:
+    nomad_vault_expected_checksum: >-
+      {{
+        (lookup('url', nomad_vault_checksum_url, wantlist=True)
+          | select('match', '.*vault_' ~ nomad_vault_version ~ '_linux_' ~ nomad_architecture ~ '\.zip$')
+          | first).split()[0]
+      }}
+  tags: [vault]
+
+- name: Download Vault binary
+  get_url:
+    url: "{{ nomad_vault_download_url }}"
+    dest: "/tmp/vault_{{ nomad_vault_version }}.zip"
+    mode: "0600"
+    checksum: "sha256:{{ nomad_vault_expected_checksum }}"
+  register: download_vault
+  tags: [vault]
+
+- name: Install Vault binary
+  unarchive:
+    src: "/tmp/vault_{{ nomad_vault_version }}.zip"
+    dest: "{{ nomad_install_dir }}"
+    remote_src: yes
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0750"
+  become: yes
+  when: download_vault.changed
+  tags: [vault]
+
+- name: Deploy Nomad Vault policy
+  template:
+    src: nomad-vault-policy.hcl.j2
+    dest: "{{ nomad_config_dir }}/nomad-vault-policy.hcl"
+    owner: "{{ nomad_user }}"
+    group: "{{ nomad_group }}"
+    mode: "0600"
+  become: yes
+  tags: [vault]
+
+- name: Fail fast if Vault integration is enabled without a real token
+  fail:
+    msg: >-
+      nomad_vault_enabled is true but nomad_vault_token is empty. Supply a
+      real Vault token (a periodic token with permission to create the
+      nomad-cluster policy is sufficient) via group_vars/host_vars, an
+      ansible-vault-encrypted file, or -e on the command line.
+  when: nomad_vault_enabled and (nomad_vault_token | default('')) | length == 0
+  tags: [vault]
+
+- name: Apply Nomad Vault policy
+  command: vault policy write nomad-cluster {{ nomad_config_dir }}/nomad-vault-policy.hcl
+  environment:
+    VAULT_ADDR: "{{ nomad_vault_address }}"
+    VAULT_TOKEN: "{{ nomad_vault_token }}"
+    VAULT_SKIP_VERIFY: "{{ nomad_vault_skip_verify | default(false) | to_json }}"
+  become: yes
+  become_user: "{{ nomad_user }}"
+  no_log: true
+  tags: [vault]

@@ -1,0 +1,20 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  pre_tasks:
+    - name: Generate a valid Fernet key for the run
+      ansible.builtin.command:
+        cmd: python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+      register: fernet_gen
+      changed_when: false
+      delegate_to: localhost
+      become: false
+
+    - name: Set generated secrets
+      ansible.builtin.set_fact:
+        fernet_key: "{{ fernet_gen.stdout }}"
+        jwt_secret: "molecule-test-jwt-secret-0123456789"
+        postgres_password: "airflowtest123"
+  roles:
+    - airflow_node

@@ -1,0 +1,45 @@
+services:
+
+  certs:
+    build: ./certs
+    environment:
+      - AUTHORITY_NAME=${AUTHORITY_NAME}
+      - AUTHORITY_PASSWORD=${AUTHORITY_PASSWORD}
+      - COMPANY=${COMPANY}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - COUNTRY_CODE=${COUNTRY_CODE}
+      - STATE=${STATE}
+      - CITY=${CITY}
+    volumes:
+      - ./nginx/secrets/certs:/certs:rw:Z
+
+  nginx:
+    restart: always
+    image: ${NGINX_IMAGE:-docker.io/nginx:alpine}
+    ports:
+      - 8005:8005/tcp #frontend port to backend
+      - 443:443/tcp
+    secrets:
+      - source: proxy.ca
+        target: /etc/nginx/certs/sslcert_chain.pem
+      - source: proxy.cert
+        target: /etc/nginx/certs/sslcert.pem
+      - source: proxy.key
+        target: /etc/nginx/certs/sslcert_rsa.key
+    volumes:
+      - ./nginx/config/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro:Z
+    networks:
+      - app
+    depends_on:
+      - certs
+
+networks:
+  app: {}
+
+secrets:
+  proxy.ca:
+    file: ./secrets/certs/sslcert_chain.pem
+  proxy.key:
+    file: ./secrets/certs/sslcert_rsa.key
+  proxy.cert:
+    file: ./secrets/certs/sslcert.pem

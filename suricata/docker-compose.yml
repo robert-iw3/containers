@@ -1,0 +1,72 @@
+---
+services:
+  suricata:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${SURICATA_VERSION:-8.0.6}
+    hostname: suricata-ids.io
+    network_mode: host
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - suricata-logs:/var/log/suricata:Z
+      - suricata-rules:/var/lib/suricata:Z
+      - suricata-config:/etc/suricata:Z
+    environment:
+      # IPS-mode toggling. Defaults = passive IDS (unchanged behaviour).
+      #   IPS_MODE=ips INLINE_METHOD=nfqueue         -> inline NFQUEUE, drops enabled
+      #   IPS_MODE=ips INLINE_METHOD=afpacket_bridge -> two-NIC inline bridge
+      - IPS_MODE=${IPS_MODE:-ids}
+      - INLINE_METHOD=${INLINE_METHOD:-afpacket_bridge}
+      - CAPTURE_INTERFACE=${CAPTURE_INTERFACE:-eth0}
+      - BRIDGE_IFACE_B=${BRIDGE_IFACE_B:-eth1}
+      # Risk-based rule action policy applied at start:
+      # detect | balanced | aggressive | paranoid (see scripts/toggle_rule_blocking.py)
+      - RULE_ACTION_POLICY=${RULE_ACTION_POLICY:-balanced}
+      - NFQ_FAIL_OPEN=${NFQ_FAIL_OPEN:-no}
+      - HOME_NET=${HOME_NET:-[10.0.0.0/8,172.16.0.0/12,192.168.0.0/16]}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: '4G'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pidof", "suricata"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  suricata-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile.connector
+    environment:
+      - LOG_DIR=/var/log/suricata
+      - SPLUNK_ENABLED=${SPLUNK_ENABLED:-false}
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - ES_ENABLED=${ES_ENABLED:-false}
+      - ES_HOST=${ES_HOST:-http://localhost:9200}
+      - ES_INDEX=${ES_INDEX:-suricata-logs}
+      - BATCH_SIZE=${BATCH_SIZE:-50}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+    volumes:
+      - suricata-logs:/var/log/suricata
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '1G'
+    depends_on:
+      - suricata
+    restart: unless-stopped
+volumes:
+  suricata-logs:
+  suricata-rules:
+  suricata-config:

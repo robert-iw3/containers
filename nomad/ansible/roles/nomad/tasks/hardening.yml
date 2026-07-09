@@ -1,0 +1,50 @@
+---
+- name: Install auditd
+  package:
+    name: "{{ 'audit' if ansible_os_family == 'RedHat' else 'auditd' }}"
+    state: present
+  become: yes
+
+- name: Enable auditd
+  systemd:
+    name: auditd
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Harden sshd configuration
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    validate: /usr/sbin/sshd -t -f %s
+  loop:
+    - { regexp: "^#?PasswordAuthentication", line: "PasswordAuthentication no" }
+    - { regexp: "^#?PermitRootLogin", line: "PermitRootLogin no" }
+    - { regexp: "^#?X11Forwarding", line: "X11Forwarding no" }
+    - { regexp: "^#?MaxAuthTries", line: "MaxAuthTries 3" }
+  become: yes
+  register: sshd_config
+
+- name: Reload sshd
+  systemd:
+    name: sshd
+    state: reloaded
+  become: yes
+  when: sshd_config.changed
+
+- name: Apply kernel hardening parameters
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: kernel.dmesg_restrict, value: "1" }
+    - { name: kernel.kptr_restrict, value: "2" }
+    - { name: net.ipv4.conf.all.rp_filter, value: "1" }
+    - { name: net.ipv4.conf.all.accept_redirects, value: "0" }
+    - { name: net.ipv4.conf.all.send_redirects, value: "0" }
+    - { name: net.ipv4.conf.all.accept_source_route, value: "0" }
+  become: yes
+  when: nomad_manage_host_settings

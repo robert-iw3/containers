@@ -1,0 +1,25 @@
+# example
+# https://opensearch.org/docs/2.11/data-prepper/managing-data-prepper/configuring-data-prepper/
+ssl: true
+keyStoreFilePath: "/usr/share/data-prepper/keystore.p12"
+keyStorePassword: " "
+privateKeyPassword: " "
+serverPort: 4900
+metricRegistries: [Prometheus]
+authentication:
+  http_basic:
+    username: ${OS_USER}
+    password: ${OS_PASS}
+extensions:
+  aws:
+    secrets:
+      host-secret-config:
+        secret_id: <YOUR_SECRET_ID_1>
+        region: <YOUR_REGION_1>
+        sts_role_arn: <YOUR_STS_ROLE_ARN_1>
+        refresh_interval: <YOUR_REFRESH_INTERVAL_1>
+      credential-secret-config:
+        secret_id: <YOUR_SECRET_ID_2>
+        region: <YOUR_REGION_2>
+        sts_role_arn: <YOUR_STS_ROLE_ARN_2>
+        refresh_interval: <YOUR_REFRESH_INTERVAL_2>

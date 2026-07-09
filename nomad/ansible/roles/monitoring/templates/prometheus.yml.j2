@@ -1,0 +1,48 @@
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_scrape_interval }}
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+{% if alertmanager_enabled %}
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:{{ alertmanager_port }}']
+{% endif %}
+
+scrape_configs:
+  - job_name: 'nomad-servers'
+    metrics_path: /v1/metrics
+    params:
+      format: ['prometheus']
+{% if nomad_tls_enabled %}
+    scheme: https
+    tls_config:
+      ca_file: /etc/prometheus/nomad-ca.pem
+{% endif %}
+    static_configs:
+      - targets:
+{% for host in groups['nomad_servers'] | default([]) %}
+          - '{{ hostvars[host]["nomad_bind_addr"] | default(hostvars[host]["ansible_host"]) }}:4646'
+{% endfor %}
+        labels:
+          group: 'nomad-servers'
+
+  - job_name: 'nomad-clients'
+    metrics_path: /v1/metrics
+    params:
+      format: ['prometheus']
+{% if nomad_tls_enabled %}
+    scheme: https
+    tls_config:
+      ca_file: /etc/prometheus/nomad-ca.pem
+{% endif %}
+    static_configs:
+      - targets:
+{% for host in groups['nomad_clients'] | default([]) %}
+          - '{{ hostvars[host]["nomad_bind_addr"] | default(hostvars[host]["ansible_host"]) }}:4646'
+{% endfor %}
+        labels:
+          group: 'nomad-clients'

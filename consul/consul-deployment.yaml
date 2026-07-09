@@ -1,0 +1,210 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: consul
+  namespace: consul
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consul-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: consul-role-binding
+subjects:
+- kind: ServiceAccount
+  name: consul
+  namespace: consul
+roleRef:
+  kind: ClusterRole
+  name: consul-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+  namespace: consul
+  labels:
+    app: consul
+spec:
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+    targetPort: 8500
+  - name: https
+    port: 8501
+    targetPort: 8501
+  - name: grpc
+    port: 8502
+    targetPort: 8502
+  - name: dns
+    port: 8600
+    targetPort: 8600
+    protocol: UDP
+  - name: server
+    port: 8300
+    targetPort: 8300
+  - name: serf-lan
+    port: 8301
+    targetPort: 8301
+  - name: serf-wan
+    port: 8302
+    targetPort: 8302
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: consul
+spec:
+  serviceName: consul
+  replicas: 3
+  selector:
+    matchLabels:
+      app: consul
+  template:
+    metadata:
+      labels:
+        app: consul
+    spec:
+      serviceAccountName: consul
+      securityContext:
+        runAsUser: 65535
+        runAsGroup: 65535
+        fsGroup: 65535
+      initContainers:
+      - name: cert-generation
+        image: hashicorp/consul:2.0.1
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            if [ "${HOSTNAME##*-}" = "0" ]; then
+              consul tls ca create -domain=consul -out=/consul/certs/consul-agent-ca.pem
+              consul tls cert create -server -dc=dc1 -domain=consul -out=/consul/certs/dc1-server-consul-0.pem
+            else
+              consul tls cert create -server -dc=dc1 -domain=consul -out=/consul/certs/dc1-server-consul-${HOSTNAME##*-}.pem
+            fi
+        volumeMounts:
+        - name: consul-certs
+          mountPath: /consul/certs
+        securityContext:
+          runAsUser: 65535
+          runAsGroup: 65535
+      containers:
+      - name: consul
+        image: hashicorp/consul:2.0.1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+            add: ["NET_BIND_SERVICE"]
+        env:
+        - name: CONSUL_LOCAL_CONFIG
+          value: |
+            {
+              "node_name": "consul-${HOSTNAME}",
+              "server": true,
+              "bootstrap_expect": 3,
+              "datacenter": "dc1",
+              "data_dir": "/consul/data",
+              "log_level": "INFO",
+              "ui_config": {"enabled": true},
+              "addresses": {"https": "0.0.0.0", "dns": "127.0.0.1"},
+              "ports": {"https": 8501, "grpc": -1, "grpc_tls": 8503, "http": -1},
+              "retry_join": ["consul-0.consul.consul.svc.cluster.local", "consul-1.consul.consul.svc.cluster.local", "consul-2.consul.consul.svc.cluster.local"],
+              "encrypt": "$(cat /consul/config/gossip-key)",
+              "encrypt_verify_incoming": true,
+              "encrypt_verify_outgoing": true,
+              "tls": {
+                "defaults": {
+                  "verify_incoming": true,
+                  "verify_outgoing": true,
+                  "ca_file": "/consul/certs/consul-agent-ca.pem",
+                  "cert_file": "/consul/certs/dc1-server-consul-${HOSTNAME##*-}.pem",
+                  "key_file": "/consul/certs/dc1-server-consul-${HOSTNAME##*-}-key.pem"
+                },
+                "internal_rpc": {"verify_server_hostname": true}
+              },
+              "auto_encrypt": {"allow_tls": true},
+              "acl": {
+                "enabled": true,
+                "default_policy": "deny",
+                "down_policy": "extend-cache",
+                "enable_token_persistence": true
+              }
+            }
+        - name: CONSUL_GOSSIP_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: consul-gossip-key
+              key: gossip-encryption-key
+        volumeMounts:
+        - name: consul-data
+          mountPath: /consul/data
+        - name: consul-certs
+          mountPath: /consul/certs
+        - name: consul-config
+          mountPath: /consul/config
+        livenessProbe:
+          httpGet:
+            path: /v1/health/service/consul
+            port: 8501
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/health/service/consul
+            port: 8501
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: consul-config
+        configMap:
+          name: consul-config
+      - name: consul-certs
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: consul-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consul-config
+  namespace: consul
+data:
+  vault-storage.json: |
+    {
+      "agent_prefix": {"": [{"policy": "read"}]},
+      "key_prefix": {"vault/": [{"policy": "write"}]},
+      "service": {"vault": [{"policy": "write"}]},
+      "session_prefix": {"": [{"policy": "write"}]}
+    }

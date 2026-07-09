@@ -1,0 +1,30 @@
+---
+driver:
+  name: podman
+
+platforms:
+  - name: monitoring-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - nomad_monitoring
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    group_vars:
+      all:
+        grafana_admin_password: "molecule-test-password"
+        nomad_tls_enabled: false
+        monitoring_manage_firewall: false
+        alertmanager_enabled: true
+        alertmanager_webhook_url: "http://127.0.0.1:9095/webhook"
+
+verifier:
+  name: ansible

@@ -1,0 +1,298 @@
+---
+# Service for Splunk Enterprise
+apiVersion: v1
+kind: Service
+metadata:
+  name: splunkenterprise
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: event-collector
+      port: 8088
+      targetPort: 8088
+      protocol: TCP
+    - name: indexer
+      port: 9997
+      targetPort: 9997
+      protocol: TCP
+    - name: daemon
+      port: 8089
+      targetPort: 8089
+      protocol: TCP
+    - name: syslog
+      port: 1514
+      targetPort: 1514
+      protocol: TCP
+    - name: kv-store
+      port: 8191
+      targetPort: 8191
+      protocol: TCP
+  selector:
+    app: splunkenterprise
+---
+# PersistentVolumeClaim for Splunk Enterprise
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: splunk-etc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: splunk-var
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Secret for Splunk Password
+apiVersion: v1
+kind: Secret
+metadata:
+  name: splunk-secrets
+type: Opaque
+data:
+  splunk_password: c3BsdW5rMTIzIQ==  # Base64 encoded 'splunk123!' REPLACE WITH YOUR OWN
+---
+# Deployment for Splunk Enterprise
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: splunkenterprise
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: splunkenterprise
+  template:
+    metadata:
+      labels:
+        app: splunkenterprise
+    spec:
+      initContainers:
+        - name: init-system
+          image: busybox:1.36
+          command: ['/bin/sh']
+          args:
+            - -c
+            - >-
+              sysctl -w vm.max_map_count=262144 &&
+              sysctl -w fs.file-max=64000 &&
+              sysctl -w net.core.rmem_default=33554432 &&
+              sysctl -w net.core.rmem_max=33554432 &&
+              sysctl -w net.core.netdev_max_backlog=10000 &&
+              sysctl -w net.core.somaxconn=1024 &&
+              sysctl -w net.ipv4.tcp_max_syn_backlog=2048 &&
+              sysctl -w net.ipv4.tcp_max_tw_buckets=1440000 &&
+              sysctl -w net.ipv4.tcp_fin_timeout=15 &&
+              sysctl -w net.ipv4.tcp_keepalive_time=1200 &&
+              sysctl -w net.ipv4.tcp_keepalive_intvl=60 &&
+              sysctl -w net.ipv4.tcp_keepalive_probes=9 &&
+              sysctl -w net.ipv4.tcp_tw_reuse=1 &&
+              sysctl -w net.ipv4.tcp_syncookies=1 &&
+              sysctl -w net.ipv4.tcp_max_orphans=327680 &&
+              sysctl -w net.ipv4.tcp_max_retrans=15 &&
+              sysctl -w net.ipv4.tcp_synack_retries=2 &&
+              sysctl -w net.ipv4.tcp_syn_retries=2 &&
+              echo never > /sys/kernel/mm/transparent_hugepage/enabled &&
+              echo never > /sys/kernel/mm/transparent_hugepage/defrag
+          securityContext:
+            privileged: false
+            capabilities:
+              add: ["SYS_ADMIN"]
+      containers:
+        - name: splunkenterprise
+          image: docker.io/splunk/splunk:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+            - containerPort: 8088
+              protocol: TCP
+            - containerPort: 9997
+              protocol: TCP
+            - containerPort: 8089
+              protocol: TCP
+            - containerPort: 1514
+              protocol: TCP
+            - containerPort: 8191
+              protocol: TCP
+          env:
+            - name: SPLUNK_START_ARGS
+              value: --accept-license
+            - name: SPLUNK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: splunk-secrets
+                  key: splunk_password
+            - name: SPLUNK_ENABLE_LISTEN
+              value: "9997"
+            - name: SPLUNK_ADD
+              value: "tcp 1514"
+            - name: SPLUNK_ROLE
+              value: splunk_standalone
+          volumeMounts:
+            - name: splunk-etc
+              mountPath: /opt/splunk/etc
+            - name: splunk-var
+              mountPath: /opt/splunk/var
+          resources:
+            limits:
+              cpu: '4'
+              memory: 8Gi
+            requests:
+              cpu: '1'
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 333
+            runAsGroup: 333
+            fsGroup: 333
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE", "SYS_CHROOT"]
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /en-US/splunkd/__raw/services/server/health/splunkd
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+      volumes:
+        - name: splunk-etc
+          persistentVolumeClaim:
+            claimName: splunk-etc
+        - name: splunk-var
+          persistentVolumeClaim:
+            claimName: splunk-var
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: 333
+        runAsGroup: 333
+        fsGroup: 333
+---
+# Service for Splunk Universal Forwarder
+apiVersion: v1
+kind: Service
+metadata:
+  name: splunkforwarder
+spec:
+  type: ClusterIP
+  ports:
+    - name: daemon
+      port: 8089
+      targetPort: 8089
+      protocol: TCP
+    - name: event-collector
+      port: 8088
+      targetPort: 8088
+      protocol: TCP
+  selector:
+    app: splunkforwarder
+---
+# PersistentVolumeClaim for Splunk Universal Forwarder
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: splunkforwarder-etc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: splunkforwarder-var
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+# Deployment for Splunk Universal Forwarder
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: splunkforwarder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: splunkforwarder
+  template:
+    metadata:
+      labels:
+        app: splunkforwarder
+    spec:
+      containers:
+        - name: splunkforwarder
+          image: docker.io/splunk/universalforwarder:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8089
+              protocol: TCP
+            - containerPort: 8088
+              protocol: TCP
+          env:
+            - name: SPLUNK_START_ARGS
+              value: --accept-license
+            - name: DOCKER_MONITORING
+              value: "true"
+          volumeMounts:
+            - name: splunkforwarder-etc
+              mountPath: /opt/splunkforwarder/etc
+            - name: splunkforwarder-var
+              mountPath: /opt/splunkforwarder/var
+          resources:
+            limits:
+              cpu: '2'
+              memory: 4Gi
+            requests:
+              cpu: '500m'
+              memory: 2Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 333
+            runAsGroup: 333
+            fsGroup: 333
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: ["NET_BIND_SERVICE"]
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              command: ["/opt/splunkforwarder/bin/splunk", "status"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+      volumes:
+        - name: splunkforwarder-etc
+          persistentVolumeClaim:
+            claimName: splunkforwarder-etc
+        - name: splunkforwarder-var
+          persistentVolumeClaim:
+            claimName: splunkforwarder-var
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 333
+        runAsGroup: 333
+        fsGroup: 333

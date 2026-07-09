@@ -1,0 +1,30 @@
+<configuration>
+  <!-- Standalone (no distributed mode) -->
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://localhost:9000/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+  <!-- tell HBase not to launch its own ZK -->
+  <property>
+    <name>hbase.manages.zookeeper</name>
+    <value>false</value>
+  </property>
+
+  <!-- point at your standalone ZK -->
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>localhost</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.clientPort</name>
+    <value>2182</value>
+  </property>
+  <property>
+    <name>hbase.wal.provider</name>
+    <value>filesystem</value>
+  </property>
+</configuration>

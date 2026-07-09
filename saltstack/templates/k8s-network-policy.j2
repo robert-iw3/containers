@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: salt-master-policy
+  namespace: {{ namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: salt-master
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: salt-minion
+      namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 4505
+    - protocol: TCP
+      port: 4506
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: salt-minion
+      namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 4505
+    - protocol: TCP
+      port: 4506
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 8000  # Prometheus
+    - protocol: TCP
+      port: 24224  # Fluentd

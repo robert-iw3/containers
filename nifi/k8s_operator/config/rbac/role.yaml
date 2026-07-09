@@ -1,0 +1,126 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - clusterissuers
+  - issuers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nifi.konpyutaika.com
+  resources:
+  - nificlusters
+  - nificonnections
+  - nifidataflows
+  - nifinodegroupautoscalers
+  - nifiparametercontexts
+  - nifiregistryclients
+  - nifiresources
+  - nifiusergroups
+  - nifiusers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nifi.konpyutaika.com
+  resources:
+  - nificlusters/finalizers
+  - nifidataflows/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nifi.konpyutaika.com
+  resources:
+  - nificlusters/status
+  - nificonnections/status
+  - nifidataflows/status
+  - nifinodegroupautoscalers/status
+  - nifiparametercontexts/status
+  - nifiregistryclients/status
+  - nifiresources/status
+  - nifiusergroups/status
+  - nifiusers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nifi.konpyutaika.com
+  resources:
+  - nificonnections/finalizers
+  - nifinodegroupautoscalers/finalizers
+  - nifiparametercontexts/finalizers
+  - nifiregistryclients/finalizers
+  - nifiresources/finalizers
+  - nifiusergroups/finalizers
+  - nifiusers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

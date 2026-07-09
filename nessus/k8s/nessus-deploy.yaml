@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nessus-deploy
+  namespace: nessus
+  labels:
+    app: nessus
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nessus
+  template:
+    metadata:
+      labels:
+        app: nessus
+    spec:
+      containers:
+      - name: nessus
+        image: localhost/nessus:latest
+        command:
+          - dnf update -y
+          - groupadd -r nessus
+          - useradd -r -g nessus nessus -m
+          - echo -ne "365\n365\nXX\nXX\nXXXX\ntestingOrg\nnessus.testing.io\ny" | /opt/nessus/sbin/nessuscli mkcert
+          - chown -R nessus:nessus /opt/nessus
+          - /opt/nessus/sbin/nessus-service --no-root -p 8834 -D
+          - su --shell /bin/bash nessus
+        env:
+          - name: ACTIVATION_CODE
+            valueFrom:
+              secretKeyRef:
+                name: nessus_code
+                key: key_code
+          - name: USERNAME
+            value: "nessus"
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: nessuspass
+                key: password
+          - name: AUTO_UPDATE
+            value: all
+      volumeMounts:
+       - mountPath: /opt/nessus/var/nessus
+         name: nessus-volume
+      ports:
+        - containerPort: 8834
+      resources:
+          limits:
+            cpu: 1000m
+            memory: 512M
+          requests:
+            cpu: 50m
+            memory: 256M
+volumeClaimTemplates:
+ - metadata:
+     name: nessus-volume
+   spec:
+     storageClassName: nessus-vol
+     accessModes: [ "ReadWriteOnce" ]
+     resources:
+       requests:
+         storage: 100Gi

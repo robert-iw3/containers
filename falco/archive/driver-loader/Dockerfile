@@ -1,0 +1,41 @@
+ARG FALCO_IMAGE_TAG=latest
+FROM docker.io/falcosecurity/falco:${FALCO_IMAGE_TAG}-debian
+
+LABEL usage="docker run -i -t --privileged -v /root/.falco:/root/.falco -v /proc:/host/proc:ro -v /boot:/host/boot:ro -v /lib/modules:/host/lib/modules:ro -v /usr:/host/usr:ro -v /etc:/host/etc:ro falcosecurity/falco-driver-loader:latest [driver] [options]"
+
+ENV HOST_ROOT /host
+ENV HOME /root
+
+RUN cp /etc/skel/.bashrc /root && cp /etc/skel/.profile /root
+
+RUN \
+	apt-get update ; \
+	apt-get install -y --no-install-recommends \
+		bc \
+		bison \
+		ca-certificates \
+		clang \
+		curl \
+		dkms \
+		dwarves \
+		flex \
+		gcc \
+		gcc-11 \
+		gnupg2 \
+		jq \
+		libc6-dev \
+		libssl-dev \
+		llvm \
+		make \
+		netcat-openbsd \
+		patchelf \
+		xz-utils \
+		zstd; \
+	rm -rf /var/lib/apt/lists/*
+
+RUN rm -df /lib/modules \
+	&& ln -s $HOST_ROOT/lib/modules /lib/modules
+
+COPY --chmod=755 docker-entrypoint.sh /
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

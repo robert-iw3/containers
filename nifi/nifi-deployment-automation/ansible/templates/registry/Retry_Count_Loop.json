@@ -1,0 +1,480 @@
+{
+   "template":{
+      "description":"Provides a function to count how many times a given flowfile has gone through it and if it exceeds some threshold it will kick it out.",
+      "name":"Retry Count Loop",
+      "snippet":{
+         "processGroups":{
+            "id":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+            "parentGroupId":"622ae166-2d67-4066-8fd1-4f96f72570c3",
+            "position":{
+               "x":"767.5239007271769",
+               "y":"-528.3105172159726"
+            },
+            "activeRemotePortCount":"0",
+            "comments":"This flow will track how many times a given flow file routes through it.  If the number of times exceeds a specific maximum then it will route to the 'limit exceeded' port.  Otherwise it will route to 'retry'.\n\nThe attributes it uses are 'retry.counter' and 'retry.maxcount'.  If the 'retry.maxcount' is specified on a given flowfile then it will be honored.  Otherwise a default of '3' is set as the maximum retry count.\n\nAs the flowfile goes through this flow it increments the 'retry.maxcount' attribute by 1.  It then checks if this value exceeds 'retry.maxcount' and if so then it routes the flowfile to 'limit exceeded' otherwise it routes to 'retry'.\n\nSo you can configure the 'retry' relationship to loop back to the process you want and you can send the 'limit exceeded' to move on from that process to something else.",
+            "contents":{
+               "connections":[
+                  {
+                     "id":"155cdc9a-b9ff-4f6d-bade-78e2b7922ead",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"10",
+                     "destination":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"de67351f-6e63-4557-91ed-4362e27de6a5",
+                        "type":"OUTPUT_PORT"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"Try again",
+                     "source":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"10f53281-4064-4725-8119-25a5e77b0cf3",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  },
+                  {
+                     "id":"9f1ccea3-7f03-4026-b3d4-d05b37ca5596",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"10",
+                     "destination":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"62021278-2608-4b09-9095-8143dbcdc772",
+                        "type":"OUTPUT_PORT"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"success",
+                     "source":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"34b75d26-46b8-3d67-923f-fb6e7f93d0cd",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  },
+                  {
+                     "id":"d3170ec7-c212-466f-b1c9-d0fc3570503e",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"10",
+                     "destination":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"10f53281-4064-4725-8119-25a5e77b0cf3",
+                        "type":"PROCESSOR"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"success",
+                     "source":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"8692729d-e3f2-472d-9435-f1bbf207e41c",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  },
+                  {
+                     "id":"fb4298e6-37b3-47ae-9124-d255368d673f",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"10",
+                     "destination":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"8692729d-e3f2-472d-9435-f1bbf207e41c",
+                        "type":"PROCESSOR"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "source":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"535627d4-d4fb-4963-84bd-22115060c9cc",
+                        "type":"INPUT_PORT"
+                     },
+                     "zIndex":"0"
+                  },
+                  {
+                     "id":"ec2fe73b-c7c0-489c-82be-ddd2fa8ce8cb",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "backPressureDataSizeThreshold":"0 MB",
+                     "backPressureObjectThreshold":"10",
+                     "destination":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"34b75d26-46b8-3d67-923f-fb6e7f93d0cd",
+                        "type":"PROCESSOR"
+                     },
+                     "flowFileExpiration":"0 sec",
+                     "labelIndex":"1",
+                     "name":"",
+                     "selectedRelationships":"unmatched",
+                     "source":{
+                        "groupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                        "id":"10f53281-4064-4725-8119-25a5e77b0cf3",
+                        "type":"PROCESSOR"
+                     },
+                     "zIndex":"0"
+                  }
+               ],
+               "inputPorts":{
+                  "id":"535627d4-d4fb-4963-84bd-22115060c9cc",
+                  "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                  "position":{
+                     "x":"442.99999073586037",
+                     "y":"107.99999712137014"
+                  },
+                  "concurrentlySchedulableTaskCount":"1",
+                  "name":"data",
+                  "state":"RUNNING",
+                  "type":"INPUT_PORT"
+               },
+               "outputPorts":[
+                  {
+                     "id":"de67351f-6e63-4557-91ed-4362e27de6a5",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "position":{
+                        "x":"266.00002125343855",
+                        "y":"620.0000047507647"
+                     },
+                     "comments":"Items sent to this port have not yet exceeded the maximum retry count.",
+                     "concurrentlySchedulableTaskCount":"1",
+                     "name":"retry",
+                     "state":"STOPPED",
+                     "type":"OUTPUT_PORT",
+                     "validationErrors":"'Port 'retry'' is invalid because Output connection for port 'retry' is not defined."
+                  },
+                  {
+                     "id":"62021278-2608-4b09-9095-8143dbcdc772",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "position":{
+                        "x":"710.4906828745322",
+                        "y":"816.4274339499834"
+                     },
+                     "concurrentlySchedulableTaskCount":"1",
+                     "name":"limit exceeded",
+                     "state":"STOPPED",
+                     "type":"OUTPUT_PORT",
+                     "validationErrors":"'Port 'limit exceeded'' is invalid because Output connection for port 'limit exceeded' is not defined."
+                  }
+               ],
+               "processors":[
+                  {
+                     "id":"10f53281-4064-4725-8119-25a5e77b0cf3",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "position":{
+                        "x":"370.0000517710166",
+                        "y":"394.0000047507647"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"1",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "descriptors":{
+                           "entry":[
+                              {
+                                 "key":"Routing Strategy",
+                                 "value":{
+                                    "allowableValues":[
+                                       {
+                                          "description":"A copy of the FlowFile will be routed to each relationship whose corresponding expression evaluates to 'true'",
+                                          "displayName":"Route to Property name",
+                                          "value":"Route to Property name"
+                                       },
+                                       {
+                                          "description":"Requires that all user-defined expressions evaluate to 'true' for the FlowFile to be considered a match",
+                                          "displayName":"Route to 'matched' if all match",
+                                          "value":"Route to 'match' if all match"
+                                       },
+                                       {
+                                          "description":"Requires that at least one user-defined expression evaluate to 'true' for hte FlowFile to be considered a match",
+                                          "displayName":"Route to 'matched' if any matches",
+                                          "value":"Route to 'match' if any matches"
+                                       }
+                                    ],
+                                    "defaultValue":"Route to Property name",
+                                    "description":"Specifies how to determine which relationship to use when evaluating the Expression Language",
+                                    "displayName":"Routing Strategy",
+                                    "dynamic":"false",
+                                    "name":"Routing Strategy",
+                                    "required":"true",
+                                    "sensitive":"false",
+                                    "supportsEl":"false"
+                                 }
+                              },
+                              {
+                                 "key":"Try again",
+                                 "value":{
+                                    "description":"",
+                                    "displayName":"Try again",
+                                    "dynamic":"true",
+                                    "name":"Try again",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           ]
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":[
+                              {
+                                 "key":"Routing Strategy"
+                              },
+                              {
+                                 "key":"Try again",
+                                 "value":"${retry.counter:le('${retry.maxcount}')}"
+                              }
+                           ]
+                        },
+                        "runDurationMillis":"0",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"Check Retry Count",
+                     "relationships":[
+                        {
+                           "autoTerminate":"false",
+                           "description":"",
+                           "name":"Try again"
+                        },
+                        {
+                           "autoTerminate":"false",
+                           "description":"FlowFiles that do not match any user-define expression will be routed here",
+                           "name":"unmatched"
+                        }
+                     ],
+                     "state":"RUNNING",
+                     "style":"",
+                     "supportsEventDriven":"true",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.standard.RouteOnAttribute"
+                  },
+                  {
+                     "id":"8692729d-e3f2-472d-9435-f1bbf207e41c",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "position":{
+                        "x":"369.00002125343855",
+                        "y":"218.00000475076467"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"1",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "descriptors":{
+                           "entry":[
+                              {
+                                 "key":"retry.counter",
+                                 "value":{
+                                    "description":"",
+                                    "displayName":"retry.counter",
+                                    "dynamic":"true",
+                                    "name":"retry.counter",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              },
+                              {
+                                 "key":"retry.maxcount",
+                                 "value":{
+                                    "description":"",
+                                    "displayName":"retry.maxcount",
+                                    "dynamic":"true",
+                                    "name":"retry.maxcount",
+                                    "required":"false",
+                                    "sensitive":"false",
+                                    "supportsEl":"true"
+                                 }
+                              }
+                           ]
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":[
+                              {
+                                 "key":"retry.counter",
+                                 "value":"${retry.counter:replaceNull('0'):plus(1)}"
+                              },
+                              {
+                                 "key":"retry.maxcount",
+                                 "value":"${retry.maxcount:replaceNull('3')}"
+                              }
+                           ]
+                        },
+                        "runDurationMillis":"0",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"Set retry counter",
+                     "relationships":{
+                        "autoTerminate":"false",
+                        "description":"All FlowFiles are routed to this relationship",
+                        "name":"success"
+                     },
+                     "state":"RUNNING",
+                     "style":"",
+                     "supportsEventDriven":"true",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                  },
+                  {
+                     "id":"34b75d26-46b8-3d67-923f-fb6e7f93d0cd",
+                     "parentGroupId":"d80fe614-b7e0-46bc-8b98-da89e3223712",
+                     "position":{
+                        "x":"629.3641311351234",
+                        "y":"617.2079695910758"
+                     },
+                     "config":{
+                        "bulletinLevel":"WARN",
+                        "comments":"",
+                        "concurrentlySchedulableTaskCount":"1",
+                        "defaultConcurrentTasks":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"1"
+                              },
+                              {
+                                 "key":"EVENT_DRIVEN",
+                                 "value":"0"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"1"
+                              }
+                           ]
+                        },
+                        "defaultSchedulingPeriod":{
+                           "entry":[
+                              {
+                                 "key":"TIMER_DRIVEN",
+                                 "value":"0 sec"
+                              },
+                              {
+                                 "key":"CRON_DRIVEN",
+                                 "value":"* * * * * ?"
+                              }
+                           ]
+                        },
+                        "descriptors":{
+                           "entry":{
+                              "key":"retry.counter",
+                              "value":{
+                                 "description":"",
+                                 "displayName":"retry.counter",
+                                 "dynamic":"true",
+                                 "name":"retry.counter",
+                                 "required":"false",
+                                 "sensitive":"false",
+                                 "supportsEl":"true"
+                              }
+                           }
+                        },
+                        "lossTolerant":"false",
+                        "penaltyDuration":"30 sec",
+                        "properties":{
+                           "entry":{
+                              "key":"retry.counter",
+                              "value":"0"
+                           }
+                        },
+                        "runDurationMillis":"0",
+                        "schedulingPeriod":"0 sec",
+                        "schedulingStrategy":"TIMER_DRIVEN",
+                        "yieldDuration":"1 sec"
+                     },
+                     "name":"Reset retry counter",
+                     "relationships":{
+                        "autoTerminate":"false",
+                        "description":"All FlowFiles are routed to this relationship",
+                        "name":"success"
+                     },
+                     "state":"RUNNING",
+                     "style":"",
+                     "supportsEventDriven":"true",
+                     "supportsParallelProcessing":"true",
+                     "type":"org.apache.nifi.processors.attributes.UpdateAttribute"
+                  }
+               ]
+            },
+            "disabledCount":"0",
+            "inactiveRemotePortCount":"0",
+            "inputPortCount":"1",
+            "invalidCount":"2",
+            "name":"Retry Check Loop",
+            "outputPortCount":"2",
+            "parent":{
+               "id":"622ae166-2d67-4066-8fd1-4f96f72570c3",
+               "name":"Onyara Processing Hub"
+            },
+            "runningCount":"4",
+            "stoppedCount":"0"
+         }
+      },
+      "timestamp":"06/02/2019 17:52:51 UTC"
+   }
+}

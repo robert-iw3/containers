@@ -1,0 +1,25 @@
+deployment_type: kubernetes
+haproxy_version: 3.0.8
+socket_path: /var/run/docker.sock
+log_level: info
+replicas: 2
+ansible_inventory: inventory
+opensearch_host: opensearch
+opensearch_port: 9200
+maxconn: 10000
+fullconn: 5000
+domain: haproxy.example.com
+email: admin@example.com
+services:
+  - name: app1
+    backend: app1.example.com
+    port: 8080
+    num_servers: 100
+    health_check:
+      method: GET
+      path: /health
+    balance: roundrobin
+  - name: app2
+    backend: app2.example.com
+    port: 8081
+    num_servers: 100

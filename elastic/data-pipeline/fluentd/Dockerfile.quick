@@ -1,0 +1,8 @@
+# fluentd/Dockerfile
+
+FROM fluent/fluentd:v1.19.3-debian-amd64-2.1
+USER root
+RUN ["fluent-gem", "install", "fluent-plugin-elasticsearch", "--no-document", "--version", "6.0.0"]
+RUN ["fluent-gem", "install", "fluent-plugin-cloudwatch", "--no-document", "--version", "2.1.1"]
+RUN ["fluent-gem", "install", "fluent-plugin-grok-parser", "--no-document", "--version", "2.6.2"]
+USER fluent

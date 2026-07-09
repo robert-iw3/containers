@@ -1,0 +1,103 @@
+---
+services:
+  rudder-postgres:
+    image: postgres:15
+    container_name: rudder-postgres
+    environment:
+      - POSTGRES_USER=rudder
+      - POSTGRES_PASSWORD={{ postgres_password }}
+      - POSTGRES_DB=rudderstack
+    volumes:
+      - rudder-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "rudder"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    {% if enable_logging %}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "rudder.postgres"
+    {% endif %}
+    networks:
+      - rudder-network
+  rudder-server:
+    image: {{ image_registry }}/rudderlabs/rudder-server:{{ rudder_version }}
+    container_name: rudder-server
+    environment:
+      - LOG_LEVEL=INFO
+      - CONFIG_BACKEND_URL={{ config_backend_url }}
+      - RSERVER_BACKEND_ENABLE_TELEMETRY={{ enable_telemetry | string | upper }}
+      - DB_HOST=rudder-postgres
+      - DB_PORT=5432
+      - DB_USER=rudder
+      - DB_NAME=rudderstack
+      - DB_PASSWORD={{ postgres_password }}
+    ports:
+      - "8080:8080"
+    depends_on:
+      rudder-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    {% if enable_logging %}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "rudder.server"
+    {% endif %}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=8080"
+    secrets:
+      - workspace_token
+    networks:
+      - rudder-network
+  rudder-transformer:
+    image: {{ image_registry }}/rudderlabs/rudder-transformer:{{ transformer_version }}
+    container_name: rudder-transformer
+    environment:
+      - LOG_LEVEL=INFO
+      - CONFIG_BACKEND_URL={{ config_backend_url }}
+    depends_on:
+      rudder-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    {% if enable_logging %}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "rudder.transformer"
+    {% endif %}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9090"
+    networks:
+      - rudder-network
+secrets:
+  workspace_token:
+    file: /opt/rudderstack/workspace_token.txt
+volumes:
+  rudder-postgres-data:
+networks:
+  rudder-network:
+    driver: bridge

@@ -1,0 +1,137 @@
+---
+- name: Tune OS for Elastic (All Distros)
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: "vm.max_map_count = 262144"
+    state: present
+  become: yes
+
+- name: Increase file descriptors (All Distros)
+  copy:
+    dest: /etc/security/limits.conf
+    content: |
+      * soft nofile 65535
+      * hard nofile 65535
+    mode: '0644'
+  become: yes
+
+- name: Disable swap (All Distros)
+  command: swapoff -a
+  become: yes
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^.* swap .*'
+    state: absent
+  become: yes
+
+# === KIBANA (Podman) ===
+- name: Deploy Kibana (Podman)
+  containers.podman.podman_container:
+    name: kibana
+    image: "docker.elastic.co/kibana/kibana:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "5601:5601"
+    env:
+      ELASTICSEARCH_HOSTS: "{{ es_hosts_list }}"
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: "{{ kibana_password }}"
+      SERVER_NAME: kibana
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_CERTIFICATE: /certs/kibana/kibana.crt
+      SERVER_SSL_KEY: /certs/kibana/kibana.key
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /certs/ca/ca.crt
+      ELASTICSEARCH_SSL_VERIFICATIONMODE: certificate
+    volumes:
+      - "{{ certs_dir }}:/certs:ro"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "podman"
+  become: yes
+
+# === KIBANA (Docker) ===
+- name: Deploy Kibana (Docker)
+  docker_container:
+    name: kibana
+    image: "docker.elastic.co/kibana/kibana:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "5601:5601"
+    env:
+      ELASTICSEARCH_HOSTS: "{{ es_hosts_list }}"
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: "{{ kibana_password }}"
+      SERVER_NAME: kibana
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_CERTIFICATE: /certs/kibana/kibana.crt
+      SERVER_SSL_KEY: /certs/kibana/kibana.key
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /certs/ca/ca.crt
+      ELASTICSEARCH_SSL_VERIFICATIONMODE: certificate
+    volumes:
+      - "{{ certs_dir }}:/certs:ro"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "docker"
+  become: yes
+
+# === FLEET SERVER (Podman) ===
+- name: Deploy Fleet Server (Podman)
+  containers.podman.podman_container:
+    name: fleet-server
+    image: "docker.elastic.co/beats/elastic-agent:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "8220:8220"
+    env:
+      FLEET_ENROLL: "1"
+      FLEET_SERVER_ENABLE: "1"
+      KIBANA_FLEET_SETUP: "1"
+      KIBANA_HOST: "https://{{ inventory_hostname }}:5601"
+      FLEET_URL: "https://{{ inventory_hostname }}:8220"
+      FLEET_SERVER_ELASTICSEARCH_HOST: "https://{{ groups['elasticsearch'][0] }}:9200"
+      KIBANA_FLEET_USERNAME: elastic
+      KIBANA_FLEET_PASSWORD: "{{ elastic_password }}"
+      FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
+      FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
+      FLEET_CA: /certs/ca/ca.crt
+      FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
+    volumes:
+      - "{{ certs_dir }}:/certs:ro"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "podman"
+  become: yes
+
+# === FLEET SERVER (Docker) ===
+- name: Deploy Fleet Server (Docker)
+  docker_container:
+    name: fleet-server
+    image: "docker.elastic.co/beats/elastic-agent:{{ elastic_version }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "8220:8220"
+    env:
+      FLEET_ENROLL: "1"
+      FLEET_SERVER_ENABLE: "1"
+      KIBANA_FLEET_SETUP: "1"
+      KIBANA_HOST: "https://{{ inventory_hostname }}:5601"
+      FLEET_URL: "https://{{ inventory_hostname }}:8220"
+      FLEET_SERVER_ELASTICSEARCH_HOST: "https://{{ groups['elasticsearch'][0] }}:9200"
+      KIBANA_FLEET_USERNAME: elastic
+      KIBANA_FLEET_PASSWORD: "{{ elastic_password }}"
+      FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
+      FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
+      FLEET_CA: /certs/ca/ca.crt
+      FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
+    volumes:
+      - "{{ certs_dir }}:/certs:ro"
+    security_opt:
+      - no-new-privileges:true
+  when: container_runtime == "docker"
+  become: yes

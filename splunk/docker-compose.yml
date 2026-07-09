@@ -1,0 +1,126 @@
+---
+volumes:
+  opt-splunk-etc:
+  opt-splunk-var:
+  opt-forwarder-etc:
+  opt-forwarder-var:
+
+networks:
+  external:
+    driver: bridge
+  internal:
+    internal: true
+
+services:
+
+  splunkenterprise:
+    build: enterprise/
+    hostname: splunkenterprise.io
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: 'changeme'
+      #SPLUNK_LICENSE_URI:
+      #SPLUNK_ROLE: {splunk_standalone, splunk_indexer, splunk_deployer, splunk_search_head}
+      #SPLUNK_STANDALONE_URL:
+      #SPLUNK_SEARCH_HEAD_URL:
+      #SPLUNK_INDEXER_URL:
+      #SPLUNK_DEPLOYER_URL:
+      #SPLUNK_CLUSTER_MASTER_URL:
+      #SPLUNK_SEARCH_HEAD_CAPTAIN_URL:
+      SPLUNK_ENABLE_LISTEN: 9997
+      SPLUNK_ADD: "tcp 1514"
+    command: >
+      bash -c '
+      sed -i 's/enableSplunkWebSSL = false/enableSplunkWebSSL = true/g' /opt/splunk/etc/system/local/web.conf;
+      /opt/splunk/bin/splunk restart splunkd;
+      '
+    volumes:
+      - opt-splunk-etc:/opt/splunk/etc:Z
+      - opt-splunk-var:/opt/splunk/var:Z
+      - ./enterprise/apps:/opt/splunk/etc/apps:Z
+    ports:
+      - "8000:8000"
+      - "8088:8088"
+      - "9997:9997"
+      - "8089:8089"
+      - "8191:8191"
+      - "1514:1514"
+    networks: ['internal']
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 16000
+        hard: 16000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.splunk.rule=Host(`splunkenterprise.io`)"
+      - "traefik.http.routers.splunk.service=splunk"
+      - "traefik.http.routers.splunk.entrypoints=websecure"
+      - "traefik.http.services.splunk.loadbalancer.server.port=8000"
+      - "traefik.docker.network=internal"
+
+  splunkuniversalforwarder:
+    build: universalforwarder/
+    hostname: splunkuniversalforwarder
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      DOCKER_MONITORING: true
+    volumes:
+      - opt-forwarder-etc:/opt/splunk/etc:Z
+      - opt-forwarder-var:/opt/splunk/var:Z
+      - /var/log:/var/log:Z
+    networks: ['internal']
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped
+
+  traefik:
+    container_name: traefik
+    build: traefik/
+    hostname: traefik
+    command:
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--providers.file.filename=/dynamic/tls.yaml"
+      # Providers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # API & Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      # Observability
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      # sudo systemctl enable --now podman.socket | non-root:  systemctl --user enable --now podman.socket
+      - /var/run/podman/podman.sock:/var/run/docker.sock:ro # for user namespace: $XDG_RUNTIME_DIR/podman/podman.sock
+      #- /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets:/secrets:ro
+      - ./traefik/config:/dynamic:ro
+    networks:
+      - internal
+      - external
+    labels:
+      - "traefik.enable=true"
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.podman.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      # htpasswd -B -c .htpasswd admin  - htpasswd -nb admin "InsertAPasswordHere" | sed -e 's/\$/\$\$/g'
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users= "
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+      # to access dashboard - https://dashboard.podman.localhost

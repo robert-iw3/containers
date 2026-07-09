@@ -1,0 +1,47 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - ./.env
+  networks:
+    - elastic
+
+volumes:
+  fleet-server:
+
+services:
+  fleet-server:
+    <<: *common-vars-apps
+    build:
+      context: .
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    container_name: fleet-server
+    user: root
+    volumes:
+      - fleet-server:/usr/share/elastic-agent/state:Z
+      - /var/lib/containers:/var/lib/docker:ro
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+    environment:
+      FLEET_ENROLL: 1
+      FLEET_SERVER_POLICY_ID: fleet-server-policy
+      FLEET_SERVER_ENABLE: 1
+      KIBANA_FLEET_SETUP: 1
+      KIBANA_HOST: https://kibana:5601
+      FLEET_URL: https://fleet-server:8220
+      FLEET_SERVER_ELASTICSEARCH_HOST: https://elasticsearch:9200
+      FLEET_CA: /certs/ca/ca.crt
+      KIBANA_FLEET_USERNAME: elastic
+      KIBANA_FLEET_PASSWORD: ${ELASTIC_PASSWORD}
+      FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
+      FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
+      FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
+      KIBANA_FLEET_CA: /certs/ca/ca.crt
+    ports:
+      - 8220:8220
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy

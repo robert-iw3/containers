@@ -1,0 +1,10 @@
+# Vault policy for Nomad
+path "secret/data/nomad/*" {
+  capabilities = ["read", "list"]
+}
+path "auth/token/create/nomad-cluster" {
+  capabilities = ["update"]
+}
+path "auth/token/revoke-self" {
+  capabilities = ["update"]
+}

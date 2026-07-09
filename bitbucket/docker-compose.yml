@@ -1,0 +1,234 @@
+---
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    bitbucket-net:
+      ipv4_address: 172.28.0.4
+
+x-common-vars-postgres: &common-vars-postgres
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    bitbucket-net:
+      ipv4_address: 172.28.0.2
+
+services:
+  bitbucket:
+    <<: *common-vars-apps
+    image: ${BITBUCKET_IMAGE:-atlassian/bitbucket:10.3.1}
+    container_name: bitbucket
+    environment:
+      JVM_MINIMUM_MEMORY: ${BITBUCKET_JVM_MINIMUM_MEMORY:-1024m}
+      JVM_MAXIMUM_MEMORY: ${BITBUCKET_JVM_MAXIMUM_MEMORY:-4096m}
+      SERVER_PROXY_NAME: ${BITBUCKET_HOSTNAME:-bitbucket.dev.io}
+      SERVER_SECURE: "true"
+      SERVER_SCHEME: https
+      SERVER_PROXY_PORT: 443
+      SETUP_DISPLAYNAME: Bitbucket
+      SETUP_BASEURL: ${BITBUCKET_URL:-https://bitbucket.dev.io}
+      JDBC_DRIVER: org.postgresql.Driver
+      JDBC_USER: ${POSTGRESQL_USERNAME:-bitbucket_user}
+      JDBC_PASSWORD_FILE: /run/secrets/postgresql_password
+      JDBC_URL: jdbc:postgresql://postgres-bitbucket:5432/${POSTGRESQL_DATABASE:-bitbucket}
+      PLUGIN_AUTH_OAUTH_JIRA_URL: ${JIRA_URL:-https://jira.dev.io}
+      JVM_SUPPORT_RECOMMENDED_ARGS: -javaagent:/opt/atlassian/bitbucket/jmx_prometheus_javaagent.jar=7991:/opt/atlassian/bitbucket/prometheus.yml
+    ports:
+      - 7990:7990
+      - 443:443
+      - 7991:7991
+    volumes:
+      - bitbucket-data:/var/atlassian/application-data/bitbucket
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      - postgres-bitbucket
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  bitbucket-exporter:
+    <<: *common-vars-apps
+    image: ${EXPORTER_IMAGE:-python:3.13-slim}
+    container_name: bitbucket-exporter
+    volumes:
+      - ./bitbucket-exporter.py:/app/bitbucket-exporter.py
+    command:
+      - python
+      - /app/bitbucket-exporter.py
+    environment:
+      BITBUCKET_URL: http://${BITBUCKET_IPv4:-172.28.0.4}:7990
+      BITBUCKET_ADMIN_USER: ${BITBUCKET_ADMIN_USER:-admin}
+      BITBUCKET_ADMIN_PASSWORD: ${BITBUCKET_ADMIN_PASSWORD:-admin_password}
+    ports:
+      - 8000:8000
+    networks:
+      bitbucket-net:
+        ipv4_address: ${BITBUCKET_EXPORTER_IPv4:-172.28.0.9}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  postgres-bitbucket:
+    <<: *common-vars-postgres
+    image: ${POSTGRES_IMAGE:-postgres:18}
+    container_name: postgres-bitbucket
+    environment:
+      POSTGRES_USER: ${POSTGRESQL_USERNAME:-bitbucket_user}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
+      POSTGRES_DB: ${POSTGRESQL_DATABASE:-bitbucket}
+      POSTGRES_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER:-repluser}
+      POSTGRES_REPLICATION_PASSWORD_FILE: /run/secrets/postgresql_replication_password
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-backup:/srv/bitbucket-postgres/backups
+      - ./secrets:/run/secrets:ro
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  postgres2-bitbucket:
+    <<: *common-vars-postgres
+    image: ${POSTGRES_IMAGE:-postgres:18}
+    container_name: postgres2-bitbucket
+    environment:
+      POSTGRES_USER: ${POSTGRESQL_USERNAME:-bitbucket_user}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
+      POSTGRES_DB: ${POSTGRESQL_DATABASE:-bitbucket}
+      POSTGRES_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER:-repluser}
+      POSTGRES_REPLICATION_PASSWORD_FILE: /run/secrets/postgresql_replication_password
+      PG_REPLICA: "true"
+    volumes:
+      - postgres2-data:/var/lib/postgresql/data
+      - postgres-backup:/srv/bitbucket-postgres/backups
+      - ./secrets:/run/secrets:ro
+    networks:
+      bitbucket-net:
+        ipv4_address: ${BACKUP_POSTGRESQL_IPv4:-172.28.0.3}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus-data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      bitbucket-net:
+        ipv4_address: ${PROMETHEUS_IPv4:-172.28.0.5}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    ports:
+      - 3000:3000
+    networks:
+      bitbucket-net:
+        ipv4_address: ${GRAFANA_IPv4:-172.28.0.7}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - 9093:9093
+    networks:
+      bitbucket-net:
+        ipv4_address: ${ALERTMANAGER_IPv4:-172.28.0.8}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRESQL_USERNAME:-bitbucket_user}@postgres-bitbucket:5432/${POSTGRESQL_DATABASE:-bitbucket}?sslmode=disable
+    ports:
+      - 9187:9187
+    networks:
+      bitbucket-net:
+        ipv4_address: ${POSTGRES_EXPORTER_IPv4:-172.28.0.6}
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+volumes:
+  bitbucket-data:
+  postgres-data:
+  postgres2-data:
+  postgres-backup:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  bitbucket-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${BITBUCKET_SUBNET:-172.28.0.0/24}
+          gateway: ${BITBUCKET_GATEWAY:-172.28.0.1}

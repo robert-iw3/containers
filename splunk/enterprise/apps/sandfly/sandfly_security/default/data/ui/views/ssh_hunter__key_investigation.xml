@@ -1,0 +1,127 @@
+<form version="1.1">
+  <label>SSH Hunter - Key Investigation</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>SSH Keys in Security Zones</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_zones path=ssh_key_details.key_zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| search aaa_zones_count &gt; 0
+| table ssh_key_details.friendly_name ssh_key_details.key_type aaa_zones_count ssh_key_details.num_users_current ssh_key_details.num_hosts_current ssh_key_details.num_hosts_with_alerts ssh_key_details.first_seen ssh_key_details.last_seen ssh_key_details.has_duplicate_keys
+| sort - ssh_key_details.last_seen
+| rename ssh_key_details.has_duplicate_keys as "Duplicate Keys"
+| rename ssh_key_details.friendly_name as "Friendly Name"
+| rename ssh_key_details.key_type as "Key Type"
+| rename ssh_key_details.num_users_current as "Active Users"
+| rename ssh_key_details.num_hosts_current as "Active Hosts"
+| rename ssh_key_details.num_hosts_with_alerts as "Hosts with Alerts"
+| rename aaa_zones_count as "Security Zones"
+| rename ssh_key_details.first_seen as "First Seen"
+| rename ssh_key_details.last_seen as "Last Seen"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__key_summary?form.tok_sshkey=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>SSH Keys with Active Users and Hosts</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details "ssh_key_details.hosts_deleted"=false
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_zones path=ssh_key_details.key_zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| table ssh_key_details.friendly_name ssh_key_details.key_type aaa_zones_count ssh_key_details.num_users_current ssh_key_details.num_hosts_current ssh_key_details.num_hosts_with_alerts ssh_key_details.first_seen ssh_key_details.last_seen ssh_key_details.has_duplicate_keys
+| sort - ssh_key_details.hosts_with_alerts
+| rename ssh_key_details.has_duplicate_keys as "Duplicate Keys"
+| rename ssh_key_details.friendly_name as "Friendly_Name"
+| rename ssh_key_details.key_type as "Key Type"
+| rename ssh_key_details.num_users_current as "Active Users"
+| rename ssh_key_details.num_hosts_current as "Active Hosts"
+| rename ssh_key_details.num_hosts_with_alerts as "Hosts with Alerts"
+| rename aaa_zones_count as "Security Zones"
+| rename ssh_key_details.first_seen as "First Seen"
+| rename ssh_key_details.last_seen as "Last Seen"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Duplicate Keys">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__key_summary?form.tok_sshkey=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>SSH Keys with No Active Users or Hosts</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details "ssh_key_details.hosts_deleted"=true
+| dedup ssh_key_details.friendly_name
+| spath output=aaa_zones path=ssh_key_details.key_zones{}
+| eval aaa_zones_count = if(isnull(aaa_zones), 0, mvcount(aaa_zones))
+| table ssh_key_details.friendly_name ssh_key_details.key_type aaa_zones_count ssh_key_details.num_users_current ssh_key_details.num_hosts_current ssh_key_details.num_hosts_with_alerts ssh_key_details.first_seen ssh_key_details.last_seen ssh_key_details.has_duplicate_keys
+| sort - ssh_key_details.last_seen
+| rename ssh_key_details.has_duplicate_keys as "Duplicate Keys"
+| rename ssh_key_details.friendly_name as "Friendly Name"
+| rename ssh_key_details.key_type as "Key Type"
+| rename ssh_key_details.num_users_current as "Active Users"
+| rename ssh_key_details.num_hosts_current as "Active Hosts"
+| rename ssh_key_details.num_hosts_with_alerts as "Hosts with Alerts"
+| rename aaa_zones_count as "Security Zones"
+| rename ssh_key_details.first_seen as "First Seen"
+| rename ssh_key_details.last_seen as "Last Seen"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Duplicate Keys">
+          <colorPalette type="map">{"true":#DC4E41}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/ssh_hunter__key_summary?form.tok_sshkey=$click.value$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Raw Event Details</title>
+        <search>
+          <query>`sandfly_search_sshkeys` event_type=ssh_key_details
+| dedup ssh_key_details.friendly_name</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

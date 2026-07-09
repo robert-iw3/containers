@@ -1,0 +1,53 @@
+# wallarm gotestwaf
+# https://github.com/wallarm/gotestwaf
+api-waf-testing:
+  stage: test
+  image: docker.io/docker:latest
+  allow_failure: true
+  tags:
+    - security
+  services:
+    - docker.io/docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    GOPATH: /usr/local/bin/go
+    URL:
+  script:
+    - set -eou pipefail
+    - apk add --no-cache -t .gotestwaf-deps gcc git make linux-headers musl-dev go
+    - mkdir -p ${GOPATH}/src/github.com/gotestwaf
+    - cd ${GOPATH}/src/github.com/gotestwaf
+    - git clone https://github.com/wallarm/gotestwaf.git
+    - cd gotestwaf
+    - cp -R testcases /
+    - cd cmd
+    - export GO111MODULE=on
+    - go install
+    - apk del --purge .gotestwaf-deps
+    - rm -rf ${GOPATH}/src/github.com
+    - apk add --no-cache tini chromium font-inter font-iosevka fontconfig
+    - fc-cache -fv
+    - tee /config.yaml <<\EOF
+      headers:
+        Connection: close
+        Pragma: no-cache
+        Cache-Control: no-cache
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Sec-Fetch-Site: none
+        Sec-Fetch-Mode: navigate
+        Sec-Fetch-User: ?1
+        Sec-Fetch-Dest: document
+        Accept-Encoding: gzip, deflate
+        Accept-Language: en-US,en;q=0.9
+      EOF
+    - mkdir /app
+    - mv /usr/local/bin/go/bin/gotestwaf /app
+    - /sbin/tini /app/gotestwaf
+    - gotestwaf --url=${URL} --noEmailReport --logFormat json --reportPath / --reportName /gl-api-test-report.json #--proxy <proxy url>
+  artifacts:
+    paths:
+      - gl-api-test-report.json
+    reports:
+      api-waf-testing: gl-api-test-report.json

@@ -1,0 +1,155 @@
+---
+services:
+  artifactory:
+    image: ${DOCKER_REGISTRY}/jfrog/artifactory-oss:${ARTIFACTORY_VERSION}
+    container_name: artifactory
+    user: "1000:1000" # Run as non-root
+    env_file:
+      - .setup-env
+    environment:
+      - JF_ROUTER_ENTRYPOINTS_EXTERNALPORT=${JF_ROUTER_ENTRYPOINTS_EXTERNALPORT}
+      - DB_TYPE=postgresql
+      - DB_HOST=postgres
+      - EXTRA_JAVA_OPTIONS=-Xms512m -Xmx4g
+    ports:
+      - ${JF_ROUTER_ENTRYPOINTS_EXTERNALPORT}:${JF_ROUTER_ENTRYPOINTS_EXTERNALPORT}
+      - 8081:8081
+      - 8085:8085
+    volumes:
+      - ${ROOT_DATA_DIR}/var:/var/opt/jfrog/artifactory:Z
+      - /etc/localtime:/etc/localtime:ro
+    secrets:
+      - postgres_user
+      - postgres_password
+    environment:
+      - DB_USER_FILE=/run/secrets/postgres_user
+      - DB_PASSWORD_FILE=/run/secrets/postgres_password
+    networks:
+      - artifactory-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/artifactory/api/system/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  nginx:
+    image: ${DOCKER_REGISTRY}/jfrog/nginx-artifactory:${ARTIFACTORY_VERSION}
+    container_name: nginx
+    user: "101:101" # Nginx non-root user
+    env_file:
+      - .setup-env
+    depends_on:
+      artifactory:
+        condition: service_healthy
+    environment:
+      - ART_BASE_URL=http://artifactory:${JF_ROUTER_ENTRYPOINTS_EXTERNALPORT}
+      - NGINX_LOG_ROTATE_COUNT=${NGINX_LOG_ROTATE_COUNT:-10}
+      - NGINX_LOG_ROTATE_SIZE=${NGINX_LOG_ROTATE_SIZE:-50m}
+      - SSL=true
+    volumes:
+      - ${ROOT_DATA_DIR}/var/data/nginx:/var/opt/jfrog/nginx:Z
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - artifactory-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18}
+    container_name: postgresql
+    user: "1001:1001" # Run as non-root
+    env_file:
+      - .setup-env
+    environment:
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+    secrets:
+      - postgres_db
+      - postgres_user
+      - postgres_password
+    ports:
+      - 5432:5432
+    volumes:
+      - ${ROOT_DATA_DIR}/var/data/postgres/data:/var/lib/postgresql/data:Z
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - artifactory-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "artifactory"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+secrets:
+  postgres_db:
+    file: ./secrets/postgres_db.txt
+  postgres_user:
+    file: ./secrets/postgres_user.txt
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+
+networks:
+  artifactory-net:
+    driver: bridge

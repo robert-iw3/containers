@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+ARG repo="docker.io" \
+    base_image="python:{{ python_version }}-slim" \
+    image_hash="{{ python_image_hash }}"
+
+FROM ${repo}/${base_image}@sha256:${image_hash}
+
+ENV PATH="${PATH}:/truss/bin" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN groupadd -g {{ truss_group_id }} truss && \
+    useradd -u {{ truss_user_id }} -g truss -m -s /bin/bash truss && \
+    mkdir -p {{ model_dir }} {{ data_dir }} {{ logs_dir }} && \
+    chown -R truss:truss /truss
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
+    for i in {1..3}; do apt-get update && apt-get install -y && break || sleep 5; done
+
+RUN python3 -m venv /truss/venv && \
+    . /truss/venv/bin/activate && \
+    pip install --upgrade pip && \
+    for i in {1..3}; do pip install -r {{ truss_config_dir }}/requirements.txt && break || sleep 5; done || { echo "Pip install failed"; exit 1; }
+
+COPY --chown=truss:truss model.py __init__.py {{ model_dir }}/
+COPY --chown=truss:truss config.yaml requirements.txt {{ truss_config_dir }}/
+WORKDIR /truss
+USER truss
+EXPOSE {{ container_port }}
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:{{ container_port }}/v1/models/model || exit 1
+CMD ["python3", "-m", "truss", "run", "/truss"]

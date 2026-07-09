@@ -1,0 +1,81 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+version: "3.8"
+
+services:
+  db:
+    image: postgres:18
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=boundary
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+
+  db-init:
+    image: hashicorp/boundary:0.21.3
+    command: ["database", "init", "-config", "/boundary/boundary.hcl"]
+    volumes:
+      - "${PWD}/:/boundary:ro,z"
+    environment:
+      - BOUNDARY_PG_URL=postgresql://postgres:postgres@db/boundary?sslmode=disable
+    cap_add:
+      - IPC_LOCK
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+  boundary:
+    image: hashicorp/boundary:0.21.3
+    command: ["server", "-config", "/boundary/boundary.hcl"]
+    volumes:
+      - "${PWD}/:/boundary/"
+    ports:
+      - "9200:9200"
+      - "9201:9201"
+      - "9202:9202"
+    environment:
+      - BOUNDARY_PG_URL=postgresql://postgres:postgres@db/boundary?sslmode=disable
+      - HOSTNAME=boundary
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-O-", "http://boundary:9200"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+# Boundary controller is the last service to start and may not be fully up
+# by the time the docker compose command returns, so we force a wait by
+# depending a placeholder on the controller healthcheck
+  wait:
+    image: busybox:latest
+    command: ["sleep", "1"]
+    depends_on:
+      boundary:
+        condition: service_healthy
+
+# Private Database Targets - not exposed to host network, only available via Boundary
+  cassandra:
+    image: bitnami/cassandra:latest
+
+  mysql:
+    image: mariadb
+    environment:
+      - 'MYSQL_ROOT_PASSWORD=my-secret-pw'
+
+  redis:
+    image: redis
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - 'ACCEPT_EULA=Y'
+      - 'SA_PASSWORD=yourStrong(!)Password'

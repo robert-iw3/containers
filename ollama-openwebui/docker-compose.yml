@@ -1,0 +1,183 @@
+volumes:
+  open-webui:
+    driver: local
+  ollama:
+    driver: local
+#  traefik-certificates:
+#    driver: local
+
+networks:
+  deepnet:
+    driver: bridge
+#  frontend:
+#    driver: bridge
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - deepnet
+#    - frontend
+
+services:
+  ollama-ui:
+    <<: *common-vars-apps
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: ollama-ui
+    hostname: open-webui.ai
+    ports:
+      - 3000:8080
+    environment:
+      - TZ=${TIMEZONE}
+      # Security
+      - WEBUI_AUTH=${WEBUI_AUTH}
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - BYPASS_MODEL_ACCESS_CONTROL=${WEBUI_BYPASS_MODEL_ACL}
+      - WEBUI_SESSION_COOKIE_SECURE=${WEBUI_SESSION_COOKIE_SECURE}
+      # OAuth via Authentik
+      #- OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      #- OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
+      #- OPENID_PROVIDER_URL=${OPENID_PROVIDER_URL}
+      #- OAUTH_PROVIDER_NAME=${OAUTH_PROVIDER_NAME}
+      #- ENABLE_OAUTH_SIGNUP=${ENABLE_OAUTH_SIGNUP}
+      #- OAUTH_MERGE_ACCOUNTS_BY_EMAIL=${OAUTH_MERGE_ACCOUNTS_BY_EMAIL}
+      #- OAUTH_SCOPES=${OAUTH_SCOPES}
+      #- OPENID_REDIRECT_URI=${OPENID_REDIRECT_URI}
+      # Models
+      - OLLAMA_BASE_URL=http://ollama:11434
+      #- DEFAULT_MODELS=llama3.1:latest
+      # Locale
+      - DEFAULT_LOCALE=${DEFAULT_LOCALE}
+      # RAG
+      #- PDF_EXTRACT_IMAGES=${PDF_EXTRACT_IMAGES}
+      #- ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH}
+      #- RAG_WEB_SEARCH_ENGINE=searxng
+      #- RAG_WEB_SEARCH_RESULT_COUNT=${RAG_WEB_SEARCH_RESULT_COUNT}
+    volumes:
+      - open-webui:/app/backend/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.webui.rule=Host(`${OLLAMA_HOSTNAME}`)"
+#      - "traefik.http.routers.webui.service=webui"
+#      - "traefik.http.routers.webui.entrypoints=websecure"
+#      - "traefik.http.services.webui.loadbalancer.server.port=3000"
+#      - "traefik.http.routers.webui.tls=true"
+#      - "traefik.http.routers.webui.tls.certresolver=letsencrypt"
+#      - "traefik.http.services.webui.loadbalancer.passhostheader=true"
+#      - "traefik.http.routers.webui.middlewares=compresstraefik"
+#      - "traefik.http.middlewares.compresstraefik.compress=true"
+#      - "traefik.docker.network=deepnet"
+
+  ollama:
+    <<: *common-vars-apps
+    image: docker.io/ollama/ollama:latest
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_NICE
+    ports:
+      - 11434:11434/tcp
+    volumes:
+      - ollama:/root/.ollama
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.tcp.routers.ollama.rule=HostSNI(`*`)"
+#      - "traefik.tcp.routers.ollama.service=ollama"
+#      - "traefik.tcp.routers.ollama.entrypoints=ollama"
+#      - "traefik.tcp.services.ollama.loadbalancer.server.port=11434"
+#      - "traefik.docker.network=deepnet"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+#    depends_on:
+#      traefik:
+#        condition: service_healthy
+
+
+#  traefik:
+#    image: ${TRAEFIK_IMAGE_TAG}
+#    command:
+#      - "--log.level=${TRAEFIK_LOG_LEVEL}"
+#      - "--api.dashboard=true"
+#      - "--ping=true"
+#      - "--ping.entrypoint=ping"
+#      - "--entrypoints.ping.address=:8082"
+#      - "--entrypoints.web.address=:80"
+#      - "--entrypoints.websecure.address=:443"
+#      - "--entryPoints.ollama.address=:11434"
+#      - "--providers.docker=true"
+#      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      # Prevent automatic exposure of all containers; only expose containers
+      # with "traefik.enable=true"
+#      - "--providers.docker.exposedbydefault=false"
+#      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+#      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+#      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+#      - "--metrics.prometheus=true"
+#      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+#      - "--global.checknewversion=true"
+#      - "--global.sendanonymoususage=false"
+#    volumes:
+    #- $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#      - /etc/localtime:/etc/localtime:ro
+#      - /etc/timezone:/etc/timezone:ro
+#      - traefik-certificates:/etc/traefik/acme
+#    networks:
+#      - frontend
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#      - "11434:11434"
+#    healthcheck:
+#      test: ["CMD", "wget", "http://localhost:8082/ping","--spider"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+#      start_period: 5s
+#    labels:
+      # Enable Traefik for this container.
+#      - "traefik.enable=true"
+      # A router to expose the Traefik dashboard
+#      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+#      - "traefik.http.routers.dashboard.entrypoints=websecure"
+#      - "traefik.http.routers.dashboard.tls=true"
+#      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+#      - "traefik.http.routers.dashboard.service=api@internal"
+      # asic Authentication for the Traefik dashboard
+#      - "traefik.http.routers.dashboard.middlewares=authtraefik"
+#      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      # Specify the internal server port to the dashboard service
+#      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      # Pass the original Host header to the backend
+#      - "traefik.http.services.dashboard.loadbalancer.passhostheader=true"
+      # HTTP -> HTTPS redirect for all hosts
+#      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+#      - "traefik.http.routers.http-catchall.entrypoints=web"
+#      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+#      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+#    env_file:
+#      - .env
+#    restart: unless-stopped

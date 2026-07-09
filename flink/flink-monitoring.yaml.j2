@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-metrics
+  namespace: {{ namespace }}
+  labels:
+    app: flink
+spec:
+  selector:
+    app: flink
+  ports:
+  - name: metrics
+    port: {{ monitoring.metrics_port }}
+    targetPort: {{ monitoring.metrics_port }}
+  type: ClusterIP

@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'nomad'
+    static_configs:
+      - targets: [%{ for ip in nomad_ips }"${ip}:4646",%{ endfor }]
+        labels:
+          group: 'nomad'
+
+  - job_name: 'consul'
+    static_configs:
+      - targets: [%{ for ip in consul_ips }"${ip}:8500",%{ endfor }]
+        labels:
+          group: 'consul'
+
+  - job_name: 'vault'
+    static_configs:
+      - targets: [%{ for ip in vault_ips }"${ip}:8200",%{ endfor }]
+        labels:
+          group: 'vault'
+
+  - job_name: 'fluent-bit'
+    static_configs:
+      - targets: [%{ for ip in nomad_ips }"${ip}:2021",%{ endfor }]
+        labels:
+          group: 'fluent-bit'

@@ -1,0 +1,25 @@
+---
+- name: Install NGINX
+  package:
+    name: nginx
+    state: present
+  become: yes
+
+- name: Configure Kibana LB
+  template:
+    src: nginx/kibana.conf.j2
+    dest: /etc/nginx/conf.d/kibana.conf
+  become: yes
+
+- name: Configure Fleet LB
+  template:
+    src: nginx/fleet.conf.j2
+    dest: /etc/nginx/conf.d/fleet.conf
+  become: yes
+
+- name: Start NGINX
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+  become: yes

@@ -1,0 +1,25 @@
+parquet_connectors:
+  schemas_file: '/app/schemas.yaml'
+  state_path: '/app/state.db'
+elastic:
+  host: 'http://localhost:9200'
+  index: 'parquet-logs'
+  auth: null  # Format: "username:password" or "api_key"
+parquet:
+  data_dir: '/app/data'
+  max_memory_mb: 1024  # Maximum memory for Parquet processing in MB
+deployment:
+  method: 'docker'  # docker, podman, kubernetes, ansible
+  namespace: 'parquet-connectors'
+  kubernetes:
+    replicas: 1
+buffer_timeout: 2.0
+worker_count: 4
+batch_size: 100
+poll_interval: 60
+incremental_enabled: false
+max_files_concurrent: 5
+metrics_port: 9000
+sqlcipher_key: 'your-secure-key'  # Set this securely
+rust_log: 'info'  # Rust logging level
+python_logging_level: 'INFO'  # Python logging level

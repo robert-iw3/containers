@@ -1,0 +1,212 @@
+{
+  "modelName": "Splunk_Internal",
+  "displayName": "Splunk Internal Logs",
+  "description": "Splunk's Internal Server Logs record information about system usage and performance.",
+  "objects": [
+    {
+      "constraints": [
+        {
+          "search": "(index=_internal source=*scheduler.log* OR (source=*license_usage.log* type IN (RolloverSummary, Usage))) OR (index IN (summary, _cmc_summary) source IN (splunk-entitlements, splunk-storage-summary, splunk-ddaa-detail, splunk-ddaa-summary, splunk-fss3-usage))"
+        }
+      ],
+      "calculations": [],
+      "parentName": "BaseEvent",
+      "objectName": "Server",
+      "displayName": "Splunk Server",
+      "comment": "Based on internal_server.json of the default search app"
+    },
+    {
+      "constraints": [
+        {
+          "search": "(source=*license_usage.log* type IN (RolloverSummary, Usage)) OR (source IN (splunk-entitlements, splunk-storage-summary, splunk-ddaa-detail, splunk-ddaa-summary, splunk-fss3-usage))"
+        }
+      ],
+      "parentName": "Server",
+      "objectName": "Licenser",
+      "displayName": "Licenser",
+      "comment": ""
+    },
+    {
+      "constraints": [
+        {
+          "search": "type=RolloverSummary"
+        }
+      ],
+      "calculations": [
+        {
+          "calculationType": "Eval",
+          "expression": "b/1024/1024/1024",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "gb",
+              "displayName": "License Used (GB)",
+              "comment": ""
+            }
+          ]
+        }
+      ],
+      "parentName": "Licenser",
+      "objectName": "Daily_Usage",
+      "displayName": "Daily Usage Summary",
+      "comment": ""
+    },
+    {
+      "constraints": [
+        {
+          "search": "source IN (splunk-entitlements, splunk-storage-summary, splunk-ddaa-detail, splunk-ddaa-summary, splunk-fss3-usage)"
+        }
+      ],
+      "fields": [
+        {
+          "type": "number",
+          "hidden": false,
+          "required": false,
+          "multivalue": false,
+          "fieldName": "ingest_license",
+          "displayName": "Ingest Limit (GB)",
+          "comment": ""
+        }
+      ],
+      "calculations": [
+        {
+          "calculationType": "Eval",
+          "expression": "activeStorageLicenseGB",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddas",
+              "displayName": "Dynamic Data Active Searchable (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "rawSizeGBCustomer",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddas_used",
+              "displayName": "DDAS Usage (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "activeArchiveLicenseGB",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddaa",
+              "displayName": "Dynamic Data Archive Searchable (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "archiveUsage",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddaa_used",
+              "displayName": "DDAA Usage (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "DDAARestoreLimitGB",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddaa_restore_limit",
+              "displayName": "DDAA Restores Limit (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "activeRestored",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "ddaa_restored",
+              "displayName": "DDAA Restored (GB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "fss3LicenseTB",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "fss3",
+              "displayName": "Federated Search for Amazon S3 (TB)",
+              "comment": ""
+            }
+          ]
+        },
+        {
+          "calculationType": "Eval",
+          "expression": "lastSummaryCumulativeFss3Usage/pow(1024,4)",
+          "comment": "",
+          "outputFields": [
+            {
+              "multivalue": false,
+              "type": "number",
+              "hidden": false,
+              "required": false,
+              "fieldName": "fss3_used",
+              "displayName": "FSS3 Usage (TB)",
+              "comment": ""
+            }
+          ]
+        }
+      ],
+      "parentName": "Licenser",
+      "objectName": "Entitlements",
+      "displayName": "Entitlements",
+      "comment": ""
+    }
+  ],
+  "objectNameList": ["Server", "Licenser", "Daily_Usage", "Entitlements"]
+}

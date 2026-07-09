@@ -1,0 +1,72 @@
+---
+- name: Deploy HyperDX with Docker
+  hosts: localhost
+  become: true
+  vars_files:
+    - ansible_vars.yaml
+  tasks:
+    - name: Install Docker
+      package:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Create target directory
+      file:
+        path: "{{ target_dir }}"
+        state: directory
+
+    - name: Copy support files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ target_dir }}/{{ item | basename }}"
+      loop:
+        - docker-compose.yml.j2
+        - .env.j2
+        - docker/clickhouse/local/config.xml
+        - docker/clickhouse/local/users.xml
+        - docker/nginx/nginx.conf.j2
+        - certs.sh
+        - ca.cnf
+        - csr.cnf
+        - backup.sh
+        - renew_certs.sh
+        - inventory.yml
+
+    - name: Generate certs
+      shell: "{{ target_dir }}/certs.sh --type {{ cert_type }} --domain {{ domain }} {% if email %}--email {{ email }}{% endif %} --out-dir {{ target_dir }}/docker/nginx/ssl"
+
+    - name: Generate secrets if empty
+      set_fact:
+        clickhouse_agg_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_agg_password == '' else clickhouse_agg_password }}"
+        clickhouse_wrk_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_wrk_password == '' else clickhouse_wrk_password }}"
+        clickhouse_api_password: "{{ lookup('password', '/dev/null length=32') if clickhouse_api_password == '' else clickhouse_api_password }}"
+        mongo_password: "{{ lookup('password', '/dev/null length=32') if mongo_password == '' else mongo_password }}"
+        api_key: "{{ lookup('password', '/dev/null length=64') if api_key == '' else api_key }}"
+
+    - name: Template .env
+      template:
+        src: "{{ target_dir }}/.env.j2"
+        dest: "{{ target_dir }}/.env"
+
+    - name: Template nginx.conf
+      template:
+        src: "{{ target_dir }}/docker/nginx/nginx.conf.j2"
+        dest: "{{ target_dir }}/docker/nginx/nginx.conf"
+
+    - name: Template users.xml
+      template:
+        src: "{{ target_dir }}/docker/clickhouse/local/users.xml"
+        dest: "{{ target_dir }}/docker/clickhouse/local/users.xml"
+
+    - name: Template docker-compose.yml
+      template:
+        src: "{{ target_dir }}/docker-compose.yml.j2"
+        dest: "{{ target_dir }}/docker-compose.yml"
+
+    - name: Run Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ target_dir }}"
+        state: present
+        restarted: true

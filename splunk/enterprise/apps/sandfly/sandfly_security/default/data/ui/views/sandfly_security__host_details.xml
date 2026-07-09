@@ -1,0 +1,294 @@
+<form version="1.1" theme="dark">
+  <label>Sandfly Security - Host Details</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tok_host_id" searchWhenChanged="true">
+      <label>Hostname (Target Address)</label>
+      <fieldForLabel>target_name</fieldForLabel>
+      <fieldForValue>target_id</fieldForValue>
+      <search>
+        <query>`sandfly_search_hosts_summary` host_summary.active="true" earliest=$tok_time1.earliest$ latest=$tok_time1.latest$
+| dedup host_summary.host_id
+| eval target_id = 'host_summary.host_id'
+| eval target_name = 'host_summary.os_info_node' + " (" + 'host_summary.hostname' + ")"
+| table target_id target_name
+| sort target_name</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Alerts</title>
+      <single>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| table host_summary.results_alert</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Alerts detected by Sandfly.</option>
+        <option name="unit">Alerts</option>
+        <option name="useColors">1</option>
+        <drilldown>
+          <link target="_blank">/app/sandfly_security/sandfly_security_host_alerts?form.tok_host_id=$tok_host_id$</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <title>Pass</title>
+      <single>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| table host_summary.results_pass</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Sandflies passed.</option>
+        <option name="unit">Pass</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Errors</title>
+      <single>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| table host_summary.results_error</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Errors whilst scanning.</option>
+        <option name="unit">Errors</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Host Last Scan</title>
+      <table>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| rename host_summary.date_last_scan as date_last_scan
+| eval last_scan_epoch = strptime(date_last_scan, "%Y-%m-%dT%H:%M:%S%Z")
+| eval local_last_scan = strftime(last_scan_epoch, "%Y-%m-%dT%H:%M:%S %Z")
+| eval time_diff = ceiling(now() - last_scan_epoch)
+| eval temp_duration = tostring(time_diff, "duration")
+| eval host_last_scan=replace(temp_duration,"(\d*)\+*(\d+):(\d+):(\d+)","\1 days \2 hours \3 minutes")
+| table date_last_scan local_last_scan host_last_scan
+| rename date_last_scan as "Date Last Scan (UTC)"
+| rename local_last_scan as "Date Last Scan (Local Time)"
+| rename host_last_scan as "Time Since Last Scan"
+| transpose
+| rename "row 1" as "Date/Time"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Host Details</title>
+      <table>
+        <search>
+          <query>`sandfly_search_hosts_details` host_details.host_id="$tok_host_id$"
+| dedup "host_details.host_id"
+| table host_details.hostname host_details.data.os.info.node host_details.last_seen_ip_addr host_details.first_seen_ip_addr host_details.host_id host_details.data.os.info.os_release.pretty_name host_details.data.os.info.platform host_details.data.os.info.release host_details.data.os.hardware.cpu.model_name host_details.data.os.info.arch host_details.tags{}
+| rename host_details.hostname as "Target Address"
+| rename host_details.data.os.info.node as "Hostname"
+| rename host_details.last_seen_ip_addr as "Last Seen IP Address"
+| rename host_details.first_seen_ip_addr as "First Seen IP Address"
+| rename host_details.host_id as "Host ID"
+| rename host_details.data.os.info.os_release.pretty_name as "Distribution"
+| rename host_details.data.os.info.platform as "Platform"
+| rename host_details.data.os.info.release as "Release"
+| rename host_details.data.os.hardware.cpu.model_name as "CPU Model"
+| rename host_details.data.os.info.arch as "Arch"
+| rename host_details.tags{} as "Tags"
+| transpose header_field="Host"
+| rename "row 1" as "Details"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Operational Status</title>
+      <table>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| table host_summary.os_info_uptime_days host_summary.os_info_uptime_date host_summary.date_last_scan host_summary.date_last_seen host_summary.date_first_seen host_summary.queue_name host_summary.credentials_id host_summary.authentication_status host_summary.jump_hosts{}
+| rename host_summary.os_info_uptime_days as "Uptime (days)"
+| rename host_summary.os_info_uptime_date as "Uptime (Date)"
+| rename host_summary.date_last_scan as "Date Last Scan"
+| rename host_summary.date_last_seen as "Date Last Seen"
+| rename host_summary.date_first_seen as "Date First Seen"
+| rename host_summary.queue_name as "Queue Name"
+| rename host_summary.credentials_id as "Credential"
+| rename host_summary.authentication_status as "Authentication Status"
+| rename host_summary.jump_hosts{} as "Jump Hosts"
+| transpose</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$all_panel_show$">
+      <title>Whitelists - All Hosts</title>
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.active=* whitelist_rule.all_hosts="true"
+| dedup whitelist_rule.id
+| eval whitelist_type=if('whitelist_rule.exclude_sandfly'=="true", "Disable Sandfly", "Match Rules")
+| eval is_active=if('whitelist_rule.active'=="true","True","False")
+| table is_active whitelist_rule.id whitelist_rule.sandfly whitelist_type
+| rename is_active as "Active"
+| rename whitelist_rule.id as "ID"
+| rename whitelist_rule.sandfly as "Sandfly"
+| rename whitelist_type as "Whitelist Type"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+          <progress>
+            <condition match="'job.resultCount' &gt; 0">
+              <set token="all_panel_show">true</set>
+            </condition>
+            <condition>
+              <unset token="all_panel_show"></unset>
+            </condition>
+          </progress>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel depends="$host_panel_show$">
+      <title>Whitelists - by Host ID</title>
+      <table>
+        <search>
+          <query>`sandfly_search_whitelist` whitelist_rule.active=* whitelist_rule.all_hosts="false"
+| dedup whitelist_rule.id
+| eval num_host_ids=mvcount('whitelist_rule.host_ids{}')
+| fillnull value=0 num_host_ids
+| search num_host_ids&gt;0
+| eval aaa_host_found=if(isnull(mvfind('whitelist_rule.host_ids{}', "$tok_host_id$")), "false", "true")
+| search aaa_host_found="true"
+| eval whitelist_type=if('whitelist_rule.exclude_sandfly'=="true", "Disable Sandfly", "Match Rules")
+| eval is_active=if('whitelist_rule.active'=="true","True","False")
+| table is_active whitelist_rule.id whitelist_rule.sandfly whitelist_type
+| rename is_active as "Active"
+| rename whitelist_rule.id as "ID"
+| rename whitelist_rule.sandfly as "Sandfly"
+| rename whitelist_type as "Whitelist Type"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+          <progress>
+            <condition match="'job.resultCount' &gt; 0">
+              <set token="host_panel_show">true</set>
+            </condition>
+            <condition>
+              <unset token="host_panel_show"></unset>
+            </condition>
+          </progress>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel depends="$tags_panel_show$">
+      <title>Whitelists - by Tags</title>
+      <table>
+        <search>
+          <progress>
+            <condition match="'job.resultCount' &gt; 0">
+              <set token="tags_panel_show">true&gt;</set>
+            </condition>
+            <condition>
+              <unset token="tags_panel_show"></unset>
+            </condition>
+          </progress>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"
+| eval num_tags=mvcount('host_summary.tags{}')
+| fillnull value=0 num_tags
+| search num_tags&gt;0
+| eval aaa_tag='host_summary.tags{}'
+| mvexpand aaa_tag
+| map
+    [ search `sandfly_search_whitelist` whitelist_rule.active=*
+    | dedup whitelist_rule.id
+    | eval aaa_host_tag="$$aaa_tag$$"
+    | eval aaa_tag_found=if(isnull(mvfind('whitelist_rule.host_tags{}', aaa_host_tag)), "false", "true")
+    | search aaa_tag_found="true"]
+| eval whitelist_type=if('whitelist_rule.exclude_sandfly'=="true", "Disable Sandfly", "Match Rules")
+| eval is_active=if('whitelist_rule.active'=="true","True","False")
+| table is_active aaa_host_tag whitelist_rule.id whitelist_rule.sandfly whitelist_type
+| rename is_active as "Active"
+| rename aaa_host_tag as "Tag"
+| rename whitelist_rule.id as "ID"
+| rename whitelist_rule.sandfly as "Sandfly"
+| rename whitelist_type as "Whitelist Type"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Host Summary Raw Event</title>
+      <event>
+        <search>
+          <query>`sandfly_search_hosts_summary` host_summary.host_id="$tok_host_id$"
+| dedup "host_summary.host_id"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+    <panel>
+      <title>Host Details Raw Event</title>
+      <event>
+        <search>
+          <query>`sandfly_search_hosts_details` host_details.host_id="$tok_host_id$"
+| dedup "host_details.host_id"</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+  </row>
+</form>

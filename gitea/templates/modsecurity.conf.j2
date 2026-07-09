@@ -1,0 +1,13 @@
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecDefaultAction "phase:1,log,deny,status:403"
+SecDefaultAction "phase:2,log,deny,status:403"
+Include /etc/modsecurity/crs/*.conf
+SecAction "phase:1,id:10001,initcol:ip=%{REMOTE_ADDR}"
+SecRule IP:REQUEST_COUNT "@gt 100" "phase:1,id:10002,deny,status:429,log,msg:'Rate limit exceeded',setvar:ip.request_count=+1,expirevar:ip.request_count=60"
+SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:10003,deny,status:403,log,msg:'Blocked by GeoIP',chain"
+SecRule GEO:COUNTRY_CODE "@streq CN" "t:none"
+SecRule REQUEST_URI "@beginsWith /api/" "phase:2,id:10004,deny,status:403,log,msg:'Unauthorized API access',chain"
+SecRule REQUEST_HEADERS:Authorization "!@streq Bearer VALID_TOKEN" "t:none"
+SecAction "phase:1,id:10005,log,pass,nolog,ctl:auditEngine=Off,setvar:tx.loki_host=loki.dev.io:3100"

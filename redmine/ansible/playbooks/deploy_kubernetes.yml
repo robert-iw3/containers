@@ -1,0 +1,21 @@
+- name: Deploy Redmine to Kubernetes
+  hosts: localhost
+  become: false
+  tasks:
+    - name: Ensure Kubernetes namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ kubernetes_namespace }}"
+        state: present
+
+    - name: Copy Kubernetes deployment template
+      template:
+        src: kubernetes-deployment.yml.j2
+        dest: kubernetes-deployment.yml
+        mode: '0644'
+
+    - name: Apply Kubernetes deployment
+      kubernetes.core.k8s:
+        state: present
+        src: kubernetes-deployment.yml

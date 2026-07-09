@@ -1,0 +1,14 @@
+---
+- name: Ensure data directory exists
+  file:
+    path: "{{ project_dir }}/data"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure embedding_model directory exists
+  file:
+    path: "{{ project_dir }}/embedding_model"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']

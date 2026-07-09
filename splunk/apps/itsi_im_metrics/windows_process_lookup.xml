@@ -1,0 +1,65 @@
+<form version="1.1">
+  <label>Windows Process Usage Lookup</label>
+  <!-- Snapshot interval is configured in [perfmon://Process] of windows-inputs.conf -->
+  <description>Process Explorer is snapshot by Splunk agent every minute. Number of events=number of snapshots. A busy host may inadvertently skip snaphosts.</description>
+  <fieldset submitButton="true" autoRun="false">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range:</label>
+      <default>Last 60 minutes</default>
+    </input>
+    <input type="text" token="hostname_value" searchWhenChanged="false">
+      <label>Host:</label>
+      <default></default>
+      <change>
+        <eval token="hostname">upper($value$)</eval>
+      </change>
+    </input>
+    <input type="text" token="cpu" searchWhenChanged="false">
+      <label>Minimum CPU %:</label>
+      <default>90</default>
+    </input>
+    <input type="text" token="priv_cpu" searchWhenChanged="false">
+      <label>Minimum Privileged CPU %:</label>
+      <default>90</default>
+    </input>
+    <input type="text" token="user_cpu" searchWhenChanged="false">
+      <label>Minimum User CPU %:</label>
+      <default>50</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+<!-- https://www.mssqltips.com/sqlservertutorial/9183/perfmon-counters-for-cpu-usage-memory-disk-and-network-performance/ -->
+        <title>CPU</title>
+        <search>
+          <query>
+            <![CDATA[
+| mstats avg(_value) AS CPU, count AS CPU_count WHERE index="windows-metrics" metric_name="Process.%_Processor_Time" host=$hostname|s$ NOT instance IN ("Idle", "_Total") BY host, instance
+| where CPU>$cpu$
+| append
+  [| mstats avg(_value) AS privCPU, count AS privCPU_count WHERE index="windows-metrics" metric_name="Process.%_Privileged_Time" host=$hostname|s$ NOT instance IN ("Idle", "_Total") BY host, instance
+  | where privCPU>$priv_cpu$]
+| append
+  [| mstats avg(_value) AS userCPU, count AS userCPU_count WHERE index="windows-metrics" metric_name="Process.%_User_Time" host=$hostname|s$ NOT instance IN ("Idle", "_Total") BY host, instance
+  | stats count AS Count, latest(_time) AS _time, avg(CPU) AS userCPU BY host, instance
+  | where userCPU>$user_cpu$]
+| rename host AS Host, instance AS Process
+| eval "CPU % (events)"=round(CPU)." (".CPU_count.")", "Privileged CPU % (events)"=round(privCPU)." (".privCPU_count.")", "User CPU % (events)"=round(userCPU)." (".userCPU_count.")", Time=strftime(_time, "%Y-%m-%d %H:%M:%S %z")
+| addinfo
+| eval "Expected Events"=floor((info_max_time-info_min_time)/60)
+| table Host, Process, "CPU % (events)", "Privileged CPU % (events)", "User CPU % (events)", "Expected Events"
+| sort Host, Process
+            ]]>
+          </query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>15m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

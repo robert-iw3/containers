@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+  namespace: flink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: jobmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: flink:2.3.0
+        args: ["jobmanager"]
+        ports:
+        - containerPort: 8081
+          name: rest
+        - containerPort: 6123
+          name: rpc
+        env:
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.memory.process.size: 2048m
+            taskmanager.memory.process.size: 4096m
+            taskmanager.numberOfTaskSlots: 4
+            parallelism.default: 4
+        - name: ENABLE_TLS
+          value: "true"
+        - name: FLINK_SSL_KEYSTORE
+          value: "/etc/flink/certs/keystore.jks"
+        - name: FLINK_SSL_TRUSTSTORE
+          value: "/etc/flink/certs/truststore.jks"
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          runAsUser: 9999
+          runAsGroup: 9999
+        volumeMounts:
+        - name: flink-tls
+          mountPath: "/etc/flink/certs"
+          readOnly: true
+      volumes:
+      - name: flink-tls
+        secret:
+          secretName: flink-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+  namespace: flink
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: flink:2.3.0
+        args: ["taskmanager"]
+        env:
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.memory.process.size: 2048m
+            taskmanager.memory.process.size: 4096m
+            taskmanager.numberOfTaskSlots: 4
+            parallelism.default: 4
+        - name: ENABLE_TLS
+          value: "true"
+        - name: FLINK_SSL_KEYSTORE
+          value: "/etc/flink/certs/keystore.jks"
+        - name: FLINK_SSL_TRUSTSTORE
+          value: "/etc/flink/certs/truststore.jks"
+        resources:
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+        securityContext:
+          runAsUser: 9999
+          runAsGroup: 9999
+        volumeMounts:
+        - name: flink-tls
+          mountPath: "/etc/flink/certs"
+          readOnly: true
+      volumes:
+      - name: flink-tls
+        secret:
+          secretName: flink-tls

@@ -1,0 +1,161 @@
+[
+  {
+    "modelName": "Authentication",
+    "displayName": "Authentication",
+    "description": "Authentication Data Model",
+    "objects": [
+      {
+        "objectName": "Authentication",
+        "displayName": "Authentication",
+        "parentName": "BaseEvent",
+        "comment": { "tags": ["authentication"] },
+        "fields": [
+          {
+            "fieldName": "authentication_signature_id",
+            "owner": "Authentication",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "authentication_signature_id",
+            "comment": ""
+          },
+          {
+            "fieldName": "authentication_signature",
+            "owner": "Authentication",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "authentication_signature",
+            "comment": ""
+          },
+          {
+            "fieldName": "authentication_title",
+            "owner": "Authentication",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "authentication_title",
+            "comment": ""
+          }
+        ],
+        "lineage": "Authentication"
+      }
+    ]
+  },
+  {
+    "modelName": "Endpoint",
+    "displayName": "Endpoint",
+    "description": "Endpoint Data Model",
+    "objects": [
+      {
+        "objectName": "Services",
+        "displayName": "Services",
+        "parentName": "BaseSearch",
+        "comment": { "tags": ["service", "report"] },
+        "fields": [
+          {
+            "fieldName": "process",
+            "owner": "Services",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "process",
+            "comment": {
+              "description": "The full command string of the service. Such as \"C:\\Program Files (x86)\\Google\\GoogleUpdater\\128.0.6537.0\\updater.exe\" --system --windows-service --service=update"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "modelName": "Endpoint",
+    "displayName": "Endpoint",
+    "description": "Endpoint Data Model",
+    "objects": [
+      {
+        "objectName": "Filesystem",
+        "displayName": "Filesystem",
+        "parentName": "BaseSearch",
+        "comment": { "tags": ["endpoint", "filesystem"] },
+        "fields": [
+          {
+            "fieldName": "signature_id",
+            "owner": "Filesystem",
+            "type": "number",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "signature_id",
+            "comment": ""
+          },
+          {
+            "fieldName": "signature",
+            "owner": "Filesystem",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "signature",
+            "comment": ""
+          },
+          {
+            "fieldName": "src",
+            "owner": "Filesystem",
+            "type": "string",
+            "fieldSearch": "",
+            "required": false,
+            "multivalue": false,
+            "hidden": false,
+            "editable": true,
+            "displayName": "src",
+            "comment": "The \"remote\" system pertaining to the filesystem activity."
+          }
+        ],
+        "calculations": [
+          {
+            "outputFields": [
+              {
+                "fieldName": "file_target",
+                "owner": "Filesystem",
+                "type": "string",
+                "fieldSearch": "",
+                "required": false,
+                "multivalue": false,
+                "hidden": false,
+                "editable": true,
+                "displayName": "file_target",
+                "comment": {
+                  "description": "Alias of RelativeTargetName of Windows Event 5145.",
+                  "recommended": true
+                }
+              }
+            ],
+            "calculationID": "Endpoint_Filesystem_eval_file_target",
+            "owner": "Filesystem",
+            "editable": true,
+            "comment": "",
+            "calculationType": "Eval",
+            "expression": "RelativeTargetName"
+          }
+        ]
+      }
+    ]
+  }
+]

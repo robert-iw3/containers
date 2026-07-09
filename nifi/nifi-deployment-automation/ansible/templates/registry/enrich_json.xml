@@ -1,0 +1,720 @@
+<?xml version="1.0" ?>
+<template encoding-version="1.0">
+  <description>use ExecuteScript to enrich JSON data using Python</description>
+  <groupId>1bcc17e9-0158-1000-d368-a854cfec3d46</groupId>
+  <name>enrich_json</name>
+  <snippet>
+    <connections>
+      <id>01581001-4f5b-1bce-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+      <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+      <destination>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>01581000-4f5b-1bce-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </destination>
+      <flowFileExpiration>0 sec</flowFileExpiration>
+      <labelIndex>1</labelIndex>
+      <name></name>
+      <selectedRelationships>success</selectedRelationships>
+      <source>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>1bcd21f7-0158-1000-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </source>
+      <zIndex>0</zIndex>
+    </connections>
+    <connections>
+      <id>1bce1774-0158-1000-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+      <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+      <destination>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>1bcd21f7-0158-1000-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </destination>
+      <flowFileExpiration>0 sec</flowFileExpiration>
+      <labelIndex>1</labelIndex>
+      <name></name>
+      <selectedRelationships>success</selectedRelationships>
+      <source>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>c4ff71c0-0157-1000-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </source>
+      <zIndex>0</zIndex>
+    </connections>
+    <connections>
+      <id>1bce786b-0158-1000-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+      <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+      <destination>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>1bce4f5b-0158-1000-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </destination>
+      <flowFileExpiration>0 sec</flowFileExpiration>
+      <labelIndex>1</labelIndex>
+      <name></name>
+      <selectedRelationships>failure</selectedRelationships>
+      <source>
+        <groupId>1bcc17e9-0158-1000-0000-000000000000</groupId>
+        <id>1bcd21f7-0158-1000-0000-000000000000</id>
+        <type>PROCESSOR</type>
+      </source>
+      <zIndex>0</zIndex>
+    </connections>
+    <processors>
+      <id>c4ff71c0-0157-1000-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <position>
+        <x>0.0</x>
+        <y>0.0</y>
+      </position>
+      <config>
+        <bulletinLevel>WARN</bulletinLevel>
+        <comments></comments>
+        <concurrentlySchedulableTaskCount>1</concurrentlySchedulableTaskCount>
+        <descriptors>
+          <entry>
+            <key>bootstrap.servers</key>
+            <value>
+              <name>bootstrap.servers</name>
+            </value>
+          </entry>
+          <entry>
+            <key>security.protocol</key>
+            <value>
+              <name>security.protocol</name>
+            </value>
+          </entry>
+          <entry>
+            <key>sasl.kerberos.service.name</key>
+            <value>
+              <name>sasl.kerberos.service.name</name>
+            </value>
+          </entry>
+          <entry>
+            <key>ssl.context.service</key>
+            <value>
+              <identifiesControllerService>org.apache.nifi.ssl.SSLContextService</identifiesControllerService>
+              <name>ssl.context.service</name>
+            </value>
+          </entry>
+          <entry>
+            <key>topic</key>
+            <value>
+              <name>topic</name>
+            </value>
+          </entry>
+          <entry>
+            <key>group.id</key>
+            <value>
+              <name>group.id</name>
+            </value>
+          </entry>
+          <entry>
+            <key>auto.offset.reset</key>
+            <value>
+              <name>auto.offset.reset</name>
+            </value>
+          </entry>
+          <entry>
+            <key>key-attribute-encoding</key>
+            <value>
+              <name>key-attribute-encoding</name>
+            </value>
+          </entry>
+          <entry>
+            <key>message-demarcator</key>
+            <value>
+              <name>message-demarcator</name>
+            </value>
+          </entry>
+          <entry>
+            <key>max.poll.records</key>
+            <value>
+              <name>max.poll.records</name>
+            </value>
+          </entry>
+        </descriptors>
+        <lossTolerant>false</lossTolerant>
+        <penaltyDuration>30 sec</penaltyDuration>
+        <properties>
+          <entry>
+            <key>bootstrap.servers</key>
+            <value>kafka:9092</value>
+          </entry>
+          <entry>
+            <key>security.protocol</key>
+            <value>PLAINTEXT</value>
+          </entry>
+          <entry>
+            <key>sasl.kerberos.service.name</key>
+          </entry>
+          <entry>
+            <key>ssl.context.service</key>
+          </entry>
+          <entry>
+            <key>topic</key>
+            <value>foo</value>
+          </entry>
+          <entry>
+            <key>group.id</key>
+            <value>grp0</value>
+          </entry>
+          <entry>
+            <key>auto.offset.reset</key>
+            <value>latest</value>
+          </entry>
+          <entry>
+            <key>key-attribute-encoding</key>
+            <value>utf-8</value>
+          </entry>
+          <entry>
+            <key>message-demarcator</key>
+          </entry>
+          <entry>
+            <key>max.poll.records</key>
+            <value>10000</value>
+          </entry>
+        </properties>
+        <runDurationMillis>0</runDurationMillis>
+        <schedulingPeriod>0 sec</schedulingPeriod>
+        <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+        <yieldDuration>1 sec</yieldDuration>
+      </config>
+      <name>ConsumeKafka</name>
+      <relationships>
+        <autoTerminate>false</autoTerminate>
+        <name>success</name>
+      </relationships>
+      <style></style>
+      <type>org.apache.nifi.processors.kafka.pubsub.ConsumeKafka</type>
+    </processors>
+    <processors>
+      <id>01581000-4f5b-1bce-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <position>
+        <x>2.0</x>
+        <y>396.0</y>
+      </position>
+      <config>
+        <bulletinLevel>WARN</bulletinLevel>
+        <comments></comments>
+        <concurrentlySchedulableTaskCount>1</concurrentlySchedulableTaskCount>
+        <descriptors>
+          <entry>
+            <key>FlowFile Success Iterations</key>
+            <value>
+              <name>FlowFile Success Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Failure Iterations</key>
+            <value>
+              <name>FlowFile Failure Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Iterations</key>
+            <value>
+              <name>FlowFile Rollback Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Yield Iterations</key>
+            <value>
+              <name>FlowFile Rollback Yield Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Penalty Iterations</key>
+            <value>
+              <name>FlowFile Rollback Penalty Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Iterations</key>
+            <value>
+              <name>FlowFile Exception Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Class</key>
+            <value>
+              <name>FlowFile Exception Class</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Skip Iterations</key>
+            <value>
+              <name>No FlowFile Skip Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Iterations</key>
+            <value>
+              <name>No FlowFile Exception Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Yield Iterations</key>
+            <value>
+              <name>No FlowFile Yield Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Class</key>
+            <value>
+              <name>No FlowFile Exception Class</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Write Iterations</key>
+            <value>
+              <name>Write Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Content Size</key>
+            <value>
+              <name>Content Size</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnScheduled Pause Time</key>
+            <value>
+              <name>@OnScheduled Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnScheduled called</key>
+            <value>
+              <name>Fail When @OnScheduled called</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnUnscheduled Pause Time</key>
+            <value>
+              <name>@OnUnscheduled Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnUnscheduled called</key>
+            <value>
+              <name>Fail When @OnUnscheduled called</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnStopped Pause Time</key>
+            <value>
+              <name>@OnStopped Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnStopped called</key>
+            <value>
+              <name>Fail When @OnStopped called</name>
+            </value>
+          </entry>
+        </descriptors>
+        <lossTolerant>false</lossTolerant>
+        <penaltyDuration>30 sec</penaltyDuration>
+        <properties>
+          <entry>
+            <key>FlowFile Success Iterations</key>
+            <value>1</value>
+          </entry>
+          <entry>
+            <key>FlowFile Failure Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Yield Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Penalty Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Class</key>
+            <value>java.lang.RuntimeException</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Skip Iterations</key>
+            <value>1</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Yield Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Class</key>
+            <value>java.lang.RuntimeException</value>
+          </entry>
+          <entry>
+            <key>Write Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>Content Size</key>
+            <value>1 KB</value>
+          </entry>
+          <entry>
+            <key>@OnScheduled Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnScheduled called</key>
+            <value>false</value>
+          </entry>
+          <entry>
+            <key>@OnUnscheduled Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnUnscheduled called</key>
+            <value>false</value>
+          </entry>
+          <entry>
+            <key>@OnStopped Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnStopped called</key>
+            <value>false</value>
+          </entry>
+        </properties>
+        <runDurationMillis>0</runDurationMillis>
+        <schedulingPeriod>0 sec</schedulingPeriod>
+        <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+        <yieldDuration>1 sec</yieldDuration>
+      </config>
+      <name>DebugFlow</name>
+      <relationships>
+        <autoTerminate>true</autoTerminate>
+        <name>failure</name>
+      </relationships>
+      <relationships>
+        <autoTerminate>true</autoTerminate>
+        <name>success</name>
+      </relationships>
+      <style></style>
+      <type>org.apache.nifi.processors.standard.DebugFlow</type>
+    </processors>
+    <processors>
+      <id>1bcd21f7-0158-1000-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <position>
+        <x>3.0</x>
+        <y>198.0</y>
+      </position>
+      <config>
+        <bulletinLevel>WARN</bulletinLevel>
+        <comments></comments>
+        <concurrentlySchedulableTaskCount>1</concurrentlySchedulableTaskCount>
+        <descriptors>
+          <entry>
+            <key>Script Engine</key>
+            <value>
+              <name>Script Engine</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Script File</key>
+            <value>
+              <name>Script File</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Script Body</key>
+            <value>
+              <name>Script Body</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Module Directory</key>
+            <value>
+              <name>Module Directory</name>
+            </value>
+          </entry>
+        </descriptors>
+        <lossTolerant>false</lossTolerant>
+        <penaltyDuration>30 sec</penaltyDuration>
+        <properties>
+          <entry>
+            <key>Script Engine</key>
+            <value>python</value>
+          </entry>
+          <entry>
+            <key>Script File</key>
+            <value>/scripts/enrich.py</value>
+          </entry>
+          <entry>
+            <key>Script Body</key>
+          </entry>
+          <entry>
+            <key>Module Directory</key>
+          </entry>
+        </properties>
+        <runDurationMillis>0</runDurationMillis>
+        <schedulingPeriod>0 sec</schedulingPeriod>
+        <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+        <yieldDuration>1 sec</yieldDuration>
+      </config>
+      <name>ExecuteScript</name>
+      <relationships>
+        <autoTerminate>false</autoTerminate>
+        <name>failure</name>
+      </relationships>
+      <relationships>
+        <autoTerminate>false</autoTerminate>
+        <name>success</name>
+      </relationships>
+      <style></style>
+      <type>org.apache.nifi.processors.script.ExecuteScript</type>
+    </processors>
+    <processors>
+      <id>1bce4f5b-0158-1000-0000-000000000000</id>
+      <parentGroupId>1bcc17e9-0158-1000-0000-000000000000</parentGroupId>
+      <position>
+        <x>583.0</x>
+        <y>268.0</y>
+      </position>
+      <config>
+        <bulletinLevel>WARN</bulletinLevel>
+        <comments></comments>
+        <concurrentlySchedulableTaskCount>1</concurrentlySchedulableTaskCount>
+        <descriptors>
+          <entry>
+            <key>FlowFile Success Iterations</key>
+            <value>
+              <name>FlowFile Success Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Failure Iterations</key>
+            <value>
+              <name>FlowFile Failure Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Iterations</key>
+            <value>
+              <name>FlowFile Rollback Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Yield Iterations</key>
+            <value>
+              <name>FlowFile Rollback Yield Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Penalty Iterations</key>
+            <value>
+              <name>FlowFile Rollback Penalty Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Iterations</key>
+            <value>
+              <name>FlowFile Exception Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Class</key>
+            <value>
+              <name>FlowFile Exception Class</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Skip Iterations</key>
+            <value>
+              <name>No FlowFile Skip Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Iterations</key>
+            <value>
+              <name>No FlowFile Exception Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Yield Iterations</key>
+            <value>
+              <name>No FlowFile Yield Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Class</key>
+            <value>
+              <name>No FlowFile Exception Class</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Write Iterations</key>
+            <value>
+              <name>Write Iterations</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Content Size</key>
+            <value>
+              <name>Content Size</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnScheduled Pause Time</key>
+            <value>
+              <name>@OnScheduled Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnScheduled called</key>
+            <value>
+              <name>Fail When @OnScheduled called</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnUnscheduled Pause Time</key>
+            <value>
+              <name>@OnUnscheduled Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnUnscheduled called</key>
+            <value>
+              <name>Fail When @OnUnscheduled called</name>
+            </value>
+          </entry>
+          <entry>
+            <key>@OnStopped Pause Time</key>
+            <value>
+              <name>@OnStopped Pause Time</name>
+            </value>
+          </entry>
+          <entry>
+            <key>Fail When @OnStopped called</key>
+            <value>
+              <name>Fail When @OnStopped called</name>
+            </value>
+          </entry>
+        </descriptors>
+        <lossTolerant>false</lossTolerant>
+        <penaltyDuration>30 sec</penaltyDuration>
+        <properties>
+          <entry>
+            <key>FlowFile Success Iterations</key>
+            <value>1</value>
+          </entry>
+          <entry>
+            <key>FlowFile Failure Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Yield Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Rollback Penalty Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>FlowFile Exception Class</key>
+            <value>java.lang.RuntimeException</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Skip Iterations</key>
+            <value>1</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Yield Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>No FlowFile Exception Class</key>
+            <value>java.lang.RuntimeException</value>
+          </entry>
+          <entry>
+            <key>Write Iterations</key>
+            <value>0</value>
+          </entry>
+          <entry>
+            <key>Content Size</key>
+            <value>1 KB</value>
+          </entry>
+          <entry>
+            <key>@OnScheduled Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnScheduled called</key>
+            <value>false</value>
+          </entry>
+          <entry>
+            <key>@OnUnscheduled Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnUnscheduled called</key>
+            <value>false</value>
+          </entry>
+          <entry>
+            <key>@OnStopped Pause Time</key>
+            <value>0 sec</value>
+          </entry>
+          <entry>
+            <key>Fail When @OnStopped called</key>
+            <value>false</value>
+          </entry>
+        </properties>
+        <runDurationMillis>0</runDurationMillis>
+        <schedulingPeriod>0 sec</schedulingPeriod>
+        <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+        <yieldDuration>1 sec</yieldDuration>
+      </config>
+      <name>DebugFlow</name>
+      <relationships>
+        <autoTerminate>true</autoTerminate>
+        <name>failure</name>
+      </relationships>
+      <relationships>
+        <autoTerminate>true</autoTerminate>
+        <name>success</name>
+      </relationships>
+      <style></style>
+      <type>org.apache.nifi.processors.standard.DebugFlow</type>
+    </processors>
+  </snippet>
+  <timestamp>10/31/2016 19:12:57 UTC</timestamp>
+</template>

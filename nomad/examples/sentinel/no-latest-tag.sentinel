@@ -1,0 +1,8 @@
+main = rule {
+  all job.task_groups as tg {
+    all tg.tasks as task {
+      task.config.image is undefined or
+      task.config.image not matches "(?::latest|^[^:]+)$"
+    }
+  }
+}

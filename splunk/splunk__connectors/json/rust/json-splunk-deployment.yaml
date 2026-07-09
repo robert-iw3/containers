@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: json-splunk
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: json-splunk
+  template:
+    metadata:
+      labels:
+        app: json-splunk
+    spec:
+      containers:
+      - name: json-splunk
+        image: json-connector:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: JSON_LOG_DIR
+          value: "/var/log/json_data"
+        - name: SCHEMAS_FILE
+          value: "/app/schemas.yaml"
+        - name: SPLUNK_ENABLED
+          value: "true"
+        - name: SPLUNK_HEC_URL
+          value: "https://splunk:8088/services/collector"
+        - name: SPLUNK_TOKEN
+          value: "your-splunk-hec-token"
+        - name: BATCH_SIZE
+          value: "100"
+        - name: BUFFER_TIMEOUT
+          value: "30"
+        - name: WORKER_COUNT
+          value: "4"
+        - name: CONFIG_FILE
+          value: "/app/deploy_config.yaml"
+        volumeMounts:
+        - name: json-logs
+          mountPath: /var/log/json_data
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "0.5"
+            memory: "512Mi"
+        livenessProbe:
+          exec:
+            command: ["pidof", "json-connector"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command: ["pidof", "json-connector"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: json-logs
+        persistentVolumeClaim:
+          claimName: json-logs

@@ -1,0 +1,46 @@
+# building from Dockerfile
+version: '3'
+
+volumes:
+  keycloak:
+
+networks:
+  keycloak:
+    name: keycloak
+    driver: bridge
+
+services:
+  keycloak:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keycloak
+    hostname: keycloak.io
+    security_opt:
+      - no-new-privileges:true
+    command: [ "/opt/keycloak/bin/kc.sh", "start", "--optimized", "--https-port=8443" ]
+    volumes:
+      - keycloak.conf:/opt/keycloak/conf/keycloak.conf:ro
+    ports:
+      - 8443:8443
+    environment:
+      KC_HEALTH_ENABLED: ${KC_HEALTH_ENABLED}
+      KC_METRICS_ENABLED: ${KC_METRICS_ENABLED}
+      KC_DB: ${POSTGRESQL_DATABASE}
+      # after postgresql build, grap ip
+      # podman inspect postgres | grep -i -A 4 ipaddress
+      KC_DB_URL: "jdbc:postgresql://${JDBC_IP}/keycloak"
+      KC_DB_USERNAME: ${POSTGRESQL_USER}
+      KC_DB_PASSWORD: ${POSTGRESQL_PASSWORD}
+      KEYCLOAK_ADMIN: ${KC_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KCADM_PASS}
+    networks:
+      - keycloak
+    depends_on:
+      postgres:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-O-", "https://localhost:8443"]
+      interval: 3s
+      timeout: 5s
+      retries: 5

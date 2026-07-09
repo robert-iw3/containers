@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movielens-deployment
+  labels:
+    app: movielens
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movielens
+  template:
+    metadata:
+      labels:
+        app: movielens
+    spec:
+      containers:
+      - name: movielens
+        image: registry:5000/manning-airflow/movielens-api:k8s
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+        env:
+        - name: API_USER
+          value: airflow
+        - name: API_PASSWORD
+          value: airflow
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movielens
+spec:
+  selector:
+    app: movielens
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081

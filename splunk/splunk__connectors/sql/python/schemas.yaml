@@ -1,0 +1,29 @@
+schemas:
+  - name: network_events
+    table_name: network_events_table
+    timestamp_field: timestamp
+    id_field: id
+    mappings:
+      cim:
+        time: timestamp
+        event_id: id
+        source: source_ip
+        src_port: source_port
+        dest: dest_ip
+        dest_port: dest_port
+        protocol: protocol
+        bytes_in: bytes_received
+        bytes_out: bytes_sent
+        action: action
+        sourcetype: sql_network
+  - name: authentication_events
+    table_name: auth_events
+    timestamp_field: login_time
+    mappings:
+      cim:
+        time: login_time
+        user: username
+        action: outcome
+        src: source_ip
+        dest: dest_host
+        sourcetype: sql_auth

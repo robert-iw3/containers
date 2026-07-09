@@ -1,0 +1,66 @@
+---
+## Default Elasticsearch configuration from Elasticsearch base image.
+## https://github.com/elastic/elasticsearch/blob/master/distribution/docker/src/docker/config/elasticsearch.yml
+#
+cluster.name: "elastic-cluster"
+network.host: 0.0.0.0
+
+discovery.type: single-node
+node.name: elasticsearch
+
+## X-Pack settings
+## see https://www.elastic.co/guide/en/elasticsearch/reference/current/security-settings.html
+#
+xpack.license.self_generated.type: trial
+xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
+xpack.security.authc.token.enabled: true
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key: certs/elasticsearch/elasticsearch.key
+xpack.security.http.ssl.certificate: certs/elasticsearch/elasticsearch.chain.pem
+xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+xpack.security.http.ssl.verification_mode: certificate
+xpack.security.http.ssl.client_authentication: optional
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.key: certs/elasticsearch/elasticsearch.key
+xpack.security.transport.ssl.certificate: certs/elasticsearch/elasticsearch.crt
+xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.client_authentication: optional
+
+xpack.security.authc.realms.oidc:
+  authentik:
+    order: 2
+    rp.client_id: kibana
+    rp.response_type: code
+    rp.requested_scopes: profile
+    rp.redirect_uri: "https://localhost:5601/api/security/oidc/callback"
+    op.issuer: "https://localhost:9443/application/o/kibana/"
+    op.authorization_endpoint: "https://localhost:9443/application/o/authorize/"
+    op.token_endpoint: "https://localhost:9443/application/o/token/"
+    op.jwkset_path: "https://localhost:9443/application/o/kibana/jwks/"
+    op.userinfo_endpoint: "https://localhost:9443/application/o/userinfo/"
+    op.endsession_endpoint: "https://localhost:9443/application/o/kibana/end-session/"
+    rp.post_logout_redirect_uri: "https://localhost:5601/security/logged_out"
+    claims.principal: sub
+    claims.groups: groups
+    ssl.verification_mode: none
+
+# echo "the client secret from the auth provider" \
+#  | bin/elasticsearch-keystore add -x 'xpack.security.authc.realms.oidc.oidc1.rp.client_secret'
+
+#xpack.security.authc.realms.oidc.oidc2:
+#  order: 3
+#  rp.client_id: kibana
+#  rp.response_type: code
+#  rp.redirect_uri: https://0.0.0.0:5601/api/security/oidc/callback
+#  op.issuer: https://keycloak/auth/realms/elastic
+#  op.authorization_endpoint: https://keycloak/auth/realms/elastic/protocol/openid-connect/auth
+#  op.token_endpoint: https://keycloak/auth/realms/elastic/protocol/openid-connect/token
+#  op.jwkset_path: https://keycloak/auth/realms/elastic/protocol/openid-connect/certs
+#  op.userinfo_endpoint: https://keycloak/auth/realms/elastic/protocol/openid-connect/userinfo
+#  op.endsession_endpoint: https://keycloak/auth/realms/elastic/protocol/openid-connect/logout
+#  rp.post_logout_redirect_uri: https://0.0.0.0:5601/security/logged_out
+#  claims.principal: sub
+#  claims.groups: "http://example.info/claims/groups"
+

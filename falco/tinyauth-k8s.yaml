@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tinyauth
+  namespace: falco
+type: Opaque
+data:
+  secret: eW91cl9iYXNlNjRfZ2VuZXJhdGVkX3NlY3JldA==  # Base64 of generated secret
+  users: dGlueWF1dGg6JDJ5JDEwJHlvdXJfaGFzaA==  # Base64 of users string
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyauth
+  namespace: falco
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinyauth
+  template:
+    metadata:
+      labels:
+        app: tinyauth
+    spec:
+      containers:
+        - name: tinyauth
+          image: ghcr.io/steveiliop56/tinyauth:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: APP_URL
+              value: "https://tinyauth.local"
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tinyauth
+                  key: secret
+            - name: USERS
+              valueFrom:
+                secretKeyRef:
+                  name: tinyauth
+                  key: users
+            - name: COOKIE_SECURE
+              value: "true"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tinyauth
+  namespace: falco
+spec:
+  selector:
+    app: tinyauth
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: tinyauth
+  namespace: falco
+spec:
+  forwardAuth:
+    address: http://tinyauth.falco.svc.cluster.local:3000/api/auth/traefik
+
+# Add IngressRoutes
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: dashboard
+  namespace: falco
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`dashboard.podman.localhost`)
+      kind: Rule
+      services:
+        - name: traefik
+          port: 8080
+      middlewares:
+        - name: tinyauth
+  tls: {}
+
+# Similar for webui and tinyauth

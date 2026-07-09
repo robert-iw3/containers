@@ -1,0 +1,20 @@
+[general]
+serverName = {{ ansible_hostname }}
+pass4SymmKey = {{ vault_splunk_symm_key }}
+
+[sslConfig]
+enableSplunkdSSL = true
+sslVersions = tls1.2, tls1.3
+cipherSuite = TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256
+sslVerifyServerCert = true
+serverCert = {{ splunk_home }}/etc/auth/server.pem
+
+[httpServer]
+disableDefaultPort = false
+port = {{ splunk_web_port }}
+
+[license]
+active_group = Enterprise
+
+[indexAndForward]
+index = {{ splunk_index }}

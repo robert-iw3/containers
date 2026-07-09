@@ -1,0 +1,23 @@
+---
+nomad:
+  user: root
+  group: root
+  log_level: "{{nomad_log_level | default ('INFO') }}"
+  datacenter: "{{ nomad_datacenter | default('dc1') }}"
+  bootstrap_expect: "{{ nomad_bootstrap_expect | default('none') }}"
+  iface: "{{ nomad_iface | default('eth0') }}"
+  log_level: "{{ nomad_log_level | default('info') }}"
+  server_join_port: "{{ nomad_server_join_port | default('4647') }}"
+  bootstrap_join_port: "{{ nomad_bootstrap_join_port | default('4648') }}"
+  advertise_port: "{{ nomad_advertise_port | default('4647')}}"
+  http_port: "{{ nomad_http_port | default('4646') }}"
+  dirs:
+    - "/etc/nomad.d"
+    - "/var/nomad"
+  config:
+    dir: "/etc/nomad.d"
+    service_file: "{{ nomad_config_service_file | default('/etc/init/nomad.conf') }}"
+  data_dir: "{{ nomad_data_dir | default('/var/nomad/data') }}"
+
+consul:
+  encrypt_key: "{{ consul_encrypt_key | default('none')}}"

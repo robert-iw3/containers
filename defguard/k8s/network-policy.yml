@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: defguard-network-policy
+  namespace: defguard
+spec:
+  podSelector:
+    matchLabels:
+      app: defguard
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: defguard
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 50055
+    - protocol: TCP
+      port: 8080
+    - protocol: UDP
+      port: 50051
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: defguard
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: TCP
+      port: 50055
+    - protocol: TCP
+      port: 8080
+    - protocol: UDP
+      port: 50051
+    - protocol: UDP
+      port: 53 # DNS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: defguard-db
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: defguard-db-network-policy
+  namespace: defguard
+spec:
+  podSelector:
+    matchLabels:
+      app: defguard-db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: defguard
+    ports:
+    - protocol: TCP
+      port: 5432

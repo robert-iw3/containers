@@ -1,0 +1,191 @@
+configs:
+  # This is the minimal yaml configuration needed to listen on all interfaces
+  # for OTLP logs, metrics and traces, exporting to Elasticsearch.
+  edot-collector-config:
+    content: |
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+      connectors:
+        elasticapm:
+
+      processors:
+        elastictrace:
+
+      exporters:
+        elasticsearch:
+          endpoint: http://elasticsearch:9200
+          user: elastic
+          password: elastic
+          mapping:
+            mode: otel
+          logs_dynamic_index:
+            enabled: true
+          metrics_dynamic_index:
+            enabled: true
+          traces_dynamic_index:
+            enabled: true
+          flush:
+            interval: 1s  # improve responsiveness in example apps (default 30s)
+
+      service:
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [elastictrace]
+            exporters: [elasticapm, elasticsearch]
+
+          metrics:
+            receivers: [otlp]
+            processors: []
+            exporters: [elasticsearch]
+
+          metrics/aggregated:
+            receivers: [elasticapm]
+            processors: []
+            exporters: [elasticsearch]
+
+          logs:
+            receivers: [otlp]
+            processors: []
+            exporters: [elasticapm, elasticsearch]
+
+networks:
+  elastic:
+    driver: bridge
+
+volumes:
+  elasticsearch:
+  fleet-server:
+
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - .env
+  networks:
+    - elastic
+
+services:
+  setup:
+    profiles:
+      - setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    init: true
+    volumes:
+      - ./setup/entrypoint.sh:/entrypoint.sh:ro,Z
+      - ./setup/lib.sh:/lib.sh:ro,Z
+      - ./setup/roles:/roles:ro,Z
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
+      LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+      METRICBEAT_INTERNAL_PASSWORD: ${METRICBEAT_INTERNAL_PASSWORD:-}
+      FILEBEAT_INTERNAL_PASSWORD: ${FILEBEAT_INTERNAL_PASSWORD:-}
+      HEARTBEAT_INTERNAL_PASSWORD: ${HEARTBEAT_INTERNAL_PASSWORD:-}
+      MONITORING_INTERNAL_PASSWORD: ${MONITORING_INTERNAL_PASSWORD:-}
+      BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    <<: *common-vars-apps
+    build:
+      context: elasticsearch/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./elasticsearch/config/elasticsearch-basic.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - elasticsearch:/usr/share/elasticsearch/data:Z
+    ports:
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
+    environment:
+      node.name: elasticsearch
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
+      discovery.type: single-node
+      bootstrap.memory_lock: true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:  # readiness probe taken from kbn-health-gateway-server script
+        [
+          "CMD-SHELL",
+          "curl --max-time 1 -s http://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      start_period: 10s
+      interval: 1s
+      timeout: 10s
+      retries: 120
+
+  kibana:
+    <<: *common-vars-apps
+    build:
+      context: kibana/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./kibana/config/kibana-basic.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    ports:
+      - "127.0.0.1:5601:5601"
+    environment:
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl --max-time 1 -s http://localhost:5601/api/status | grep -q 'available'"]
+      retries: 300
+      interval: 1s
+
+  fleet-server:
+    build:
+      context: fleet/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    user: root
+    volumes:
+      - fleet-server:/usr/share/elastic-agent/state:Z
+      - /var/lib/containers:/var/lib/docker/containers:ro
+      - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
+    environment:
+      FLEET_SERVER_ENABLE: '1'
+      FLEET_SERVER_INSECURE_HTTP: '1'
+      FLEET_SERVER_HOST: 0.0.0.0
+      FLEET_SERVER_POLICY_ID: fleet-server-policy
+      KIBANA_FLEET_SETUP: '1'
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-}
+    ports:
+      - "127.0.0.1:8220:8220"
+    hostname: fleet-server
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  otel-collector:
+    image: docker.elastic.co/elastic-agent/elastic-otel-collector:${ELASTIC_VERSION}
+    container_name: otel-collector
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: [
+      "--config=/etc/otelcol-contrib/config.yaml",
+    ]
+    configs:
+      - source: edot-collector-config
+        target: /etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"  # grpc
+      - "4318:4318"  # http
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo -n > /dev/tcp/127.0.0.1/4317'"]
+      retries: 300
+      interval: 1s

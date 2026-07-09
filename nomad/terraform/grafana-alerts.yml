@@ -1,0 +1,39 @@
+groups:
+- name: NomadAlerts
+  rules:
+  - alert: NomadJobFailure
+    expr: nomad_nomad_job_summary_failed > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Nomad job failure detected"
+      description: "{{ $labels.job_name }} has failed tasks ({{ $value }} failed). Check Nomad UI for details."
+  - alert: NomadHighCPUUsage
+    expr: nomad_nomad_alloc_cpu_usage > 90
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage in Nomad allocations"
+      description: "Allocation {{ $labels.instance }} has CPU usage above 90% (current: {{ $value }}%)."
+- name: ConsulAlerts
+  rules:
+  - alert: ConsulLeaderChange
+    expr: consul_leader_changes > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Consul leader change detected"
+      description: "Consul cluster has experienced {{ $value }} leader changes. Check Consul logs and status."
+- name: VaultAlerts
+  rules:
+  - alert: VaultSealed
+    expr: vault_sealed == 1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Vault is sealed"
+      description: "Vault instance {{ $labels.instance }} is sealed. Unseal immediately to restore functionality."

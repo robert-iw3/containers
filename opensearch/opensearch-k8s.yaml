@@ -1,0 +1,837 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: opensearch
+data:
+  opensearch.yml: |-
+    cluster.name: docker-cluster
+    network.host: 0.0.0.0
+    node.roles: []
+    plugins.security.ssl.http.enabled: true
+    plugins.security.ssl.http.pemcert_filepath: node.pem
+    plugins.security.ssl.http.pemkey_filepath: node-key.pem
+    plugins.security.ssl.http.pemtrustedcas_filepath: root-ca.pem
+    plugins.security.ssl.transport.enforce_hostname_verification: false
+    plugins.security.ssl.transport.pemcert_filepath: node.pem
+    plugins.security.ssl.transport.pemkey_filepath: node-key.pem
+    plugins.security.ssl.transport.pemtrustedcas_filepath: root-ca.pem
+    plugins.security.ssl.transport.resolve_hostname: false
+    plugins.security.authcz.admin_dn:
+      - 'CN=,OU=,O=,L=,ST=,C=US'
+    plugins.security.nodes_dn:
+      - 'CN=node*.dns.a-record,OU=,O=,L=,ST=,C=US'
+    plugins.security.audit.type: internal_opensearch
+  audit.yml: |-
+    _meta:
+      type: "audit"
+      config_version: 2
+    config:
+      # enable/disable audit logging
+      enabled: false
+      audit:
+        # Enable/disable REST API auditing
+        enable_rest: true
+        # Categories to exclude from REST API auditing
+        disabled_rest_categories:
+          - AUTHENTICATED
+          - GRANTED_PRIVILEGES
+        # Enable/disable Transport API auditing
+        enable_transport: true
+        # Categories to exclude from Transport API auditing
+        disabled_transport_categories:
+          - AUTHENTICATED
+          - GRANTED_PRIVILEGES
+        # Users to be excluded from auditing. Wildcard patterns are supported. Eg:
+        # ignore_users: ["test-user", "employee-*"]
+        ignore_users:
+          - kibanaserver
+        # Requests to be excluded from auditing. Wildcard patterns are supported. Eg:
+        # ignore_requests: ["indices:data/read/*", "SearchRequest"]
+        ignore_requests: []
+        # Log individual operations in a bulk request
+        resolve_bulk_requests: false
+        # Include the body of the request (if available) for both REST and the transport layer
+        log_request_body: true
+        # Logs all indices affected by a request. Resolves aliases and wildcards/date patterns
+        resolve_indices: true
+        # Exclude sensitive headers from being included in the logs. Eg: Authorization
+        exclude_sensitive_headers: true
+      compliance:
+        # enable/disable compliance
+        enabled: true
+        # Log updates to internal security changes
+        internal_config: true
+        # Log external config files for the node
+        external_config: false
+        # Log only metadata of the document for read events
+        read_metadata_only: true
+        # Map of indexes and fields to monitor for read events. Wildcard patterns are supported for both index names and fields. Eg:
+        # read_watched_fields: {
+        #   "twitter": ["message"]
+        #   "logs-*": ["id", "attr*"]
+        # }
+        read_watched_fields: {}
+        # List of users to ignore for read events. Wildcard patterns are supported. Eg:
+        # read_ignore_users: ["test-user", "employee-*"]
+        read_ignore_users:
+          - kibanaserver
+        # Log only metadata of the document for write events
+        write_metadata_only: true
+        # Log only diffs for document updates
+        write_log_diffs: false
+        # List of indices to watch for write events. Wildcard patterns are supported
+        # write_watched_indices: ["twitter", "logs-*"]
+        write_watched_indices: []
+        # List of users to ignore for write events. Wildcard patterns are supported. Eg:
+        # write_ignore_users: ["test-user", "employee-*"]
+        write_ignore_users:
+          - kibanaserver
+  action_groups.yml: |-
+    _meta:
+      type: "actiongroups"
+      config_version: 2
+  config.yml: |-
+    _meta:
+      type: "config"
+      config_version: 2
+    config:
+      dynamic:
+        http:
+          anonymous_auth_enabled: false
+        authc:
+          internal_auth:
+            order: 0
+            description: "HTTP basic authentication using the internal user database"
+            http_enabled: true
+            transport_enabled: true
+            http_authenticator:
+              type: basic
+              challenge: false
+            authentication_backend:
+              type: internal
+          ldap_auth:
+            order: 1
+            description: "Authenticate using LDAP"
+            http_enabled: true
+            transport_enabled: true
+            http_authenticator:
+              type: basic
+              challenge: false
+            authentication_backend:
+              type: ldap
+              config:
+                enable_ssl: true
+                enable_start_tls: false
+                enable_ssl_client_auth: false
+                verify_hostnames: false
+                pemtrustedcas_filepath: /usr/share/opensearch/config/root-ca.pem
+                hosts:
+                - 192.168.10.123:6360
+                bind_dn: uid=bind,ou=people,dc=example,dc=org
+                password: "p@55w0rd"
+                userbase: ou=people,dc=example,dc=org
+                usersearch: (uid={0})
+                username_attribute: uid
+        authz:
+          ldap_roles:
+            description: "Authorize using LDAP"
+            http_enabled: true
+            transport_enabled: true
+            authorization_backend:
+              type: ldap
+              config:
+                enable_ssl: true
+                enable_start_tls: false
+                enable_ssl_client_auth: false
+                verify_hostnames: false
+                pemtrustedcas_filepath: /usr/share/opensearch/config/root-ca.pem
+                hosts:
+                - 192.168.10.123:6360
+                bind_dn: uid=bind,ou=people,dc=example,dc=org
+                password: "p@55w0rd"
+                userbase: ou=people,dc=example,dc=org
+                usersearch: (uid={0})
+                username_attribute: uid
+                rolebase: ou=groups,dc=example,dc=org
+                rolesearch: (member={0})
+                userroleattribute: null
+                userrolename: disabled
+                rolename: cn
+                resolve_nested_roles: false
+                skip_users:
+                  - admin
+                  - kibanaserver
+  internal_users.yml: |-
+    _meta:
+      type: "internalusers"
+      config_version: 2
+    admin:
+      hash: "$2y$12$qi5zOIrpHaDn.iNck9YXXuq.05DLu9TCTn7MpQ0hdiqLCmYmE/U0W"
+      reserved: true
+      backend_roles:
+      - "administrators"
+      description: "Demo admin user"
+    kibanaserver:
+      hash: "$2y$12$qf.ha.L9eGbg18PWpyw6mualIwuvH5UP21yWWmsPJVaHpp3yU5hee"
+      reserved: true
+      description: "Demo kibanaserver user"
+  roles.yml: |-
+    _meta:
+      type: "roles"
+      config_version: 2
+    # Restrict users so they can only view visualization and dashboard on OpenSearchDashboards
+    kibana_read_only:
+      reserved: true
+    # The security REST API access role is used to assign specific users access to change the security settings through the REST API.
+    security_rest_api_access:
+      reserved: true
+    # Allows users to view monitors, destinations and alerts
+    alerting_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/alerting/alerts/get'
+        - 'cluster:admin/opendistro/alerting/destination/get'
+        - 'cluster:admin/opendistro/alerting/monitor/get'
+        - 'cluster:admin/opendistro/alerting/monitor/search'
+        - 'cluster:admin/opensearch/alerting/findings/get'
+    # Allows users to view and acknowledge alerts
+    alerting_ack_alerts:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/alerting/alerts/*'
+    # Allows users to use all alerting functionality
+    alerting_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster_monitor'
+        - 'cluster:admin/opendistro/alerting/*'
+        - 'cluster:admin/opensearch/alerting/*'
+        - 'cluster:admin/opensearch/notifications/feature/publish'
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - 'indices_monitor'
+            - 'indices:admin/aliases/get'
+            - 'indices:admin/mappings/get'
+    # Allow users to read Anomaly Detection detectors and results
+    anomaly_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/ad/detector/info'
+        - 'cluster:admin/opendistro/ad/detector/search'
+        - 'cluster:admin/opendistro/ad/detectors/get'
+        - 'cluster:admin/opendistro/ad/result/search'
+        - 'cluster:admin/opendistro/ad/tasks/search'
+        - 'cluster:admin/opendistro/ad/detector/validate'
+        - 'cluster:admin/opendistro/ad/result/topAnomalies'
+    # Allows users to use all Anomaly Detection functionality
+    anomaly_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster_monitor'
+        - 'cluster:admin/opendistro/ad/*'
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - 'indices_monitor'
+            - 'indices:admin/aliases/get'
+            - 'indices:admin/mappings/get'
+    # Allows users to read Notebooks
+    notebooks_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/notebooks/list'
+        - 'cluster:admin/opendistro/notebooks/get'
+    # Allows users to all Notebooks functionality
+    notebooks_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/notebooks/create'
+        - 'cluster:admin/opendistro/notebooks/update'
+        - 'cluster:admin/opendistro/notebooks/delete'
+        - 'cluster:admin/opendistro/notebooks/get'
+        - 'cluster:admin/opendistro/notebooks/list'
+    # Allows users to read observability objects
+    observability_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/observability/get'
+    # Allows users to all Observability functionality
+    observability_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/observability/create'
+        - 'cluster:admin/opensearch/observability/update'
+        - 'cluster:admin/opensearch/observability/delete'
+        - 'cluster:admin/opensearch/observability/get'
+    # Allows users to read and download Reports
+    reports_instances_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/reports/instance/list'
+        - 'cluster:admin/opendistro/reports/instance/get'
+        - 'cluster:admin/opendistro/reports/menu/download'
+    # Allows users to read and download Reports and Report-definitions
+    reports_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/reports/definition/get'
+        - 'cluster:admin/opendistro/reports/definition/list'
+        - 'cluster:admin/opendistro/reports/instance/list'
+        - 'cluster:admin/opendistro/reports/instance/get'
+        - 'cluster:admin/opendistro/reports/menu/download'
+    # Allows users to all Reports functionality
+    reports_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/reports/definition/create'
+        - 'cluster:admin/opendistro/reports/definition/update'
+        - 'cluster:admin/opendistro/reports/definition/on_demand'
+        - 'cluster:admin/opendistro/reports/definition/delete'
+        - 'cluster:admin/opendistro/reports/definition/get'
+        - 'cluster:admin/opendistro/reports/definition/list'
+        - 'cluster:admin/opendistro/reports/instance/list'
+        - 'cluster:admin/opendistro/reports/instance/get'
+        - 'cluster:admin/opendistro/reports/menu/download'
+    # Allows users to use all asynchronous-search functionality
+    asynchronous_search_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/asynchronous_search/*'
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - 'indices:data/read/search*'
+    # Allows users to read stored asynchronous-search results
+    asynchronous_search_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opendistro/asynchronous_search/get'
+    # Allows user to use all index_management actions - ism policies, rollups, transforms
+    index_management_full_access:
+      reserved: true
+      cluster_permissions:
+        - "cluster:admin/opendistro/ism/*"
+        - "cluster:admin/opendistro/rollup/*"
+        - "cluster:admin/opendistro/transform/*"
+        - "cluster:admin/opensearch/notifications/feature/publish"
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - 'indices:admin/opensearch/ism/*'
+    # Allows users to use all cross cluster replication functionality at leader cluster
+    cross_cluster_replication_leader_full_access:
+      reserved: true
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - "indices:admin/plugins/replication/index/setup/validate"
+            - "indices:data/read/plugins/replication/changes"
+            - "indices:data/read/plugins/replication/file_chunk"
+    # Allows users to use all cross cluster replication functionality at follower cluster
+    cross_cluster_replication_follower_full_access:
+      reserved: true
+      cluster_permissions:
+        - "cluster:admin/plugins/replication/autofollow/update"
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - "indices:admin/plugins/replication/index/setup/validate"
+            - "indices:data/write/plugins/replication/changes"
+            - "indices:admin/plugins/replication/index/start"
+            - "indices:admin/plugins/replication/index/pause"
+            - "indices:admin/plugins/replication/index/resume"
+            - "indices:admin/plugins/replication/index/stop"
+            - "indices:admin/plugins/replication/index/update"
+            - "indices:admin/plugins/replication/index/status_check"
+    # Allow users to read ML stats/models/tasks
+    ml_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/ml/stats/nodes'
+        - 'cluster:admin/opensearch/ml/models/get'
+        - 'cluster:admin/opensearch/ml/models/search'
+        - 'cluster:admin/opensearch/ml/tasks/get'
+        - 'cluster:admin/opensearch/ml/tasks/search'
+    # Allows users to use all ML functionality
+    ml_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster_monitor'
+        - 'cluster:admin/opensearch/ml/*'
+      index_permissions:
+        - index_patterns:
+            - '*'
+          allowed_actions:
+            - 'indices_monitor'
+    # Allows users to use all Notifications functionality
+    notifications_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/notifications/*'
+    # Allows users to read Notifications config/channels
+    notifications_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/notifications/configs/get'
+        - 'cluster:admin/opensearch/notifications/features'
+        - 'cluster:admin/opensearch/notifications/channels/get'
+    # Allows users to use all snapshot management functionality
+    snapshot_management_full_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/snapshot_management/*'
+        - 'cluster:admin/opensearch/notifications/feature/publish'
+        - 'cluster:admin/repository/*'
+        - 'cluster:admin/snapshot/*'
+    # Allows users to see snapshots, repositories, and snapshot management policies
+    snapshot_management_read_access:
+      reserved: true
+      cluster_permissions:
+        - 'cluster:admin/opensearch/snapshot_management/policy/get'
+        - 'cluster:admin/opensearch/snapshot_management/policy/search'
+        - 'cluster:admin/opensearch/snapshot_management/policy/explain'
+        - 'cluster:admin/repository/get'
+        - 'cluster:admin/snapshot/get'
+  roles_mapping.yml: |-
+    _meta:
+      type: "rolesmapping"
+      config_version: 2
+    all_access:
+      reserved: false
+      backend_roles:
+      - "administrators"
+      # uncomment this for TESTING ONLY to give all users all access (don't be stupid, though)
+      # users:
+      # - "*"
+      description: "Maps administrators to all_access"
+    own_index:
+      reserved: false
+      users:
+      - "*"
+      description: "Allow full access to an index named like the username"
+    kibana_user:
+      reserved: false
+      backend_roles:
+      - "kibanauser"
+      - "developers"
+      - "service"
+    readall:
+      reserved: false
+      backend_roles:
+      - "readall"
+      - "developers"
+      - "service"
+    manage_snapshots:
+      reserved: false
+      backend_roles:
+      - "snapshotrestore"
+      - "developers"
+      - "service"
+    kibana_server:
+      reserved: true
+      users:
+      - "kibanaserver"
+  tenants.yml: |-
+    _meta:
+      type: "tenants"
+      config_version: 2
+  opensearch_dashboards.yml: |-
+    server.host: '0.0.0.0'
+    opensearch.hosts: [https://localhost:9200]
+    server.ssl.enabled: true
+    server.ssl.certificate: /usr/share/opensearch-dashboards/config/client.pem
+    server.ssl.key: /usr/share/opensearch-dashboards/config/client-key.pem
+    opensearch.ssl.certificate: /usr/share/opensearch-dashboards/config/client.pem
+    opensearch.ssl.key: /usr/share/opensearch-dashboards/config/client-key.pem
+    opensearch.ssl.certificateAuthorities: [ "/usr/share/opensearch-dashboards/config/root-ca.pem" ]
+    opensearch.ssl.verificationMode: none
+    opensearch.username: kibanaserver
+    opensearch.password: changethistoo
+    opensearch.requestHeadersWhitelist: [authorization, securitytenant]
+    opensearch_security.multitenancy.enabled: true
+    opensearch_security.multitenancy.tenants.enable_global: true
+    opensearch_security.multitenancy.tenants.enable_private: true
+    opensearch_security.multitenancy.tenants.preferred: ["Private", "Global"]
+    opensearch_security.readonly_mode.roles: [kibana_read_only]
+    # Use this setting if you are running opensearch-dashboards without https
+    opensearch_security.cookie.secure: false
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opensearch-secrets
+  namespace: opensearch
+type: Opaque
+data:
+  ca-trust: |-
+    # Base64-encoded content of certs/ca-trust
+  admin-key.pem: |-
+    # Base64-encoded content of certs/admin-key.pem
+  admin.pem: |-
+    # Base64-encoded content of certs/admin.pem
+  node1-key.pem: |-
+    # Base64-encoded content of certs/node1-key.pem
+  node1.pem: |-
+    # Base64-encoded content of certs/node1.pem
+  node2-key.pem: |-
+    # Base64-encoded content of certs/node2-key.pem
+  node2.pem: |-
+    # Base64-encoded content of certs/node2.pem
+  node3-key.pem: |-
+    # Base64-encoded content of certs/node3-key.pem
+  node3.pem: |-
+    # Base64-encoded content of certs/node3.pem
+  node4-key.pem: |-
+    # Base64-encoded content of certs/node4-key.pem
+  node4.pem: |-
+    # Base64-encoded content of certs/node4.pem
+  root-ca.pem: |-
+    # Base64-encoded content of certs/root-ca.pem
+  client-key.pem: |-
+    # Base64-encoded content of certs/client-key.pem
+  client.pem: |-
+    # Base64-encoded content of certs/client.pem
+  .creds.curlrc: |-
+    # Base64-encoded content of .creds.curlrc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opensearch-backup
+  namespace: opensearch
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi # Adjust size based on needs
+  storageClassName: standard-rwx # Replace with a ReadWriteMany-capable storage class (e.g. NFS, EFS)
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch-cluster
+  namespace: opensearch
+spec:
+  clusterIP: None # Headless service
+  selector:
+    app: opensearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+    - name: transport
+      port: 9600
+      targetPort: 9600
+      protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch-dashboards
+  namespace: opensearch
+spec:
+  selector:
+    app: opensearch-dashboards
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+      protocol: TCP
+  type: NodePort # Consider using Ingress for production
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: opensearch
+spec:
+  serviceName: opensearch-cluster
+  replicas: 4 # Matches the four nodes in Docker Compose
+  selector:
+    matchLabels:
+      app: opensearch
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard # Replace with appropriate storage class
+        resources:
+          requests:
+            storage: 50Gi # Adjust size based on needs
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: opensearch
+                topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+        - name: select-node-certs
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              ordinal="${HOSTNAME##*-}"
+              certnum=$((ordinal + 1))
+              cp /secrets-src/node${certnum}-key.pem /node-certs/node-key.pem
+              cp /secrets-src/node${certnum}.pem /node-certs/node.pem
+          volumeMounts:
+            - name: secrets
+              mountPath: /secrets-src
+              readOnly: true
+            - name: node-certs
+              mountPath: /node-certs
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:latest
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              ordinal="${HOSTNAME##*-}"
+              if [ "$ordinal" = "0" ] || [ "$ordinal" = "1" ]; then
+                heap=4g
+              else
+                heap=16g
+              fi
+              export OPENSEARCH_JAVA_OPTS="-server -Xms${heap} -Xmx${heap} -Xss256k -XX:-HeapDumpOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom -Dlog4j.formatMsgNoLookups=true -Dcom.sun.jndi.ldap.object.disableEndpointIdentification=true"
+              case "$HOSTNAME" in
+                opensearch-1) roles=cluster_manager ;;
+                opensearch-2|opensearch-3) roles=data,ingest ;;
+                *) roles= ;;
+              esac
+              exec env "node.roles=${roles}" ./opensearch-docker-entrypoint.sh opensearch
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+          env:
+            - name: cluster.name
+              value: opensearch-cluster
+            - name: discovery.seed_hosts
+              value: opensearch-0.opensearch-cluster.opensearch.svc.cluster.local,opensearch-1.opensearch-cluster.opensearch.svc.cluster.local,opensearch-2.opensearch-cluster.opensearch.svc.cluster.local,opensearch-3.opensearch-cluster.opensearch.svc.cluster.local
+            - name: cluster.initial_cluster_manager_nodes
+              value: opensearch-1.opensearch-cluster.opensearch.svc.cluster.local
+            - name: bootstrap.memory_lock
+              value: "true"
+            - name: MAX_LOCKED_MEMORY
+              value: unlimited
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: "true"
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "false"
+            - name: cluster.routing.allocation.disk.threshold_enabled
+              value: "false"
+            - name: indices.query.bool.max_clause_count
+              value: "4096"
+            - name: path.repo
+              value: /opt/opensearch/backup
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: logger.level
+              value: WARN
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9600
+              name: transport
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/opensearch/data
+            - name: backup
+              mountPath: /opt/opensearch/backup
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch.yml
+              subPath: opensearch.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/audit.yml
+              subPath: audit.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/action_groups.yml
+              subPath: action_groups.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/config.yml
+              subPath: config.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/internal_users.yml
+              subPath: internal_users.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/roles.yml
+              subPath: roles.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/roles_mapping.yml
+              subPath: roles_mapping.yml
+            - name: config
+              mountPath: /usr/share/opensearch/config/opensearch-security/tenants.yml
+              subPath: tenants.yml
+            - name: secrets
+              mountPath: /var/local/ca-trust
+              subPath: ca-trust
+            - name: secrets
+              mountPath: /usr/share/opensearch/config/admin-key.pem
+              subPath: admin-key.pem
+            - name: secrets
+              mountPath: /usr/share/opensearch/config/admin.pem
+              subPath: admin.pem
+            - name: node-certs
+              mountPath: /usr/share/opensearch/config/node-key.pem
+              subPath: node-key.pem
+            - name: node-certs
+              mountPath: /usr/share/opensearch/config/node.pem
+              subPath: node.pem
+            - name: secrets
+              mountPath: /usr/share/opensearch/config/root-ca.pem
+              subPath: root-ca.pem
+            - name: secrets
+              mountPath: /var/local/curlrc/.creds.curlrc
+              subPath: .creds.curlrc
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: backup
+          persistentVolumeClaim:
+            claimName: opensearch-backup
+        - name: config
+          configMap:
+            name: opensearch-config
+        - name: secrets
+          secret:
+            name: opensearch-secrets
+        - name: node-certs
+          emptyDir: {}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensearch-dashboards
+  namespace: opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch-dashboards
+  template:
+    metadata:
+      labels:
+        app: opensearch-dashboards
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: opensearch-dashboards
+          image: opensearchproject/opensearch-dashboards:latest
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          env:
+            - name: OPENSEARCH_HOSTS
+              value: '["https://opensearch-0.opensearch-cluster.opensearch.svc.cluster.local:9200"]'
+            - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
+              value: "false"
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+          ports:
+            - containerPort: 5601
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+            - name: secrets
+              mountPath: /usr/share/opensearch-dashboards/config/client-key.pem
+              subPath: client-key.pem
+            - name: secrets
+              mountPath: /usr/share/opensearch-dashboards/config/client.pem
+              subPath: client.pem
+            - name: secrets
+              mountPath: /usr/share/opensearch-dashboards/config/root-ca.pem
+              subPath: root-ca.pem
+            - name: secrets
+              mountPath: /var/local/curlrc/.creds.curlrc
+              subPath: .creds.curlrc
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: opensearch-config
+        - name: secrets
+          secret:
+            name: opensearch-secrets

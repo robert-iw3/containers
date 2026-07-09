@@ -1,0 +1,38 @@
+# LDAP configuration for Grafana
+
+[[servers]]
+host = "${LDAP_HOST}"  # Environment variable for LDAP server
+port = 636  # Use secure LDAPS port
+use_ssl = true  # Enforce SSL for secure communication
+start_tls = false  # Disable STARTTLS if SSL is used
+ssl_skip_verify = false  # Enforce certificate verification
+bind_dn = "${LDAP_BIND_DN}"  # Environment variable for bind DN
+bind_password = "${LDAP_BIND_PASSWORD}"  # Environment variable for bind password
+search_filter = "(sAMAccountName=%s)"  # Filter for user lookup
+search_base_dns = ["${LDAP_SEARCH_BASE_DNS}"]  # Environment variable for base DNs, e.g., OU=Users,DC=domain,DC=net
+timeout = 10  # Connection timeout in seconds
+verbose_logging = true  # Enable detailed LDAP logs
+
+[servers.attributes]
+name = "givenName"
+surname = "sn"
+username = "sAMAccountName"
+member_of = "memberOf"
+email = "mail"
+
+# Group mappings for role-based access control
+[[servers.group_mappings]]
+group_dn = "${LDAP_ADMIN_GROUP}"  # Environment variable, e.g., CN=Grafana-Admin,OU=Groups,DC=domain,DC=net
+org_role = "Admin"
+
+[[servers.group_mappings]]
+group_dn = "${LDAP_EDITOR_GROUP}"  # Environment variable, e.g., CN=Grafana-Editor,OU=Groups,DC=domain,DC=net
+org_role = "Editor"
+
+[[servers.group_mappings]]
+group_dn = "${LDAP_VIEWER_GROUP}"  # Environment variable, e.g., CN=Grafana-Viewer,OU=Groups,DC=domain,DC=net
+org_role = "Viewer"
+
+[[servers.group_mappings]]
+group_dn = "*"  # Default role for all authenticated users
+org_role = "Viewer"

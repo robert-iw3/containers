@@ -1,0 +1,30 @@
+deployment_type: docker
+grafana:
+  image: docker.io/bitnami/grafana:latest
+  port: 3000
+  ldap_config: /etc/grafana/ldap.toml
+  plugins:
+    - alexanderzobnin-zabbix-app
+    - grafana-loki-datasource
+loki:
+  image: grafana/loki:latest
+  port: 3100
+  config_file: /etc/loki/loki-config.yml
+prometheus:
+  image: prom/prometheus:latest
+  port: 9090
+  config_file: /etc/prometheus/prometheus.yml
+postgres:
+  image: docker.io/bitnami/postgresql:latest
+  port: 5432
+  database: grafana
+wallarm:
+  image: docker.io/wallarm/node:latest
+  api_host: ${WALLARM_API_HOST}
+  api_token: ${WALLARM_API_TOKEN}
+security:
+  enable_tls: true
+  cert_resolver: letsencrypt
+  traefik:
+    dashboard: true
+    log_level: WARN

@@ -1,0 +1,21 @@
+[Unit]
+Description=Grafana (podman)
+Wants=network-online.target
+After=network-online.target prometheus.service
+
+[Service]
+EnvironmentFile={{ monitoring_data_dir }}/grafana/grafana.env
+ExecStartPre=-/usr/bin/podman rm -f grafana
+ExecStart=/usr/bin/podman run --name grafana --rm \
+  -p {{ grafana_port }}:3000 \
+  -v {{ monitoring_data_dir }}/grafana/data:/var/lib/grafana:Z \
+  -v {{ monitoring_data_dir }}/grafana/provisioning:/etc/grafana/provisioning:ro,Z \
+  -e GF_SECURITY_ADMIN_PASSWORD \
+  -e GF_USERS_ALLOW_SIGN_UP=false \
+  {{ grafana_image }}
+ExecStop=/usr/bin/podman stop grafana
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

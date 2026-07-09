@@ -1,0 +1,438 @@
+---
+- name: Deploy Splunk Podman Container with systemd
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    network_interface: eth0
+    ansible_control_node_network: 10.0.77.0/24
+    subnet_allow_fw_traffic: 10.0.0.0/8
+    podman_systemd_user: splunk
+    podman_systemd_network: splunk
+    podman_systemd_unit_path: /usr/local/lib/systemd/system
+    podman_systemd_file: container-{{ podman_systemd_name }}.service
+    podman_systemd_comment: "{{ podman_systemd_file }}"
+    podman_systemd_description: Podman {{ podman_systemd_file }}
+    podman_systemd_readonly: false
+    podman_systemd_ports: "8000 8089 9997 1514 8088"
+    podman_systemd_volumes: splunk
+    podman_systemd_environment: {}
+    tags: splunk
+    splunk_password: "{{ vault_splunk_password | default('changeMe') }}" # change this
+    splunk_license: #path to license file (/home/someguy/Documents/Splunk_Enterprise_Q3FY24.lic)
+    memory: 16g
+    cpus: 4
+    ulimit: "memlock=-1:-1"
+  tasks:
+    - name: Install podman
+      package:
+        name:
+          - podman
+          - podman-compose
+          - firewalld
+        state: present
+
+    - name: Allow podman privileged port 443 for non root users
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_unprivileged_port_start
+        value: '443'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Required virtual memory
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: '262144'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Configure swap
+      ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '1'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: TCP retransmission timeout
+      ansible.posix.sysctl:
+        name: net.ipv4.tcp_retries2
+        value: '5'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Default Socket Receive Buffer
+      ansible.posix.sysctl:
+        name: net.core.rmem_default
+        value: '31457280'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Maximum Socket Receive Buffer
+      ansible.posix.sysctl:
+        name: net.core.rmem_max
+        value: '12582912'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Default Socket Send Buffer
+      ansible.posix.sysctl:
+        name: net.core.wmem_default
+        value: '31457280'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Maximum Socket Send Buffer
+      ansible.posix.sysctl:
+        name: net.core.wmem_max
+        value: '12582912'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase number of incoming connections
+      ansible.posix.sysctl:
+        name: net.core.somaxconn
+        value: '65535'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase number of incoming connections backlog
+      ansible.posix.sysctl:
+        name: net.core.netdev_max_backlog
+        value: '65536'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase the maximum amount of option memory buffers
+      ansible.posix.sysctl:
+        name: net.core.optmem_max
+        value: '25165824'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase the read-buffer space allocatable1
+      ansible.posix.sysctl:
+        name: net.ipv4.tcp_rmem
+        value: '8192 87380 16777216'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase the read-buffer space allocatable2
+      ansible.posix.sysctl:
+        name: net.ipv4.udp_rmem_min
+        value: '16384'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase the write-buffer-space allocatable1
+      ansible.posix.sysctl:
+        name: net.ipv4.tcp_wmem
+        value: '8192 65536 16777216'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Increase the write-buffer-space allocatable2
+      ansible.posix.sysctl:
+        name: net.ipv4.udp_wmem_min
+        value: '16384'
+        sysctl_file: /etc/sysctl.conf
+        sysctl_set: true
+        state: present
+        reload: true
+
+    #- name: Ensure GPG check is globally activated
+    #  ini_file:
+    #    dest: /etc/dnf/dnf.conf
+    #    section: main
+    #    option: gpgcheck
+    #    value: 1
+    #    no_extra_spaces: true
+    #    create: false
+    #  when: '"dnf" in ansible_facts.packages'
+
+    - name: Create a podman network
+      containers.podman.podman_network:
+        name: "{{ podman_systemd_network }}"
+      become: true
+
+    - name: Create splunk volume
+      containers.podman.podman_volume:
+        state: present
+        name: "{{ podman_systemd_volumes }}"
+
+    - name: Build splunk
+      containers.podman.podman_image:
+        name: splunk
+        path: ./enterprise
+        build:
+          cache: no
+          force_rm: true
+          format: oci
+          annotation:
+            app: splunk
+            function: data-wrangling
+            info: Splunk Enterprise for data
+
+    - name: Build env cleanup
+      shell: |
+        sudo podman image prune -f
+        podman rmi debian:13 -f
+      register: check_env
+    - name: Check Results
+      debug:
+        var: check_env.stdout_lines
+
+    - name: Spin up splunk
+      containers.podman.podman_container:
+        image: splunk:latest
+        name: splunkenterprise
+        hostname: splunkenterprise
+        state: "started"
+        volumes:
+          - "{{ podman_systemd_volumes }}:/opt/splunk:Z"
+          - ./enterprise/apps:/opt/splunk/etc/apps:Z
+          - "{{ splunk_license }}:/var/opt/splunk/etc/licenses:Z"
+        env:
+          SPLUNK_PASSWORD: "{{ splunk_password }}"
+          SPLUNK_START_ARGS: --accept-license
+          SPLUNK_ENABLE_LISTEN: 9997
+          SPLUNK_ADD: tcp 1514
+          SPLUNK_LICENSE_URI: "{{ splunk_license }}"
+          SPLUNK_ROLE: splunk_standalone
+        command: >
+          bash -c '
+          sed -i 's/enableSplunkWebSSL = false/enableSplunkWebSSL = true/g' /opt/splunk/etc/system/local/web.conf;
+          /opt/splunk/bin/splunk restart splunkd;
+          '
+        ports:
+          - "8000:8000"
+          - "8088:8088"
+          - "9997:9997"
+          - "8089:8089"
+          - "1514:1514"
+        network: "{{ podman_systemd_network }}"
+        security_opt: no-new-privileges:true
+        restart_policy: on-failure
+        memory: "{{ memory }}"
+        cpus: "{{ cpus }}"
+        labels:
+          PODMAN_SYSTEMD_UNIT: container-splunk
+          io.containers.autoupdate: registry
+          process: splunk
+        ulimit:
+          - "{{ ulimit }}"
+        generate_systemd:
+          path: '~/.config/systemd/splunk/'
+          new: true
+      register: result
+      until: result is success
+      retries: 3
+      delay: 5
+
+    - name: 'Enable the container-splunk.service service'
+      ansible.builtin.systemd:
+        name: "{{ podman_systemd_file }}"
+        enabled: true
+        scope: user
+
+    - name: 'Enable the podman-auto-update.timer'
+      ansible.builtin.systemd:
+        name: 'podman-auto-update.timer'
+        enabled: true
+        scope: user
+      when:
+        - enable_podman_auto_updates_timer is defined
+        - enable_podman_auto_updates_timer | bool
+
+    - name: Check logs
+      shell: |
+        podman ps -a
+        podman logs splunk
+      register: check_logs
+
+    - name: Check Log Output
+      debug:
+        var: check_logs.stdout_lines
+
+    - name: Lookup user UID
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ podman_systemd_user }}"
+      when: podman_systemd_uid is not defined
+
+    - name: Set UID variable
+      ansible.builtin.set_fact:
+        podman_systemd_uid: "{{ getent_passwd[podman_systemd_user][1] }}"
+      when: podman_systemd_uid is not defined
+
+    - name: Create systemd unit files directory
+      file:
+        path: "{{ podman_systemd_unit_path }}"
+        state: directory
+        mode: "0755"
+      become: yes
+
+    - name: Create splunk service unit
+      ansible.builtin.template:
+        src: systemd-unit.splunk.j2
+        dest: "{{ [podman_systemd_unit_path, podman_systemd_file] | path_join }}"
+        mode: "0644"
+      become: yes
+      notify: Restart service
+
+    - name: Enable splunk service
+      ansible.builtin.systemd:
+        name: "{{ podman_systemd_file }}"
+        enabled: yes
+      become: yes
+
+    - name: Start splunk service
+      ansible.builtin.systemd:
+        name:  "{{ podman_systemd_file }}"
+        state: started
+      become: yes
+
+    - name: Create splunk group
+      ansible.builtin.group:
+        name: "splunk"
+        system: yes
+      register: group
+
+    - name: Add splunk user to splunk group
+      ansible.builtin.user:
+        name: "splunk"
+        groups: "splunk"
+        append: yes
+      notify: Reset connection
+
+    - name: Create splunk user
+      ansible.builtin.user:
+        name: "splunk"
+        group: "splunk"
+        system: yes
+        create_home: yes
+        password: "{{ 'your_password' | password_hash('sha512') }}"  # Replace 'your_password' with the actual password
+        shell: /bin/bash
+        state: present
+      register: user
+
+    - name: Add splunk user to systemd-journal group
+      ansible.builtin.user:
+        name: "splunk"
+        groups: systemd-journal
+        append: yes
+
+    - name: Add user to sudo group
+      ansible.builtin.user:
+        name: splunk
+        groups: wheel
+        append: yes
+
+    - name: Allow passwordless sudo for the user (CentOS/RHEL)
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/splunk
+        state: present
+        line: 'username ALL=(ALL) NOPASSWD:ALL'
+        create: yes
+        mode: '0440'
+        validate: '/usr/sbin/visudo -cf %s'
+
+    - name: Set splunk user facts
+      ansible.builtin.set_fact:
+        podman_user_home: "/home/splunk"
+        podman_user_uid: "41812"
+        podman_user_gid: "41812"
+
+    - name: Add splunk user to subuid file
+      ansible.builtin.lineinfile:
+        path: /etc/subuid
+        regexp: "^splunk:.*"
+        line: "splunk:165536:65536"
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Add splunk group to subgid file
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        regexp: "^splunk:.*"
+        line: "splunk:165536:65536"
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Enable lingering for splunk user
+      command:
+        cmd: "loginctl enable-linger splunk"
+        creates: "/var/lib/systemd/linger/splunk"
+      become: yes
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Set network interface to firewalld zone
+      ansible.posix.firewalld:
+        zone: drop
+        interface: "{{ network_interface }}"
+        permanent: true
+        state: enabled
+
+    - name: Set default to drop
+      ansible.posix.firewalld:
+        zone: drop
+        permanent: true
+        default_policy: drop
+        state: enabled
+
+    - name: Allow traffic from Ansible control node network
+      ansible.posix.firewalld:
+        rich_rule:: 'source net {{ ansible_control_node_network }} port=22 protocol=tcp family=ipv4 accept'
+        zone: drop
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: Configure FW Ports for splunk stack
+      ansible.posix.firewalld:
+        rich_rule: "{{ item }}"
+        zone: drop
+        state: enabled
+        immediate: yes
+        permanent: yes
+        with_items:
+          - 'source net {{ subnet_allow_fw_traffic }} port=443 protocol=tcp family=ipv4 accept'
+          - 'source net {{ subnet_allow_fw_traffic }} port=8000 protocol=tcp family=ipv4 accept'
+          - 'source net {{ subnet_allow_fw_traffic }} port=8089 protocol=tcp family=ipv4 accept'
+          - 'source net {{ subnet_allow_fw_traffic }} port=9997 protocol=tcp family=ipv4 accept'
+          - 'source net {{ subnet_allow_fw_traffic }} port=1514 protocol=tcp family=ipv4 accept'

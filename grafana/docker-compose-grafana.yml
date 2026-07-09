@@ -1,0 +1,222 @@
+---
+volumes:
+  grafana-postgres:
+  grafana-postgres-backups:
+  traefik-certificates:
+
+networks:
+  grafana:
+    driver: bridge
+  traefik:
+    external: true
+
+x-common-vars-apps: &common-vars-apps
+  networks:
+    - grafana
+    - traefik
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres
+    hostname: postgres-grafana.io
+    ports:
+      - 5432:5432
+    volumes:
+      - grafana-postgres:/bitnami/postgresql:z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  grafana:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/grafana:latest
+    container_name: grafana
+    hostname: grafana.io
+    volumes:
+      - ./ldap.toml:/etc/grafana/ldap.toml:ro
+    ports:
+      - 3000:3000
+    environment:
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres-grafana.io:5432
+      GF_DATABASE_NAME: ${POSTGRESQL_DATABASE}
+      GF_DATABASE_USER: ${POSTGRESQL_USERNAME}
+      GF_DATABASE_PASSWORD: ${POSTGRESQL_PASSWORD}
+      GF_SERVER_DOMAIN: ${GF_SERVER_DOMAIN}
+      GF_SERVER_ROOT_URL: ${GF_SERVER_ROOT_URL}
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'  # Force LDAP login
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_LDAP_ENABLED: 'true'
+      GF_AUTH_LDAP_ALLOW_SIGN_UP: 'true'
+      GF_AUTH_LDAP_CONFIG_FILE: /etc/grafana/ldap.toml
+      GF_INSTALL_PLUGINS: alexanderzobnin-zabbix-app,grafana-loki-datasource
+      GF_SMTP_ENABLED: 'true'
+      GF_SMTP_HOST: ${GF_SMTP_HOST}:587
+      GF_SMTP_USER: ${GF_SMTP_USER}
+      GF_SMTP_PASSWORD: ${GF_SMTP_PASSWORD}
+      GF_SMTP_FROM_NAME: Grafana Alert
+      GF_SMTP_FROM_ADDRESS: ${GF_SMTP_FROM_ADDRESS}
+      GF_SECURITY_COOKIE_SECURE: 'true'  # Enforce secure cookies
+      GF_SERVER_ENFORCE_DOMAIN: 'true'  # Prevent DNS rebinding
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.grafana.rule=Host(`${GF_SERVER_DOMAIN}`)
+        - traefik.http.routers.grafana.entrypoints=websecure
+        - traefik.http.routers.grafana.tls=true
+        - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+        - traefik.http.services.grafana.loadbalancer.server.port=3000
+        - traefik.http.services.grafana.loadbalancer.passhostheader=true
+        - traefik.http.routers.grafana.middlewares=compresstraefik,secHeaders
+        - traefik.http.middlewares.compresstraefik.compress=true
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.X-Frame-Options=SAMEORIGIN
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.X-Content-Type-Options=nosniff
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.Strict-Transport-Security=max-age=31536000;includeSubDomains;preload
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  traefik:
+    <<: *common-vars-apps
+    image: docker.io/traefik:v3.7.6
+    container_name: traefik
+    hostname: traefik.io
+    command:
+      - --log.level=INFO  # Increased log level for better monitoring
+      - --accesslog=true
+      - --api.dashboard=true
+      - --api.insecure=false  # Disable insecure API access
+      - --ping=true
+      - --ping.entrypoint=ping
+      - --entryPoints.ping.address=:8082
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      - --providers.docker.exposedByDefault=false
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json
+      - --metrics.prometheus=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+    volumes:
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/etc/traefik/acme
+    ports:
+      - 80:80
+      - 443:443
+      - 8082:8082
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      mode: global
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_DOMAIN}`)
+        - traefik.http.routers.dashboard.service=api@internal
+        - traefik.http.routers.dashboard.entrypoints=websecure
+        - traefik.http.routers.dashboard.tls=true
+        - traefik.http.routers.dashboard.tls.certresolver=letsencrypt
+        - traefik.http.routers.dashboard.middlewares=authtraefik,secHeaders
+        - traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_AUTH_USERS}
+        - traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)
+        - traefik.http.routers.http-catchall.entrypoints=web
+        - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.X-Frame-Options=SAMEORIGIN
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.X-Content-Type-Options=nosniff
+        - traefik.http.middlewares.secHeaders.headers.customResponseHeaders.Strict-Transport-Security=max-age=31536000;includeSubDomains;preload
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  backups:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: psql-backup
+    hostname: grafana-backup-psql.io
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          pg_dump -h postgres-grafana.io -p 5432 -U "${POSTGRESQL_USERNAME}" "${POSTGRESQL_DATABASE}" | \
+          gzip > /srv/grafana-postgres/backups/grafana-postgres-backup-$(date +%Y-%m-%d_%H-%M).gz && \
+          find /srv/grafana-postgres/backups -type f -mtime +7 -delete;
+          sleep 86400;  # 24 hours
+        done
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - grafana-postgres-backups:/srv/grafana-postgres/backups
+    environment:
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          memory: 64M

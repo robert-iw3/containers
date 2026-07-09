@@ -1,0 +1,202 @@
+{
+  "variables": {
+    "aws_access_key_id": "{{ env `AWS_ACCESS_KEY_ID` }}",
+    "aws_secret_access_key": "{{ env `AWS_SECRET_ACCESS_KEY` }}",
+    "aws_region": "{{ env `AWS_REGION` }}",
+    "release_version": "{{ env `RELEASE_VERSION` }}",
+    "vcs_name": "{{ env `VCS_NAME` }}",
+    "consul_version": "{{ env `CONSUL_VERSION` }}",
+    "consul_ent_url": "{{ env `CONSUL_ENT_URL` }}",
+    "consul_group": "consul",
+    "consul_user": "consul",
+    "consul_comment": "Consul",
+    "consul_home": "/srv/consul",
+    "vault_version": "{{ env `VAULT_VERSION` }}",
+    "vault_ent_url": "{{ env `VAULT_ENT_URL` }}",
+    "vault_group": "vault",
+    "vault_user": "vault",
+    "vault_comment": "Vault",
+    "vault_home": "/srv/vault"
+  },
+  "builders": [
+    {
+      "name": "amazon-ebs-rhel-9.3-systemd",
+      "type": "amazon-ebs",
+      "access_key": "{{ user `aws_access_key_id` }}",
+      "secret_key": "{{ user `aws_secret_access_key` }}",
+      "region": "{{ user `aws_region` }}",
+      "force_deregister": true,
+      "force_delete_snapshot": true,
+      "ssh_pty": true,
+      "instance_type": "t2.medium",
+      "associate_public_ip_address": true,
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "*RHEL-9.3_HVM_GA-*",
+          "root-device-type": "ebs"
+        },
+        "owners": ["309956199498"],
+        "most_recent": true
+      },
+      "ssh_username": "ec2-user",
+      "ssh_timeout": "5m",
+      "ami_virtualization_type": "hvm",
+      "ami_name": "vault-image_{{ user `release_version` }}_vault_{{ user `vault_version` }}_consul_{{ user `consul_version` }}_rhel_9.3",
+      "ami_description": "HashiCorp Vault Image {{ user `release_version` }}",
+      "tags": {
+        "Name": "Vault RHEL 9.3 Image {{ user `release_version` }}: Vault v{{ user `vault_version` }} Consul v{{ user `consul_version` }}",
+        "System": "Vault",
+        "Product": "Vault",
+        "Built-By": "{{ user `vcs_name` }}",
+        "Release-Version": "{{ user `release_version` }}",
+        "Consul-Version": "{{ user `consul_version` }}",
+        "Vault-Version": "{{ user `vault_version` }}",
+        "Nomad-Version": "nil",
+        "OS": "rhel",
+        "OS-Version": "9.3"
+      }
+    },
+    {
+      "name": "amazon-ebs-ubuntu-22.04-systemd",
+      "type": "amazon-ebs",
+      "access_key": "{{ user `aws_access_key_id` }}",
+      "secret_key": "{{ user `aws_secret_access_key` }}",
+      "region": "{{ user `aws_region` }}",
+      "force_deregister": true,
+      "force_delete_snapshot": true,
+      "ssh_pty": true,
+      "instance_type": "t2.medium",
+      "associate_public_ip_address": true,
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "*ubuntu-xenial-22.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": ["099720109477"],
+        "most_recent": true
+      },
+      "ssh_username": "ubuntu",
+      "ssh_timeout": "10m",
+      "ami_virtualization_type": "hvm",
+      "ami_name": "vault-image_{{ user `release_version` }}_vault_{{ user `vault_version` }}_consul_{{ user `consul_version` }}_ubuntu_22.04",
+      "ami_description": "HashiCorp Vault Image {{ user `release_version` }}",
+      "tags": {
+        "Name": "Vault Ubuntu 22.04 Image {{ user `release_version` }}: Vault v{{ user `vault_version` }} Consul v{{ user `consul_version` }}",
+        "System": "Vault",
+        "Product": "Vault",
+        "Built-By": "{{ user `vcs_name` }}",
+        "Release-Version": "{{ user `release_version` }}",
+        "Consul-Version": "{{ user `consul_version` }}",
+        "Vault-Version": "{{ user `vault_version` }}",
+        "Nomad-Version": "nil",
+        "OS": "ubuntu",
+        "OS-Version": "22.04"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "../",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "bash /tmp/shared/scripts/base.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "only": ["amazon-ebs-rhel-9.3-systemd", "amazon-ebs-ubuntu-22.04-systemd"],
+      "inline": [
+        "bash /tmp/shared/scripts/base-aws.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "GROUP={{ user `consul_group` }}",
+        "USER={{ user `consul_user` }}",
+        "COMMENT={{ user `consul_comment` }}",
+        "HOME={{ user `consul_home` }}"
+      ],
+      "inline": [
+        "bash /tmp/shared/scripts/setup-user.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "VERSION={{ user `consul_version` }}",
+        "URL={{ user `consul_ent_url` }}",
+        "USER={{ user `consul_user` }}",
+        "GROUP={{ user `consul_group` }}"
+      ],
+      "inline": [
+        "bash /tmp/consul/scripts/install-consul.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "only": ["amazon-ebs-rhel-9.3-systemd", "amazon-ebs-ubuntu-22.04-systemd"],
+      "inline": [
+        "bash /tmp/consul/scripts/install-consul-systemd.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "GROUP={{ user `vault_group` }}",
+        "USER={{ user `vault_user` }}",
+        "COMMENT={{ user `vault_comment` }}",
+        "HOME={{ user `vault_home` }}"
+      ],
+      "inline": [
+        "bash /tmp/shared/scripts/setup-user.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "VERSION={{ user `vault_version` }}",
+        "URL={{ user `vault_ent_url` }}",
+        "USER={{ user `vault_user` }}",
+        "GROUP={{ user `vault_group` }}"
+      ],
+      "inline": [
+        "bash /tmp/vault/scripts/install-vault.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "only": ["amazon-ebs-rhel-9.3-systemd", "amazon-ebs-ubuntu-22.04-systemd"],
+      "inline": [
+        "bash /tmp/vault/scripts/install-vault-systemd.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "only": ["amazon-ebs-rhel-9.3-systemd", "amazon-ebs-ubuntu-22.04-systemd"],
+      "inline": [
+        "cd /tmp/shared/scripts && bash /tmp/shared/scripts/setup-testing.sh",
+        "cd /tmp && rake vault:spec"
+      ]
+    },
+    {
+      "type": "shell",
+      "only": ["amazon-ebs-rhel-9.3-systemd", "amazon-ebs-ubuntu-22.04-systemd"],
+      "inline": [
+        "bash /tmp/shared/scripts/cleanup-aws.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "bash /tmp/shared/scripts/cleanup.sh"
+      ]
+    }
+  ]
+}

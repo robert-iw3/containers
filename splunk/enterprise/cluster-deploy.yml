@@ -1,0 +1,223 @@
+---
+
+networks:
+  splunk:
+    driver: bridge
+    attachable: true
+
+services:
+  search-head1:
+    networks:
+      splunk:
+        aliases:
+          - search-head1
+    build: .
+    hostname: search-head1
+    container_name: search-head1
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_search_head_captain
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  search-head2:
+    networks:
+      splunk:
+        aliases:
+          - search-head2
+    build: .
+    hostname: search-head2
+    container_name: search-head2
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_search_head
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  search-head3:
+    networks:
+      splunk:
+        aliases:
+          - search-head3
+    build: .
+    hostname: search-head3
+    container_name: search-head3
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_search_head
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  deployer1:
+    networks:
+      splunk:
+        aliases:
+          - deployer1
+    build: .
+    hostname: deployer1
+    container_name: deployer1
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_deployer
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  cluster-master1:
+    networks:
+      splunk:
+        aliases:
+          - cluster-master1
+    build: .
+    hostname: cluster-master1
+    container_name: cluster-master1
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_cluster_master
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  indexer1:
+    networks:
+      splunk:
+        aliases:
+          - indexer1
+    build: .
+    hostname: indexer1
+    container_name: indexer1
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_indexer
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  indexer2:
+    networks:
+      splunk:
+        aliases:
+          - indexer2
+    build: .
+    hostname: indexer2
+    container_name: indexer2
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_indexer
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  indexer3:
+    networks:
+      splunk:
+        aliases:
+          - indexer3
+    build: .
+    hostname: indexer3
+    container_name: indexer3
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_indexer
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults
+
+  indexer4:
+    networks:
+      splunk:
+        aliases:
+          - indexer4
+    build: .
+    hostname: indexer4
+    container_name: indexer4
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_INDEXER_URL=indexer1,indexer2,indexer3,indexer4
+      - SPLUNK_SEARCH_HEAD_URL=search-head2,search-head3
+      - SPLUNK_SEARCH_HEAD_CAPTAIN_URL=search-head1
+      - SPLUNK_CLUSTER_MASTER_URL=cluster-master1
+      - SPLUNK_ROLE=splunk_indexer
+      - SPLUNK_DEPLOYER_URL=deployer1
+      - SPLUNK_LICENSE_URI
+      - DEBUG=true
+    ports:
+      - 8000
+      - 8089
+    volumes:
+      - ./defaults:/tmp/defaults

@@ -1,0 +1,122 @@
+# Default values for ksqlDB.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+serviceAccountName:
+
+## Image Info
+## ref: https://hub.docker.com/r/confluentinc/ksqldb-server
+image:
+  registry: docker.io
+  repository: confluentinc/ksqldb-server
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets:  []
+nameOverride: ""
+fullnameOverride: ""
+
+# KSQL configuration options
+## ref: https://docs.confluent.io/current/ksql/docs/installation/server-config/config-reference.html
+configurationOverrides: {}
+  # "opts": "-Dmax.request.size=2097152"
+  # "ksql.streams.producer.retries": "2147483647"
+
+## ksqlDB
+## ref: https://docs.ksqldb.io/en/latest/operate-and-deploy/capacity-planning/#scaling-ksqldb
+replicaCount: 1
+
+## ksqlDB Configuration
+## ref: https://docs.ksqldb.io/en/latest/operate-and-deploy/installation/install-ksqldb-with-docker/
+heapOpts: -XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=50.0
+port: 8088
+loggingProcessing:
+  streamAutoCreate: true
+  topicAutoCreate: true
+confluentSupportMetricsEnable: false
+internalTopicReplicas: 1
+
+## ksqlDB Headless mode deployment
+## When a queries file is specified, ksqlDB will be deployed in headless mode
+## ref: https://docs.ksqldb.io/en/latest/operate-and-deploy/installation/server-config/#start-headless-ksqldb-server-by-using-the-configuration-file
+queriesFileConfigMap:
+
+## Kafka Cluster Configuration
+kafka:
+  ## If true, kafka was installed under the same umbrella
+  enabled: true
+  replicaCount: 3
+  ## If outside or custom kafka a bootstrap server is required
+  bootstrapServers: PLAINTEXT://ks-kafka-headless:9092
+
+## Kafka Broker Kerberos
+## ref: https://docs.confluent.io/platform/current/kafka/authentication_sasl/authentication_sasl_gssapi.html#brokers
+kerberos:
+  enabled: false
+  krb5Conf:
+  keyTabSecret:
+  serviceName:
+  domain:
+
+## Schema Registry Configuration
+schema-registry:
+  ## If true, schema-registry was installed under the same umbrella
+  enabled: true
+  ## If outside or custom a URL and port are required to connect. Remember to include the protocol http:// or https://
+  url:
+
+## Kafka Connect Configuration
+kafka-connect:
+  ## If true, kafka connect was installed under the same umbrella
+  enabled: true
+  ## If outside or custom a URL and port are required to connect. Remember to include the protocol http:// or https://
+  url:
+
+## Configure Liveness and Readiness Probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+## Configure Pod Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+podSecurityContext:
+  fsGroup: 1000
+
+## Configure Container Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsUser: 1000
+  runAsGroup: 1000
+  capabilities:
+    drop:
+    - ALL
+
+## Configure Resources for Containers
+## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+resources:
+  limits:
+    cpu: 1
+    memory: 2000Mi
+  requests:
+    cpu: 1
+    memory: 2000Mi
+
+## Configure nodeSelector Node labels for pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+## ref:  https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+nodeSelector: {}
+tolerations: {}
+affinity: {}

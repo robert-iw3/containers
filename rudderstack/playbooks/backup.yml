@@ -1,0 +1,25 @@
+- name: Backup RudderStack configuration
+  hosts: docker_hosts
+  become: yes
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: /opt/rudderstack/backup
+        state: directory
+        mode: '0755'
+
+    - name: Backup Podman volumes
+      when: platform == 'podman'
+      command: podman volume export rudder-postgres-data > /opt/rudderstack/backup/rudder-postgres-data-$(date +%Y%m%d).tar
+      args:
+        chdir: /opt/rudderstack/backup
+      register: backup_result
+      failed_when: backup_result.rc != 0
+
+    - name: Backup Docker volumes
+      when: platform == 'docker'
+      command: docker run --rm -v rudder-postgres-data:/data busybox tar cvf /backup/rudder-postgres-data-$(date +%Y%m%d).tar /data
+      args:
+        chdir: /opt/rudderstack/backup
+      register: backup_result
+      failed_when: backup_result.rc != 0

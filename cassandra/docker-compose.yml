@@ -1,0 +1,63 @@
+---
+services:
+  cassandra:
+    image: cassandra:5.0
+    ports:
+      - "9042:9042"  # CQL only; intra-node stays internal
+    volumes:
+      - cassandra_data:/var/lib/cassandra:Z
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml:ro
+      - ./init-cassandra.sh:/init-cassandra.sh:ro
+    environment:
+      - CASSANDRA_SEEDS=cassandra,cassandra2
+      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_PASSWORD=cassandra
+      - MAX_HEAP_SIZE=4G
+      - HEAP_NEWSIZE=800M
+      - JVM_OPTS=-XX:+UseContainerSupport
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe keyspaces"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - cassandra-net
+
+  cassandra2:
+    image: cassandra:5.0
+    ports:
+      - "9043:9042"
+    volumes:
+      - cassandra2_data:/var/lib/cassandra:Z
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml:ro
+      - ./init-cassandra.sh:/init-cassandra.sh:ro
+    environment:
+      - CASSANDRA_SEEDS=cassandra,cassandra2
+      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+      - CASSANDRA_PASSWORD=cassandra
+      - MAX_HEAP_SIZE=4G
+      - HEAP_NEWSIZE=800M
+      - JVM_OPTS=-XX:+UseContainerSupport
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe keyspaces"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    networks:
+      - cassandra-net
+
+networks:
+  cassandra-net:
+    driver: bridge
+
+volumes:
+  cassandra_data:
+    driver: local
+  cassandra2_data:
+    driver: local

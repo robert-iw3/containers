@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bitbucket-network-policy
+  namespace: bitbucket
+spec:
+  podSelector:
+    matchLabels:
+      app: bitbucket
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: postgres-bitbucket
+      namespaceSelector:
+        matchLabels:
+          name: bitbucket
+    ports:
+    - protocol: TCP
+      port: 7990
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 7991
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres-bitbucket
+      namespaceSelector:
+        matchLabels:
+          name: bitbucket
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+      namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  - to:
+    - podSelector:
+        matchLabels:
+          app: grafana
+      namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 3000

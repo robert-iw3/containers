@@ -1,0 +1,76 @@
+---
+- name: Resolve this node's advertise address
+  ansible.builtin.set_fact:
+    advertise_host: "{{ spark_advertise_host | default(ansible_host) | default(ansible_default_ipv4.address) }}"
+
+- name: Resolve the master's advertise address (from the master host's inventory)
+  ansible.builtin.set_fact:
+    master_host: >-
+      {{ hostvars[groups['spark_master'][0]]['spark_advertise_host']
+         | default(hostvars[groups['spark_master'][0]]['ansible_host']) }}
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Ensure the shared events directory exists
+  ansible.builtin.file:
+    path: "{{ spark_events_dir }}"
+    state: directory
+    mode: "0777"
+  become: true
+
+- name: Open cluster ports (firewalld)
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+    - "{{ spark_master_port }}/tcp"
+    - "{{ spark_master_webui_port }}/tcp"
+    - "{{ spark_master_rest_port }}/tcp"
+    - "{{ spark_worker_webui_port }}/tcp"
+  become: true
+  when: ansible_os_family == "RedHat"
+  failed_when: false
+
+# --- Master ---
+- name: Run the Spark master
+  containers.podman.podman_container:
+    name: spark-master
+    image: "{{ (spark_registry ~ '/' if spark_registry else '') ~ spark_master_image }}"
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      # Advertise the reachable address so cross-host workers/executors can
+      # connect back — the crux of a multi-IP standalone deployment.
+      SPARK_MASTER_HOST: "{{ advertise_host }}"
+      SPARK_PUBLIC_DNS: "{{ advertise_host }}"
+      SPARK_LOCAL_IP: "{{ advertise_host }}"
+    volumes:
+      - "{{ spark_events_dir }}:/tmp/spark-events"
+  become: true
+  when: "'spark_master' in group_names"
+
+# --- Workers ---
+- name: Run the Spark worker
+  containers.podman.podman_container:
+    name: spark-worker
+    image: "{{ (spark_registry ~ '/' if spark_registry else '') ~ spark_worker_image }}"
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      SPARK_MASTER: "spark://{{ master_host }}:{{ spark_master_port }}"
+      SPARK_PUBLIC_DNS: "{{ advertise_host }}"
+      SPARK_LOCAL_IP: "{{ advertise_host }}"
+      SPARK_WORKER_CORES: "{{ spark_worker_cores | string }}"
+      SPARK_WORKER_MEMORY: "{{ spark_worker_memory }}"
+    volumes:
+      - "{{ spark_events_dir }}:/tmp/spark-events"
+  become: true
+  when: "'spark_workers' in group_names"

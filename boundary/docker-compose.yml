@@ -1,0 +1,65 @@
+---
+volumes:
+  boundary_db:
+  postgresql_data:
+
+networks:
+  boundary:
+    driver: bridge
+
+services:
+  postgres:
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-boundary
+    hostname: postgres-boundary.testing.io
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRESQL_USERNAME=${POSTGRESQL_USERNAME}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRESQL_REPLICATION_USER=${POSTGRESQL_REPLICATION_USER}
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRESQL_REPLICATION_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - postgresql_data:/bitnami/postgresql:z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - boundary
+
+  boundary:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boundary-main
+    hostname: boundary.testing.io
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+      - "9201:9201"
+      - "9202:9202"
+    environment:
+      - BOUNDARY_POSTGRES_URL=postgresql://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@postgres-boundary.testing.io:5432/${POSTGRESQL_DATABASE}?sslmode=disable
+      - BOUNDARY_ROOT_KEY=${BOUNDARY_ROOT_KEY}
+      - BOUNDARY_WORKER_AUTH_KEY=${BOUNDARY_WORKER_AUTH_KEY}
+      - BOUNDARY_RECOVERY_KEY=${BOUNDARY_RECOVERY_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9200/v1/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    networks:
+      - boundary

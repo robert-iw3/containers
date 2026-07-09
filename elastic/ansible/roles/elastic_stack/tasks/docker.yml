@@ -1,0 +1,11 @@
+---
+- name: Render docker-compose
+  template:
+    src: docker-compose.j2
+    dest: "{{ project_dir }}/docker-compose-rendered.yml"
+
+- name: Start Docker stack
+  community.docker.docker_compose:
+    project_src: "{{ project_dir }}"
+    files: docker-compose-rendered.yml
+    state: present

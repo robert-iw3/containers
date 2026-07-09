@@ -1,0 +1,519 @@
+---
+# ========================================
+# Namespace
+# ========================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: elastic
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+# ========================================
+# Persistent Volumes
+# ========================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: certs
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kibana-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fleetserver-data
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+# ========================================
+# Elasticsearch Cluster (Headless Service)
+# ========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-cluster
+  namespace: elastic
+spec:
+  clusterIP: None
+  selector:
+    app: elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+    - name: transport
+      port: 9300
+      targetPort: 9300
+
+---
+# ========================================
+# Elasticsearch StatefulSet (3 Nodes)
+# ========================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: elastic
+spec:
+  serviceName: elasticsearch-cluster
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+          env:
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: elastic-cluster
+            - name: cluster.initial_master_nodes
+              value: elasticsearch-0,elasticsearch-1,elasticsearch-2
+            - name: discovery.seed_hosts
+              value: elasticsearch-0.elasticsearch-cluster.elastic.svc.cluster.local,elasticsearch-1.elasticsearch-cluster.elastic.svc.cluster.local,elasticsearch-2.elasticsearch-cluster.elastic.svc.cluster.local
+            - name: xpack.security.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.key
+              value: certs/elasticsearch/elasticsearch.key
+            - name: xpack.security.http.ssl.certificate
+              value: certs/elasticsearch/elasticsearch.chain.pem
+            - name: xpack.security.http.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.http.ssl.verification_mode
+              value: certificate
+            - name: xpack.security.transport.ssl.enabled
+              value: "true"
+            - name: xpack.security.transport.ssl.key
+              value: certs/elasticsearch/elasticsearch.key
+            - name: xpack.security.transport.ssl.certificate
+              value: certs/elasticsearch/elasticsearch.crt
+            - name: xpack.security.transport.ssl.certificate_authorities
+              value: certs/ca/ca.crt
+            - name: xpack.security.transport.ssl.verification_mode
+              value: certificate
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/certs
+              readOnly: true
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+          ports:
+            - containerPort: 9200
+            - containerPort: 9300
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+        - name: data
+          persistentVolumeClaim:
+            claimName: elasticsearch-data
+
+---
+# ========================================
+# Kibana Deployment
+# ========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          env:
+            - name: ELASTICSEARCH_USERNAME
+              value: kibana_system
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: KIBANA_SYSTEM_PASSWORD
+            - name: ELASTICSEARCH_HOSTS
+              value: '["https://elasticsearch-cluster:9200"]'
+            - name: SERVER_NAME
+              value: kibana
+            - name: SERVER_SSL_ENABLED
+              value: "true"
+            - name: SERVER_SSL_CERTIFICATE
+              value: /certs/kibana/kibana.crt
+            - name: SERVER_SSL_KEY
+              value: /certs/kibana/kibana.key
+            - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+              value: /certs/ca/ca.crt
+            - name: ELASTICSEARCH_SSL_VERIFICATIONMODE
+              value: certificate
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+            - name: data
+              mountPath: /usr/share/kibana/data
+          ports:
+            - containerPort: 5601
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+        - name: data
+          persistentVolumeClaim:
+            claimName: kibana-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: elastic
+spec:
+  selector:
+    app: kibana
+  ports:
+    - port: 5601
+      targetPort: 5601
+
+---
+# ========================================
+# Fleet Server
+# ========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-server
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fleet-server
+  template:
+    metadata:
+      labels:
+        app: fleet-server
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+        - name: fleet-server
+          image: docker.elastic.co/beats/elastic-agent:${ELASTIC_VERSION}
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          env:
+            - name: FLEET_ENROLL
+              value: "1"
+            - name: FLEET_SERVER_ENABLE
+              value: "1"
+            - name: KIBANA_FLEET_SETUP
+              value: "1"
+            - name: KIBANA_HOST
+              value: https://kibana:5601
+            - name: FLEET_URL
+              value: https://fleet-server:8220
+            - name: FLEET_SERVER_ELASTICSEARCH_HOST
+              value: https://elasticsearch-cluster:9200
+            - name: KIBANA_FLEET_USERNAME
+              value: elastic
+            - name: KIBANA_FLEET_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+            - name: FLEET_SERVER_CERT
+              value: /certs/fleet-server/fleet-server.crt
+            - name: FLEET_SERVER_CERT_KEY
+              value: /certs/fleet-server/fleet-server.key
+            - name: FLEET_CA
+              value: /certs/ca/ca.crt
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+            - name: data
+              mountPath: /usr/share/elastic-agent
+          ports:
+            - containerPort: 8220
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8220
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8220
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+        - name: data
+          persistentVolumeClaim:
+            claimName: fleetserver-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-server
+  namespace: elastic
+spec:
+  selector:
+    app: fleet-server
+  ports:
+    - port: 8220
+      targetPort: 8220
+
+---
+# ========================================
+# OpenTelemetry Collector
+# ========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-config
+  namespace: elastic
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 75
+        spike_limit_percentage: 25
+
+    exporters:
+      elasticsearch:
+        endpoints: ["https://elasticsearch-cluster:9200"]
+        user: elastic
+        password: "${ELASTIC_PASSWORD}"
+        tls:
+          ca_file: /certs/ca/ca.crt
+          insecure_skip_verify: false
+        mapping:
+          mode: otel
+        logs_dynamic_index:
+          enabled: true
+        metrics_dynamic_index:
+          enabled: true
+        traces_dynamic_index:
+          enabled: true
+        flush:
+          interval: 1s
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [elasticsearch]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: docker.elastic.co/observability/otel-collector:8.15.0
+          command: ["/otelcol", "--config=/etc/otel/config.yaml"]
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: "512Mi"
+            limits:
+              cpu: "0.5"
+              memory: "1Gi"
+          env:
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-secrets
+                  key: ELASTIC_PASSWORD
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+            - name: certs
+              mountPath: /certs
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+      volumes:
+        - name: config
+          configMap:
+            name: otel-config
+        - name: certs
+          persistentVolumeClaim:
+            claimName: certs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: elastic
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: grpc
+      port: 4317
+      targetPort: 4317
+    - name: http
+      port: 4318
+      targetPort: 4318

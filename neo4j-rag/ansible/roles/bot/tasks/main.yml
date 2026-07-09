@@ -1,0 +1,15 @@
+---
+- name: Ensure bot Dockerfile exists
+  copy:
+    src: "{{ project_dir }}/bot.Dockerfile"
+    dest: "{{ project_dir }}/bot.Dockerfile"
+    mode: "0644"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure bot files exist
+  copy:
+    src: "{{ project_dir }}/{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+    mode: "0644"
+  loop: "{{ python_services | selectattr('name', 'equalto', 'bot') | first | attr('service_files') }}"
+  when: orchestrator in ['docker', 'podman']

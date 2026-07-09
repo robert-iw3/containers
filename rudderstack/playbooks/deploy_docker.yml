@@ -1,0 +1,39 @@
+- name: Deploy RudderStack with Docker
+  hosts: docker_hosts
+  become: yes
+  tasks:
+    - name: Ensure Docker is installed
+      package:
+        name: docker
+        state: present
+
+    - name: Ensure RudderStack directory exists
+      file:
+        path: /opt/rudderstack
+        state: directory
+        mode: '0755'
+
+    - name: Create secrets file on target host
+      copy:
+        content: "{{ lookup('ansible.builtin.env', 'WORKSPACE_TOKEN') }}"
+        dest: /opt/rudderstack/workspace_token.txt
+        mode: '0600'
+
+    - name: Copy Docker Compose file
+      copy:
+        src: "{{ playbook_dir }}/../generated/docker-compose.yml"
+        dest: /opt/rudderstack/docker-compose.yml
+        mode: '0644'
+
+    - name: Deploy RudderStack stack
+      command: docker-compose -f /opt/rudderstack/docker-compose.yml up -d
+      args:
+        chdir: /opt/rudderstack
+      register: deploy_result
+      failed_when: deploy_result.rc != 0
+
+    - name: Clean up secrets file
+      file:
+        path: /opt/rudderstack/workspace_token.txt
+        state: absent
+      when: deploy_result.rc == 0

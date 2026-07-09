@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  tasks:
+    - name: Install podman inside the test instance
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Deploy the ScyllaDB cluster
+      ansible.builtin.include_role:
+        name: scylladb

@@ -1,0 +1,651 @@
+{
+	"template": {
+		"description": "",
+		"groupId": "e203534b-0157-1000-4ebf-d99709df8080",
+		"name": "kafka2elasticsearch",
+		"snippet": {
+			"connections": [
+				{
+					"id": "c50d246a-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c50c8a34-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c4ff71c0-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "c530e394-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c52ee5a3-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "success",
+					"source": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c4ff71c0-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				},
+				{
+					"id": "c531069d-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"backPressureDataSizeThreshold": "1 GB",
+					"backPressureObjectThreshold": "10000",
+					"destination": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c529dbcd-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"flowFileExpiration": "0 sec",
+					"labelIndex": "1",
+					"name": "",
+					"selectedRelationships": "matched",
+					"source": {
+						"groupId": "c4fee2d1-0157-1000-0000-000000000000",
+						"id": "c52ee5a3-0157-1000-0000-000000000000",
+						"type": "PROCESSOR"
+					},
+					"zIndex": "0"
+				}
+			],
+			"labels": [
+				{
+					"id": "c5325e74-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "1361.0",
+						"y": "8.0"
+					},
+					"height": "22.0",
+					"label": "TODO: retry (to self?)",
+					"style": {
+						"entry": {
+							"key": "font-size",
+							"value": "12px"
+						}
+					},
+					"width": "124.0"
+				},
+				{
+					"id": "c534487f-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "783.0",
+						"y": "0.0"
+					},
+					"height": "20.0",
+					"label": "todo: failure, unmatched",
+					"style": {
+						"entry": {
+							"key": "font-size",
+							"value": "12px"
+						}
+					},
+					"width": "142.0"
+				}
+			],
+			"processors": [
+				{
+					"id": "c4ff71c0-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "0.0",
+						"y": "27.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "security.protocol",
+									"value": {
+										"name": "security.protocol"
+									}
+								},
+								{
+									"key": "ssl.context.service",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "ssl.context.service"
+									}
+								},
+								{
+									"key": "max.poll.records",
+									"value": {
+										"name": "max.poll.records"
+									}
+								},
+								{
+									"key": "group.id",
+									"value": {
+										"name": "group.id"
+									}
+								},
+								{
+									"key": "bootstrap.servers",
+									"value": {
+										"name": "bootstrap.servers"
+									}
+								},
+								{
+									"key": "topic",
+									"value": {
+										"name": "topic"
+									}
+								},
+								{
+									"key": "message-demarcator",
+									"value": {
+										"name": "message-demarcator"
+									}
+								},
+								{
+									"key": "key-attribute-encoding",
+									"value": {
+										"name": "key-attribute-encoding"
+									}
+								},
+								{
+									"key": "auto.offset.reset",
+									"value": {
+										"name": "auto.offset.reset"
+									}
+								},
+								{
+									"key": "sasl.kerberos.service.name",
+									"value": {
+										"name": "sasl.kerberos.service.name"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "security.protocol",
+									"value": "PLAINTEXT"
+								},
+								{
+									"key": "ssl.context.service"
+								},
+								{
+									"key": "max.poll.records",
+									"value": "10000"
+								},
+								{
+									"key": "group.id",
+									"value": "grp0"
+								},
+								{
+									"key": "bootstrap.servers",
+									"value": "kafka:9092"
+								},
+								{
+									"key": "topic",
+									"value": "foo"
+								},
+								{
+									"key": "message-demarcator"
+								},
+								{
+									"key": "key-attribute-encoding",
+									"value": "utf-8"
+								},
+								{
+									"key": "auto.offset.reset",
+									"value": "none"
+								},
+								{
+									"key": "sasl.kerberos.service.name"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "ConsumeKafka",
+					"relationships": {
+						"autoTerminate": "false",
+						"name": "success"
+					},
+					"style": "",
+					"type": "org.apache.nifi.processors.kafka.pubsub.ConsumeKafka"
+				},
+				{
+					"id": "c50c8a34-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "1.0",
+						"y": "243.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Idle Connection Expiration",
+									"value": {
+										"name": "Idle Connection Expiration"
+									}
+								},
+								{
+									"key": "Outgoing Message Delimiter",
+									"value": {
+										"name": "Outgoing Message Delimiter"
+									}
+								},
+								{
+									"key": "Max Size of Socket Send Buffer",
+									"value": {
+										"name": "Max Size of Socket Send Buffer"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service"
+									}
+								},
+								{
+									"key": "Timeout",
+									"value": {
+										"name": "Timeout"
+									}
+								},
+								{
+									"key": "Port",
+									"value": {
+										"name": "Port"
+									}
+								},
+								{
+									"key": "Hostname",
+									"value": {
+										"name": "Hostname"
+									}
+								},
+								{
+									"key": "Connection Per FlowFile",
+									"value": {
+										"name": "Connection Per FlowFile"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"name": "Character Set"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Idle Connection Expiration",
+									"value": "5 seconds"
+								},
+								{
+									"key": "Outgoing Message Delimiter",
+									"value": "\\n"
+								},
+								{
+									"key": "Max Size of Socket Send Buffer",
+									"value": "200 KB"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Timeout",
+									"value": "10 seconds"
+								},
+								{
+									"key": "Port",
+									"value": "80"
+								},
+								{
+									"key": "Hostname",
+									"value": "debug"
+								},
+								{
+									"key": "Connection Per FlowFile",
+									"value": "false"
+								},
+								{
+									"key": "Character Set",
+									"value": "UTF-8"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutTCP",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "success"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.standard.PutTCP"
+				},
+				{
+					"id": "c529dbcd-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "1137.0",
+						"y": "34.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "ElasticSearch Hosts",
+									"value": {
+										"name": "ElasticSearch Hosts"
+									}
+								},
+								{
+									"key": "Sampler Interval",
+									"value": {
+										"name": "Sampler Interval"
+									}
+								},
+								{
+									"key": "Cluster Name",
+									"value": {
+										"name": "Cluster Name"
+									}
+								},
+								{
+									"key": "Index Operation",
+									"value": {
+										"name": "Index Operation"
+									}
+								},
+								{
+									"key": "Index",
+									"value": {
+										"name": "Index"
+									}
+								},
+								{
+									"key": "Shield Plugin Filename",
+									"value": {
+										"name": "Shield Plugin Filename"
+									}
+								},
+								{
+									"key": "Identifier Attribute",
+									"value": {
+										"name": "Identifier Attribute"
+									}
+								},
+								{
+									"key": "ElasticSearch Ping Timeout",
+									"value": {
+										"name": "ElasticSearch Ping Timeout"
+									}
+								},
+								{
+									"key": "SSL Context Service",
+									"value": {
+										"identifiesControllerService": "org.apache.nifi.ssl.SSLContextService",
+										"name": "SSL Context Service"
+									}
+								},
+								{
+									"key": "Type",
+									"value": {
+										"name": "Type"
+									}
+								},
+								{
+									"key": "Username",
+									"value": {
+										"name": "Username"
+									}
+								},
+								{
+									"key": "Batch Size",
+									"value": {
+										"name": "Batch Size"
+									}
+								},
+								{
+									"key": "Character Set",
+									"value": {
+										"name": "Character Set"
+									}
+								},
+								{
+									"key": "Password",
+									"value": {
+										"name": "Password"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "ElasticSearch Hosts",
+									"value": "elasticsearch:9200"
+								},
+								{
+									"key": "Sampler Interval",
+									"value": "5s"
+								},
+								{
+									"key": "Cluster Name",
+									"value": "elasticsearch"
+								},
+								{
+									"key": "Index Operation",
+									"value": "index"
+								},
+								{
+									"key": "Index",
+									"value": "foo"
+								},
+								{
+									"key": "Shield Plugin Filename"
+								},
+								{
+									"key": "Identifier Attribute",
+									"value": "uuid"
+								},
+								{
+									"key": "ElasticSearch Ping Timeout",
+									"value": "5s"
+								},
+								{
+									"key": "SSL Context Service"
+								},
+								{
+									"key": "Type",
+									"value": "foo"
+								},
+								{
+									"key": "Username"
+								},
+								{
+									"key": "Batch Size",
+									"value": "30"
+								},
+								{
+									"key": "Character Set",
+									"value": "UTF-8"
+								},
+								{
+									"key": "Password"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "PutElasticsearch",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "retry"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "success"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.elasticsearch.PutElasticsearch"
+				},
+				{
+					"id": "c52ee5a3-0157-1000-0000-000000000000",
+					"parentGroupId": "c4fee2d1-0157-1000-0000-000000000000",
+					"position": {
+						"x": "575.0",
+						"y": "27.0"
+					},
+					"config": {
+						"bulletinLevel": "WARN",
+						"comments": "",
+						"concurrentlySchedulableTaskCount": "1",
+						"descriptors": {
+							"entry": [
+								{
+									"key": "Destination",
+									"value": {
+										"name": "Destination"
+									}
+								},
+								{
+									"key": "Return Type",
+									"value": {
+										"name": "Return Type"
+									}
+								},
+								{
+									"key": "Null Value Representation",
+									"value": {
+										"name": "Null Value Representation"
+									}
+								},
+								{
+									"key": "uuid",
+									"value": {
+										"name": "uuid"
+									}
+								},
+								{
+									"key": "Path Not Found Behavior",
+									"value": {
+										"name": "Path Not Found Behavior"
+									}
+								}
+							]
+						},
+						"lossTolerant": "false",
+						"penaltyDuration": "30 sec",
+						"properties": {
+							"entry": [
+								{
+									"key": "Destination",
+									"value": "flowfile-attribute"
+								},
+								{
+									"key": "Return Type",
+									"value": "auto-detect"
+								},
+								{
+									"key": "Null Value Representation",
+									"value": "empty string"
+								},
+								{
+									"key": "uuid",
+									"value": "$.id"
+								},
+								{
+									"key": "Path Not Found Behavior",
+									"value": "warn"
+								}
+							]
+						},
+						"runDurationMillis": "0",
+						"schedulingPeriod": "0 sec",
+						"schedulingStrategy": "TIMER_DRIVEN",
+						"yieldDuration": "1 sec"
+					},
+					"name": "EvaluateJsonPath",
+					"relationships": [
+						{
+							"autoTerminate": "true",
+							"name": "failure"
+						},
+						{
+							"autoTerminate": "false",
+							"name": "matched"
+						},
+						{
+							"autoTerminate": "true",
+							"name": "unmatched"
+						}
+					],
+					"style": "",
+					"type": "org.apache.nifi.processors.standard.EvaluateJsonPath"
+				}
+			]
+		},
+		"timestamp": "10/20/2022 12:15:02 UTC",
+		"_encoding-version": "1.0"
+	}
+}

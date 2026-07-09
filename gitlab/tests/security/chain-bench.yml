@@ -1,0 +1,22 @@
+# Chain-bench is an open-source tool for auditing your software supply chain stack for security compliance based on a new CIS Software Supply Chain benchmark.
+# The auditing focuses on the entire SDLC process, where it can reveal risks from code time into deploy time.
+chain-bench-scanning:
+  stage: test
+  allow_failure: true
+  tags:
+    - security
+  image:
+    name: docker.io/aquasec/chain-bench
+    entrypoint: [""]
+  variables:
+    CI_PROJECT_URL: "https://myawesome-gitlab.dev"
+    # You have to create new token with Maintainer role that has read_api & read_repository permissions.
+    # https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html
+    CHAIN_BENCH_TOKEN: " "
+  script:
+    - if [ -z $CI_PROJECT_URL ]; then echo "Please configure CI_PROJECT_URL env variables" && exit 1; fi
+    - if [ -z $CHAIN_BENCH_TOKEN ]; then echo "Please configure CHAIN_BENCH_TOKEN env variables" && exit 1; fi
+    - chain-bench scan --repository-url $CI_PROJECT_URL --access-token $CHAIN_BENCH_TOKEN --scm-platform gitlab -o /chain-bench-scm-results.json --template @/templates/gitlab_security_scanner.tpl
+  artifacts:
+    reports:
+      container_scanning: chain-bench-gitlab-scm-results.json

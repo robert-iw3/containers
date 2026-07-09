@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+data:
+  config.yml: |
+    database:
+      user: "{{ .Values.vault.enabled | ternary (printf "{{ vault_secret('%s', 'db_username') }}" .Values.vault.secretPath) .Values.db.username }}"
+      password: "{{ .Values.vault.enabled | ternary (printf "{{ vault_secret('%s', 'db_password') }}" .Values.vault.secretPath) .Values.db.password }}"
+      host: {{ .Release.Name }}-postgresql.{{ .Release.Namespace }}.svc.cluster.local
+      port: 5432
+      dialect: postgres
+      ssl:
+        enabled: true
+        mode: verify-full
+    passcode:
+      email:
+        from_address: no-reply@hanko.io
+      smtp:
+        host: {{ .Release.Name }}-mailslurper.{{ .Release.Namespace }}.svc.cluster.local
+        port: 2500
+        tls: true
+        auth:
+          user: "{{ .Values.vault.enabled | ternary (printf "{{ vault_secret('%s', 'smtp_user') }}" .Values.vault.secretPath) .Values.smtp.username }}"
+          password: "{{ .Values.vault.enabled | ternary (printf "{{ vault_secret('%s', 'smtp_password') }}" .Values.vault.secretPath) .Values.smtp.password }}"
+    secrets:
+      keys:
+        - "{{ .Values.vault.enabled | ternary (printf "{{ vault_secret('%s', 'jwt_secret') }}" .Values.vault.secretPath) .Values.secrets.jwt_secret }}"
+    service:
+      name: Hanko Authentication Service
+    webauthn:
+      relying_party:
+        id: {{ .Values.ingress.hostname }}
+        name: Hanko Authentication
+        origins:
+          - "https://{{ .Values.ingress.hostname }}"
+          - "http://localhost:9500"
+    session:
+      cookie:
+        secure: true
+        http_only: true
+        same_site: strict
+        max_age: 86400
+    server:
+      public:
+        cors:
+          allow_origins:
+            - "https://{{ .Values.ingress.hostname }}"
+            - "http://localhost:9500"
+          allow_methods:
+            - GET
+            - POST
+            - OPTIONS
+          allow_headers:
+            - Authorization
+            - Content-Type
+        rate_limit:
+          enabled: true
+          requests: 100
+          per: 60s
+      tls:
+        enabled: true
+        cert: /etc/tls/tls.crt
+        key: /etc/tls/tls.key

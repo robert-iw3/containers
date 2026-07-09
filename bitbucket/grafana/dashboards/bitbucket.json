@@ -1,0 +1,196 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "jvm_memory_bytes_used{job='bitbucket'}",
+          "legendFormat": "{{area}}"
+        }
+      ],
+      "title": "Bitbucket JVM Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "pg_stat_activity_count{job='postgres'}",
+          "legendFormat": "{{datname}}"
+        }
+      ],
+      "title": "PostgreSQL Active Connections",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "rate(backup_status{job='backup',status='success'}[5m])",
+          "legendFormat": "Successful Backups"
+        },
+        {
+          "expr": "rate(backup_status{job='backup',status='failure'}[5m])",
+          "legendFormat": "Failed Backups"
+        }
+      ],
+      "title": "Backup Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job='bitbucket'}[5m])",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "title": "Bitbucket HTTP Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job='bitbucket'}[5m]))",
+          "legendFormat": "99th Percentile Latency"
+        }
+      ],
+      "title": "Bitbucket Request Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "rate(bitbucket_repo_pushes_total[5m])",
+          "legendFormat": "{{repository}}"
+        }
+      ],
+      "title": "Repository Pushes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "rate(bitbucket_repo_pulls_total[5m])",
+          "legendFormat": "{{repository}}"
+        }
+      ],
+      "title": "Repository Pulls",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "rate(bitbucket_repo_clones_total[5m])",
+          "legendFormat": "{{repository}}"
+        }
+      ],
+      "title": "Repository Clones",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 38,
+  "title": "Bitbucket Dashboard",
+  "uid": "bitbucket",
+  "version": 2
+}

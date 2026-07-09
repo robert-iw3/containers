@@ -1,0 +1,24 @@
+---
+services:
+  coredns:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coredns
+    hostname: dns.containers.local
+    env_file:
+      - .env
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    command: -conf /etc/coredns/Corefile -dns.port 53
+    ports:
+      - "53:53"
+      - "53:53/udp"
+      - "8080:8080"
+    volumes:
+      - ./Corefile:/etc/coredns/Corefile:ro,Z
+      - ./db.containers.local:/etc/coredns/db.containers.local:ro,Z
+      - ./db.10.77.0:/etc/coredns/db.10.77.0:ro,Z
+    networks:
+      - elastic

@@ -1,0 +1,58 @@
+- name: Deploy RudderStack with Podman
+  hosts: docker_hosts
+  become: no
+  tasks:
+    - name: Ensure Podman is installed
+      package:
+        name: podman
+        state: present
+      become: yes
+
+    - name: Ensure podman-compose is installed
+      pip:
+        name: podman-compose
+        state: present
+      become: yes
+
+    - name: Ensure Podman volume directory permissions
+      command: podman unshare chown -R {{ ansible_user_id }}:{{ ansible_user_id }} /opt/rudderstack
+      args:
+        creates: /opt/rudderstack
+      become: yes
+
+    - name: Ensure RudderStack directory exists
+      file:
+        path: /opt/rudderstack
+        state: directory
+        mode: '0755'
+
+    - name: Create secrets file on target host
+      copy:
+        content: "{{ lookup('ansible.builtin.env', 'WORKSPACE_TOKEN') }}"
+        dest: /opt/rudderstack/workspace_token.txt
+        mode: '0600'
+
+    - name: Copy Docker Compose file
+      copy:
+        src: "{{ playbook_dir }}/../generated/docker-compose.yml"
+        dest: /opt/rudderstack/docker-compose.yml
+        mode: '0644'
+
+    - name: Deploy RudderStack stack with Podman
+      command: podman-compose -f /opt/rudderstack/docker-compose.yml up -d
+      args:
+        chdir: /opt/rudderstack
+      register: deploy_result
+      failed_when: deploy_result.rc != 0
+
+    - name: Clean up secrets file
+      file:
+        path: /opt/rudderstack/workspace_token.txt
+        state: absent
+      when: deploy_result.rc == 0
+
+    - name: Rollback on failure
+      command: podman-compose -f /opt/rudderstack/docker-compose.yml down
+      args:
+        chdir: /opt/rudderstack
+      when: deploy_result.rc != 0

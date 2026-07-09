@@ -1,0 +1,38 @@
+---
+# Multi-host Spark standalone cluster: one master + N workers, each on its own
+# machine/IP. Run the master play first so workers can resolve its address.
+#
+#   ansible-playbook -i inventory.ini deploy-spark.yml
+#
+# Scale out by adding hosts under [spark_workers] and re-running.
+
+- name: Deploy Spark master
+  hosts: spark_master
+  gather_facts: true
+  roles:
+    - spark_node
+
+- name: Deploy Spark workers
+  hosts: spark_workers
+  gather_facts: true
+  roles:
+    - spark_node
+
+- name: Verify workers registered with the master
+  hosts: spark_master
+  gather_facts: false
+  tasks:
+    - name: Query the master REST API for alive workers
+      ansible.builtin.uri:
+        url: "http://{{ spark_advertise_host | default(ansible_host) }}:{{ spark_master_rest_port }}/v1/submissions/status/none"
+        status_code: [200, 400]
+      register: master_rest
+      retries: 12
+      delay: 5
+      until: master_rest.status in [200, 400]
+
+    - name: Report cluster endpoint
+      ansible.builtin.debug:
+        msg: >-
+          Spark master UI: http://{{ spark_advertise_host | default(ansible_host) }}:{{ spark_master_webui_port }}
+          — submit with --master spark://{{ spark_advertise_host | default(ansible_host) }}:{{ spark_master_port }}

@@ -1,0 +1,34 @@
+---
+services:
+  sql-splunk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SCHEMAS_FILE=/app/schemas.yaml
+      - STATE_PATH=/app/state.db
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - POLL_INTERVAL=${POLL_INTERVAL:-60}
+      - DB_TYPE=${DB_TYPE:-postgres}
+      - DB_CONN_STR=${DB_CONN_STR:-postgres://user:pass@host:port/dbname}
+      - CDC_ENABLED=${CDC_ENABLED:-false}
+      - MAX_CONNECTIONS_PER_TABLE=${MAX_CONNECTIONS_PER_TABLE:-5}
+      - METRICS_PORT=${METRICS_PORT:-9000}
+      - ENABLE_SPLUNK=true
+      - RUST_LOG=info
+    ports:
+      - "${METRICS_PORT:-9000}:${METRICS_PORT:-9000}"
+    volumes:
+      - sql-state:/app/state.db:Z
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '1G'
+    restart: unless-stopped
+volumes:
+  sql-state:

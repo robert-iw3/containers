@@ -1,0 +1,228 @@
+networks:
+  net:
+    driver: bridge
+
+services:
+  llm:
+    image: {{ ollama_image }}
+    profiles: ["linux"]
+    networks: [net]
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_HOST={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "{{ OLLAMA_BASE_URL | default('http://localhost:11434') }}/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    ports:
+      - 11434:11434
+
+  database:
+    image: {{ neo4j_image }}
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - {{ project_dir }}/data:/data
+    environment:
+      - NEO4J_AUTH={{ NEO4J_USERNAME }}/{{ NEO4J_PASSWORD }}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_db_tx_log_rotation_retention_policy=false
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
+    networks: [net]
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  pull-model:
+    build:
+      context: {{ project_dir }}
+      dockerfile: pull_model.Dockerfile
+    environment:
+      - OLLAMA_BASE_URL={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+      - LLM={{ LLM | default('llama3.2:3b') }}
+    networks: [net]
+    depends_on:
+      llm:
+        condition: service_healthy
+    tty: true
+
+  bot:
+    build:
+      context: {{ project_dir }}
+      dockerfile: bot.Dockerfile
+    volumes:
+      - {{ project_dir }}/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI={{ NEO4J_URI }}
+      - NEO4J_USERNAME={{ NEO4J_USERNAME }}
+      - NEO4J_PASSWORD={{ NEO4J_PASSWORD }}
+      - OLLAMA_BASE_URL={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+      - LLM={{ LLM | default('llama3.2:3b') }}
+      - EMBEDDING_MODEL={{ EMBEDDING_MODEL | default('openai') }}
+      - LANGCHAIN_TRACING_V2={{ LANGCHAIN_TRACING_V2 | default('false') }}
+      - LANGCHAIN_ENDPOINT={{ LANGCHAIN_ENDPOINT | default('https://api.smith.langchain.com') }}
+      - LANGCHAIN_PROJECT={{ LANGCHAIN_PROJECT | default('neo4j-rag') }}
+      - LANGCHAIN_API_KEY={{ LANGCHAIN_API_KEY | default('') }}
+      - OPENAI_API_KEY={{ OPENAI_API_KEY | default('') }}
+      - AWS_ACCESS_KEY_ID={{ AWS_ACCESS_KEY_ID | default('') }}
+      - AWS_SECRET_ACCESS_KEY={{ AWS_SECRET_ACCESS_KEY | default('') }}
+      - AWS_DEFAULT_REGION={{ AWS_DEFAULT_REGION | default('us-east-1') }}
+      - GOOGLE_API_KEY={{ GOOGLE_API_KEY | default('') }}
+    networks: [net]
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8501:8501
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  pdf_bot:
+    build:
+      context: {{ project_dir }}
+      dockerfile: pdf_bot.Dockerfile
+    volumes:
+      - {{ project_dir }}/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI={{ NEO4J_URI }}
+      - NEO4J_USERNAME={{ NEO4J_USERNAME }}
+      - NEO4J_PASSWORD={{ NEO4J_PASSWORD }}
+      - OLLAMA_BASE_URL={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+      - LLM={{ LLM | default('llama3.2:3b') }}
+      - EMBEDDING_MODEL={{ EMBEDDING_MODEL | default('openai') }}
+      - LANGCHAIN_TRACING_V2={{ LANGCHAIN_TRACING_V2 | default('false') }}
+      - LANGCHAIN_ENDPOINT={{ LANGCHAIN_ENDPOINT | default('https://api.smith.langchain.com') }}
+      - LANGCHAIN_PROJECT={{ LANGCHAIN_PROJECT | default('neo4j-rag') }}
+      - LANGCHAIN_API_KEY={{ LANGCHAIN_API_KEY | default('') }}
+      - OPENAI_API_KEY={{ OPENAI_API_KEY | default('') }}
+      - AWS_ACCESS_KEY_ID={{ AWS_ACCESS_KEY_ID | default('') }}
+      - AWS_SECRET_ACCESS_KEY={{ AWS_SECRET_ACCESS_KEY | default('') }}
+      - AWS_DEFAULT_REGION={{ AWS_DEFAULT_REGION | default('us-east-1') }}
+      - GOOGLE_API_KEY={{ GOOGLE_API_KEY | default('') }}
+    networks: [net]
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8503:8503
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  loader:
+    build:
+      context: {{ project_dir }}
+      dockerfile: loader.Dockerfile
+    volumes:
+      - {{ project_dir }}/embedding_model:/embedding_model
+      - {{ project_dir }}/images:/images
+    environment:
+      - NEO4J_URI={{ NEO4J_URI }}
+      - NEO4J_USERNAME={{ NEO4J_USERNAME }}
+      - NEO4J_PASSWORD={{ NEO4J_PASSWORD }}
+      - OLLAMA_BASE_URL={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+      - LLM={{ LLM | default('llama3.2:3b') }}
+      - EMBEDDING_MODEL={{ EMBEDDING_MODEL | default('openai') }}
+      - LANGCHAIN_TRACING_V2={{ LANGCHAIN_TRACING_V2 | default('false') }}
+      - LANGCHAIN_ENDPOINT={{ LANGCHAIN_ENDPOINT | default('https://api.smith.langchain.com') }}
+      - LANGCHAIN_PROJECT={{ LANGCHAIN_PROJECT | default('neo4j-rag') }}
+      - LANGCHAIN_API_KEY={{ LANGCHAIN_API_KEY | default('') }}
+      - OPENAI_API_KEY={{ OPENAI_API_KEY | default('') }}
+      - AWS_ACCESS_KEY_ID={{ AWS_ACCESS_KEY_ID | default('') }}
+      - AWS_SECRET_ACCESS_KEY={{ AWS_SECRET_ACCESS_KEY | default('') }}
+      - AWS_DEFAULT_REGION={{ AWS_DEFAULT_REGION | default('us-east-1') }}
+      - GOOGLE_API_KEY={{ GOOGLE_API_KEY | default('') }}
+    networks: [net]
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8502:8502
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  api:
+    build:
+      context: {{ project_dir }}
+      dockerfile: api.Dockerfile
+    volumes:
+      - {{ project_dir }}/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI={{ NEO4J_URI }}
+      - NEO4J_USERNAME={{ NEO4J_USERNAME }}
+      - NEO4J_PASSWORD={{ NEO4J_PASSWORD }}
+      - OLLAMA_BASE_URL={{ OLLAMA_BASE_URL | default('http://ollama:11434') }}
+      - LLM={{ LLM | default('llama3.2:3b') }}
+      - EMBEDDING_MODEL={{ EMBEDDING_MODEL | default('openai') }}
+      - LANGCHAIN_TRACING_V2={{ LANGCHAIN_TRACING_V2 | default('false') }}
+      - LANGCHAIN_ENDPOINT={{ LANGCHAIN_ENDPOINT | default('https://api.smith.langchain.com') }}
+      - LANGCHAIN_PROJECT={{ LANGCHAIN_PROJECT | default('neo4j-rag') }}
+      - LANGCHAIN_API_KEY={{ LANGCHAIN_API_KEY | default('') }}
+      - OPENAI_API_KEY={{ OPENAI_API_KEY | default('') }}
+      - AWS_ACCESS_KEY_ID={{ AWS_ACCESS_KEY_ID | default('') }}
+      - AWS_SECRET_ACCESS_KEY={{ AWS_SECRET_ACCESS_KEY | default('') }}
+      - AWS_DEFAULT_REGION={{ AWS_DEFAULT_REGION | default('us-east-1') }}
+      - GOOGLE_API_KEY={{ GOOGLE_API_KEY | default('') }}
+    networks: [net]
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8504:8504
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  front-end:
+    build:
+      context: {{ project_dir }}
+      dockerfile: front-end.Dockerfile
+    volumes:
+      - {{ project_dir }}/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [net]
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - 8505:8505
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M

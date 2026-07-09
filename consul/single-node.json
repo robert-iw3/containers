@@ -1,0 +1,69 @@
+{
+    "bootstrap": true,
+    "log_level": "INFO",
+    "node_name": "consul-server1",
+    "server": true,
+    "ports": {
+      "grpc": -1,
+      "grpc_tls": 8503,
+      "http": -1,
+      "https": 8501
+    },
+    "ui_config": {
+      "enabled": true
+    },
+    "data_dir": "/consul/data",
+    "addresses": {
+      "dns": "127.0.0.1",
+      "https": "0.0.0.0"
+    },
+    "bind_addr": "0.0.0.0",
+    "advertise_addr": "{{ GetInterfaceIP \"eth0\" }}",
+    "bootstrap_expect": "1",
+    "retry_join": "0.0.0.0",
+    "retry_interval": "30s",
+    "rejoin_after_leave": false,
+    "leave_on_terminate": true,
+    "encrypt": "aPuGh+5UDskRAbkLaXRzFoSOcSM+5vAK+NEYOWHJH7w=",
+    "encrypt_verify_incoming": true,
+    "encrypt_verify_outgoing": true,
+    "http_config": {
+      "response_headers": [
+        {
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    "tls": {
+      "defaults": {
+        "verify_incoming": true,
+        "verify_outgoing": true,
+        "ca_file": "/consul/certs/consul-agent-ca.pem",
+        "cert_file": "/consul/certs/dc1-server-consul-0.pem",
+        "key_file": "/consul/certs/dc1-server-consul-0-key.pem"
+      },
+      "internal_rpc": {
+        "verify_server_hostname": true
+      }
+    },
+    "auto_encrypt" : {
+      "allow_tls" : true
+    },
+    "acl": {
+        "enabled": true,
+        "default_policy": "deny",
+        "down_policy": "extend-cache",
+        "enable_token_persistence": true
+    },
+    "performance": {
+      "raft_multiplier": 1
+    },
+    "autopilot": {
+      "server_stabilization_time": "10s",
+      "last_contact_threshold": "200ms",
+      "cleanup_dead_servers": true
+    },
+    "limits": {
+      "rpc_client_timeout": "120s"
+    }
+  }

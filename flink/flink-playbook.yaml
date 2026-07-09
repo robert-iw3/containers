@@ -1,0 +1,26 @@
+- name: Configure Apache Flink
+  hosts: localhost
+  vars:
+    flink_version: "{{ flink_version }}"
+    namespace: "{{ namespace }}"
+    enable_tls: "{{ enable_tls }}"
+    cert_path: "{{ cert_path }}"
+  tasks:
+    - name: Ensure Flink namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
+    - name: Configure Flink monitoring
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'flink-monitoring.yaml.j2') }}"
+      when: monitoring.prometheus_enabled
+
+    - name: Apply Flink security configurations
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'flink-security.yaml.j2') }}"
+      when: enable_tls

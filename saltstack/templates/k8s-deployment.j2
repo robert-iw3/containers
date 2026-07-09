@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salt-master
+  namespace: {{ namespace }}
+spec:
+  replicas: {{ replicas }}
+  selector:
+    matchLabels:
+      app: salt-master
+  template:
+    metadata:
+      labels:
+        app: salt-master
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: salt-master
+        image: {{ image_registry }}/saltstack/salt:{{ salt_version }}
+        ports:
+        - containerPort: 4505
+        - containerPort: 4506
+        env:
+        - name: SALT_LOG_LEVEL
+          value: "info"
+        - name: SALT_MASTER_KEY
+          value: "{{ master_key }}"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        volumeMounts:
+        - name: salt-config
+          mountPath: /etc/salt
+        livenessProbe:
+          exec:
+            command:
+            - salt-call
+            - --local
+            - test.ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      - name: fluentd
+        image: fluent/fluentd:v1.14-1
+        env:
+        - name: FLUENTD_CONF
+          value: "fluent.conf"
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: /fluentd/etc
+      volumes:
+      - name: salt-config
+        persistentVolumeClaim:
+          claimName: salt-config-pvc
+      - name: fluentd-config
+        configMap:
+          name: fluentd-config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: salt-config-pvc
+  namespace: {{ namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+{% for i in range(minion_count) %}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salt-minion-{{ i }}
+  namespace: {{ namespace }}
+spec:
+  replicas: {{ replicas }}
+  selector:
+    matchLabels:
+      app: salt-minion-{{ i }}
+  template:
+    metadata:
+      labels:
+        app: salt-minion-{{ i }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: salt-minion
+        image: {{ image_registry }}/saltstack/salt:{{ salt_version }}
+        env:
+        - name: SALT_MASTER
+          value: "salt-master.{{ namespace }}.svc.cluster.local"
+        - name: SALT_LOG_LEVEL
+          value: "info"
+        resources:
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          exec:
+            command:
+            - salt-call
+            - --local
+            - test.ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      - name: fluentd
+        image: fluent/fluentd:v1.14-1
+        env:
+        - name: FLUENTD_CONF
+          value: "fluent.conf"
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: /fluentd/etc
+      volumes:
+      - name: fluentd-config
+        configMap:
+          name: fluentd-config
+---
+{% endfor %}

@@ -1,0 +1,89 @@
+# syntax=docker/dockerfile:1
+# opensearch: a scalable, flexible, and extensible open-source software suite for search, analytics, and observability applications.
+
+ARG repo="docker.io/opensearchproject" \
+    base_image="opensearch:3.2.0" \
+    image_hash="925060a17ef0374f2b3d94d0f8fb35dffb491701cd4a72fb12a9ca2fed9929d4"
+
+FROM ${repo}/${base_image}@sha256:${image_hash}
+
+ARG DEFAULT_UID=1000 \
+    DEFAULT_GID=1000 \
+    OPENSEARCH_PRIMARY="opensearch-local" \
+    API_URL="http://api:5000/mapi/event" \
+    DISABLE_INSTALL_DEMO_CONFIG=true
+
+ENV DEFAULT_UID $DEFAULT_UID \
+    DEFAULT_GID $DEFAULT_GID \
+    PUID $DEFAULT_UID \
+    USER "opensearch" \
+    GROUP "opensearch" \
+    USER_PRIV_DROP true \
+    USER_RLIMIT_UNLOCK true
+
+ENV TERM xterm \
+    TINI_VERSION v0.19.0 \
+    OPENSEARCH_PRIMARY $OPENSEARCH_PRIMARY \
+    API_URL $API_URL \
+    DISABLE_INSTALL_DEMO_CONFIG $DISABLE_INSTALL_DEMO_CONFIG \
+    DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI $DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI \
+    OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
+
+ARG BUILD_DATE
+ARG VCS_REF
+
+USER root
+
+RUN \
+    tini_bin="" ; \
+    case "$(arch)" in \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    esac ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin} ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/${TINI_VERSION}/${tini_bin}.sha256sum ; \
+    sha256sum -c ${tini_bin}.sha256sum ; \
+    rm ${tini_bin}.sha256sum ; \
+    mv ${tini_bin} /usr/bin/tini ; \
+    chmod 0555 /usr/bin/tini
+
+RUN \
+    yum install -y \
+      openssl \
+      util-linux \
+      procps \
+      rsync; \
+    yum upgrade -y; \
+    echo -e 'cluster.name: "docker-cluster"\nnetwork.host: 0.0.0.0\nbootstrap.memory_lock: true\nhttp.cors.enabled: true\nhttp.cors.allow-origin: "*"\nhttp.cors.allow-methods: OPTIONS, HEAD, GET, POST, PUT, DELETE\nhttp.cors.allow-headers: "kbn-version, Origin, X-Requested-With, Content-Type, Accept, Engaged-Auth-Token Authorization"' > /usr/share/opensearch/config/opensearch.yml; \
+    sed -i "s/#[[:space:]]*\([0-9]*-[0-9]*:-XX:-\(UseConcMarkSweepGC\|UseCMSInitiatingOccupancyOnly\)\)/\1/" /usr/share/opensearch/config/jvm.options; \
+    sed -i "s/^[0-9][0-9]*\(-:-XX:\(+UseG1GC\|G1ReservePercent\|InitiatingHeapOccupancyPercent\)\)/$($OPENSEARCH_JAVA_HOME/bin/java -version 2>&1 | grep version | awk '{print $3}' | tr -d '\"' | cut -d. -f1)\1/" /usr/share/opensearch/config/jvm.options; \
+    mkdir -p /var/local/ca-trust /opt/opensearch/backup /usr/share/opensearch/config/bootstrap /usr/share/opensearch/config/persist; \
+    chown -R $USER:$GROUP /usr/share/opensearch/config/opensearch.yml /var/local/ca-trust /opt/opensearch/backup /usr/share/opensearch/config/bootstrap /usr/share/opensearch/config/persist; \
+    chmod +x /usr/bin/tini; \
+    sed -i '/^[[:space:]]*runOpensearch.*/i /usr/local/bin/jdk-cacerts-auto-import.sh || true' /usr/share/opensearch/opensearch-docker-entrypoint.sh; \
+    sed -i '/^[[:space:]]*runOpensearch.*/i /usr/local/bin/keystore-bootstrap.sh || true' /usr/share/opensearch/opensearch-docker-entrypoint.sh
+
+COPY --chmod=755 bin/docker-uid-gid-setup.sh /usr/local/bin/
+COPY --chmod=755 bin/jdk-cacerts-auto-import.sh /usr/local/bin/
+COPY --chmod=755 bin/keystore-bootstrap.sh /usr/local/bin/
+COPY --chmod=755 bin/service_check_passthrough.sh /usr/local/bin/
+
+ENV bootstrap.memory_lock "true" \
+    cluster.routing.allocation.disk.threshold_enabled "false" \
+    cluster.routing.allocation.node_initial_primaries_recoveries 8 \
+    discovery.type "single-node" \
+    indices.query.bool.max_clause_count 4096 \
+    logger.level "WARN" \
+    MAX_LOCKED_MEMORY "unlimited" \
+    path.repo "/opt/opensearch/backup"
+
+VOLUME ["/var/local/ca-trust"]
+
+ENTRYPOINT ["/usr/bin/tini", \
+            "--", \
+            "/usr/local/bin/docker-uid-gid-setup.sh", \
+            "/usr/local/bin/service_check_passthrough.sh", \
+            "-s", "opensearch"]
+
+CMD ["/usr/share/opensearch/opensearch-docker-entrypoint.sh"]

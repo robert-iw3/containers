@@ -1,0 +1,15 @@
+aws_region           = "us-east-1"
+cluster_name         = "nomad-prod"
+nomad_version        = "1.9.2"
+num_nomad_servers    = 3
+num_nomad_clients    = 3
+num_consul_servers   = 3
+num_vault_servers    = 3
+server_instance_type = "t3.medium"
+client_instance_type = "t3.large"
+nomad_ami_id         = "ami-xxxxxxxxxxxxxxxxx" # Replace with Packer-built AMI ID
+consul_ami_id        = ""                      # Optional, set if Consul enabled
+vault_ami_id         = ""                      # Optional, set if Vault enabled
+consul_enabled       = false
+vault_enabled        = false
+ssl_certificate_arn  = "arn:aws:acm:us-east-1:xxxxxxxxxxxx:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

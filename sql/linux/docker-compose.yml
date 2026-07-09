@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    build: .
+    image: sqlserver-2025-linux
+    container_name: sql2025
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"  # Required
+      TZ: "America/New_York"  # Set timezone
+    ports:
+      - "1433:1433"
+    volumes:
+      - /var/sql-data:/var/opt/mssql  # Persist data
+      - ./config.ini:/config.ini  # Optional overrides
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+# For Podman: Use podman-compose up (similar syntax)

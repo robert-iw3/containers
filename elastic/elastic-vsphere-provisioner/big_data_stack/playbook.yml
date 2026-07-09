@@ -1,0 +1,37 @@
+---
+- name: OS Tuning
+  hosts: all
+  become: yes
+  roles:
+    - os_setup
+
+- name: Container Runtime
+  hosts: all
+  become: yes
+  roles:
+    - container_runtime
+
+- name: Elasticsearch
+  hosts: master,data_hot,data_warm,coordinating
+  become: yes
+  roles:
+    - setup
+    - elastic_node
+
+- name: Kibana + Fleet
+  hosts: kibana,fleet
+  become: yes
+  roles:
+    - kibana_fleet
+
+- name: Load Balancer
+  hosts: lb
+  become: yes
+  roles:
+    - nginx_lb
+
+- name: S3 Cold Storage
+  hosts: data_warm
+  become: yes
+  roles:
+    - s3_cold

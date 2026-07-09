@@ -1,0 +1,43 @@
+log_level: INFO
+storage:
+  storage_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+  on_disk_payload: true
+  wal:
+    wal_capacity_mb: 32
+    wal_segments_ahead: 0
+  performance:
+    max_search_threads: 0
+    max_optimization_threads: 1
+  optimizers:
+    deleted_threshold: 0.2
+    vacuum_min_vector_number: 1000
+    default_segment_number: 0
+    max_segment_size_kb: null
+    memmap_threshold_kb: null
+    indexing_threshold_kb: 20000
+    flush_interval_sec: 5
+    max_optimization_threads: 1
+  hnsw_index:
+    m: 16
+    ef_construct: 100
+    full_scan_threshold_kb: 10000
+    max_indexing_threads: 0
+    on_disk: false
+service:
+  max_request_size_mb: 32
+  max_workers: 0
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+  enable_cors: true
+  enable_tls: "{{ tls_enabled }}"
+  api_key: "{{ api_key }}"
+cluster:
+  enabled: false
+telemetry_disabled: false
+tls:
+  cert: /qdrant/tls/cert.pem
+  key: /qdrant/tls/key.pem
+  ca_cert: /qdrant/tls/cacert.pem
+  cert_ttl: 3600

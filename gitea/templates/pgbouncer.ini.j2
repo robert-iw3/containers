@@ -1,0 +1,15 @@
+[databases]
+{{ postgresql_database }} = host=patroni-gitea.dev.io port=5432 dbname={{ postgresql_database }} user={{ postgresql_username }} password={{ postgresql_password | replace('"', '\\"') | replace("'", "\\'") }}
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 6432
+auth_type = md5
+pool_mode = transaction
+max_client_conn = 500
+default_pool_size = 50
+reserve_pool_size = 10
+server_lifetime = 3600
+server_idle_timeout = 600
+log_connections = 1
+log_disconnections = 1

@@ -1,0 +1,67 @@
+---
+- name: Create scylla network
+  containers.podman.podman_network:
+    name: "{{ scylla_network }}"
+    state: present
+
+- name: Start the seed node
+  containers.podman.podman_container:
+    name: "{{ scylla_seed }}"
+    image: "{{ scylla_image }}"
+    network: "{{ scylla_network }}"
+    state: started
+    command: >-
+      --seeds={{ scylla_seed }}
+      --smp {{ scylla_smp }} --memory {{ scylla_memory }}
+      --overprovisioned {{ scylla_overprovisioned }}
+      --developer-mode {{ scylla_developer_mode }}
+      --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer
+      --broadcast-address {{ scylla_seed }} --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0 --broadcast-rpc-address {{ scylla_seed }}
+
+- name: Wait for the seed to report itself UN
+  ansible.builtin.command: >-
+    podman exec {{ scylla_seed }} nodetool status
+  register: seed_status
+  until: seed_status.stdout is search('^UN', multiline=True)
+  retries: 40
+  delay: 6
+  changed_when: false
+
+# ScyllaDB requires nodes to bootstrap one at a time.
+- name: Join the remaining nodes sequentially
+  containers.podman.podman_container:
+    name: "scylla-node{{ item }}"
+    image: "{{ scylla_image }}"
+    network: "{{ scylla_network }}"
+    state: started
+    command: >-
+      --seeds={{ scylla_seed }}
+      --smp {{ scylla_smp }} --memory {{ scylla_memory }}
+      --overprovisioned {{ scylla_overprovisioned }}
+      --developer-mode {{ scylla_developer_mode }}
+      --authenticator PasswordAuthenticator --authorizer CassandraAuthorizer
+      --broadcast-address scylla-node{{ item }} --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0 --broadcast-rpc-address scylla-node{{ item }}
+  loop: "{{ range(2, scylla_node_count + 1) | list }}"
+
+- name: Wait until all nodes are UN
+  ansible.builtin.shell: >-
+    podman exec {{ scylla_seed }} nodetool status | grep -cE '^UN'
+  register: un_count
+  until: un_count.stdout | int == scylla_node_count
+  retries: 40
+  delay: 10
+  changed_when: false
+
+- name: Copy the schema into the seed
+  ansible.builtin.command: >-
+    podman cp {{ role_path }}/../../../schema/{{ scylla_schema_src }} {{ scylla_seed }}:/tmp/schema.cql
+  changed_when: true
+
+- name: Load the schema
+  ansible.builtin.command: >-
+    podman exec {{ scylla_seed }} cqlsh -f /tmp/schema.cql
+  register: schema_load
+  changed_when: true
+  failed_when: schema_load.rc != 0 and 'AlreadyExists' not in schema_load.stderr

@@ -1,0 +1,43 @@
+# Config-driven schema for ANY data shape. deploy_scylladb.py renders this into
+# CQL via schema/templates/schema.cql.j2, applying a performance profile per
+# table so tuning isn't hand-copied. Point deploy at your own copy to model IoT,
+# events, documents, metrics, or anything else — structured columns plus an
+# optional unstructured text/blob column for arbitrary payloads.
+
+keyspaces:
+  - name: telemetry
+    replication:
+      class: NetworkTopologyStrategy
+      # map of datacenter -> RF; single-DC clusters use the DC name (datacenter1)
+      datacenters:
+        datacenter1: 3
+    tables:
+      - name: raw_events
+        # "timeseries" profile => TimeWindowCompactionStrategy sized from the TTL,
+        # Zstd compression, short gc_grace. Use "registry" for lookup tables.
+        profile: timeseries
+        ttl_seconds: 2592000          # 30d; windows auto-sized to stay <= 50
+        columns:
+          - {name: device_id, type: text}
+          - {name: bucket, type: text}
+          - {name: event_time, type: timestamp}
+          - {name: event_id, type: timeuuid}
+          - {name: metric, type: text}
+          - {name: value, type: double}
+          - {name: unit, type: text}
+          - {name: payload, type: text}     # unstructured JSON/blob
+          - {name: ingested_at, type: timestamp}
+        partition_key: [device_id, bucket]
+        clustering_key: [event_time, event_id]
+        clustering_order: {event_time: DESC, event_id: DESC}
+
+      - name: devices
+        profile: registry
+        columns:
+          - {name: device_id, type: text}
+          - {name: kind, type: text}
+          - {name: location, type: text}
+          - {name: metadata, type: text}
+          - {name: registered_at, type: timestamp}
+          - {name: last_seen, type: timestamp}
+        partition_key: [device_id]

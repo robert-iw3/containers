@@ -1,0 +1,27 @@
+<form class="form-horizontal form-complex">
+    <div class="control-group">
+        <label class="control-label" for="activate_machine_scan_name_of_scan">Name or ID of the Scan</label>
+        <div class="controls">
+        <input type="text" name="action.activate_machine_scan.param.name_of_scan" id="activate_machine_scan_name_of_scan"/>
+                    <span class="help-block">
+                        Enter name or ID of the scan.
+                    </span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="activate_machine_scan_ip">IP</label>
+        <div class="controls">
+        <input type="text" name="action.activate_machine_scan.param.ip" id="activate_machine_scan_ip"/>
+                    <span class="help-block">
+                        Enter the IP value.
+                    </span>
+        </div>
+    </div>
+    <label class="control-label" for="activate_machine_scan_account">Tenable SC Account</label>
+        <div class="controls">
+        <splunk-search-dropdown name="action.activate_machine_scan.param.account_name" id="activate_machine_scan_account"
+            search = "| rest /servicesNS/nobody/TA-tenable/configs/conf-ta_tenable_account splunk_server=local | search tenable_account_type=*securitycenter* | table title"
+            label-field="title" value-field="title" />
+        <span class="help-block">Tenable SC Account to use.</span>
+        </div>
+    </form>

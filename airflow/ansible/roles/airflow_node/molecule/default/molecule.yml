@@ -1,0 +1,32 @@
+---
+# Converges airflow_node on a single instance acting as BOTH control host and
+# worker (single-host mode of the multi-host role), then verifies the api-server
+# serves HTTPS and the celery worker registered -- i.e. the broker + execution
+# API + TLS-trust wiring all work. The airflow image must be loadable inside the
+# instance; prepare.yml loads it from the host's podman.
+driver:
+  name: podman
+
+platforms:
+  - name: airflow-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - airflow_control
+      - airflow_workers
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      airflow-molecule:
+        airflow_advertise_host: "127.0.0.1"
+
+verifier:
+  name: ansible

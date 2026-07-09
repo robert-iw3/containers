@@ -1,0 +1,31 @@
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - deepnet
+
+services:
+  nginx:
+    <<: *common-vars-apps
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    secrets:
+      - source: proxy.cert
+        target: /etc/nginx/certs/cert.crt
+      - source: proxy.key
+        target: /etc/nginx/certs/cert.key
+
+secrets:
+  proxy.key:
+    file: ./certs/cert.key
+  proxy.cert:
+    file: ./certs/cert.crt

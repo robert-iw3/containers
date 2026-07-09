@@ -1,0 +1,198 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redmine
+  namespace: {{ kubernetes_namespace }}
+spec:
+  replicas: {{ kubernetes_replicas }}
+  selector:
+    matchLabels:
+      app: redmine
+  template:
+    metadata:
+      labels:
+        app: redmine
+    spec:
+      containers:
+        - name: redmine
+          image: redmine:6.1.2
+          env:
+            - name: TZ
+              value: {{ timezone }}
+            - name: DB_ADAPTER
+              value: postgresql
+            - name: DB_HOST
+              value: postgresql
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              value: {{ postgres_user }}
+            - name: DB_PASS
+              value: {{ postgres_password }}
+            - name: DB_NAME
+              value: {{ postgres_db }}
+            - name: DB_SSL_MODE
+              value: prefer
+            - name: REDMINE_PORT
+              value: "{{ redmine_port }}"
+            - name: REDMINE_HTTPS
+              value: "true"
+            - name: SSL_KEY_PATH
+              value: /certs/redmine.key
+            - name: SSL_CERTIFICATE_PATH
+              value: /certs/redmine.crt
+            - name: SSL_DHPARAM_PATH
+              value: /certs/dhparam.pem
+            - name: REDMINE_SECRET_TOKEN
+              value: {{ redmine_secret_token }}
+            - name: REDMINE_SUDO_MODE_ENABLED
+              value: "false"
+            - name: REDMINE_CONCURRENT_UPLOADS
+              value: "2"
+            - name: SMTP_ENABLED
+              value: "{{ smtp_enabled }}"
+            - name: SMTP_METHOD
+              value: smtp
+            - name: SMTP_DOMAIN
+              value: {{ smtp_domain }}
+            - name: SMTP_HOST
+              value: {{ smtp_host }}
+            - name: SMTP_PORT
+              value: "{{ smtp_port }}"
+            - name: SMTP_USER
+              value: {{ smtp_user }}
+            - name: SMTP_PASS
+              value: {{ smtp_password }}
+            - name: SMTP_STARTTLS
+              value: "true"
+            - name: SMTP_AUTHENTICATION
+              value: ":login"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: redmine-data
+              mountPath: /usr/src/redmine/files
+            - name: redmine-logs
+              mountPath: /var/log/redmine
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+      volumes:
+        - name: redmine-data
+          persistentVolumeClaim:
+            claimName: redmine-data-pvc
+        - name: redmine-logs
+          persistentVolumeClaim:
+            claimName: redmine-logs-pvc
+        - name: certs
+          secret:
+            secretName: redmine-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redmine
+  namespace: {{ kubernetes_namespace }}
+spec:
+  selector:
+    app: redmine
+  ports:
+    - protocol: TCP
+      port: {{ redmine_port }}
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: {{ kubernetes_namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: {{ postgres_user }}
+            - name: POSTGRES_PASSWORD
+              value: {{ postgres_password }}
+            - name: POSTGRES_DB
+              value: {{ postgres_db }}
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-storage-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: {{ kubernetes_namespace }}
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redmine-data-pvc
+  namespace: {{ kubernetes_namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redmine-logs-pvc
+  namespace: {{ kubernetes_namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-storage-pvc
+  namespace: {{ kubernetes_namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redmine-certs
+  namespace: {{ kubernetes_namespace }}
+type: Opaque
+data:
+  redmine.crt: "{{ lookup('file', certs_path + '/redmine.crt') | b64encode }}"
+  redmine.key: "{{ lookup('file', certs_path + '/redmine.key') | b64encode }}"
+  dhparam.pem: "{{ lookup('file', certs_path + '/dhparam.pem') | b64encode }}"
+  ca.crt: "{{ lookup('file', certs_path + '/ca.crt') | b64encode }}"

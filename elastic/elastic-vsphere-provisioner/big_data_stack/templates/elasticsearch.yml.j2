@@ -1,0 +1,17 @@
+cluster.name: {{ cluster_name }}
+node.name: {{ inventory_hostname }}
+network.host: 0.0.0.0
+http.port: 9200
+discovery.seed_hosts: [{{ seed_hosts | join(',') }}]
+cluster.initial_master_nodes: [{{ initial_masters | join(',') }}]
+
+xpack.security.enabled: true
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key: certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key
+xpack.security.http.ssl.certificate: certs/{{ inventory_hostname }}/{{ inventory_hostname }}.chain.pem
+xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.key: certs/{{ inventory_hostname }}/{{ inventory_hostname }}.key
+xpack.security.transport.ssl.certificate: certs/{{ inventory_hostname }}/{{ inventory_hostname }}.crt
+xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt

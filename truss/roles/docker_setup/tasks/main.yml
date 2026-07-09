@@ -1,0 +1,23 @@
+---
+- name: Install Docker
+  package:
+    name: docker.io
+    state: present
+
+- name: Ensure Docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Install Podman (for compatibility)
+  package:
+    name: podman
+    state: present
+  when: use_podman
+
+- name: Add user to docker group
+  user:
+    name: "{{ truss_user }}"
+    groups: docker
+    append: yes

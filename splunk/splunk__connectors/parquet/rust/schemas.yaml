@@ -1,0 +1,28 @@
+schemas:
+  - name: network_events
+    file_name: network_events.parquet
+    timestamp_field: timestamp
+    mappings:
+      cim:
+        time: timestamp
+        event_id: id
+        source: source_ip
+        src_port: source_port
+        dest: dest_ip
+        dest_port: dest_port
+        protocol: protocol
+        bytes_in: bytes_received
+        bytes_out: bytes_sent
+        action: action
+        sourcetype: parquet_network
+  - name: authentication_events
+    file_name: auth_events.parquet
+    timestamp_field: login_time
+    mappings:
+      cim:
+        time: login_time
+        user: username
+        action: outcome
+        src: source_ip
+        dest: dest_host
+        sourcetype: parquet_auth

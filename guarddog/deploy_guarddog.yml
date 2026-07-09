@@ -1,0 +1,60 @@
+---
+- name: Deploy GuardDog environment
+  hosts: all
+  become: yes
+  vars:
+    container_runtime: "{{ container_runtime | default('podman') }}"
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - kubectl
+          - yq
+          - "{{ 'docker.io' if container_runtime == 'docker' else 'podman' }}"
+        state: present
+        update_cache: yes
+
+    - name: Install Python dependencies
+      pip:
+        name:
+          - kubernetes
+          - pyyaml
+        executable: pip3
+
+    - name: Ensure Docker service is running (only for docker)
+      when: container_runtime == 'docker'
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create GuardDog directory
+      file:
+        path: /tmp/guarddog
+        state: directory
+        mode: '0755'
+
+    - name: Copy files
+      copy:
+        src: "{{ item.src }}"
+        dest: "/tmp/guarddog/{{ item.dest }}"
+        mode: "{{ item.mode | default('0644') }}"
+      loop:
+        - { src: Dockerfile, dest: Dockerfile, mode: '0644' }
+        - { src: packages.yaml, dest: packages.yaml, mode: '0644' }
+        - { src: scan_packages.sh, dest: scan_packages.sh, mode: '0755' }
+
+    - name: Build GuardDog image
+      command: "{{ container_runtime }} build -t guarddog:latest /tmp/guarddog"
+      args:
+        chdir: /tmp/guarddog
+
+    - name: Run GuardDog scan script
+      environment:
+        CONTAINER_RUNTIME: "{{ container_runtime }}"
+      command: /tmp/guarddog/scan_packages.sh
+      args:
+        chdir: /tmp/guarddog

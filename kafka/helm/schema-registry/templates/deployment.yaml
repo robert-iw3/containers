@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "schema-registry.fullname" . }}
+  labels:
+    {{- include "schema-registry.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "schema-registry.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "schema-registry.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "schema-registry.fullname" . }}-sa
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+        {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: SCHEMA_REGISTRY_HOST_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: SCHEMA_REGISTRY_LISTENERS
+              value: "http://0.0.0.0:{{ .Values.port }}"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+              value: {{ include "schema-registry.kafka.bootstrapServers" . }}
+            - name: SCHEMA_REGISTRY_KAFKASTORE_GROUP_ID
+              value: "{{ include "schema-registry.kafka.groupId" . }}-schema-registry"
+            - name: SCHEMA_REGISTRY_SCHEMA_REGISTRY_GROUP_ID
+              value: "{{ include "schema-registry.kafka.groupId" . }}-schema-registry"
+            - name: SCHEMA_REGISTRY_MASTER_ELIGIBILITY
+              value: {{ .Values.leaderEligibility | quote }}
+            - name: SCHEMA_REGISTRY_HEAP_OPTS
+              value: {{ .Values.heapOpts | quote }}
+            - name: SCHEMA_REGISTRY_CONFLUENT_SUPPORT_METRICS_ENABLE
+              value: {{ .Values.confluentSupportMetricsEnable | quote }}
+            - name: SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS
+              value: {{ .Values.accessControl.allowMethods | quote }}
+            - name: SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN
+              value: {{ .Values.accessControl.AllowOrigin | quote }}
+            - name: SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL
+              value: {{ .Values.schemaCompatibilityLevel | quote }}
+            {{- if .Values.kerberos.enabled }}
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM
+              value: GSSAPI
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_KERBEROS_SERVICE_NAME
+              value: kafka
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG
+              value: com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/keytabs/{{ .Values.kerberos.serviceName }}.keytab" principal="{{ .Values.kerberos.serviceName }}@{{ .Values.kerberos.domain }}";
+           {{- end }}
+          ports:
+          - name: tcp
+            containerPort: {{ .Values.port }}
+            protocol: TCP
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: tcp
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: tcp
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - name: config
+            mountPath: /etc/schema-registry
+          {{- if .Values.kerberos.enabled }}
+          - name: krb5
+            mountPath: /etc/krb5.conf
+            subPath: krb5.conf
+          - name: keytabs
+            mountPath: /keytabs
+            readOnly: true
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: config
+        emptyDir: {}
+      {{- if .Values.kerberos.enabled }}
+      - name: krb5
+        configMap:
+          name: {{ required "The .Values.kerberos.krb5Conf is required when kerberos enabled!" .Values.kerberos.krb5Conf }}
+      - name: keytabs
+        secret:
+          secretName: {{ required "The .Values.kerberos.keyTabSecret is required when kerberos enabled!" .Values.kerberos.keyTabSecret }}
+      {{- end }}

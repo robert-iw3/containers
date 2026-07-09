@@ -1,0 +1,52 @@
+---
+x-common-vars-apps: &common-vars-apps
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  mem_limit: 512m
+  cpus: 1.0
+  env_file:
+    - .env
+
+services:
+  api-fw:
+    <<: *common-vars-apps
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    container_name: api-fw
+    hostname: api-fw.io
+    environment:
+      APIFW_URL: "${APIFW_URL:-https://0.0.0.0:8080}"
+      APIFW_TLS_CERTS_PATH: /certs
+      APIFW_TLS_CERT_FILE: /certs/api-fw.crt.pem
+      APIFW_TLS_CERT_KEY: /certs/api-fw.key.pem
+      APIFW_API_SPECS: "${APIFW_API_SPECS:-/opt/resources/openapi_spec.json}"
+      APIFW_SERVER_URL: "${APIFW_SERVER_URL:-http://qdrant:6333}"
+      APIFW_SERVER_MAX_CONNS_PER_HOST: "${APIFW_MAX_CONNS_PER_HOST:-512}"
+      APIFW_SERVER_READ_TIMEOUT: "${APIFW_READ_TIMEOUT:-5s}"
+      APIFW_SERVER_WRITE_TIMEOUT: "${APIFW_WRITE_TIMEOUT:-5s}"
+      APIFW_SERVER_DIAL_TIMEOUT: "${APIFW_DIAL_TIMEOUT:-200ms}"
+      APIFW_REQUEST_VALIDATION: "BLOCK"
+      APIFW_RESPONSE_VALIDATION: "BLOCK"
+      APIFW_LOG_LEVEL: "${APIFW_LOG_LEVEL:-INFO}"
+      APIFW_ALLOW_IP_FILE: '/opt/resources/allowed.iplist.db'
+      APIFW_ALLOW_IP_HEADER_NAME: 'X-Forwarded-For'
+      APIFW_SHADOW_API_UNKNOWN_PARAMETERS_DETECTION: "false"
+      APIFW_MODSEC_CONF_FILES: "/opt/resources/coraza.conf;/opt/resources/crs/crs-setup.conf.example${APIFW_MODSEC_RULES_DIR:+;/opt/resources/modsec_rules/*}"
+      APIFW_MODSEC_RULES_DIR: "${APIFW_MODSEC_RULES_DIR:-/opt/resources/crs/rules/}"
+    volumes:
+      - ./${OPENAPI_SPEC:-openapi_spec.json}:${APIFW_API_SPECS:-/opt/resources/openapi_spec.json}:ro,Z
+      - ./certs:/certs:Z
+      - ./config/allowed.iplist.db:/opt/resources/allowed.iplist.db:ro,Z
+      - ./crs:/opt/resources/crs:ro,Z
+      - ./config/coraza.conf:/opt/resources/coraza.conf:ro,Z
+      - ./config/modsec_rules:/opt/resources/modsec_rules:ro,Z
+    ports:
+      - "127.0.0.1:8080:8080"
+    stop_grace_period: 1s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

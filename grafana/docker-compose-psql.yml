@@ -1,0 +1,37 @@
+---
+volumes:
+  grafana-postgres:
+
+networks:
+  grafana:
+    driver: bridge
+
+services:
+  postgres:
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres
+    hostname: postgres-grafana.io
+    ports:
+      - 5432:5432
+    volumes:
+      - grafana-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grafana
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M

@@ -1,0 +1,255 @@
+{
+    "list_realms": {
+        "category": "1. Discovery",
+        "name": "List All Realms",
+        "description": "Lists all realms present in the database.",
+        "params": [],
+        "query": "MATCH (r:Realm) RETURN r.name AS realm ORDER BY realm"
+    },
+    "list_clients": {
+        "category": "1. Discovery",
+        "name": "List Clients in Realm",
+        "description": "Lists all clients within a specific realm.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(r:Realm {name: $realm_name}) RETURN c.clientId AS client_id, c.name AS client_name, c.protocol, c.enabled ORDER BY client_id"
+    },
+    "list_groups": {
+        "category": "1. Discovery",
+        "name": "List Groups in Realm",
+        "description": "Lists all groups in a realm, showing their hierarchy.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (g:Group)-[:IN_REALM|IS_SUBGROUP_OF*1..]->(:Realm {name: $realm_name}) WITH g OPTIONAL MATCH (parent:Group)<-[:IS_SUBGROUP_OF]-(g) RETURN parent.name AS parent_group, g.name as group_name, g.path as full_path ORDER BY full_path"
+    },
+    "list_users": {
+        "category": "1. Discovery",
+        "name": "List Users in Realm",
+        "description": "Lists all users in a realm.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (u:User)-[:IN_REALM]->(:Realm {name: $realm_name}) RETURN u.username AS username, u.email AS email, u.enabled AS enabled ORDER BY username"
+    },
+    "list_roles": {
+        "category": "1. Discovery",
+        "name": "List Roles in Realm",
+        "description": "Lists all roles (realm and client) for a given realm. Client roles are displayed as 'role-name - (client-id)'.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (role:RealmRole)-[:BELONGS_TO_REALM]->(r:Realm {name: $realm_name}) RETURN role.name AS role_name UNION ALL MATCH (role:ClientRole)-[:BELONGS_TO_CLIENT]->(c:Client)-[:IN_REALM]->(r:Realm {name: $realm_name}) RETURN role.name + ' - (' + c.clientId + ')' AS role_name"
+    },
+    "get_user_effective_roles": {
+        "category": "2. Permission Analysis",
+        "name": "Get User Effective Roles",
+        "description": "Lists all effective roles for a user, showing how each role is obtained (direct, via group, or composite).",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" },
+          { "name": "username", "autocomplete": "list_users", "depends_on": "realm_name" }
+        ],
+        "query": "MATCH (u:User {username: $username})-[:IN_REALM]->(r:Realm {name: $realm_name}) CALL { WITH u MATCH (u)-[:HAS_ROLE]->(role:Role) RETURN role, 'Direct' as origin_type, u.username as origin_source UNION ALL WITH u MATCH (u)-[:MEMBER_OF*1..]->(g:Group)-[:HAS_ROLE]->(role:Role) RETURN role, 'Group' as origin_type, g.name as origin_source } WITH role AS entry_point_role, origin_type, origin_source MATCH (entry_point_role)-[:COMPOSED_OF*0..]->(effective_role:Role) RETURN DISTINCT effective_role.name AS role_name, CASE WHEN entry_point_role = effective_role THEN origin_type ELSE 'Composite' END AS assignment_type, CASE WHEN entry_point_role = effective_role THEN origin_source ELSE 'from ' + entry_point_role.name END AS assignment_source ORDER BY role_name"
+    },
+    "find_role_usage": {
+        "category": "2. Permission Analysis",
+        "name": "Find Role Usage",
+        "description": "Finds all entities (users, groups, composite roles) that effectively use a specific role, including via indirect relationships like group membership.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" },
+            { "name": "role_name", "autocomplete": "list_roles", "depends_on": "realm_name" }
+        ],
+        "query": "MATCH (target_role:Role {name: $role_name}) WHERE ((target_role)-[:BELONGS_TO_REALM]->(:Realm {name: $realm_name}) OR (target_role)-[:BELONGS_TO_CLIENT]->()-[:IN_REALM]->(:Realm {name: $realm_name})) CALL { WITH target_role MATCH (u:User)-[:HAS_ROLE]->(assigned_role:Role)-[:COMPOSED_OF*0..]->(target_role) RETURN u.username AS entity, 'User' AS entity_type, CASE WHEN assigned_role = target_role THEN 'Directly Assigned' ELSE 'Via Composite Role: ' + assigned_role.name END AS details UNION WITH target_role MATCH (u:User)-[:MEMBER_OF*1..]->(g:Group)-[:HAS_ROLE]->(assigned_role:Role)-[:COMPOSED_OF*0..]->(target_role) RETURN u.username AS entity, 'User' AS entity_type, 'Via Group: ' + g.name + ' (Role: ' + assigned_role.name + ')' AS details UNION WITH target_role MATCH (g:Group)-[:HAS_ROLE]->(assigned_role:Role)-[:COMPOSED_OF*0..]->(target_role) RETURN g.name AS entity, 'Group' AS entity_type, CASE WHEN assigned_role = target_role THEN 'Directly Assigned' ELSE 'Via Composite Role: ' + assigned_role.name END AS details UNION WITH target_role MATCH (p:Role)-[:COMPOSED_OF*1..]->(target_role) RETURN p.name AS entity, 'Parent Composite Role' AS entity_type, 'Is composed of this role' AS details } RETURN DISTINCT entity, entity_type, details ORDER BY entity_type, entity"
+    },
+    "find_users_with_high_privileges": {
+        "category": "2. Permission Analysis",
+        "name": "Find Users With High Privileges",
+        "description": "Finds users with critical administrative roles. This includes master realm admins and key realm-management roles like realm-admin, impersonation, manage-users, manage-clients, manage-authorization, etc.",
+        "params": [
+            {
+                "name": "realm_name",
+                "autocomplete": "list_realms"
+            }
+        ],
+        "query": "MATCH (target_role:Role) WHERE (target_role.name IN ['admin', 'create-realm'] AND (target_role)-[:BELONGS_TO_REALM]->(:Realm {name:'master'})) OR (target_role.name IN ['realm-admin', 'impersonation', 'manage-users', 'manage-clients', 'manage-realm', 'manage-identity-providers', 'manage-authorization', 'create-client', 'manage-events'] AND (target_role)-[:BELONGS_TO_CLIENT]->()-[:IN_REALM]->(:Realm {name:$realm_name})) CALL { WITH target_role MATCH (user:User)-[:HAS_ROLE]->(parent_role:Role)-[:COMPOSED_OF*0..]->(target_role) RETURN user, 'Direct/Composite' as type, parent_role.name as via, target_role.name as privileged_role UNION ALL WITH target_role MATCH (user:User)-[:MEMBER_OF*1..]->(g:Group)-[:HAS_ROLE]->(parent_role:Role)-[:COMPOSED_OF*0..]->(target_role) RETURN user, 'Group' as type, g.name as via, target_role.name as privileged_role } RETURN DISTINCT user.username as username, user.enabled, privileged_role, type, via ORDER BY username, privileged_role"
+    },
+    "get_realm_security_settings": {
+        "category": "3. Security Audit",
+        "name": "Get Realm Security Settings",
+        "description": "Gets key security settings for a realm (password policy, brute force).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) RETURN r.name as realm, r.bruteForceProtected as brute_force_protection, coalesce(r.passwordPolicy, 'Not Defined') as password_policy, r.verifyEmail as require_email_verification"
+      },
+    "find_permissive_redirect_uris": {
+        "category": "3. Security Audit",
+        "name": "Find Permissive Redirect URIs",
+        "description": "Finds clients with potentially permissive redirect URIs (containing '*' or '/').",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.redirectUris IS NOT NULL UNWIND c.redirectUris AS uri WITH c, uri WHERE uri CONTAINS '*' OR uri ENDS WITH '/' RETURN DISTINCT c.name AS client_name, c.clientId AS client_id, uri AS permissive_redirect_uri ORDER BY client_name, permissive_redirect_uri"
+      },
+    "find_clients_with_implicit_flow": {
+        "category": "3. Security Audit",
+        "name": "OIDC - Find Clients with Implicit Flow",
+        "description": "Finds OIDC clients with the Implicit Grant Flow enabled, which is less secure than Authorization Code Flow.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.protocol = 'openid-connect' AND c.`attributes.implicitFlowEnabled` = 'true' RETURN c.clientId as client_id, c.name as client_name"
+    },
+    "find_clients_without_pkce": {
+        "category": "3. Security Audit",
+        "name": "OIDC - Find Clients Not Enforcing PKCE",
+        "description": "Finds public OIDC clients that do not enforce PKCE (Proof Key for Code Exchange), which protects against authorization code interception attacks.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.protocol = 'openid-connect' AND c.publicClient = true AND (c.`attributes.pkceCodeChallengeMethod` IS NULL OR c.`attributes.pkceCodeChallengeMethod` = '') RETURN c.clientId as client_id, c.name as client_name"
+    },
+    "find_oidc_weak_signature_alg": {
+        "category": "3. Security Audit",
+        "name": "OIDC - Find Clients with Weak Signature Algorithms",
+        "description": "Finds OIDC clients configured with signature algorithms weaker than RS256.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.protocol = 'openid-connect' AND c.`attributes.access.token.signed.response.alg` IS NOT NULL AND NOT c.`attributes.access.token.signed.response.alg` IN ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'] RETURN c.clientId as client_id, c.name as client_name, c.`attributes.access.token.signed.response.alg` as algorithm"
+    },
+    "find_saml_without_encryption": {
+        "category": "3. Security Audit",
+        "name": "SAML - Find Clients with Encryption Disabled",
+        "description": "Finds SAML clients that do not have assertion/response encryption enabled.",
+        "params": [
+          { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.protocol = 'saml' AND c.`attributes.saml.encrypt` = 'false' RETURN c.clientId AS client_id, c.name AS client_name"
+    },
+    "find_insecure_saml_clients": {
+        "category": "3. Security Audit",
+        "name": "SAML - Find Clients with Weak Signature Config",
+        "description": "Finds SAML clients that do not require server signatures or do not sign their own requests.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(r:Realm {name: $realm_name}) WHERE c.protocol = 'saml' AND (c.`attributes.saml.server.signature` = 'false' OR c.`attributes.saml.client.signature` = 'false' OR c.`attributes.saml.assertion.signature` = 'false') RETURN c.clientId AS client_id, c.name AS client_name, c.`attributes.saml.server.signature` as server_signature, c.`attributes.saml.client.signature` as client_signature, c.`attributes.saml.assertion.signature` as assertion_signature"
+    },
+    "find_clients_with_weak_flows": {
+        "category": "3. Security Audit",
+        "name": "Find Clients with Weak Authentication Flows",
+        "description": "Finds clients that override the default browser flow with a flow that is potentially less secure (e.g., missing MFA).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) MATCH (c:Client)-[:IN_REALM]->(r) WHERE c.`attributes.authenticationFlowBindingOverrides.browser` IS NOT NULL AND c.`attributes.authenticationFlowBindingOverrides.browser` <> r.browserFlow RETURN c.clientId as client, c.`attributes.authenticationFlowBindingOverrides.browser` as overridden_flow"
+    },
+    "find_flows_without_mfa": {
+        "category": "3. Security Audit",
+        "name": "Find Flows Without MFA",
+        "description": "Searches for authentication flows that might be missing an MFA step (OTP or WebAuthn).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (flow:AuthenticationFlow)-[:IN_REALM]->(:Realm {name:$realm_name}) WHERE NOT EXISTS { (flow)-[:HAS_EXECUTION]->(e:AuthenticationExecution) WHERE e.providerId IN ['auth-otp-form', 'webauthn-passwordless-authenticator', 'webauthn-authenticator'] } RETURN flow.alias as flow_alias, flow.description"
+    },
+    "find_long_lived_tokens": {
+        "category": "3. Security Audit",
+        "name": "Find Long-Lived Tokens",
+        "description": "Finds realms with access token lifespans longer than 15 minutes (900s) or refresh token lifespans longer than 8 hours (28800s).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) WHERE r.accessTokenLifespan > 900 OR r.ssoSessionMaxLifespan > 28800 RETURN r.name as realm, r.accessTokenLifespan as access_token_lifespan_seconds, r.ssoSessionMaxLifespan as refresh_token_lifespan_seconds"
+    },
+    "audit_password_policies": {
+        "category": "3. Security Audit",
+        "name": "Audit Password Policies",
+        "description": "Checks for weak password policies in a realm (e.g., short length, no complexity requirements).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) WHERE r.passwordPolicy IS NULL OR NOT (r.passwordPolicy CONTAINS 'length(12)' OR r.passwordPolicy CONTAINS 'length(14)' OR r.passwordPolicy CONTAINS 'length(16)') OR NOT r.passwordPolicy CONTAINS 'specialChar' OR NOT r.passwordPolicy CONTAINS 'upperCase' OR NOT r.passwordPolicy CONTAINS 'lowerCase' OR NOT r.passwordPolicy CONTAINS 'digit' RETURN r.name as realm, coalesce(r.passwordPolicy, 'Not Defined') as password_policy"
+    },
+    "check_brute_force_protection": {
+        "category": "3. Security Audit",
+        "name": "Check Brute Force Protection",
+        "description": "Identifies realms where brute force detection is disabled or has a high failure threshold.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) WHERE r.bruteForceProtected = false OR r.maxFailureWait > 10 RETURN r.name as realm, r.bruteForceProtected as brute_force_protection_enabled, r.maxFailureWait as max_failure_wait"
+    },
+    "find_permissive_web_origins": {
+        "category": "3. Security Audit",
+        "name": "Find Permissive Web Origins",
+        "description": "Finds clients with overly permissive web origins (e.g., '+', '*').",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Client)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE c.webOrigins IS NOT NULL AND ('+' IN c.webOrigins OR '*' IN c.webOrigins) RETURN c.clientId as client_id, c.name as client_name, c.webOrigins as web_origins"
+    },
+    "find_idp_mappers_to_risky_roles": {
+        "category": "3. Security Audit",
+        "name": "IDP - Find Mappers to Risky Roles",
+        "description": "Finds Identity Provider mappers that automatically assign administrative roles (e.g., admin, realm-admin) to federated users upon login.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (idp:IdentityProvider)-[:IN_REALM]->(r:Realm {name: $realm_name}) MATCH (idp)-[:HAS_MAPPER]->(m:IdpMapper) WHERE m.`config.role` IN ['admin', 'create-realm', 'realm-admin', 'impersonation'] RETURN idp.alias as identity_provider, m.name as mapper_name, m.`config.role` as assigned_role"
+    },
+    "find_mappers_exposing_attributes": {
+        "category": "3. Security Audit",
+        "name": "Find Mappers Exposing User Attributes",
+        "description": "Finds Protocol Mappers that add user attributes to tokens, which could potentially expose sensitive data. Review the 'user.attribute' to ensure it's not sensitive.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Realm {name: $realm_name}) CALL { WITH r MATCH (c:Client)-[:IN_REALM]->(r) MATCH (c)-[:HAS_MAPPER]->(m:ProtocolMapper) WHERE m.protocolMapper = 'oidc-usermodel-attribute-mapper' RETURN 'Client' as owner_type, c.clientId as owner_name, m.name as mapper_name, m.`config.user.attribute` as mapped_attribute, m.`config.claim.name` as token_claim UNION WITH r MATCH (cs:ClientScope)-[:IN_REALM]->(r) MATCH (cs)-[:HAS_MAPPER]->(m:ProtocolMapper) WHERE m.protocolMapper = 'oidc-usermodel-attribute-mapper' RETURN 'Client Scope' as owner_type, cs.name as owner_name, m.name as mapper_name, m.`config.user.attribute` as mapped_attribute, m.`config.claim.name` as token_claim } RETURN owner_type, owner_name, mapper_name, mapped_attribute, token_claim ORDER BY owner_type, owner_name"
+    },
+    "list_idps": {
+        "category": "4. Advanced Configuration",
+        "name": "List Identity Providers",
+        "description": "Lists all external identity providers (IDPs) configured in a realm.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (i:IdentityProvider)-[:IN_REALM]->(r:Realm {name: $realm_name}) RETURN i.alias as alias, i.providerId as provider, i.enabled as enabled ORDER BY i.alias"
+    },
+    "list_components": {
+        "category": "4. Advanced Configuration",
+        "name": "List Components (User Federations)",
+        "description": "Lists all components for a realm, such as User Storage Federation (LDAP).",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (c:Component)-[:IN_REALM]->(r:Realm {name: $realm_name}) WHERE c.providerType = 'org.keycloak.storage.UserStorageProvider' RETURN c.name as federation_name, c.providerId as provider, c.config as configuration"
+    },
+    "find_orphaned_roles": {
+        "category": "5. Hygiene & Cleanup",
+        "name": "Find Orphaned Roles",
+        "description": "Finds roles that are not assigned to any user/group and are not part of a composite role.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (r:Role) WHERE ((r)-[:BELONGS_TO_REALM]->(:Realm {name: $realm_name}) OR (r)-[:BELONGS_TO_CLIENT]->()-[:IN_REALM]->(:Realm {name: $realm_name})) AND NOT (r)<-[:HAS_ROLE]-() AND NOT (r)<-[:COMPOSED_OF]-() RETURN r.name as orphaned_role, r.description"
+    },
+    "find_orphaned_groups": {
+        "category": "5. Hygiene & Cleanup",
+        "name": "Find Orphaned Groups",
+        "description": "Finds groups with no members and no assigned roles.",
+        "params": [
+            { "name": "realm_name", "autocomplete": "list_realms" }
+        ],
+        "query": "MATCH (g:Group)-[:IN_REALM]->(:Realm {name: $realm_name}) WHERE NOT (g)<-[:MEMBER_OF]-() AND NOT (g)-[:HAS_ROLE]->() RETURN g.name as orphaned_group, g.path as full_path"
+    },
+    "check_default_admin_user": {
+        "category": "5. Hygiene & Cleanup",
+        "name": "Check Default Admin User",
+        "description": "Checks if the default 'admin' user in the 'master' realm is still enabled.",
+        "params": [],
+        "query": "MATCH (u:User {username: 'admin'})-[:IN_REALM]->(:Realm {name: 'master'}) WHERE u.enabled = true RETURN u.username as username, u.enabled as is_enabled"
+    }
+}

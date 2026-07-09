@@ -1,0 +1,33 @@
+---
+# Configure nested podman (fuse-overlayfs) then pull the images the role needs so
+# the converge has them locally.
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install podman, fuse-overlayfs, and openssl
+      ansible.builtin.package:
+        name:
+          - podman
+          - fuse-overlayfs
+          - openssl
+        state: present
+
+    - name: Configure the overlay mount program (podman-in-podman)
+      ansible.builtin.copy:
+        dest: /etc/containers/storage.conf
+        mode: "0644"
+        content: |
+          [storage]
+          driver = "overlay"
+          [storage.options.overlay]
+          mount_program = "/usr/bin/fuse-overlayfs"
+
+    - name: Pull the images inside the instance
+      containers.podman.podman_image:
+        name: "{{ item }}"
+      loop:
+        - docker.io/apache/airflow:3.3.0
+        - docker.io/postgres:18
+        - docker.io/redis:7

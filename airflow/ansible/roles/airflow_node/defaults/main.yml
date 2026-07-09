@@ -1,0 +1,33 @@
+---
+# Role defaults so airflow_node is self-contained (molecule, standalone reuse).
+# group_vars/all.yml overrides these for a real deployment.
+
+# Images
+airflow_image: "docker.io/apache/airflow:3.3.0"
+postgres_image: "docker.io/postgres:18"
+redis_image: "docker.io/redis:7"
+
+container_runtime: podman   # podman (primary) or docker
+
+# Node state
+airflow_base_dir: /opt/airflow-node
+dags_dir: "{{ airflow_base_dir }}/dags"
+logs_dir: "{{ airflow_base_dir }}/logs"
+certs_dir: "{{ airflow_base_dir }}/certs"
+
+# Set to a path containing telemetry_pipeline/ and example_dags/ to sync real DAGs
+# onto every node. Empty = skip (nodes start with an empty dags folder).
+dags_src: ""
+
+# Admin login created by the init step.
+airflow_admin_user: airflow
+airflow_admin_password: airflow
+
+# !!! OVERRIDE THESE SECRETS FOR ANY REAL DEPLOYMENT (see group_vars/all.yml) !!!
+postgres_password: "airflow123"
+fernet_key: "REPLACE_WITH_GENERATED_FERNET_KEY"
+jwt_secret: "REPLACE_WITH_RANDOM_JWT_SECRET"
+
+apiserver_port: 8080
+postgres_port: 5432
+redis_port: 6379

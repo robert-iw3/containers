@@ -1,0 +1,110 @@
+---
+- name: Deploy Truss Model
+  hosts: truss_servers
+  become: true
+  vars_files:
+    - vars/config.yml
+
+  pre_tasks:
+    - name: Validate required variables
+      fail:
+        msg: "{{ item }} is not defined or empty"
+      when: vars[item] is not defined or vars[item] | length == 0
+      loop:
+        - model_name
+        - model_requirements
+        - python_version
+        - python_image_hash
+
+    - name: Install python-docker for Ansible
+      package:
+        name: python3-docker
+        state: present
+      when: not use_kubernetes
+
+    - name: Check Docker availability
+      command: docker --version
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      when: not use_kubernetes
+
+    - name: Check Kubernetes cluster connectivity
+      command: kubectl get nodes
+      register: kubectl_check
+      failed_when: kubectl_check.rc != 0
+      when: use_kubernetes
+
+  roles:
+    - role: docker_setup
+    - role: truss_deployment
+
+  tasks:
+    - name: Ensure required directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ truss_user }}"
+        group: "{{ truss_group }}"
+      loop:
+        - "{{ model_dir }}"
+        - "{{ data_dir }}"
+        - "{{ logs_dir }}"
+        - "{{ truss_config_dir }}"
+
+    - name: Copy Truss model files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: '0644'
+        owner: "{{ truss_user }}"
+        group: "{{ truss_group }}"
+      loop:
+        - { src: 'templates/model.py.j2', dest: '{{ model_dir }}/model.py' }
+        - { src: 'templates/__init__.py.j2', dest: '{{ model_dir }}/__init__.py' }
+        - { src: 'templates/config.yaml.j2', dest: '{{ truss_config_dir }}/config.yaml' }
+        - { src: 'templates/requirements.txt.j2', dest: '{{ truss_config_dir }}/requirements.txt' }
+        - { src: 'templates/Dockerfile.j2', dest: '{{ truss_config_dir }}/Dockerfile' }
+
+    - name: Build and deploy Truss Docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ container_image }}:{{ truss_version }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ truss_port }}:{{ container_port }}"
+        volumes:
+          - "{{ model_dir }}:/truss/model:ro"
+          - "{{ data_dir }}:/truss/data"
+          - "{{ logs_dir }}:/truss/logs"
+        env:
+          TRUSS_ENV: "{{ truss_env }}"
+          MODEL_NAME: "{{ model_name }}"
+          MAX_LENGTH: "{{ max_length | default('128') }}"
+          PIPELINE_TYPE: "{{ pipeline_type | default('text-generation') }}"
+        user: "{{ truss_user_id }}:{{ truss_group_id }}"
+        build:
+          path: "{{ truss_config_dir }}"
+          dockerfile: "{{ truss_config_dir }}/Dockerfile"
+        cleanup: true
+      when: not use_kubernetes
+      register: docker_deploy
+
+    - name: Deploy to Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'templates/k8s-deployment.yaml.j2') }}"
+      when: use_kubernetes
+      register: k8s_deploy
+
+    - name: Clean up old containers
+      docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        image: "{{ container_image }}:{{ truss_version }}"
+      when: docker_deploy.changed and not use_kubernetes
+
+    - name: Log deployment status
+      debug:
+        msg: "{{ 'Docker' if not use_kubernetes else 'Kubernetes' }} deployment successful for {{ container_name }}"

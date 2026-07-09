@@ -1,0 +1,47 @@
+- name: Deploy Hanko Authentication Service
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: hanko
+    registry: "{{ lookup('env', 'CONTAINER_REGISTRY') }}"
+    tag: latest
+  tasks:
+    - name: Create namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ namespace }}"
+            labels:
+              name: "{{ namespace }}"
+
+    - name: Deploy Helm chart
+      kubernetes.core.helm:
+        name: hanko
+        chart_ref: ./helm/hanko
+        namespace: "{{ namespace }}"
+        values:
+          image:
+            repository: "{{ registry }}/hanko"
+            tag: "{{ tag }}"
+          vault:
+            address: "{{ lookup('env', 'VAULT_ADDR') }}"
+          ingress:
+            enabled: true
+            hostname: hanko.your-domain.com
+            tls: true
+          podSecurityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+    - name: Wait for deployments
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_timeout: 300
+        label_selectors:
+          - app in (hanko, elements, postgresql, mailslurper)

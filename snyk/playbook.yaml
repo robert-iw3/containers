@@ -1,0 +1,24 @@
+---
+- name: Run Snyk Scanner with Docker
+  hosts: localhost
+  tasks:
+    - name: Build Docker image
+      command: docker build -t snyk-scanner .
+
+    - name: Run Docker container
+      command: >
+        docker run --rm
+        -v /path/to/local/code:/scan/dir1
+        -v /path/to/local/jars:/scan/jars
+        -v /path/to/reports:/reports
+        -e SNYK_TOKEN={{ snyk_token }}
+        snyk-scanner
+        --token=$SNYK_TOKEN
+        --dirs=/scan/dir1
+        --jar-dirs=/scan/jars
+        --remote-repo-url=your-repo-url
+        --url=https://example.com/codebase.zip
+        --code-name=myproject
+        --html-output-dir=/reports
+  vars:
+    snyk_token: "{{ lookup('env', 'SNYK_TOKEN') }}"  # Or use vault

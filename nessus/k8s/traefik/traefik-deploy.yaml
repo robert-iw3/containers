@@ -1,0 +1,72 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: traefik-controller
+  labels:
+    k8s-app: traefik-controller
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      k8s-app: traefik-controller
+  template:
+    metadata:
+      labels:
+        k8s-app: traefik-controller
+        name: traefik-controller
+    spec:
+      serviceAccountName: traefik-serviceaccount
+      terminationGracePeriodSeconds: 35
+      volumes:
+        - name: traefik-certs
+          secret:
+            secretName: traefik-certs
+        - name: traefik-configmap
+          configMap:
+            name: traefik-configmap
+        - name: traefik-configmap-dynamic
+          configMap:
+            name: traefik-configmap-dynamic
+      containers:
+      - image: docker.io/traefik
+        name: traefik-controller
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 200m
+            memory: 384Mi
+          requests:
+            cpu: 25m
+            memory: 128Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /ping
+            port: 80
+            scheme: HTTP
+          periodSeconds: 5
+        volumeMounts:
+          - mountPath: "/traefik/certs"
+            name: "traefik-certs"
+          - mountPath: "/"
+            name: "traefik-configmap"
+          - mountPath: "/etc/traefik/dynamic"
+            name: "traefik-configmap-dynamic"
+        ports:
+        - name: http
+          containerPort: 80
+        - name: https
+          containerPort: 443
+        - name: dashboard
+          containerPort: 8080
+        args:
+        - --configfile=/traefik.yaml

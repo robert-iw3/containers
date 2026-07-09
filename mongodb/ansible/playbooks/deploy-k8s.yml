@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Run Python for K8s generation
+      shell: python3 ../deploy_mongodb.py ../user_config.yaml  # Assumes config
+      args:
+        chdir: ..
+    - name: Apply K8s
+      kubernetes.core.k8s:
+        state: present
+        src: k8s-mongodb.yaml

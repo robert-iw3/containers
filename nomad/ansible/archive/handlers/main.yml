@@ -1,0 +1,15 @@
+- name: start nomad
+  sudo: yes
+  service: name=nomad state=started
+
+- name: restart nomad
+  sudo: yes
+  service: name=nomad state=restarted
+
+- name: restart consul
+  sudo: yes
+  service: name=dnsmasq state=consul
+
+- name: restart dnsmasq
+  sudo: yes
+  service: name=dnsmasq state=restarted

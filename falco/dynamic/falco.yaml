@@ -1,0 +1,23 @@
+http:
+  routers:
+    falco:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`falco.io`, `www.falco.io`)"
+      middlewares:
+        - secured
+      tls:
+        certificates:
+          - certFile: /secrets/certs/sslcert.pem
+            keyFile: /secrets/certs/sslcert_rsa.key.pem
+      service: falco
+  services:
+    falco:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:2802"
+        passHostHeader: true
+        healthCheck:
+          path: /status
+          interval: 10s
+          timeout: 3s

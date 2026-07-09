@@ -1,0 +1,48 @@
+# example config, modify to your environment
+http:
+  routers:
+    open-webui:
+      entryPoints:
+        - "websecure"
+      rule: "Host(`open-webui.ai`)"
+      middlewares:
+        - open-webui-whitelist
+        - default-headers
+      tls: {}
+      service: open-webui
+
+  services:
+    open-webui:
+      loadBalancer:
+        servers:
+          - url: "http://open-webui.ai:3000"
+
+    default-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+        accessControlMaxAge: 100
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+    open-webui-whitelist:
+      ipWhiteList:
+        sourceRange:
+        #restrict access to specific subnets example:
+        - "192.168.99.0/24"
+        - "192.168.88.0/24"
+
+    secured:
+      chain:
+        middlewares:
+        - open-webui-whitelist
+        - default-headers

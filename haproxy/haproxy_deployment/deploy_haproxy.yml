@@ -1,0 +1,258 @@
+---
+- name: Deploy HAProxy
+  hosts: haproxy_servers
+  become: yes
+  vars:
+    default_config:
+      haproxy_version: "3.0.8"
+      deployment_type: "docker"
+      socket_path: "/var/run/docker.sock"
+      services:
+        - name: default
+          backend: localhost
+          port: 8080
+          num_servers: 100
+      log_level: "info"
+      replicas: 2
+      opensearch_host: "opensearch"
+      opensearch_port: 9200
+      maxconn: 10000
+      fullconn: 5000
+      domain: "haproxy.example.com"
+      email: "admin@example.com"
+    config_file: /tmp/haproxy/config.yml
+    config: "{{ (lookup('file', config_file, errors='ignore') | default('') | from_yaml) | default(default_config) }}"
+    haproxy_version: "{{ config.haproxy_version }}"
+    deployment_type: "{{ config.deployment_type }}"
+    socket_path: "{{ config.socket_path }}"
+    services: "{{ config.services }}"
+    log_level: "{{ config.log_level }}"
+    replicas: "{{ config.replicas }}"
+    opensearch_host: "{{ config.opensearch_host }}"
+    opensearch_port: "{{ config.opensearch_port }}"
+    maxconn: "{{ config.maxconn }}"
+    fullconn: "{{ config.fullconn }}"
+    domain: "{{ config.domain }}"
+    email: "{{ config.email }}"
+  tasks:
+    - name: Copy config.yml to target host
+      copy:
+        src: haproxy_deployment/config.yml
+        dest: /tmp/haproxy/config.yml
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Create deployment directory
+      file:
+        path: /tmp/haproxy
+        state: directory
+        mode: '0755'
+
+    - name: Create config directory
+      file:
+        path: /tmp/haproxy/config
+        state: directory
+        mode: '0755'
+
+    - name: Copy HAProxy deployment files
+      copy:
+        src: "{{ item }}"
+        dest: /tmp/haproxy/{{ item | basename }}
+        mode: "{{ '0755' if 'entrypoint.sh' in item or 'generate-certs.sh' in item else '0644' }}"
+      loop:
+        - haproxy_deployment/Dockerfile
+        - haproxy_deployment/docker-compose.yml
+        - haproxy_deployment/entrypoint.sh
+        - haproxy_deployment/generate-certs.sh
+        - haproxy_deployment/config/ca-csr.conf
+        - haproxy_deployment/config/server-csr.conf
+        - haproxy_deployment/templates/haproxy.cfg.j2
+        - haproxy_deployment/templates/fluentd.conf.j2
+      register: copy_files
+      retries: 3
+      delay: 5
+      until: copy_files is success
+
+    - name: Install OpenSSL and Certbot
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - openssl
+        - certbot
+      register: package_install
+      retries: 3
+      delay: 5
+      until: package_install is success
+
+    - name: Generate SSL certificates
+      command: bash /tmp/haproxy/generate-certs.sh
+      args:
+        creates: /usr/local/etc/haproxy/certs/haproxy.pem
+      environment:
+        DOMAIN: "{{ domain }}"
+        EMAIL: "{{ email }}"
+
+    - name: Install required packages for Docker/Podman
+      when: deployment_type in ['docker', 'podman']
+      package:
+        name: "{{ deployment_type == 'podman' | ternary('podman', 'docker') }}"
+        state: present
+      register: package_install
+      retries: 3
+      delay: 5
+      until: package_install is success
+
+    - name: Ensure Podman socket is enabled (for Podman)
+      when: deployment_type == 'podman'
+      systemd:
+        name: podman.socket
+        enabled: yes
+        state: started
+      register: podman_socket
+      retries: 3
+      delay: 5
+      until: podman_socket is success
+
+    - name: Render haproxy.cfg for Docker/Podman
+      when: deployment_type in ['docker', 'podman']
+      template:
+        src: /tmp/haproxy/haproxy.cfg.j2
+        dest: /tmp/haproxy/haproxy.cfg
+        mode: '0644'
+      vars:
+        log_level: "{{ log_level }}"
+        services: "{{ services }}"
+        maxconn: "{{ maxconn }}"
+        fullconn: "{{ fullconn }}"
+
+    - name: Render fluentd.conf for Docker/Podman
+      when: deployment_type in ['docker', 'podman']
+      template:
+        src: /tmp/haproxy/fluentd.conf.j2
+        dest: /tmp/haproxy/fluentd.conf
+        mode: '0644'
+      vars:
+        opensearch_host: "{{ opensearch_host }}"
+        opensearch_port: "{{ opensearch_port }}"
+
+    - name: Check if HAProxy image exists
+      when: deployment_type in ['docker', 'podman']
+      command: "{{ deployment_type == 'podman' | ternary('podman', 'docker') }} images -q haproxy:{{ haproxy_version }}"
+      register: image_check
+      changed_when: false
+
+    - name: Build HAProxy image
+      when:
+        - deployment_type in ['docker', 'podman']
+        - image_check.stdout == ""
+      command: "{{ deployment_type == 'podman' | ternary('podman', 'docker') }} build -t haproxy:{{ haproxy_version }} /tmp/haproxy"
+      register: build_image
+      retries: 3
+      delay: 5
+      until: build_image is success
+
+    - name: Deploy HAProxy with docker-compose
+      when: deployment_type in ['docker', 'podman']
+      command: "{{ deployment_type == 'podman' | ternary('podman', 'docker') }} compose -f /tmp/haproxy/docker-compose.yml up -d"
+      register: deploy_compose
+      retries: 3
+      delay: 5
+      until: deploy_compose is success
+
+    - name: Verify HAProxy is running
+      when: deployment_type in ['docker', 'podman']
+      command: "{{ deployment_type == 'podman' | ternary('podman', 'docker') }} exec haproxy haproxy -v"
+      register: haproxy_check
+      retries: 3
+      delay: 5
+      until: haproxy_check.rc == 0
+
+    - name: Install kubectl for Kubernetes deployment
+      when: deployment_type == 'kubernetes'
+      package:
+        name: kubectl
+        state: present
+      register: kubectl_install
+      retries: 3
+      delay: 5
+      until: kubectl_install is success
+
+    - name: Copy Kubernetes templates
+      when: deployment_type == 'kubernetes'
+      copy:
+        src: "{{ item }}"
+        dest: /tmp/haproxy/{{ item | basename }}
+        mode: '0644'
+      loop:
+        - haproxy_deployment/templates/haproxy-configmap.yaml.j2
+        - haproxy_deployment/templates/haproxy-deployment.yaml.j2
+        - haproxy_deployment/templates/haproxy-service.yaml.j2
+        - haproxy_deployment/templates/haproxy-hpa.yaml.j2
+        - haproxy_deployment/templates/haproxy-ingress.yaml.j2
+        - haproxy_deployment/templates/haproxy-rbac.yaml.j2
+        - haproxy_deployment/templates/haproxy-network-policy.yaml.j2
+        - haproxy_deployment/templates/haproxy-pod-security.yaml.j2
+        - haproxy_deployment/templates/logging-deployment.yaml.j2
+      register: copy_k8s_files
+      retries: 3
+      delay: 5
+      until: copy_k8s_files is success
+
+    - name: Render Kubernetes manifests
+      when: deployment_type == 'kubernetes'
+      template:
+        src: /tmp/haproxy/{{ item.src | basename }}
+        dest: /tmp/haproxy/{{ item.dest }}
+        mode: '0644'
+      loop:
+        - { src: 'haproxy-configmap.yaml.j2', dest: 'haproxy-configmap.yaml' }
+        - { src: 'haproxy-deployment.yaml.j2', dest: 'haproxy-deployment.yaml' }
+        - { src: 'haproxy-service.yaml.j2', dest: 'haproxy-service.yaml' }
+        - { src: 'haproxy-hpa.yaml.j2', dest: 'haproxy-hpa.yaml' }
+        - { src: 'haproxy-ingress.yaml.j2', dest: 'haproxy-ingress.yaml' }
+        - { src: 'haproxy-rbac.yaml.j2', dest: 'haproxy-rbac.yaml' }
+        - { src: 'haproxy-network-policy.yaml.j2', dest: 'haproxy-network-policy.yaml' }
+        - { src: 'haproxy-pod-security.yaml.j2', dest: 'haproxy-pod-security.yaml' }
+        - { src: 'logging-deployment.yaml.j2', dest: 'logging-deployment.yaml' }
+      vars:
+        haproxy_version: "{{ haproxy_version }}"
+        log_level: "{{ log_level }}"
+        services: "{{ services }}"
+        replicas: "{{ replicas }}"
+        socket_path: "{{ socket_path }}"
+        opensearch_host: "{{ opensearch_host }}"
+        opensearch_port: "{{ opensearch_port }}"
+        maxconn: "{{ maxconn }}"
+        fullconn: "{{ fullconn }}"
+
+    - name: Apply Kubernetes manifests
+      when: deployment_type == 'kubernetes'
+      command: kubectl apply -f /tmp/haproxy/{{ item }}
+      loop:
+        - haproxy-rbac.yaml
+        - haproxy-pod-security.yaml
+        - haproxy-configmap.yaml
+        - haproxy-deployment.yaml
+        - haproxy-service.yaml
+        - haproxy-hpa.yaml
+        - haproxy-ingress.yaml
+        - haproxy-network-policy.yaml
+        - haproxy-logging-deployment.yaml
+      register: apply_k8s
+      retries: 3
+      delay: 5
+      until: apply_k8s is success
+
+    - name: Verify HAProxy pods are running
+      when: deployment_type == 'kubernetes'
+      command: kubectl get pods -l app=haproxy -o jsonpath='{.items[*].status.phase}'
+      register: pod_check
+      retries: 10
+      delay: 10
+      until: "'Running' in pod_check.stdout"
+
+    - name: Clean up temporary files
+      file:
+        path: /tmp/haproxy
+        state: absent

@@ -1,0 +1,43 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Master container is running
+      ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' spark-master
+      register: master_state
+      changed_when: false
+      failed_when: "'true' not in master_state.stdout"
+
+    - name: Worker container is running
+      ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' spark-worker
+      register: worker_state
+      changed_when: false
+      failed_when: "'true' not in worker_state.stdout"
+
+    - name: Master UI is serving
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080"
+        status_code: 200
+      register: ui
+      retries: 12
+      delay: 5
+      until: ui.status == 200
+
+    - name: Worker registered with the master (master log shows registration)
+      ansible.builtin.shell: podman logs spark-master 2>&1 | grep -c 'Registering worker'
+      register: reg
+      changed_when: false
+      retries: 12
+      delay: 5
+      until: reg.stdout | int >= 1
+
+    - name: A Spark job runs to completion on the cluster
+      ansible.builtin.command: >-
+        podman run --rm --network host spark-submit:4.1.2-hadoop3
+        /spark/bin/spark-submit --master spark://127.0.0.1:7077
+        --class org.apache.spark.examples.SparkPi
+        /spark/examples/jars/spark-examples_2.13-4.1.2.jar 20
+      register: sparkpi
+      changed_when: true
+      failed_when: "'Pi is roughly' not in sparkpi.stdout"

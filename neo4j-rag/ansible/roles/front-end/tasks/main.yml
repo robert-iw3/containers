@@ -1,0 +1,21 @@
+---
+- name: Ensure front-end Dockerfile exists
+  copy:
+    src: "{{ project_dir }}/front-end.Dockerfile"
+    dest: "{{ project_dir }}/front-end.Dockerfile"
+    mode: "0644"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure nginx.conf exists
+  copy:
+    src: "{{ project_dir }}/nginx.conf"
+    dest: "{{ project_dir }}/nginx.conf"
+    mode: "0644"
+  when: orchestrator in ['docker', 'podman']
+
+- name: Ensure front-end directory exists
+  file:
+    path: "{{ project_dir }}/front-end"
+    state: directory
+    mode: "0755"
+  when: orchestrator in ['docker', 'podman']

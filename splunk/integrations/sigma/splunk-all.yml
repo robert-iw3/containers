@@ -1,0 +1,260 @@
+---
+title: Splunk CIM-compliant Sigma Configuration
+backends:
+  - splunk
+logsources:
+  windows-sysmon:
+    product: windows
+    service: sysmon
+    index: windows
+    sourcetype: XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-Sysmon/Operational'
+  windows-application:
+    product: windows
+    service: application
+    index: windows
+    sourcetype: WinEventLog:Application
+    conditions:
+      source: 'WinEventLog:Application'
+  windows-security:
+    product: windows
+    service: security
+    index: windows
+    sourcetype: WinEventLog:Security
+    conditions:
+      source: 'WinEventLog:Security'
+  windows-system:
+    product: windows
+    service: system
+    index: windows
+    sourcetype: WinEventLog:System
+    conditions:
+      source: 'WinEventLog:System'
+  windows-process-creation:
+    category: process_creation
+    product: windows
+    index: windows
+    sourcetype: XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-Sysmon/Operational'
+      EventCode: 1
+  windows-powershell:
+    product: windows
+    service: powershell
+    index: windows
+    sourcetype: WinEventLog:Microsoft-Windows-PowerShell/Operational
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-PowerShell/Operational'
+  windows-classicpowershell:
+    product: windows
+    service: powershell-classic
+    index: windows
+    sourcetype: Windows:PowerShell
+    conditions:
+      source: 'Windows PowerShell'
+  windows-taskscheduler:
+    product: windows
+    service: taskscheduler
+    index: windows
+    sourcetype: WinEventLog:Microsoft-Windows-TaskScheduler/Operational
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-TaskScheduler/Operational'
+  windows-wmi:
+    product: windows
+    service: wmi
+    index: windows
+    sourcetype: WinEventLog:Microsoft-Windows-WMI-Activity/Operational
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-WMI-Activity/Operational'
+  windows-dns-server:
+    product: windows
+    service: dns-server
+    category: dns
+    index: windows
+    sourcetype: DNS:Server
+    conditions:
+      source: 'DNS Server'
+  windows-dns-server-audit:
+    product: windows
+    service: dns-server-audit
+    index: windows
+    sourcetype: Microsoft-Windows-DNS-Server/Audit
+    conditions:
+      source: 'Microsoft-Windows-DNS-Server/Audit'
+  windows-driver-framework:
+    product: windows
+    service: driver-framework
+    index: windows
+    sourcetype: Microsoft-Windows-DriverFrameworks-UserMode/Operational
+    conditions:
+      source: 'Microsoft-Windows-DriverFrameworks-UserMode/Operational'
+  windows-ntlm:
+    product: windows
+    service: ntlm
+    index: windows
+    sourcetype: Microsoft-Windows-NTLM/Operational
+    conditions:
+      source: 'Microsoft-Windows-NTLM/Operational'
+  windows-dhcp:
+    product: windows
+    service: dhcp
+    index: windows
+    sourcetype: Microsoft-Windows-DHCP-Server/Operational
+    conditions:
+      source: 'Microsoft-Windows-DHCP-Server/Operational'
+  linux:
+    product: linux
+    index: unix
+    sourcetype: linux:syslog
+    conditions:
+      source: 'syslog'
+fieldmappings:
+  # CIM-compliant field mappings for all log sources
+  EventID: EventCode
+  user: user
+  src_ip: src
+  dest_ip: dest
+  src_port: src_port
+  dest_port: dest_port
+  src: src
+  dest: dest
+  process: process_name
+  parent_process: parent_process_name
+  command_line: process
+  file_path: file_path
+  file_name: file_name
+  registry_path: registry_path
+  registry_key: registry_key_name
+  registry_value: registry_value_name
+  action: action
+  status: status
+  signature: signature
+  dvc: dvc
+  hostname: host
+  domain: domain
+  src_user: src_user
+  dest_user: dest_user
+  parent_process_id: parent_pid
+  process_id: pid
+  query: query
+  query_type: query_type
+  response: response
+  protocol: protocol
+  bytes_in: bytes_in
+  bytes_out: bytes_out
+  task_name: task_name
+  opid: operation_id
+  event_type: event_type
+  # MITRE ATT&CK mappings for Splunk ES
+  mitre_technique: mitre_technique_id
+  mitre_tactic: mitre_tactic_id
+indexmappings:
+  default: main
+  sysmon: windows
+  application: windows
+  security: windows
+  system: windows
+  powershell: windows
+  powershell-classic: windows
+  taskscheduler: windows
+  wmi: windows
+  dns-server: windows
+  dns-server-audit: windows
+  driver-framework: windows
+  ntlm: windows
+  dhcp: windows
+  linux: unix
+sourcetypemappings:
+  sysmon: XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  application: WinEventLog:Application
+  security: WinEventLog:Security
+  system: WinEventLog:System
+  process-creation: XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  powershell: WinEventLog:Microsoft-Windows-PowerShell/Operational
+  powershell-classic: Windows:PowerShell
+  taskscheduler: WinEventLog:Microsoft-Windows-TaskScheduler/Operational
+  wmi: WinEventLog:Microsoft-Windows-WMI-Activity/Operational
+  dns-server: DNS:Server
+  dns-server-audit: Microsoft-Windows-DNS-Server/Audit
+  driver-framework: Microsoft-Windows-DriverFrameworks-UserMode/Operational
+  ntlm: Microsoft-Windows-NTLM/Operational
+  dhcp: Microsoft-Windows-DHCP-Server/Operational
+  linux: linux:syslog
+datamodels:
+  Authentication:
+    fields:
+      - user
+      - src
+      - dest
+      - src_user
+      - dest_user
+      - action
+      - status
+    tags:
+      - authentication
+    logsources:
+      - windows-security
+      - windows-ntlm
+      - linux
+  Endpoint:
+    fields:
+      - process_name
+      - parent_process_name
+      - process
+      - parent_pid
+      - pid
+      - file_path
+      - file_name
+      - registry_path
+      - registry_key_name
+      - registry_value_name
+      - host
+    tags:
+      - endpoint
+    logsources:
+      - windows-sysmon
+      - windows-process-creation
+      - windows-driver-framework
+      - linux
+  Network_Traffic:
+    fields:
+      - src
+      - dest
+      - src_ip
+      - dest_ip
+      - src_port
+      - dest_port
+      - protocol
+      - bytes_in
+      - bytes_out
+    tags:
+      - network_traffic
+    logsources:
+      - windows-dhcp
+      - linux
+  DNS:
+    fields:
+      - query
+      - query_type
+      - response
+      - src
+      - dest
+    tags:
+      - dns
+    logsources:
+      - windows-dns-server
+      - windows-dns-server-audit
+  Change:
+    fields:
+      - task_name
+      - operation_id
+      - event_type
+      - user
+      - host
+    tags:
+      - change
+    logsources:
+      - windows-taskscheduler
+      - windows-wmi
+      - linux

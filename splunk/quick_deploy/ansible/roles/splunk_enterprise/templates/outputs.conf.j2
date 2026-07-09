@@ -1,0 +1,9 @@
+[tcpout]
+defaultGroup = splunk_server
+disabled = false
+
+[tcpout:splunk_server]
+server = {{ splunk_bind_ip }}:9997
+sslVerifyServerCert = true
+sslCertPath = {{ splunk_home }}/etc/auth/splunkweb/cert.pem
+sslRootCAPath = {{ splunk_home }}/etc/auth/cacert.pem

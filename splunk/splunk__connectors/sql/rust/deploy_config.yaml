@@ -1,0 +1,23 @@
+# Configuration for the Rust-based SQL connector for Splunk (CIM-compliant)
+sql_connectors:
+  schemas_file: '/app/schemas.yaml'
+  state_path: '/app/state.db'
+splunk:
+  enabled: true
+  hec_url: 'https://your-splunk-host:8088/services/collector/event'
+  hec_token: 'your-splunk-hec-token'
+database:
+  db_type: 'postgres'  # postgres, mysql, mssql, sqlite, oracle
+  conn_str: 'postgres://user:pass@host:port/dbname'
+deployment:
+  method: 'docker'  # docker, podman, kubernetes, ansible
+  namespace: 'sql-connectors'
+  kubernetes:
+    replicas: 1
+buffer_timeout: 2.0 # Time (seconds) to wait before flushing batch
+worker_count: 4
+batch_size: 100
+poll_interval: 60
+cdc_enabled: false  # Enable for PostgreSQL CDC
+max_connections_per_table: 5  # Max DB connections per table
+metrics_port: 9000  # Prometheus metrics endpoint

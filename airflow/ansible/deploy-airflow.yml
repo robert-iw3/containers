@@ -1,0 +1,19 @@
+---
+# Deploy the multi-host Airflow cluster. Control plane first (DB/broker/init must
+# exist before workers connect), then the workers.
+#
+#   ansible-playbook -i inventory.ini deploy-airflow.yml
+#
+# Sync the repo DAGs onto every node with:
+#   ansible-playbook -i inventory.ini deploy-airflow.yml -e dags_src=/path/to/airflow
+- name: Deploy Airflow control plane
+  hosts: airflow_control
+  gather_facts: true
+  roles:
+    - airflow_node
+
+- name: Deploy Airflow workers
+  hosts: airflow_workers
+  gather_facts: true
+  roles:
+    - airflow_node

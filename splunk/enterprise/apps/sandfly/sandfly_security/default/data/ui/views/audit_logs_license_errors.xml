@@ -1,0 +1,97 @@
+<form version="1.1" theme="light">
+  <label>Audit Logs - License Errors</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tok_time1" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Cannot run scheduled scans with an expired license</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="Cannot run scheduled scans with an expired license."
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Cannot run scheduled scans without a license</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="Cannot run scheduled scans without a license."
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>The number of configured email alerts exceeds the license limitation</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="The number of configured email alerts exceeds the license limitation;*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>The number of configured syslog alerts exceeds the license limitation</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="The number of configured syslog alerts exceeds the license limitation;*"
+| stats count</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Most Recent Instance of License Error</title>
+        <search>
+          <query>`sandfly_search_audit` audit_log.message="*license*"
+| search NOT audit_log.message="retrieved license"
+| search NOT audit_log.message="deleted license key"
+| search NOT audit_log.message="added license key*"
+| eval TimeStamp=strftime(_time,"%x %r")
+| dedup audit_log.message
+| sort - _time
+| table TimeStamp audit_log.message
+| rename audit_log.message as Message</query>
+          <earliest>$tok_time1.earliest$</earliest>
+          <latest>$tok_time1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,36 @@
+triage-sandbox-stage:
+  image: docker.io/alpine:latest
+  stage: test
+  tags:
+    - sandbox
+  variables:
+    TRIAGE_API_KEY: "<enter yours>"
+    SOURCE_FILE_URL: "https://some-artifact-url.repo/files.zip"
+  script:
+    - apk add --no-cache -t .build-deps ca-certificates rust cargo gcc g++ musl-dev linux-headers python3-dev unzip wget
+    - mkdir /files; cd /files
+    - if [ -z $SOURCE_FILE_URL ]; then echo "Please configure SOURCE_FILE_URL env variables" && exit 1; fi
+    - wget --progress=bar:force "${SOURCE_FILE_URL}" -O analyze.zip
+    - unzip analyze.zip
+    - cd /
+    - wget --progress=bar:force https://github.com/hatching/triage/archive/refs/heads/main.zip
+    - unzip main.zip
+    - cd triage-main/python
+    - apk add --no-cache python3 py3-pip
+    - python3 -m venv triage
+    - . triage/bin/activate
+    - python3 -m pip install --upgrade pip
+    - python3 -m pip install .
+    - triage authenticate "${TRIAGE_API_KEY}"
+    - apk del --no-network --purge .build-deps
+    - rm -rf /var/cache/apk/* /root/.cache/*
+    # not using triage api, internal sandbox part of the pipeline.
+    #- apk add --no-cache curl
+    #- curl -H 'Authorization: Bearer ${TRIAGE_API_KEY}'
+    #  -F password=${PASSWORD}
+    #  -F 'file=@/files/analyze.zip' \
+    #  https://private.tria.ge/api/v0/samples
+    - for file in $(find /files/analyze -type f -name '*'); do triage submit $file; done
+    # individual files to be sent one by one for analysis
+    #- declare -a FILE=(./mystery.exe ./nothingtoseehere.exe ./notac2beacon.py ./getdatmonies.crypto)
+    #- for ((i=0; i<${#FILE[@]}; i++)); do triage submit ${FILE[$i]}; done

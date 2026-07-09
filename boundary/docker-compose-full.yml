@@ -1,0 +1,150 @@
+version: '3'
+
+volumes:
+  boundary-postgres:
+  boundary-postgres-backups:
+
+x-common-vars-apps: &common-vars-apps
+  networks:
+    boundary:
+      driver: bridge
+  security_opt:
+    - no-new-privileges:true
+  restart: on-failure
+  env_file:
+    - .env
+
+services:
+  postgres:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: postgres-boundary
+    hostname: postgres-boundary.testing.io
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - boundary-postgres:/bitnami/postgresql:z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  db-init:
+    <<: *common-vars-apps
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boundary-db-init
+    hostname: boundary-init.testing.io
+    command: ["database", "init", "-config", "/boundary/boundary.hcl"]
+    volumes:
+      - "${PWD}/:/boundary:ro,z"
+    environment:
+      - BOUNDARY_POSTGRES_URL=postgresql://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@postgres-boundary.testing.io:5432/${POSTGRESQL_DATABASE}?sslmode=disable
+    cap_add:
+      - IPC_LOCK
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  boundary:
+    <<: *common-vars-apps
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boundary-main
+    hostname: boundary.testing.io
+    command: ["server", "-config", "/boundary/boundary.hcl"]
+    volumes:
+      - "${PWD}/:/boundary/"
+    ports:
+      - "9200:9200"
+      - "9201:9201"
+      - "9202:9202"
+    environment:
+      - BOUNDARY_POSTGRES_URL=postgresql://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@postgres-boundary.testing.io:5432/${POSTGRESQL_DATABASE}?sslmode=disable
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-O-", "http://boundary:9200"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  backups:
+    <<: *common-vars-apps
+    image: docker.io/bitnami/postgresql:latest
+    container_name: boundary-backup-psql
+    hostname: boundary-backup-psql.io
+    command:
+      - sh
+      - -c
+      - |
+        sleep 30m
+        while true; do
+          pg_dump -h postgres-boundary.testing.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/boundary-postgres/backups/boundary-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+            echo "Backup failed at $(date)"; exit 1;
+          }
+          find /srv/boundary-postgres/backups -type f -mtime +7 -delete
+          sleep 24h
+        done
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - boundary-postgres:/bitnami/postgresql:z
+      - boundary-postgres-backups:/srv/boundary-postgres/backups:Z
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-boundary.testing.io
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+    ports:
+      - 5432:5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+      boundary:
+        condition: service_healthy
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M

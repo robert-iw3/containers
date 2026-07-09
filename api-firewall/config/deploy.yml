@@ -1,0 +1,24 @@
+- name: Deploy API Firewall
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure certs directory exists
+      file:
+        path: "{{ output_dir }}/certs"
+        state: directory
+        mode: '0700'
+    - name: Ensure CRS directory exists
+      file:
+        path: "{{ output_dir }}/crs"
+        state: directory
+        mode: '0755'
+    - name: Check podman-compose availability
+      command: podman-compose --version
+      register: podman_compose_check
+      failed_when: podman_compose_check.rc != 0
+    - name: Run podman-compose
+      command: podman-compose up -d --force-recreate
+      args:
+        chdir: "{{ output_dir }}"
+      register: podman_compose_result
+      failed_when: podman_compose_result.rc != 0

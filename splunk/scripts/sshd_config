@@ -1,0 +1,12 @@
+# /etc/ssh/sshd_config.d/ad.conf
+# remove /etc/ssh/sshd_config.d/50-cloud-init.conf if exist, to avoid config conflict
+
+# Allow AD domain users to login using AD password
+Match User *@domain.example
+  PasswordAuthentication yes
+
+Match all
+  PasswordAuthentication no
+
+## optional: use static host key
+# HostKey /etc/ssh/splunk_host_ed25519_key

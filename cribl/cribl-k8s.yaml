@@ -1,0 +1,376 @@
+# cribl-k8s.yaml: modify as needed for your environment
+# Note: Secrets (e.g., certs, tokens) should be base64 encoded before use.
+# This example assumes a StorageClass 'fast-ssd' exists; adjust as necessary.
+# Adjust resource requests/limits based on your cluster capacity and workload.
+# Ensure you have the necessary permissions to create resources in the specified namespace.
+# This manifest creates a NetworkPolicy to restrict traffic; modify as needed.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cribl-master
+  labels:
+    app: cribl-master
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      name: ui
+      protocol: TCP
+    - port: 4200
+      name: leader
+      protocol: TCP
+  selector:
+    app: cribl-master
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cribl-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cribl-master
+  template:
+    metadata:
+      labels:
+        app: cribl-master
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: cribl
+          image: cribl/cribl:latest
+          env:
+            - name: CRIBL_DIST_MODE
+              value: "master"
+            - name: CRIBL_DIST_LEADER_URL
+              value: "tcp://criblmaster@0.0.0.0:4200"
+            - name: CRIBL_VOLUME_DIR
+              value: "/opt/cribl/local"
+            - name: SCOPE_METRIC_DEST
+              value: "udp://cribl-workers:8125"
+            - name: SCOPE_EVENT_DEST
+              value: "tcp://cribl-workers:10001"
+            - name: CRIBL_SPLUNK
+              value: "cribl-workers:9999"
+            - name: CRIBL_SPLUNK_ARGS
+              value: "-ssl-cert-path /opt/cribl/certs/client.pem"
+            - name: CRIBL_SPLUNK_HEC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cribl-certs
+                  key: splunk_hec_token
+            - name: CRIBL_ELASTIC
+              value: "http://cribl-workers:10200"
+            - name: CRIBL_ELASTIC_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: cribl-certs
+                  key: elastic_api_key
+            - name: CRIBL_HEC
+              value: "http://cribl-workers:10088/services/collector/event"
+            - name: CRIBL_SYSLOG
+              value: "cribl-workers:5140"
+            - name: CRIBL_KAFKA
+              value: "kafka:29092"
+            - name: CRIBL_STATSD
+              value: "cribl-workers:8125"
+            - name: CRIBL_TCPJSON
+              value: "cribl-workers:10001"
+          ports:
+            - containerPort: 9000
+              name: ui
+              protocol: TCP
+            - containerPort: 4200
+              name: leader
+              protocol: TCP
+          volumeMounts:
+            - name: cribl-config
+              mountPath: /opt/cribl/local
+            - name: cribl-state
+              mountPath: /opt/cribl/state
+            - name: certs
+              mountPath: /opt/cribl/certs
+          resources:
+            requests:
+              memory: "4Gi"  # Increased
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: cribl-config
+          persistentVolumeClaim:
+            claimName: cribl-master-config
+        - name: cribl-state
+          persistentVolumeClaim:
+            claimName: cribl-master-state
+        - name: certs
+          secret:
+            secretName: cribl-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cribl-workers
+  labels:
+    app: cribl-workers
+spec:
+  type: ClusterIP
+  ports:
+    - port: 10200
+      name: elastic
+      protocol: TCP
+    - port: 10088
+      name: hec
+      protocol: TCP
+    - port: 9999
+      name: splunk
+      protocol: TCP
+    - port: 5140
+      name: syslog-tcp
+      protocol: TCP
+    - port: 5140
+      name: syslog-udp
+      protocol: UDP
+    - port: 8125
+      name: statsd-tcp
+      protocol: TCP
+    - port: 8125
+      name: statsd-udp
+      protocol: UDP
+    - port: 10001
+      name: tcpjson
+      protocol: TCP
+  selector:
+    app: cribl-workers
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cribl-workers
+spec:
+  serviceName: cribl-workers
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cribl-workers
+  template:
+    metadata:
+      labels:
+        app: cribl-workers
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: cribl
+          image: cribl/cribl:latest
+          env:
+            - name: CRIBL_DIST_MODE
+              value: "worker"
+            - name: CRIBL_DIST_LEADER_URL
+              value: "tcp://criblmaster@cribl-master:4200"
+            - name: CRIBL_VOLUME_DIR
+              value: "/opt/cribl/local"
+            - name: SCOPE_METRIC_DEST
+              value: "udp://cribl-workers:8125"
+            - name: SCOPE_EVENT_DEST
+              value: "tcp://cribl-workers:10001"
+            - name: CRIBL_SPLUNK
+              value: "cribl-workers:9999"
+            - name: CRIBL_SPLUNK_ARGS
+              value: "-ssl-cert-path /opt/cribl/certs/client.pem"
+            - name: CRIBL_SPLUNK_HEC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cribl-certs
+                  key: splunk_hec_token
+            - name: CRIBL_ELASTIC
+              value: "http://cribl-workers:10200"
+            - name: CRIBL_ELASTIC_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: cribl-certs
+                  key: elastic_api_key
+            - name: CRIBL_HEC
+              value: "http://cribl-workers:10088/services/collector/event"
+            - name: CRIBL_SYSLOG
+              value: "cribl-workers:5140"
+            - name: CRIBL_KAFKA
+              value: "kafka:29092"
+            - name: CRIBL_STATSD
+              value: "cribl-workers:8125"
+            - name: CRIBL_TCPJSON
+              value: "cribl-workers:10001"
+          ports:
+            - containerPort: 10200
+              name: elastic
+              protocol: TCP
+            - containerPort: 10088
+              name: hec
+              protocol: TCP
+            - containerPort: 9999
+              name: splunk
+              protocol: TCP
+            - containerPort: 5140
+              name: syslog-tcp
+              protocol: TCP
+            - containerPort: 5140
+              name: syslog-udp
+              protocol: UDP
+            - containerPort: 8125
+              name: statsd-tcp
+              protocol: TCP
+            - containerPort: 8125
+              name: statsd-udp
+              protocol: UDP
+            - containerPort: 10001
+              name: tcpjson
+              protocol: TCP
+          volumeMounts:
+            - name: cribl-config
+              mountPath: /opt/cribl/local
+            - name: cribl-state
+              mountPath: /opt/cribl/state
+            - name: certs
+              mountPath: /opt/cribl/certs
+          resources:
+            requests:
+              memory: "4Gi"  # Increased
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: certs
+          secret:
+            secretName: cribl-certs
+  volumeClaimTemplates:
+    - metadata:
+        name: cribl-config
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 10Gi  # Increased
+    - metadata:
+        name: cribl-state
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cribl-master-config
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cribl-master-state
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cribl-certs
+data:
+  client.pem: ""  # Base64 encoded in deployment
+  splunk_hec_token: ""  # Base64 encoded in deployment
+  elastic_api_key: ""  # Base64 encoded in deployment
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cribl-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: cribl-master
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: cribl-workers
+      ports:
+        - port: 4200
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: cribl-workers
+      ports:
+        - port: 4200
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 9997
+          protocol: TCP  # Splunk
+        - port: 9200
+          protocol: TCP  # Elastic

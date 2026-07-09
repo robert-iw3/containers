@@ -1,0 +1,37 @@
+---
+- name: Playbook to configure IPA cluster
+  hosts: ipacluster
+  become: true
+  vars_files:
+    - playbook_sensitive_data.yml
+  pre_tasks:
+    - name: Check Ansible version
+      ansible.builtin.assert:
+        that: "ansible_version.full is version('2.14', '>=')"
+        fail_msg: "Ansible version 2.14 or higher is required"
+    - name: Verify connectivity
+      ansible.builtin.ping:
+  roles:
+    - role: ipaserver
+      when: inventory_hostname in groups['ipaserver']
+      vars:
+        ipaserver_setup_dns: yes
+        ipaserver_auto_forwarders: yes
+        ipaserver_install_packages: yes
+        ipaserver_setup_firewalld: yes
+      state: present
+    - role: ipareplica
+      when: inventory_hostname in groups['ipareplicas']
+      vars:
+        ipareplica_setup_dns: yes
+        ipareplica_auto_forwarders: yes
+        ipareplica_install_packages: yes
+        ipareplica_setup_firewalld: yes
+      state: present
+    - role: ipaclient
+      when: inventory_hostname in groups['ipaclients']
+      vars:
+        ipaclient_use_otp: yes
+        ipaclient_install_packages: yes
+        ipaclient_setup_firewalld: yes
+      state: present

@@ -1,0 +1,42 @@
+groups:
+  - name: nomad-cluster
+    rules:
+      - alert: NomadServerDown
+        expr: up{group="nomad-servers"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nomad server {{ '{{ $labels.instance }}' }} is down"
+
+      - alert: NomadQuorumAtRisk
+        expr: count(up{group="nomad-servers"} == 1) <= (count(up{group="nomad-servers"}) / 2)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Half or more of the Nomad servers are unreachable; Raft quorum is at risk"
+
+      - alert: NomadClientDown
+        expr: up{group="nomad-clients"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nomad client {{ '{{ $labels.instance }}' }} is down"
+
+      - alert: NomadLeadershipFlapping
+        expr: changes(nomad_raft_leader_lastContact_count[10m]) == 0 and up{group="nomad-servers"} == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nomad server {{ '{{ $labels.instance }}' }} reports no leader contact"
+
+      - alert: NomadBlockedEvals
+        expr: nomad_nomad_blocked_evals_total_blocked > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nomad has evaluations blocked for over 10 minutes (insufficient capacity)"
