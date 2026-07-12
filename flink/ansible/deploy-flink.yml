@@ -1,0 +1,17 @@
+---
+# Deploy the multi-host Flink session cluster. JobManager first (it generates the
+# shared TLS keystore and must be reachable before TaskManagers register), then the
+# TaskManagers.
+#
+#   ansible-playbook -i inventory.ini deploy-flink.yml
+- name: Deploy Flink JobManager
+  hosts: flink_jobmanager
+  gather_facts: true
+  roles:
+    - flink_node
+
+- name: Deploy Flink TaskManagers
+  hosts: flink_taskmanagers
+  gather_facts: true
+  roles:
+    - flink_node

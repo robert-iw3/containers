@@ -1,0 +1,124 @@
+---
+# Multi-host Flink 2.3 session cluster (CeleryExecutor-free; Flink-native).
+#   flink_jobmanager : the JobManager (REST/UI + RPC + blob server)
+#   flink_taskmanagers : TaskManagers (scale horizontally, distinct IPs/hosts)
+# TaskManagers reach the JobManager over RPC + the blob server, and internal SSL is
+# mutual, so the JobManager's advertise address and a shared keystore are the crux.
+
+- name: Resolve the JobManager's advertise address
+  ansible.builtin.set_fact:
+    jobmanager_host: >-
+      {{ hostvars[groups['flink_jobmanager'][0]]['flink_advertise_host']
+         | default(hostvars[groups['flink_jobmanager'][0]]['ansible_host'])
+         | default(hostvars[groups['flink_jobmanager'][0]]['ansible_default_ipv4']['address']) }}
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Create node directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0777"
+  loop:
+    - "{{ flink_base_dir }}"
+    - "{{ tls_dir }}"
+    - "{{ pipelines_dir }}"
+  become: true
+
+- name: Pull the Flink image
+  containers.podman.podman_image:
+    name: "{{ flink_image }}"
+  become: true
+
+# --- TLS: generate the shared keystore/truststore on the JobManager, distribute ---
+- name: Generate the Flink TLS keystore/truststore (JobManager, via the image's keytool)
+  ansible.builtin.command:
+    cmd: >-
+      {{ container_runtime }} run --rm --user 0 -v {{ tls_dir }}:/tls:Z {{ flink_image }}
+      bash -c "keytool -genkeypair -alias flink -keyalg RSA -keysize 2048 -validity 825
+      -keystore /tls/keystore.jks -storepass {{ flink_tls_password }} -keypass {{ flink_tls_password }}
+      -dname CN=flink -ext SAN=ip:{{ jobmanager_host }},dns:jobmanager,dns:localhost,ip:127.0.0.1 &&
+      keytool -exportcert -alias flink -keystore /tls/keystore.jks -storepass {{ flink_tls_password }} -rfc -file /tls/flink.cer &&
+      keytool -importcert -noprompt -alias flink -file /tls/flink.cer -keystore /tls/truststore.jks -storepass {{ flink_tls_password }} &&
+      rm -f /tls/flink.cer && chmod 644 /tls/keystore.jks /tls/truststore.jks"
+    creates: "{{ tls_dir }}/keystore.jks"
+  become: true
+  when: "'flink_jobmanager' in group_names"
+
+- name: Fetch the keystore/truststore to the controller for distribution
+  ansible.builtin.fetch:
+    src: "{{ tls_dir }}/{{ item }}"
+    dest: "/tmp/flink-tls/{{ item }}"
+    flat: true
+  loop: [keystore.jks, truststore.jks]
+  become: true
+  when: "'flink_jobmanager' in group_names"
+
+- name: Distribute the keystore/truststore to TaskManager hosts
+  ansible.builtin.copy:
+    src: "/tmp/flink-tls/{{ item }}"
+    dest: "{{ tls_dir }}/{{ item }}"
+    mode: "0644"
+  loop: [keystore.jks, truststore.jks]
+  become: true
+  when: "'flink_taskmanagers' in group_names and 'flink_jobmanager' not in group_names"
+
+- name: Assemble FLINK_PROPERTIES
+  ansible.builtin.set_fact:
+    flink_properties: |
+      jobmanager.rpc.address: {{ jobmanager_host }}
+      blob.server.port: {{ blob_port }}
+      taskmanager.numberOfTaskSlots: {{ taskmanager_slots }}
+      parallelism.default: {{ parallelism_default }}
+      jobmanager.memory.process.size: {{ jobmanager_memory }}
+      taskmanager.memory.process.size: {{ taskmanager_memory }}
+      state.backend.type: rocksdb
+      execution.checkpointing.interval: 30s
+      jobmanager.scheduler: adaptive
+      security.ssl.internal.enabled: true
+      security.ssl.internal.keystore: /opt/flink/tls/keystore.jks
+      security.ssl.internal.truststore: /opt/flink/tls/truststore.jks
+      security.ssl.internal.keystore-password: {{ flink_tls_password }}
+      security.ssl.internal.key-password: {{ flink_tls_password }}
+      security.ssl.internal.truststore-password: {{ flink_tls_password }}
+      security.ssl.rest.enabled: true
+      security.ssl.rest.keystore: /opt/flink/tls/keystore.jks
+      security.ssl.rest.truststore: /opt/flink/tls/truststore.jks
+      security.ssl.rest.keystore-password: {{ flink_tls_password }}
+      security.ssl.rest.key-password: {{ flink_tls_password }}
+      security.ssl.rest.truststore-password: {{ flink_tls_password }}
+
+- name: Run the JobManager (JobManager host)
+  containers.podman.podman_container:
+    name: flink-jobmanager
+    image: "{{ flink_image }}"
+    command: jobmanager
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      FLINK_PROPERTIES: "{{ flink_properties }}"
+    volumes:
+      - "{{ tls_dir }}:/opt/flink/tls:ro"
+      - "{{ pipelines_dir }}:/opt/pipelines:ro"
+  become: true
+  when: "'flink_jobmanager' in group_names"
+
+- name: Run a TaskManager (TaskManager hosts)
+  containers.podman.podman_container:
+    name: flink-taskmanager
+    image: "{{ flink_image }}"
+    command: taskmanager
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      FLINK_PROPERTIES: "{{ flink_properties }}"
+    volumes:
+      - "{{ tls_dir }}:/opt/flink/tls:ro"
+  become: true
+  when: "'flink_taskmanagers' in group_names"

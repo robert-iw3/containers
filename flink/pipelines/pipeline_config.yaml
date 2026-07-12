@@ -1,0 +1,50 @@
+# Declarative streaming-pipeline definition. build_pipeline.py turns this into a
+# Flink SQL job: source table -> windowed aggregation (+ optional anomaly flag) ->
+# sink table. Change the schema/source/sink and the same generator handles it --
+# the pipeline processes whatever you configure it to.
+#
+# This example: IoT sensor telemetry, generated locally (datagen) so it runs with
+# no external systems. Point `source`/`sink` at kafka/filesystem for real data.
+
+name: telemetry_stream
+
+source:
+  connector: datagen           # datagen | kafka | filesystem
+  options:
+    rows-per-second: "2000"
+
+schema:
+  # Every column: name + Flink SQL type. datagen options are optional per column.
+  columns:
+    - {name: sensor_id, type: "INT",    datagen: {kind: random, min: 1,   max: 24}}
+    - {name: metric,    type: "INT",    datagen: {kind: random, min: 0,   max: 3}}
+    - {name: value,     type: "DOUBLE", datagen: {kind: random, min: 0.0, max: 250.0}}
+  # processing = window on wall-clock (simplest, works with datagen).
+  # event      = requires an event_time column below + watermark.
+  time_attribute: processing
+  # For event-time, uncomment:
+  # event_time_column: event_time
+  # watermark_delay: "5 SECONDS"
+
+key_by: [sensor_id, metric]
+
+window:
+  type: tumble                 # tumble | hop | cumulate
+  size: "10 SECONDS"
+  # hop/cumulate also take: slide / step
+
+aggregations:
+  - {field: value, funcs: [avg, min, max, count, stddev_pop]}
+
+# Optional: flag a window as anomalous when the peak sits > threshold stddevs above
+# the window mean. Needs stddev_pop in the aggregations for `field`.
+anomaly:
+  field: value
+  method: zscore
+  threshold: 3.0
+
+sink:
+  connector: print             # print | filesystem | kafka
+  # filesystem example:
+  # connector: filesystem
+  # options: {path: "file:///tmp/flink-out", format: json}

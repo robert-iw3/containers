@@ -1,0 +1,21 @@
+---
+# Role defaults so flink_node is self-contained (molecule, standalone reuse).
+# group_vars/all.yml overrides these for a real deployment.
+flink_image: "docker.io/library/flink:2.3.0"
+container_runtime: podman   # podman (primary) or docker
+
+flink_base_dir: /opt/flink-node
+tls_dir: "{{ flink_base_dir }}/tls"
+pipelines_dir: "{{ flink_base_dir }}/pipelines"
+
+# !!! OVERRIDE FOR ANY REAL DEPLOYMENT !!!
+flink_tls_password: "flink-tls-pass"
+
+taskmanager_slots: 4
+parallelism_default: 4
+jobmanager_memory: 2048m
+taskmanager_memory: 4096m
+
+rest_port: 8081
+rpc_port: 6123
+blob_port: 6124

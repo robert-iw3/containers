@@ -1,0 +1,31 @@
+---
+# Converges flink_node on a single instance acting as BOTH JobManager and
+# TaskManager (single-host mode of the multi-host role), then verifies the cluster
+# is up over TLS and the TaskManager registered. The flink image must be loadable
+# inside the instance; prepare.yml pulls it (fuse-overlayfs for nested podman).
+driver:
+  name: podman
+
+platforms:
+  - name: flink-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - flink_jobmanager
+      - flink_taskmanagers
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      flink-molecule:
+        flink_advertise_host: "127.0.0.1"
+
+verifier:
+  name: ansible
