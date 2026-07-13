@@ -1,0 +1,11 @@
+---
+# Deploy the multi-host Cassandra cluster. serial:1 bootstraps nodes one at a time
+# (a Cassandra requirement -- joining two nodes simultaneously corrupts the ring).
+#
+#   ansible-playbook -i inventory.ini deploy-cassandra.yml
+- name: Deploy Cassandra cluster
+  hosts: cassandra_cluster
+  serial: 1
+  gather_facts: true
+  roles:
+    - cassandra_node

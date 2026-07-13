@@ -1,0 +1,265 @@
+---
+# Distributed Hadoop 3.5 on Kubernetes: HDFS (NameNode + 3-DataNode StatefulSet,
+# RF=3) as the datalake storage layer, YARN (ResourceManager + 2 NodeManagers) as
+# compute, plus the timeline/history server. Config comes from the hadoop-config
+# ConfigMap (the CORE_CONF_/HDFS_CONF_/YARN_CONF_ env the image entrypoint templates).
+#
+# The Services are named `namenode` / `resourcemanager` / `historyserver` so they
+# match the hostnames baked into the config env.
+#
+# Build + push the images first (make build; push hadoop-*:latest to your registry),
+# then:  kubectl apply -f k8s-hadoop-cluster.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hadoop
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hadoop-config
+  namespace: hadoop
+data:
+  CORE_CONF_fs_defaultFS: "hdfs://namenode:9000"
+  CORE_CONF_hadoop_http_staticuser_user: "root"
+  HDFS_CONF_dfs_webhdfs_enabled: "true"
+  HDFS_CONF_dfs_permissions_enabled: "false"
+  HDFS_CONF_dfs_replication: "3"
+  HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+  YARN_CONF_yarn_resourcemanager_hostname: "resourcemanager"
+  YARN_CONF_yarn_resourcemanager_address: "resourcemanager:8032"
+  YARN_CONF_yarn_resourcemanager_scheduler_address: "resourcemanager:8030"
+  YARN_CONF_yarn_resourcemanager_resource__tracker_address: "resourcemanager:8031"
+  YARN_CONF_yarn_timeline___service_enabled: "true"
+  YARN_CONF_yarn_timeline___service_hostname: "historyserver"
+  YARN_CONF_yarn_log___aggregation___enable: "true"
+  YARN_CONF_yarn_nodemanager_aux___services: "mapreduce_shuffle"
+  YARN_CONF_yarn_nodemanager_resource_memory___mb: "8192"
+  YARN_CONF_yarn_nodemanager_resource_cpu___vcores: "4"
+  MAPRED_CONF_mapreduce_framework_name: "yarn"
+  CLUSTER_NAME: "arcanaeum-datalake"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: namenode
+  namespace: hadoop
+spec:
+  selector: {app: hadoop, component: namenode}
+  ports:
+  - {name: rpc, port: 9000, targetPort: 9000}
+  - {name: ui, port: 9870, targetPort: 9870}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: namenode
+  namespace: hadoop
+spec:
+  serviceName: namenode
+  replicas: 1
+  selector:
+    matchLabels: {app: hadoop, component: namenode}
+  template:
+    metadata:
+      labels: {app: hadoop, component: namenode}
+    spec:
+      containers:
+      - name: namenode
+        image: hadoop-namenode:latest
+        envFrom:
+        - configMapRef: {name: hadoop-config}
+        ports:
+        - {containerPort: 9870, name: ui}
+        - {containerPort: 9000, name: rpc}
+        volumeMounts:
+        - {name: name, mountPath: /hadoop/dfs/name}
+        readinessProbe:
+          httpGet: {path: /, port: 9870}
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+          limits: {cpu: "2", memory: "2Gi"}
+  volumeClaimTemplates:
+  - metadata: {name: name}
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources: {requests: {storage: 10Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datanode
+  namespace: hadoop
+spec:
+  clusterIP: None
+  selector: {app: hadoop, component: datanode}
+  ports:
+  - {name: data, port: 9864}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: datanode
+  namespace: hadoop
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app: hadoop, component: datanode}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: datanode
+  namespace: hadoop
+spec:
+  serviceName: datanode
+  replicas: 3
+  selector:
+    matchLabels: {app: hadoop, component: datanode}
+  template:
+    metadata:
+      labels: {app: hadoop, component: datanode}
+    spec:
+      containers:
+      - name: datanode
+        image: hadoop-datanode:latest
+        envFrom:
+        - configMapRef: {name: hadoop-config}
+        env:
+        - {name: SERVICE_PRECONDITION, value: "namenode:9870"}
+        ports:
+        - {containerPort: 9864, name: data}
+        volumeMounts:
+        - {name: data, mountPath: /hadoop/dfs/data}
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+          limits: {cpu: "2", memory: "2Gi"}
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources: {requests: {storage: 20Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resourcemanager
+  namespace: hadoop
+spec:
+  selector: {app: hadoop, component: resourcemanager}
+  ports:
+  - {name: ui, port: 8088, targetPort: 8088}
+  - {name: scheduler, port: 8030, targetPort: 8030}
+  - {name: tracker, port: 8031, targetPort: 8031}
+  - {name: rm, port: 8032, targetPort: 8032}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resourcemanager
+  namespace: hadoop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: hadoop, component: resourcemanager}
+  template:
+    metadata:
+      labels: {app: hadoop, component: resourcemanager}
+    spec:
+      containers:
+      - name: resourcemanager
+        image: hadoop-resourcemanager:latest
+        envFrom:
+        - configMapRef: {name: hadoop-config}
+        env:
+        - {name: SERVICE_PRECONDITION, value: "namenode:9000 namenode:9870 datanode:9864"}
+        ports:
+        - {containerPort: 8088, name: ui}
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+          limits: {cpu: "2", memory: "2Gi"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodemanager
+  namespace: hadoop
+spec:
+  # Stateless compute -- the tier you scale (HPA-friendly, unlike the stateful HDFS).
+  replicas: 2
+  selector:
+    matchLabels: {app: hadoop, component: nodemanager}
+  template:
+    metadata:
+      labels: {app: hadoop, component: nodemanager}
+    spec:
+      containers:
+      - name: nodemanager
+        image: hadoop-nodemanager:latest
+        envFrom:
+        - configMapRef: {name: hadoop-config}
+        env:
+        - {name: SERVICE_PRECONDITION, value: "namenode:9000 namenode:9870 resourcemanager:8088"}
+        resources:
+          requests: {cpu: "1", memory: "2Gi"}
+          limits: {cpu: "2", memory: "4Gi"}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nodemanager
+  namespace: hadoop
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nodemanager
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target: {type: Utilization, averageUtilization: 70}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: historyserver
+  namespace: hadoop
+spec:
+  selector: {app: hadoop, component: historyserver}
+  ports:
+  - {name: ui, port: 8188, targetPort: 8188}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: historyserver
+  namespace: hadoop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: hadoop, component: historyserver}
+  template:
+    metadata:
+      labels: {app: hadoop, component: historyserver}
+    spec:
+      containers:
+      - name: historyserver
+        image: hadoop-historyserver:latest
+        envFrom:
+        - configMapRef: {name: hadoop-config}
+        env:
+        - {name: SERVICE_PRECONDITION, value: "namenode:9000 namenode:9870 resourcemanager:8088"}
+        ports:
+        - {containerPort: 8188, name: ui}
+        volumeMounts:
+        - {name: timeline, mountPath: /hadoop/yarn/timeline}
+        resources:
+          requests: {cpu: "250m", memory: "512Mi"}
+          limits: {cpu: "1", memory: "1Gi"}
+      volumes:
+      - {name: timeline, emptyDir: {}}

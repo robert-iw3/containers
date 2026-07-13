@@ -1,63 +1,71 @@
 ---
+# Apache Cassandra 5.0 — a 3-node cluster on the official image, driven by the
+# image's own CASSANDRA_* env vars (no partial config mounted over the full one).
+# Nodes bootstrap sequentially (2 waits for 1, 3 waits for 2) as Cassandra requires,
+# then schema-init applies the declarative schema.
+#
+#   docker compose up -d                 # 3-node cluster (give it a few minutes)
+#   docker compose run --rm schema-init  # apply schema/schema.cql (RF=3)
+x-cassandra-common: &cassandra-common
+  image: ${CASSANDRA_IMAGE:-docker.io/library/cassandra:5.0}
+  environment: &cassandra-env
+    CASSANDRA_CLUSTER_NAME: arcanaeum
+    CASSANDRA_SEEDS: cassandra1
+    CASSANDRA_DC: dc1
+    CASSANDRA_RACK: rack1
+    CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    # Modest heap so three nodes fit on one host for the demo.
+    MAX_HEAP_SIZE: 1024M
+    HEAP_NEWSIZE: 128M
+  healthcheck:
+    test: ["CMD-SHELL", "nodetool status | grep -q '^UN' || exit 1"]
+    interval: 15s
+    timeout: 10s
+    retries: 25
+    start_period: 90s
+  networks: [cassandra]
+  restart: unless-stopped
+
 services:
-  cassandra:
-    image: cassandra:5.0
-    ports:
-      - "9042:9042"  # CQL only; intra-node stays internal
-    volumes:
-      - cassandra_data:/var/lib/cassandra:Z
-      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml:ro
-      - ./init-cassandra.sh:/init-cassandra.sh:ro
-    environment:
-      - CASSANDRA_SEEDS=cassandra,cassandra2
-      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
-      - CASSANDRA_PASSWORD_SEEDER=yes
-      - CASSANDRA_PASSWORD=cassandra
-      - MAX_HEAP_SIZE=4G
-      - HEAP_NEWSIZE=800M
-      - JVM_OPTS=-XX:+UseContainerSupport
-    healthcheck:
-      test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe keyspaces"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-    networks:
-      - cassandra-net
+  cassandra1:
+    <<: *cassandra-common
+    hostname: cassandra1
+    ports: ["9042:9042"]
+    volumes: ["cassandra1-data:/var/lib/cassandra"]
 
   cassandra2:
-    image: cassandra:5.0
-    ports:
-      - "9043:9042"
-    volumes:
-      - cassandra2_data:/var/lib/cassandra:Z
-      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml:ro
-      - ./init-cassandra.sh:/init-cassandra.sh:ro
-    environment:
-      - CASSANDRA_SEEDS=cassandra,cassandra2
-      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
-      - CASSANDRA_PASSWORD=cassandra
-      - MAX_HEAP_SIZE=4G
-      - HEAP_NEWSIZE=800M
-      - JVM_OPTS=-XX:+UseContainerSupport
-    healthcheck:
-      test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe keyspaces"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+    <<: *cassandra-common
+    hostname: cassandra2
+    volumes: ["cassandra2-data:/var/lib/cassandra"]
     depends_on:
-      cassandra:
-        condition: service_healthy
-    networks:
-      - cassandra-net
+      cassandra1: {condition: service_healthy}
+
+  cassandra3:
+    <<: *cassandra-common
+    hostname: cassandra3
+    volumes: ["cassandra3-data:/var/lib/cassandra"]
+    depends_on:
+      cassandra2: {condition: service_healthy}
+
+  # One-shot: apply the declarative schema once the cluster is up.
+  schema-init:
+    image: ${CASSANDRA_IMAGE:-docker.io/library/cassandra:5.0}
+    depends_on:
+      cassandra3: {condition: service_healthy}
+    volumes:
+      - ./schema:/schema:ro
+    entrypoint:
+      - bash
+      - -c
+      - "until cqlsh cassandra1 -e 'describe cluster' >/dev/null 2>&1; do sleep 5; done; cqlsh cassandra1 -f /schema/schema.cql && echo SCHEMA_APPLIED"
+    networks: [cassandra]
+    profiles: ["tools"]
 
 networks:
-  cassandra-net:
+  cassandra:
     driver: bridge
 
 volumes:
-  cassandra_data:
-    driver: local
-  cassandra2_data:
-    driver: local
+  cassandra1-data: {}
+  cassandra2-data: {}
+  cassandra3-data: {}

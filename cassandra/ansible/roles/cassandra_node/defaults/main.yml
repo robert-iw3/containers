@@ -1,0 +1,14 @@
+---
+# Role defaults so cassandra_node is self-contained (molecule, standalone reuse).
+cassandra_image: "docker.io/library/cassandra:5.0"
+container_runtime: podman
+
+cassandra_cluster_name: "arcanaeum"
+cassandra_dc: "dc1"
+cassandra_rack: "rack1"
+cassandra_max_heap: "1024M"
+cassandra_heap_newsize: "128M"
+
+# Optional: path (on the control node) to a schema.cql applied after the first node
+# is up. Empty = skip.
+cassandra_schema_src: ""

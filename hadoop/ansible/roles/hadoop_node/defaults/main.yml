@@ -1,0 +1,15 @@
+---
+# Role defaults so hadoop_node is self-contained. group_vars/all.yml overrides these.
+# Images are built by `make build` and either pushed to a registry (set
+# hadoop_registry) or preloaded on each host.
+hadoop_registry: ""                       # e.g. "registry.example.com/" (trailing /)
+container_runtime: podman
+
+hadoop_cluster_name: "arcanaeum-datalake"
+hadoop_replication: 3
+hadoop_data_dir: /opt/hadoop-node
+
+# Per-role service ports (host network).
+namenode_rpc_port: 9000
+namenode_ui_port: 9870
+rm_ui_port: 8088

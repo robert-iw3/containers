@@ -1,61 +1,74 @@
-version: "3"
+---
+# Distributed Hadoop 3.5 data cluster: HDFS (NameNode + 3 DataNodes, RF=3) as the
+# datalake storage layer, YARN (ResourceManager + 2 NodeManagers) as the compute
+# layer, plus the timeline/history server. Config is templated from hadoop.env by
+# the image entrypoint.
+#
+#   make build && docker compose up -d          # bring up the cluster
+#   ./datalake/init_datalake.sh                 # create HDFS zones + load sample logs
+#   ./datalake/process_logs.sh                  # run the distributed log-processing job
+#
+# UIs: NameNode http://localhost:9870 · ResourceManager http://localhost:8088
+x-hadoop-env: &hadoop-env
+  env_file: ./hadoop.env
+  restart: unless-stopped
 
 services:
   namenode:
-    image: hadoop-base:latest
-    container_name: namenode
-    restart: always
-    ports:
-      - 9870:9870
-      - 9000:9000
-    volumes:
-      - hadoop_namenode:/hadoop/dfs/name
+    <<: *hadoop-env
+    image: hadoop-namenode:latest
+    hostname: namenode
+    ports: ["9870:9870", "9000:9000"]
+    volumes: ["hadoop_namenode:/hadoop/dfs/name"]
     environment:
-      - CLUSTER_NAME=test
-    env_file:
-      - ./hadoop.env
+      CLUSTER_NAME: arcanaeum-datalake
 
-  datanode:
+  datanode1: &datanode
+    <<: *hadoop-env
     image: hadoop-datanode:latest
-    container_name: datanode
-    restart: always
-    volumes:
-      - hadoop_datanode:/hadoop/dfs/data
+    hostname: datanode1
+    volumes: ["hadoop_datanode1:/hadoop/dfs/data"]
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
-    env_file:
-      - ./hadoop.env
+  datanode2:
+    <<: *datanode
+    hostname: datanode2
+    volumes: ["hadoop_datanode2:/hadoop/dfs/data"]
+  datanode3:
+    <<: *datanode
+    hostname: datanode3
+    volumes: ["hadoop_datanode3:/hadoop/dfs/data"]
 
   resourcemanager:
+    <<: *hadoop-env
     image: hadoop-resourcemanager:latest
-    container_name: resourcemanager
-    restart: always
+    hostname: resourcemanager
+    ports: ["8088:8088"]
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
-    env_file:
-      - ./hadoop.env
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864"
 
-  nodemanager1:
+  nodemanager1: &nodemanager
+    <<: *hadoop-env
     image: hadoop-nodemanager:latest
-    container_name: nodemanager
-    restart: always
+    hostname: nodemanager1
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
-    env_file:
-      - ./hadoop.env
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 resourcemanager:8088"
+  nodemanager2:
+    <<: *nodemanager
+    hostname: nodemanager2
 
   historyserver:
+    <<: *hadoop-env
     image: hadoop-historyserver:latest
-    container_name: historyserver
-    restart: always
+    hostname: historyserver
+    ports: ["8188:8188"]
+    volumes: ["hadoop_historyserver:/hadoop/yarn/timeline"]
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
-    volumes:
-      - hadoop_historyserver:/hadoop/yarn/timeline
-    env_file:
-      - ./hadoop.env
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 resourcemanager:8088"
 
 volumes:
   hadoop_namenode:
-  hadoop_datanode:
+  hadoop_datanode1:
+  hadoop_datanode2:
+  hadoop_datanode3:
   hadoop_historyserver:

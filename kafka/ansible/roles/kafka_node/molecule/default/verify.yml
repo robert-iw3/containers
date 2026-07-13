@@ -1,0 +1,47 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Kafka container is running
+      ansible.builtin.command: podman ps --format '{{ "{{" }}.Names{{ "}}" }}'
+      register: ps
+      changed_when: false
+
+    - name: Assert the broker is up
+      ansible.builtin.assert:
+        that: "'kafka' in ps.stdout"
+
+    - name: Wait for the broker API to answer (KRaft quorum formed)
+      ansible.builtin.command: >-
+        podman exec kafka /opt/kafka/bin/kafka-broker-api-versions.sh
+        --bootstrap-server localhost:9092
+      register: api
+      changed_when: false
+      until: api.rc == 0
+      retries: 30
+      delay: 5
+
+    - name: Create a test topic
+      ansible.builtin.command: >-
+        podman exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092
+        --create --if-not-exists --topic molecule-test --partitions 1 --replication-factor 1
+      changed_when: false
+
+    - name: Produce a message
+      ansible.builtin.shell: >-
+        echo 'hello-molecule' | podman exec -i kafka
+        /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic molecule-test
+      changed_when: false
+
+    - name: Consume it back
+      ansible.builtin.command: >-
+        podman exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092
+        --topic molecule-test --from-beginning --max-messages 1 --timeout-ms 15000
+      register: consumed
+      changed_when: false
+
+    - name: Assert the round-trip worked
+      ansible.builtin.assert:
+        that: "'hello-molecule' in consumed.stdout"

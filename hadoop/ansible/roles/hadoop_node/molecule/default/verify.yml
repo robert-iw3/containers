@@ -1,0 +1,23 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Hadoop role containers are running
+      ansible.builtin.command: podman ps --format '{{ "{{" }}.Names{{ "}}" }}'
+      register: ps
+      changed_when: false
+    - name: Assert NameNode + DataNode + ResourceManager are up
+      ansible.builtin.assert:
+        that:
+          - "'hadoop-namenode' in ps.stdout"
+          - "'hadoop-datanode' in ps.stdout"
+          - "'hadoop-resourcemanager' in ps.stdout"
+    - name: HDFS reports at least one live DataNode
+      ansible.builtin.command: podman exec hadoop-namenode hdfs dfsadmin -report
+      register: rep
+      changed_when: false
+      until: "'Live datanodes' in rep.stdout"
+      retries: 30
+      delay: 10

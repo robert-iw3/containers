@@ -1,0 +1,16 @@
+---
+# Role defaults so kafka_node is self-contained (molecule, standalone reuse).
+kafka_image: "docker.io/apache/kafka:4.3.1"
+container_runtime: podman
+
+# All nodes in a KRaft cluster share one cluster id (must be a valid base64 UUID).
+kafka_cluster_id: "kQiG5vY0R0aH8xVzR2mQ2A"
+
+# Replication defaults; capped to the node count at runtime so a single-node
+# cluster (e.g. molecule) still forms.
+kafka_replication_factor: 3
+kafka_min_insync_replicas: 2
+kafka_num_partitions: 6
+
+kafka_client_port: 9092
+kafka_controller_port: 9093

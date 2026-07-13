@@ -1,0 +1,30 @@
+---
+# Converges cassandra_node on a single instance (1-node cluster), applies the repo
+# schema, and verifies the node is Up/Normal and a CQL round-trip works.
+driver:
+  name: podman
+
+platforms:
+  - name: cassandra-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - cassandra_cluster
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      cassandra-molecule:
+        cassandra_advertise_host: "127.0.0.1"
+        cassandra_max_heap: "1024M"
+        cassandra_schema_src: "${MOLECULE_PROJECT_DIRECTORY}/../../../schema/schema.cql"
+
+verifier:
+  name: ansible

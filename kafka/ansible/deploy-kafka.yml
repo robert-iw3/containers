@@ -1,0 +1,10 @@
+---
+# Deploy the multi-host Kafka KRaft cluster. All nodes come up together (each is a
+# controller-quorum voter), so a single play across the whole group is correct.
+#
+#   ansible-playbook -i inventory.ini deploy-kafka.yml
+- name: Deploy Kafka KRaft cluster
+  hosts: kafka_cluster
+  gather_facts: true
+  roles:
+    - kafka_node

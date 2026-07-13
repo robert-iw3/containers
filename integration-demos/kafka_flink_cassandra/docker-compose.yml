@@ -1,0 +1,118 @@
+---
+# Holistic big-data pipeline: producer -> Kafka -> Flink -> Kafka -> Cassandra.
+# A lean single-node-per-tier version of the kafka/, flink/, and cassandra/ clusters,
+# on one network, reusing each directory's assets (producer, SQL generator, schema).
+#
+#   ./run_demo.sh telemetry        # run the whole pipeline end to end
+#
+# Tiers: kafka1 (KRaft broker), cassandra (1 node), flink jobmanager+taskmanager
+# (with the Kafka SQL connector jar). Producer + cassandra-sink are `tools` services.
+services:
+  kafka1:
+    image: docker.io/apache/kafka:4.3.1
+    hostname: kafka1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:19092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092,EXTERNAL://localhost:19092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: kQiG5vY0R0aH8xVzR2mQ2A
+    ports: ["19092:19092"]
+    networks: [arcanaeum]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  cassandra:
+    image: docker.io/library/cassandra:5.0
+    hostname: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: arcanaeum
+      CASSANDRA_SEEDS: cassandra
+      CASSANDRA_DC: dc1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      MAX_HEAP_SIZE: 1024M
+      HEAP_NEWSIZE: 128M
+    ports: ["9042:9042"]
+    networks: [arcanaeum]
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -q '^UN' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  jobmanager:
+    image: docker.io/library/flink:2.3.0
+    hostname: jobmanager
+    command: jobmanager
+    depends_on:
+      kafka1: {condition: service_healthy}
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 2
+    ports: ["8081:8081"]
+    volumes:
+      - ./flink-lib/flink-sql-connector-kafka.jar:/opt/flink/lib/flink-sql-connector-kafka.jar:ro
+      - ./flink_jobs:/opt/jobs
+    networks: [arcanaeum]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/overview || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  taskmanager:
+    image: docker.io/library/flink:2.3.0
+    command: taskmanager
+    depends_on:
+      jobmanager: {condition: service_healthy}
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+    volumes:
+      - ./flink-lib/flink-sql-connector-kafka.jar:/opt/flink/lib/flink-sql-connector-kafka.jar:ro
+    networks: [arcanaeum]
+
+  # --- tools (profile) : the producer and the Cassandra sink ---
+  producer:
+    build: ./tools
+    depends_on:
+      kafka1: {condition: service_healthy}
+    volumes:
+      - ../../kafka/producers:/producers:ro
+    command: ["python3", "/producers/produce.py", "--scenario", "telemetry",
+              "--bootstrap", "kafka1:9092", "--rate", "2000"]
+    networks: [arcanaeum]
+    profiles: ["tools"]
+
+  cassandra-sink:
+    build: ./tools
+    depends_on:
+      cassandra: {condition: service_healthy}
+    volumes:
+      - ./sinks:/sinks:ro
+    command: ["python3", "/sinks/cassandra_sink.py", "--bootstrap", "kafka1:9092",
+              "--cassandra", "cassandra", "--topic", "sensor-rollups"]
+    networks: [arcanaeum]
+    profiles: ["tools"]
+
+networks:
+  arcanaeum:
+    driver: bridge

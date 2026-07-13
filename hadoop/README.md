@@ -1,52 +1,85 @@
-## Quick Start
+# Apache Hadoop — distributed datalake
 
-To deploy an example HDFS cluster, run:
+Apache **Hadoop 3.5** as a distributed data cluster: **HDFS** (NameNode + 3 DataNodes,
+RF=3) as the datalake storage layer and **YARN** (ResourceManager + 2 NodeManagers)
+for compute, with a config-templated image (`CORE_CONF_*/HDFS_CONF_*/YARN_CONF_*`
+env → Hadoop XML). Built for massive telemetry and heterogeneous log/unstructured
+data: a `raw → curated` datalake with a distributed multi-format log-processing job.
+
+## Layout
+
 ```
-  docker-compose up
-```
-
-Run example wordcount job:
-```
-  make wordcount
-```
-
-Or deploy in swarm:
-```
-docker stack deploy -c docker-compose-v3.yml hadoop
-```
-
-`docker-compose` creates a docker network that can be found by running `docker network list`, e.g. `dockerhadoop_default`.
-
-Run `docker network inspect` on the network (e.g. `dockerhadoop_default`) to find the IP the hadoop interfaces are published on. Access these interfaces with the following URLs:
-
-* Namenode: http://<dockerhadoop_IP_address>:9870/dfshealth.html#tab-overview
-* History server: http://<dockerhadoop_IP_address>:8188/applicationhistory
-* Datanode: http://<dockerhadoop_IP_address>:9864/
-* Nodemanager: http://<dockerhadoop_IP_address>:8042/node
-* Resource manager: http://<dockerhadoop_IP_address>:8088/
-
-## Configure Environment Variables
-
-The configuration parameters can be specified in the hadoop.env file or as environmental variables for specific services (e.g. namenode, datanode etc.):
-```
-  CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+hadoop/
+├── base/                     # base image (Hadoop 3.5 + JDK17 + python3) + entrypoint
+├── namenode|datanode|resourcemanager|nodemanager|historyserver/   # role images
+├── docker-compose.yml        # NameNode + 3 DataNodes + RM + 2 NodeManagers + history
+├── hadoop.env                # cluster config (RF=3, YARN scheduler, compression, …)
+├── k8s-hadoop-cluster.yaml   # HDFS StatefulSets + YARN + NodeManager HPA + PDB
+├── datalake/                 # the datalake + log-processing pipeline
+│   ├── sample_logs/          #   JSON / Apache-combined / syslog / CSV samples
+│   ├── jobs/                 #   Hadoop Streaming mapper + reducer (multi-format parse)
+│   ├── init_datalake.sh      #   create HDFS zones (raw/curated/warehouse) + load logs
+│   └── process_logs.sh       #   run the distributed log-processing job on YARN
+├── Makefile                  # make build | up | down | datalake
+└── tests/                    # pytest: image/compose/k8s invariants + log-parser logic
 ```
 
-CORE_CONF corresponds to core-site.xml. fs_defaultFS=hdfs://namenode:8020 will be transformed into:
-```
-  <property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
-```
-To define dash inside a configuration parameter, use triple underscore, such as YARN_CONF_yarn_log___aggregation___enable=true (yarn-site.xml):
-```
-  <property><name>yarn.log-aggregation-enable</name><value>true</value></property>
+## Quick start
+
+```bash
+make build                 # build the images (:latest)
+docker compose up -d       # NameNode + 3 DataNodes + RM + 2 NodeManagers + history
+make datalake              # create datalake zones, load logs, run the processing job
 ```
 
-The available configurations are:
-* /etc/hadoop/core-site.xml CORE_CONF
-* /etc/hadoop/hdfs-site.xml HDFS_CONF
-* /etc/hadoop/yarn-site.xml YARN_CONF
-* /etc/hadoop/httpfs-site.xml HTTPFS_CONF
-* /etc/hadoop/kms-site.xml KMS_CONF
-* /etc/hadoop/mapred-site.xml  MAPRED_CONF
+UIs: NameNode http://localhost:9870 · ResourceManager http://localhost:8088
 
-If you need to extend some other configuration file, refer to base/entrypoint.sh bash script.
+## Datalake + distributed log processing
+
+The datalake is laid out on HDFS as `raw/` (landing) → `curated/` (processed) →
+`warehouse/` (serving), replicated 3× across the DataNodes.
+
+`datalake/process_logs.sh` runs a **Hadoop Streaming** job on YARN that turns
+heterogeneous, unstructured logs into a structured analytics rollup:
+
+- **input** — `/datalake/raw/logs/` holds four formats at once: JSON application logs,
+  Apache-combined access logs, syslog, and CSV.
+- **mapper** (`jobs/parse_logs_mapper.py`) — parses each line regardless of format
+  into a common `(source, level)` and emits `source::level → 1`. Apache lines are
+  levelled by status code; syslog by content.
+- **reducer** (`jobs/count_reducer.py`) — sums per `(source, level)`.
+- **output** — `/datalake/curated/log_summary` (e.g. `api::ERROR 1`, `web::INFO 2`).
+
+Because it's Streaming on YARN, the parse/aggregate runs **distributed across the
+NodeManagers** — the model scales to massive telemetry/log volumes (add DataNodes for
+storage, NodeManagers for compute). Add a format by extending `classify()` in the
+mapper; point `init_datalake.sh` at real log sources to ingest your own.
+
+## Kubernetes
+
+`k8s-hadoop-cluster.yaml` runs HDFS as StatefulSets (NameNode; 3-replica DataNode +
+PodDisruptionBudget) and YARN as Deployments, all fed by the `hadoop-config`
+ConfigMap. The **NodeManager (stateless compute) tier autoscales** via an HPA;
+HDFS/DataNodes are stateful (scale by adding nodes + rebalancing, not an HPA). Build
+and push the `hadoop-*:latest` images to your registry first.
+## Multi-host (Ansible)
+
+`ansible/` deploys a genuinely distributed cluster across hosts by role group —
+`hadoop_namenode`, `hadoop_datanodes`, `hadoop_resourcemanager`,
+`hadoop_nodemanagers`, `hadoop_historyserver` (a host may be in several). The role
+resolves the NameNode/RM/History addresses from the inventory and points every
+node's config env at them. Push the `hadoop-*:latest` images to a registry
+(`hadoop_registry`) or preload them, then:
+
+```bash
+cd ansible && ansible-playbook -i inventory.ini deploy-hadoop.yml
+```
+
+A Molecule scenario is included (converge the whole cluster on one instance + verify
+HDFS/YARN) — run it in CI or on a host with a few GB free; Hadoop is heavy.
+
+## Optional: themed UI proxy
+
+`nginx/` is an optional reverse proxy that injects CSS over the NameNode UI (not in
+the default compose). Its upstream is `9870`; add an `nginx` service building
+`./nginx` if you want the themed page.

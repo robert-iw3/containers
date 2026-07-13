@@ -1,20 +1,24 @@
-DOCKER_NETWORK = docker-hadoop_default
-ENV_FILE = hadoop.env
-current_branch := $(shell git rev-parse --abbrev-ref HEAD)
-build:
-	docker build -t hadoop-base:$(current_branch) ./base
-	docker build -t hadoop-namenode:$(current_branch) ./namenode
-	docker build -t hadoop-datanode:$(current_branch) ./datanode
-	docker build -t hadoop-resourcemanager:$(current_branch) ./resourcemanager
-	docker build -t hadoop-nodemanager:$(current_branch) ./nodemanager
-	docker build -t hadoop-historyserver:$(current_branch) ./historyserver
-	docker build -t hadoop-submit:$(current_branch) ./submit
+# Build the Hadoop cluster images (tagged :latest to match docker-compose.yml).
+# Use podman by default; override with `make CR=docker build`.
+CR ?= podman
 
-wordcount:
-	docker build -t hadoop-wordcount ./submit
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-base:$(current_branch) hdfs dfs -mkdir -p /input/
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-base:$(current_branch) hdfs dfs -copyFromLocal -f /opt/hadoop-3.4.1/README.txt /input/
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-wordcount
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-base:$(current_branch) hdfs dfs -cat /output/*
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-base:$(current_branch) hdfs dfs -rm -r /output
-	docker run --network ${DOCKER_NETWORK} --env-file ${ENV_FILE} hadoop-base:$(current_branch) hdfs dfs -rm -r /input
+build:
+	$(CR) build -t hadoop-base:latest ./base
+	@for c in namenode datanode resourcemanager nodemanager historyserver submit; do \
+		$(CR) build -t hadoop-$$c:latest ./$$c || exit 1; \
+	done
+
+up:
+	$(CR)-compose up -d
+
+down:
+	$(CR)-compose down
+
+clean:
+	$(CR)-compose down -v
+
+# Distributed multi-format log-processing demo on the datalake (HDFS + YARN):
+# create the datalake zones + load sample logs, then run the Streaming job.
+datalake:
+	./datalake/init_datalake.sh
+	./datalake/process_logs.sh

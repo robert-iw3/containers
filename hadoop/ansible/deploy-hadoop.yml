@@ -1,0 +1,11 @@
+---
+# Deploy the distributed Hadoop datalake cluster. The NameNode/RM/History come up on
+# the master; workers' DataNode/NodeManager containers wait on SERVICE_PRECONDITION
+# (baked into the images), so a single play across the cluster is safe.
+#
+#   ansible-playbook -i inventory.ini deploy-hadoop.yml
+- name: Deploy Hadoop datalake cluster
+  hosts: hadoop_cluster
+  gather_facts: true
+  roles:
+    - hadoop_node

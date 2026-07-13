@@ -1,0 +1,62 @@
+---
+# Multi-host Apache Kafka 4.3 in KRaft mode. Every host in kafka_cluster is a
+# combined broker+controller; the controller quorum is built from all of them.
+# Each host sets kafka_node_id (unique, starts at 1) and optionally
+# kafka_advertise_host (defaults to ansible_host) in the inventory.
+
+- name: Resolve this node's advertise address
+  ansible.builtin.set_fact:
+    advertise_host: "{{ kafka_advertise_host | default(ansible_host) | default(ansible_default_ipv4.address) }}"
+
+- name: Build the controller quorum voters from every node in the cluster
+  ansible.builtin.set_fact:
+    quorum_voters: >-
+      {{ groups['kafka_cluster']
+         | map('extract', hostvars)
+         | map(attribute='kafka_node_id')
+         | zip(groups['kafka_cluster']
+               | map('extract', hostvars)
+               | map(attribute='kafka_advertise_host'))
+         | map('join', '@')
+         | map('regex_replace', '$', ':' ~ kafka_controller_port)
+         | join(',') }}
+    effective_rf: "{{ [kafka_replication_factor | int, groups['kafka_cluster'] | length] | min }}"
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Pull the Kafka image
+  containers.podman.podman_image:
+    name: "{{ kafka_image }}"
+  become: true
+
+- name: Run the Kafka KRaft node
+  containers.podman.podman_container:
+    name: kafka
+    image: "{{ kafka_image }}"
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      KAFKA_NODE_ID: "{{ kafka_node_id }}"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "{{ quorum_voters }}"
+      KAFKA_LISTENERS: "INTERNAL://:{{ kafka_client_port }},CONTROLLER://:{{ kafka_controller_port }}"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://{{ advertise_host }}:{{ kafka_client_port }}"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "{{ effective_rf }}"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "{{ effective_rf }}"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "{{ [kafka_min_insync_replicas | int, effective_rf | int] | min }}"
+      KAFKA_DEFAULT_REPLICATION_FACTOR: "{{ effective_rf }}"
+      KAFKA_MIN_INSYNC_REPLICAS: "{{ [kafka_min_insync_replicas | int, effective_rf | int] | min }}"
+      KAFKA_NUM_PARTITIONS: "{{ kafka_num_partitions }}"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: "{{ kafka_cluster_id }}"
+    volumes:
+      - "kafka-data:/var/lib/kafka/data"
+  become: true

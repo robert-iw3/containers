@@ -1,0 +1,105 @@
+---
+# Multi-host Hadoop 3.5 datalake cluster. Inventory groups place each role:
+#   hadoop_namenode (1) · hadoop_datanodes (N) · hadoop_resourcemanager (1)
+#   hadoop_nodemanagers (N) · hadoop_historyserver (1)
+# A host may be in several groups (small clusters). Every node shares one config env
+# pointing at the NameNode / ResourceManager / HistoryServer advertise addresses.
+
+- name: Resolve the NameNode / ResourceManager / HistoryServer addresses
+  ansible.builtin.set_fact:
+    namenode_host: "{{ hostvars[groups['hadoop_namenode'][0]]['hadoop_advertise_host'] | default(hostvars[groups['hadoop_namenode'][0]]['ansible_host']) }}"
+    rm_host: "{{ hostvars[groups['hadoop_resourcemanager'][0]]['hadoop_advertise_host'] | default(hostvars[groups['hadoop_resourcemanager'][0]]['ansible_host']) }}"
+    history_host: "{{ hostvars[groups['hadoop_historyserver'][0]]['hadoop_advertise_host'] | default(hostvars[groups['hadoop_historyserver'][0]]['ansible_host']) }}"
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Create node data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0777"
+  loop:
+    - "{{ hadoop_data_dir }}/name"
+    - "{{ hadoop_data_dir }}/data"
+  become: true
+
+- name: Assemble the shared Hadoop config env
+  ansible.builtin.set_fact:
+    hadoop_env:
+      CORE_CONF_fs_defaultFS: "hdfs://{{ namenode_host }}:{{ namenode_rpc_port }}"
+      CORE_CONF_hadoop_http_staticuser_user: "root"
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_replication: "{{ hadoop_replication | string }}"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+      YARN_CONF_yarn_resourcemanager_hostname: "{{ rm_host }}"
+      YARN_CONF_yarn_resourcemanager_address: "{{ rm_host }}:8032"
+      YARN_CONF_yarn_resourcemanager_scheduler_address: "{{ rm_host }}:8030"
+      YARN_CONF_yarn_resourcemanager_resource__tracker_address: "{{ rm_host }}:8031"
+      YARN_CONF_yarn_timeline___service_enabled: "true"
+      YARN_CONF_yarn_timeline___service_hostname: "{{ history_host }}"
+      YARN_CONF_yarn_log___aggregation___enable: "true"
+      YARN_CONF_yarn_nodemanager_aux___services: "mapreduce_shuffle"
+      MAPRED_CONF_mapreduce_framework_name: "yarn"
+
+- name: Run the NameNode
+  containers.podman.podman_container:
+    name: hadoop-namenode
+    image: "{{ hadoop_registry }}hadoop-namenode:latest"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ hadoop_env | combine({'CLUSTER_NAME': hadoop_cluster_name}) }}"
+    volumes: ["{{ hadoop_data_dir }}/name:/hadoop/dfs/name"]
+  become: true
+  when: "'hadoop_namenode' in group_names"
+
+- name: Run the DataNode
+  containers.podman.podman_container:
+    name: hadoop-datanode
+    image: "{{ hadoop_registry }}hadoop-datanode:latest"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ hadoop_env | combine({'SERVICE_PRECONDITION': namenode_host ~ ':' ~ namenode_ui_port}) }}"
+    volumes: ["{{ hadoop_data_dir }}/data:/hadoop/dfs/data"]
+  become: true
+  when: "'hadoop_datanodes' in group_names"
+
+- name: Run the ResourceManager
+  containers.podman.podman_container:
+    name: hadoop-resourcemanager
+    image: "{{ hadoop_registry }}hadoop-resourcemanager:latest"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ hadoop_env | combine({'SERVICE_PRECONDITION': namenode_host ~ ':' ~ namenode_rpc_port ~ ' ' ~ namenode_host ~ ':' ~ namenode_ui_port}) }}"
+  become: true
+  when: "'hadoop_resourcemanager' in group_names"
+
+- name: Run the NodeManager
+  containers.podman.podman_container:
+    name: hadoop-nodemanager
+    image: "{{ hadoop_registry }}hadoop-nodemanager:latest"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ hadoop_env | combine({'SERVICE_PRECONDITION': rm_host ~ ':' ~ rm_ui_port}) }}"
+  become: true
+  when: "'hadoop_nodemanagers' in group_names"
+
+- name: Run the HistoryServer
+  containers.podman.podman_container:
+    name: hadoop-historyserver
+    image: "{{ hadoop_registry }}hadoop-historyserver:latest"
+    state: started
+    restart_policy: always
+    network: host
+    env: "{{ hadoop_env | combine({'SERVICE_PRECONDITION': rm_host ~ ':' ~ rm_ui_port}) }}"
+    volumes: ["{{ hadoop_data_dir }}/timeline:/hadoop/yarn/timeline"]
+  become: true
+  when: "'hadoop_historyserver' in group_names"

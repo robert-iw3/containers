@@ -1,0 +1,78 @@
+---
+# Multi-host Apache Cassandra 5.0. The first host in cassandra_cluster is the seed;
+# the rest join through it. Run the play with `serial: 1` so nodes bootstrap one at
+# a time (a Cassandra requirement). Each host may set cassandra_advertise_host
+# (defaults to ansible_host).
+
+- name: Resolve this node's advertise (broadcast) address
+  ansible.builtin.set_fact:
+    advertise_host: "{{ cassandra_advertise_host | default(ansible_host) | default(ansible_default_ipv4.address) }}"
+
+- name: Resolve the seed (first node in the cluster)
+  ansible.builtin.set_fact:
+    seed_host: >-
+      {{ hostvars[groups['cassandra_cluster'][0]]['cassandra_advertise_host']
+         | default(hostvars[groups['cassandra_cluster'][0]]['ansible_host']) }}
+
+- name: Ensure the container runtime is installed
+  ansible.builtin.package:
+    name: "{{ container_runtime }}"
+    state: present
+  become: true
+
+- name: Pull the Cassandra image
+  containers.podman.podman_image:
+    name: "{{ cassandra_image }}"
+  become: true
+
+- name: Run the Cassandra node
+  containers.podman.podman_container:
+    name: cassandra
+    image: "{{ cassandra_image }}"
+    state: started
+    restart_policy: always
+    network: host
+    env:
+      CASSANDRA_CLUSTER_NAME: "{{ cassandra_cluster_name }}"
+      CASSANDRA_SEEDS: "{{ seed_host }}"
+      CASSANDRA_DC: "{{ cassandra_dc }}"
+      CASSANDRA_RACK: "{{ cassandra_rack }}"
+      CASSANDRA_ENDPOINT_SNITCH: "GossipingPropertyFileSnitch"
+      CASSANDRA_BROADCAST_ADDRESS: "{{ advertise_host }}"
+      CASSANDRA_LISTEN_ADDRESS: "{{ advertise_host }}"
+      CASSANDRA_BROADCAST_RPC_ADDRESS: "{{ advertise_host }}"
+      CASSANDRA_RPC_ADDRESS: "0.0.0.0"
+      MAX_HEAP_SIZE: "{{ cassandra_max_heap }}"
+      HEAP_NEWSIZE: "{{ cassandra_heap_newsize }}"
+    volumes:
+      - "cassandra-data:/var/lib/cassandra"
+  become: true
+
+- name: Wait until this node is Up/Normal in the ring
+  ansible.builtin.command: >-
+    {{ container_runtime }} exec cassandra nodetool status
+  register: nodetool
+  changed_when: false
+  until: nodetool.stdout is search('^UN', multiline=True)
+  retries: 40
+  delay: 15
+  become: true
+
+# --- Schema (only on the seed, after it is up) ---
+- name: Copy the schema to the seed
+  ansible.builtin.copy:
+    src: "{{ cassandra_schema_src }}"
+    dest: "/tmp/schema.cql"
+    mode: "0644"
+  become: true
+  when: "cassandra_schema_src | length > 0 and inventory_hostname == groups['cassandra_cluster'][0]"
+
+- name: Apply the schema (seed)
+  # Pipe the file on the host into cqlsh's stdin -- the file lives on the host, not
+  # inside the container, so `cqlsh -f /tmp/schema.cql` (in-container) can't see it.
+  ansible.builtin.shell: >-
+    {{ container_runtime }} exec -i cassandra cqlsh < /tmp/schema.cql
+  register: schema_apply
+  changed_when: true
+  become: true
+  when: "cassandra_schema_src | length > 0 and inventory_hostname == groups['cassandra_cluster'][0]"

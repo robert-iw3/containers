@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Cassandra container is running
+      ansible.builtin.command: podman ps --format '{{ "{{" }}.Names{{ "}}" }}'
+      register: ps
+      changed_when: false
+    - name: Assert the node is up
+      ansible.builtin.assert:
+        that: "'cassandra' in ps.stdout"
+    - name: Node is Up/Normal in the ring
+      ansible.builtin.command: podman exec cassandra nodetool status
+      register: st
+      changed_when: false
+      failed_when: "'UN' not in st.stdout"
+    - name: The telemetry keyspace was created by the schema
+      ansible.builtin.command: >-
+        podman exec cassandra cqlsh -e "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name='telemetry';"
+      register: ks
+      changed_when: false
+      failed_when: "'telemetry' not in ks.stdout"
+    - name: CQL round-trip (single-node consistency ONE)
+      ansible.builtin.command: >-
+        podman exec cassandra cqlsh -e "CONSISTENCY ONE; INSERT INTO telemetry.sensor_rollups (sensor_id,window_start,metric,avg_value,count_value,anomaly) VALUES ('mol','2026-01-01 00:00:00','t',1.0,1,0); SELECT sensor_id FROM telemetry.sensor_rollups WHERE sensor_id='mol';"
+      register: rt
+      changed_when: false
+      failed_when: "'mol' not in rt.stdout"

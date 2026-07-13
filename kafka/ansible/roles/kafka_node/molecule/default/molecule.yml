@@ -1,0 +1,29 @@
+---
+# Converges kafka_node on a single instance (1-node KRaft cluster, RF auto-capped
+# to 1), then verifies the broker is up and a produce/consume round-trip works.
+driver:
+  name: podman
+
+platforms:
+  - name: kafka-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - kafka_cluster
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      kafka-molecule:
+        kafka_node_id: 1
+        kafka_advertise_host: "127.0.0.1"
+
+verifier:
+  name: ansible

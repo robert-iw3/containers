@@ -1,0 +1,22 @@
+# Declarative Kafka topics, applied idempotently by scripts/apply_topics.sh
+# (docker compose run --rm topic-init). Add a topic here and re-run -- existing
+# topics are left alone (--if-not-exists). `configs` is a comma-separated k=v list.
+topics:
+  - name: pizza-orders
+    partitions: 6
+    replication_factor: 3
+    configs: retention.ms=604800000
+
+  - name: user-behavior
+    partitions: 6
+    replication_factor: 3
+
+  - name: stock-ticks
+    partitions: 3
+    replication_factor: 3
+    configs: cleanup.policy=compact
+
+  - name: iot-metrics
+    partitions: 12
+    replication_factor: 3
+    configs: retention.ms=259200000

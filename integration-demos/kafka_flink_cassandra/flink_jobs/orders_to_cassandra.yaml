@@ -1,0 +1,39 @@
+# Second scenario -- a completely different application/data shape through the SAME
+# pipeline: pizza orders instead of sensor telemetry.
+#   Kafka `pizza-orders` -> Flink windowed revenue aggregation -> Kafka `order-rollups`
+# Demonstrates the config-driven Flink stage handling different data with no code
+# change (just this file). Per-shop 30s revenue rollups.
+name: orders_to_cassandra
+
+source:
+  connector: kafka
+  options:
+    topic: pizza-orders
+    properties.bootstrap.servers: kafka1:9092
+    properties.group.id: flink-orders
+    scan.startup.mode: latest-offset
+    format: json
+    json.ignore-parse-errors: "true"
+
+schema:
+  # Only the fields we aggregate; Flink's JSON format ignores the rest (order_id, ...).
+  columns:
+    - {name: shop_id, type: "INT"}
+    - {name: amount,  type: "DOUBLE"}
+  time_attribute: processing
+
+key_by: [shop_id]
+
+window:
+  type: tumble
+  size: "30 SECONDS"
+
+aggregations:
+  - {field: amount, funcs: [sum, avg, max, count]}
+
+sink:
+  connector: kafka
+  options:
+    topic: order-rollups
+    properties.bootstrap.servers: kafka1:9092
+    format: json

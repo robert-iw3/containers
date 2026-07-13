@@ -1,0 +1,51 @@
+# Integration pipeline (telemetry scenario), consumed by flink's build_pipeline.py:
+#   Kafka `iot-metrics` (raw sensor events)
+#     -> Flink tumbling-window aggregation + anomaly flag
+#     -> Kafka `sensor-rollups` (windowed rollups)
+#   -> cassandra_sink.py -> Cassandra telemetry.sensor_rollups
+#
+# Same generator as flink/pipelines -- just Kafka source + Kafka sink instead of
+# datagen + print. Different applications reuse this by swapping the schema/topics.
+name: telemetry_to_cassandra
+
+source:
+  connector: kafka
+  options:
+    topic: iot-metrics
+    properties.bootstrap.servers: kafka1:9092
+    properties.group.id: flink-telemetry
+    scan.startup.mode: latest-offset
+    format: json
+    json.timestamp-format.standard: ISO-8601
+    json.ignore-parse-errors: "true"
+
+schema:
+  columns:
+    - {name: sensor_id,  type: "STRING"}
+    - {name: metric,     type: "STRING"}
+    - {name: value,      type: "DOUBLE"}
+    - {name: event_time, type: "STRING"}
+  # Window on processing (arrival) time -- robust to the producer's high-precision
+  # ISO timestamps. For event-time, emit millisecond ISO and set time_attribute: event.
+  time_attribute: processing
+
+key_by: [sensor_id, metric]
+
+window:
+  type: tumble
+  size: "10 SECONDS"
+
+aggregations:
+  - {field: value, funcs: [avg, min, max, count, stddev_pop]}
+
+anomaly:
+  field: value
+  method: zscore
+  threshold: 3.0
+
+sink:
+  connector: kafka
+  options:
+    topic: sensor-rollups
+    properties.bootstrap.servers: kafka1:9092
+    format: json

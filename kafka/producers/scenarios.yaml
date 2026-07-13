@@ -1,0 +1,25 @@
+# Config-driven event generator scenarios. Each scenario maps a named event shape
+# to a Kafka topic. produce.py emits JSON events for the chosen scenario -- add a
+# scenario here (or a new generator in produce.py) to feed a different application's
+# data through the same producer.
+scenarios:
+  telemetry:
+    topic: iot-metrics
+    key_field: sensor_id
+    # IoT sensor readings -- feeds the Kafka -> Flink -> Cassandra integration demo.
+    generator: telemetry
+
+  orders:
+    topic: pizza-orders
+    key_field: order_id
+    generator: pizza_order
+
+  clicks:
+    topic: user-behavior
+    key_field: session_id
+    generator: user_click
+
+  ticks:
+    topic: stock-ticks
+    key_field: symbol
+    generator: stock_tick

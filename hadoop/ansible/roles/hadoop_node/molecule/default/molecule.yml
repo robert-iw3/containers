@@ -1,0 +1,32 @@
+---
+# Converges hadoop_node on a single instance acting as the whole cluster (all role
+# groups), then verifies HDFS + YARN are up. Hadoop is heavy -- run this in CI or on
+# a host with a few GB free, not a laptop. The hadoop-*:latest images must be loadable
+# inside the instance (prepare.yml loads them / expects a registry).
+driver:
+  name: podman
+platforms:
+  - name: hadoop-molecule
+    image: docker.io/almalinux/10-init:latest
+    command: /sbin/init
+    systemd: always
+    privileged: true
+    volumes:
+      - /dev/fuse:/dev/fuse
+    groups:
+      - hadoop_namenode
+      - hadoop_resourcemanager
+      - hadoop_historyserver
+      - hadoop_datanodes
+      - hadoop_nodemanagers
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  inventory:
+    host_vars:
+      hadoop-molecule:
+        hadoop_advertise_host: "127.0.0.1"
+        hadoop_replication: 1
+verifier:
+  name: ansible
