@@ -30,8 +30,6 @@ x-common-vars-apps: &common-vars-apps
 services:
   setup:
     <<: *common-vars-apps
-    profiles:
-      - setup
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
     container_name: elastic-setup
     init: true
@@ -118,9 +116,6 @@ services:
       interval: 1s
       timeout: 5s
       retries: 120
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
 
   elasticsearch:
     <<: *common-vars-apps
@@ -130,8 +125,13 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     container_name: elastic
     hostname: elasticsearch
+    depends_on:
+      setup:
+        condition: service_healthy
+    ulimits:
+      memlock: {soft: -1, hard: -1}
     volumes:
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - ./elasticsearch/config/elasticsearch-multi.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
       - elasticsearch:/usr/share/elasticsearch/data:Z
       - certs:/usr/share/elasticsearch/config/certs:z
     ports:
@@ -176,7 +176,13 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     container_name: elastic1
     hostname: elasticsearch1
+    depends_on:
+      setup:
+        condition: service_healthy
+    ulimits:
+      memlock: {soft: -1, hard: -1}
     volumes:
+      - ./elasticsearch/config/elasticsearch-multi.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
       - elasticsearch1:/usr/share/elasticsearch/data:Z
       - certs:/usr/share/elasticsearch/config/certs:z
     environment:
@@ -200,9 +206,6 @@ services:
       xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
       xpack.security.transport.ssl.verification_mode: certificate
       xpack.security.transport.ssl.client_authentication: optional
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
     healthcheck:
       test:
         [
@@ -221,7 +224,13 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     container_name: elastic2
     hostname: elasticsearch2
+    depends_on:
+      setup:
+        condition: service_healthy
+    ulimits:
+      memlock: {soft: -1, hard: -1}
     volumes:
+      - ./elasticsearch/config/elasticsearch-multi.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
       - elasticsearch2:/usr/share/elasticsearch/data:Z
       - certs:/usr/share/elasticsearch/config/certs:z
     environment:
@@ -245,11 +254,6 @@ services:
       xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
       xpack.security.transport.ssl.verification_mode: certificate
       xpack.security.transport.ssl.client_authentication: optional
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      elasticsearch1:
-        condition: service_healthy
     healthcheck:
       test:
         [

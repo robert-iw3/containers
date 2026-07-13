@@ -39,11 +39,13 @@ monitoring:
   elasticsearch:
     username: beats_system
     password: ${BEATS_SYSTEM_PASSWORD}
+    ssl.certificate_authorities: [ /certs/ca/ca.crt ]
 
 output.elasticsearch:
   hosts: [ https://elasticsearch:9200 ]
   username: filebeat_internal
   password: ${FILEBEAT_INTERNAL_PASSWORD}
+  ssl.certificate_authorities: [ /certs/ca/ca.crt ]
 
 ## HTTP endpoint for health checking
 ## https://www.elastic.co/guide/en/beats/filebeat/current/http-endpoint.html

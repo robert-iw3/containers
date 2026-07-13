@@ -3,7 +3,7 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: on-failure
   env_file:
-    - ./.env
+    - ../.env
   networks:
     - elastic
 
@@ -30,15 +30,18 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl --cacert /usr/share/apm-server/config/certificates/ca/ca.crt --max-time 120 --retry 120 --retry-delay 1 --show-error --silent https://localhost:8200",
+          "curl --cacert /usr/share/apm-server/config/certs/ca/ca.crt --max-time 120 --retry 120 --retry-delay 1 --show-error --silent https://localhost:8200",
         ]
       interval: 10s
       timeout: 10s
       retries: 120
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      kibana:
-        condition: service_healthy
-      fleet-server:
-        condition: service_healthy
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}
+
+volumes:
+  certs:
+    external: true
+    name: ${STACK_CERTS:-elastic_certs}

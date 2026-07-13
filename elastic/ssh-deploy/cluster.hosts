@@ -1,0 +1,11 @@
+# Multi-host Elastic cluster inventory for the SSH deploy (non-ansible option).
+# One line per node:  <role>  <ssh-target>  <advertise-ip>
+#   role         = es | kibana
+#   ssh-target   = user@host that `ssh` can reach
+#   advertise-ip = the address other nodes use to reach this one (private IP/DNS)
+#
+# Enterprise example: 3-7 es + 2 kibana search heads across hosts.
+es      ubuntu@10.0.7.11   10.0.7.11
+es      ubuntu@10.0.7.12   10.0.7.12
+es      ubuntu@10.0.7.13   10.0.7.13
+kibana  ubuntu@10.0.7.21   10.0.7.21

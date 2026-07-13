@@ -39,7 +39,7 @@ spec:
           securityContext:
             privileged: true
         - name: setup-certs-system
-          image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+          image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
           env:
             - name: KIBANA_SYSTEM_PASSWORD
               value: kibana
@@ -102,7 +102,7 @@ spec:
               echo "All done!";
       containers:
         - name: elasticsearch
-          image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.0.3
+          image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION}
           volumeMounts:
             - name: certs
               mountPath: /usr/share/elasticsearch/config/certs
@@ -214,7 +214,7 @@ spec:
     spec:
       containers:
         - name: kibana
-          image: docker.elastic.co/kibana/kibana-wolfi:9.0.3
+          image: docker.elastic.co/kibana/kibana-wolfi:${ELASTIC_VERSION}
           ports:
             - containerPort: 5601
           volumeMounts:
@@ -308,7 +308,7 @@ spec:
     spec:
       containers:
         - name: fleet
-          image: docker.elastic.co/elastic-agent/elastic-agent-wolfi:9.0.3
+          image: docker.elastic.co/elastic-agent/elastic-agent-wolfi:${ELASTIC_VERSION}
           ports:
             - containerPort: 8220
           volumeMounts:
@@ -462,7 +462,7 @@ spec:
     spec:
       containers:
         - name: otel-collector
-          image: docker.elastic.co/elastic-agent/elastic-otel-collector:9.0.3
+          image: docker.elastic.co/elastic-agent/elastic-otel-collector:${ELASTIC_VERSION}
           command: ["/usr/bin/tini", "--"]
           args: ["/usr/local/bin/docker-entrypoint", "--config=/usr/share/elastic-agent/config.yaml"]
           volumeMounts:

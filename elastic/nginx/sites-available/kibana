@@ -1,36 +1,39 @@
 upstream elasticsearch {
-    server localhost:9200;
+    server elasticsearch:9200;
     keepalive 15;
   }
 
 upstream kibana {
-    server localhost:5601;
+    server kibana:5601;
     keepalive 15;
   }
 
 server {
 
-  listen 443;
+  listen 443 ssl;
   server_name elastic-lab.io;
 
-  ssl on;
   ssl_certificate /path/to/your/kibana.crt;
   ssl_certificate_key /path/to/your/kibana.key;
 
-  ssl_protocols TLSv1.2;
+  ssl_protocols TLSv1.2 TLSv1.3;
   ssl_prefer_server_ciphers on;
   ssl_session_timeout 1d;
   ssl_session_cache shared:SSL:50m;
-  ssl_ciphers 'YOUR-CHIPER-SUITE'
+  ssl_ciphers 'YOUR-CIPHER-SUITE';
   ssl_dhparam /etc/nginx/dhparam.pem;
 
   auth_basic "Your Company Restricted Area";
   auth_basic_user_file /path/to/your/basicauth.htpasswd;
 
-   # Elasticsearch
+  # The stack backends are TLS; trust the stack CA mounted at /certs/ca/ca.crt.
+  proxy_ssl_trusted_certificate /certs/ca/ca.crt;
+  proxy_ssl_verify on;
+
+  # Elasticsearch
   location / {
 
-    proxy_pass http://localhost:9200;
+    proxy_pass https://elasticsearch;
     proxy_redirect off;
     proxy_buffering off;
 
@@ -43,7 +46,7 @@ server {
   # Kibana
   location /kibana/ {
 
-    proxy_pass http://localhost:5601;
+    proxy_pass https://kibana;
     proxy_redirect off;
     proxy_buffering off;
 
@@ -54,3 +57,5 @@ server {
     rewrite ^/kibana/(.*)$ /$1 break;
 
   }
+
+}

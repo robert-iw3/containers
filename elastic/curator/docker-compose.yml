@@ -3,7 +3,7 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: unless-stopped
   env_file:
-    - .env
+    - ../.env
   networks:
     - elastic
 
@@ -16,8 +16,16 @@ services:
     volumes:
       - ./config/curator.yml:/.curator/curator.yml:ro,Z
       - ./config/delete_log_files_curator.yml:/.curator/delete_log_files_curator.yml:ro,Z
+      - certs:/certs:ro,z
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}
+
+volumes:
+  certs:
+    external: true
+    name: ${STACK_CERTS:-elastic_certs}

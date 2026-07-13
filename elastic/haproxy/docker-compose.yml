@@ -3,7 +3,7 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: on-failure
   env_file:
-    - ./.env
+    - ../.env
   networks:
     - elastic
 
@@ -23,3 +23,8 @@ services:
     ports:
       - 80:80
       - 443:443
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}

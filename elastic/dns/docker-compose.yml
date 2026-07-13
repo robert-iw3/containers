@@ -6,8 +6,6 @@ services:
       dockerfile: Dockerfile
     container_name: coredns
     hostname: dns.containers.local
-    env_file:
-      - .env
     restart: always
     security_opt:
       - no-new-privileges:true
@@ -22,3 +20,8 @@ services:
       - ./db.10.77.0:/etc/coredns/db.10.77.0:ro,Z
     networks:
       - elastic
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}

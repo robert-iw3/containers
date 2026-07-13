@@ -1,0 +1,33 @@
+# SIEM datasets -> labeled indices + ILM lifecycle. gen_siem.py turns each entry
+# into (1) an ILM policy (hot -> warm -> delete) and (2) a data-stream index template
+# that routes the dataset into a LABELED index `logs-<name>-<namespace>` with that
+# policy. This is how Fleet/Elastic Agent parsing streams land in per-dataset indices.
+#
+#   python3 gen_siem.py            # render siem/generated/{ilm,templates}/*.json
+#   ./apply-siem.sh                # PUT them to Elasticsearch
+namespace: default
+
+datasets:
+  - name: siem.auth          # authentication / identity (Okta, AD, ssh)
+    retention_days: 90
+    hot_rollover_gb: 50
+    hot_rollover_days: 7
+    warm_after_days: 7
+
+  - name: siem.network       # firewall / netflow / proxy
+    retention_days: 30
+    hot_rollover_gb: 50
+    hot_rollover_days: 1
+    warm_after_days: 3
+
+  - name: siem.endpoint      # EDR / host telemetry
+    retention_days: 180
+    hot_rollover_gb: 50
+    hot_rollover_days: 7
+    warm_after_days: 14
+
+  - name: siem.cloud         # cloudtrail / gcp / azure audit
+    retention_days: 365
+    hot_rollover_gb: 50
+    hot_rollover_days: 30
+    warm_after_days: 30

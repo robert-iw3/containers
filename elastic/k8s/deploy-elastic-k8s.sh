@@ -2,12 +2,12 @@
 
 # Script to deploy Elasticsearch, Kibana, Fleet Server, and OTel Collector to Kubernetes
 # Usage: ./deploy-elastic-k8s.sh [path_to_yaml] [path_to_env]
-# Default YAML file: elastic-k8s.yaml
+# Default YAML file: elastic-k8s.yml
 # Default .env file: .env
 
 set -e
 
-YAML_FILE=${1:-"elastic-k8s.yaml"}
+YAML_FILE=${1:-"elastic-k8s.yml"}
 ENV_FILE=${2:-".env"}
 NAMESPACE="elastic"
 CONFIG_DIR="."

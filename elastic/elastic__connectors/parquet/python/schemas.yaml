@@ -1,0 +1,60 @@
+schemas:
+  - name: network_events
+    file_name: network_events.parquet
+    timestamp_field: timestamp
+    mappings:
+      ecs:
+        '@timestamp': timestamp
+        'event.category': '"network"'
+        'source.ip': source_ip
+        'source.port': source_port
+        'destination.ip': dest_ip
+        'destination.port': dest_port
+        'network.protocol': protocol
+        'network.bytes': bytes_received
+  - name: authentication_events
+    file_name: auth_events.parquet
+    timestamp_field: login_time
+    mappings:
+      ecs:
+        '@timestamp': login_time
+        'user.name': username
+        'event.outcome': outcome
+        'source.ip': source_ip
+        'host.name': dest_host
+  - name: system_log
+    file_name: system_log.parquet
+    timestamp_field: timestamp
+    mappings:
+      ecs:
+        '@timestamp': timestamp
+        'event.category': '"system"'
+        'log.level': severity
+        'message': message
+        'host.name': hostname
+  - name: web_access
+    file_name: web_access.parquet
+    timestamp_field: timestamp
+    mappings:
+      ecs:
+        '@timestamp': timestamp
+        'event.category': '"web"'
+        'http.request.method': method
+        'url.original': url
+        'http.response.status_code': status_code
+        'user_agent.original': user_agent
+        'source.ip': client_ip
+  - name: ids_alert
+    file_name: ids_alert.parquet
+    timestamp_field: timestamp
+    mappings:
+      ecs:
+        '@timestamp': timestamp
+        'event.category': '"intrusion_detection"'
+        'source.ip': src_ip
+        'source.port': src_port
+        'destination.ip': dst_ip
+        'destination.port': dst_port
+        'network.protocol': proto
+        'event.outcome': severity
+        'message': signature

@@ -5,7 +5,7 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: on-failure
   env_file:
-    - ./.env
+    - ../../.env
 
 services:
   metricbeat:
@@ -21,6 +21,7 @@ services:
       - --system.hostfs=/hostfs
     volumes:
       - ./config/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro,Z
+      - certs:/certs:ro,z
       - type: bind
         source: /
         target: /hostfs
@@ -41,6 +42,13 @@ services:
       METRICBEAT_INTERNAL_PASSWORD: ${METRICBEAT_INTERNAL_PASSWORD:-}
       MONITORING_INTERNAL_PASSWORD: ${MONITORING_INTERNAL_PASSWORD:-}
       BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}
+
+volumes:
+  certs:
+    external: true
+    name: ${STACK_CERTS:-elastic_certs}

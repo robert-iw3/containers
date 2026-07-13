@@ -1086,7 +1086,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: otel-collector
-          image: docker.elastic.co/elastic-agent/elastic-otel-collector:9.2.0
+          image: docker.elastic.co/elastic-agent/elastic-otel-collector:${ELASTIC_VERSION}
           command: ["/usr/bin/tini", "--"]
           args: ["/usr/local/bin/docker-entrypoint", "--config=/usr/share/elastic-agent/config.yaml"]
           resources:

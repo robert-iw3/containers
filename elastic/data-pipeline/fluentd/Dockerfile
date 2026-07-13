@@ -40,17 +40,17 @@ RUN \
     \
     echo 'gem: --no-document' >> /etc/gemrc; \
     gem install fluentd -v 1.18.0; \
-    gem install elasticsearch -v 8.18.0 \
+    gem install elasticsearch -v 8.18.0; \
     gem install fluent-plugin-elasticsearch -v '~> 5.4.3'; \
     gem install fluent-plugin-cloudwatch -v 2.1.1; \
     gem install fluent-plugin-grok-parser -v 2.6.2; \
     gem install fluent-plugin-s3 -v 1.8.2; \
     gem install specific_install -v 0.3.8; \
     gem install fluent-plugin-label-router -v 0.4.0; \
-    gem install fluent-plugin-prometheus -v '~> 2.2' \
-    gem install fluent-plugin-record-modifier -v '~> 2.2' \
-    gem install fluent-plugin-grafana-loki -v '~> 1.2' \
-    gem sources --clear-all \
+    gem install fluent-plugin-prometheus -v '~> 2.2'; \
+    gem install fluent-plugin-record-modifier -v '~> 2.2'; \
+    gem install fluent-plugin-grafana-loki -v '~> 1.2'; \
+    gem sources --clear-all; \
     \
     apk del --purge --no-network .build-deps; \
     rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem /usr/lib/ruby/gems/3.*/gems/fluentd-*/test; \
@@ -62,7 +62,7 @@ RUN \
     mkdir -p /fluentd/log /fluentd/etc /fluentd/plugins; \
     chown -R fluent:fluent /fluentd
 
-COPY fluent.conf /fluentd/etc
+COPY conf/ /fluentd/etc/
 COPY --chmod=755 entrypoint.sh /bin
 COPY healthy.sh /bin
 

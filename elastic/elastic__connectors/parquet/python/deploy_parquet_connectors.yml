@@ -105,7 +105,7 @@
       when: not cleanup and use_rust | default(false)
 
     - name: Deploy with Docker
-      community.docker.docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: present
         build: true
@@ -198,7 +198,7 @@
       when: not cleanup and deployment.method == 'kubernetes'
 
     - name: Cleanup Docker deployment
-      community.docker.docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: absent
         remove_volumes: true

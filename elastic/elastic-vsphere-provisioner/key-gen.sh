@@ -1,5 +1,5 @@
 # version
-echo "ELASTIC_VERSION=9.2.0" >> .env
+echo "ELASTIC_VERSION=9.4.3" >> .env
 # system passwords
 echo "ELASTIC_PASSWORD=$(openssl rand -hex 36 | tr -d '\n')" >> .env
 echo "LOGSTASH_INTERNAL_PASSWORD=$(openssl rand -hex 36 | tr -d '\n')" >> .env

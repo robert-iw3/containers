@@ -3,12 +3,20 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: on-failure
   env_file:
-    - ./.env
+    - ../.env
   networks:
     - elastic
 
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}
+
 volumes:
   fleet-server:
+  certs:
+    external: true
+    name: ${STACK_CERTS:-elastic_certs}
 
 services:
   fleet-server:
@@ -21,6 +29,7 @@ services:
     user: root
     volumes:
       - fleet-server:/usr/share/elastic-agent/state:Z
+      - certs:/certs:ro,z
       - /var/lib/containers:/var/lib/docker:ro
       - $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
     environment:
@@ -40,8 +49,3 @@ services:
       KIBANA_FLEET_CA: /certs/ca/ca.crt
     ports:
       - 8220:8220
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      kibana:
-        condition: service_healthy

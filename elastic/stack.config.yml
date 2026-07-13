@@ -1,0 +1,21 @@
+# Configurable Elastic SIEM topology. `gen_stack.py` renders this into a correct,
+# TLS-secured docker-compose (docker-compose.generated.yml) for ANY deployment size:
+# scale elasticsearch 1..7, run 1..2 Kibana search heads, toggle Fleet / Logstash.
+# The setup service generates a CA + per-node certs for exactly the instances below.
+#
+#   python3 gen_stack.py                 # render docker-compose.generated.yml
+#   docker compose -f docker-compose.generated.yml up -d
+#
+# The small test the README documents: elasticsearch.nodes=3, kibana.nodes=1.
+cluster_name: elastic-cluster
+
+elasticsearch:
+  nodes: 3          # 1-7 data/master nodes
+  heap: auto        # auto = 50% of discovered RAM / nodes, capped 31g
+
+kibana:
+  nodes: 1          # 1-2 search heads (enterprise: 2 behind a load balancer)
+
+fleet: true         # Fleet Server (agents enroll here; data streams -> labeled indices)
+logstash: false     # optional Logstash ingest pipeline
+tls: true           # HTTP + transport TLS everywhere (leave true for production)

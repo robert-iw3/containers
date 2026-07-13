@@ -1,0 +1,11 @@
+---
+# Shared config for the MULTI-NODE cluster. Per-node settings (node.name,
+# discovery.seed_hosts, cluster.initial_master_nodes, the SSL cert paths) come from
+# each service's environment in docker-compose-multi-node.yml -- do NOT set
+# discovery.type here (single-node) or the cluster can't form.
+cluster.name: "elastic-cluster"
+network.host: 0.0.0.0
+xpack.license.self_generated.type: trial
+xpack.security.enabled: true
+# Required for Fleet / Elastic Agent enrollment.
+xpack.security.authc.api_key.enabled: true

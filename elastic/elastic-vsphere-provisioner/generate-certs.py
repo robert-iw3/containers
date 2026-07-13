@@ -30,7 +30,7 @@ def generate_certs():
     subprocess.run([
         "docker", "run", "--rm",
         "-v", f"{CERTS_DIR}:/certs",
-        f"docker.elastic.co/elasticsearch/elasticsearch:9.2.0",
+        f"docker.elastic.co/elasticsearch/elasticsearch:{os.getenv('ELASTIC_VERSION', '9.4.3')}",
         "bash", "-c",
         """
         set -e

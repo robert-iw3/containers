@@ -188,7 +188,7 @@ def generate_env(vsphere, cloudinit, vm_specs, container_runtime, security):
     # Passwords & generic vars
     # ------------------------------------------------------------------
     passwords = {
-        "ELASTIC_VERSION": "9.2.0",
+        "ELASTIC_VERSION": os.getenv("ELASTIC_VERSION", "9.4.3"),
         "ELASTIC_PASSWORD": subprocess.getoutput("openssl rand -hex 36 | tr -d '\n'"),
         "KIBANA_SYSTEM_PASSWORD": subprocess.getoutput("openssl rand -hex 36 | tr -d '\n'"),
         "LOGSTASH_INTERNAL_PASSWORD": subprocess.getoutput("openssl rand -hex 36 | tr -d '\n'"),

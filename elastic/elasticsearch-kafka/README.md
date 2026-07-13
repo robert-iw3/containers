@@ -1,43 +1,67 @@
-# Data Ingestion  with Apache Kafka and Elasticsearch
+# Data ingestion with Apache Kafka and Elasticsearch
 
-This project demonstrates a data ingestion pipeline using **Apache Kafka** and **Elasticsearch** with **Python**. Messages are produced and consumed through Kafka, indexed in Elasticsearch, and visualized in Kibana.
+A self-contained demo of a Kafka → Elasticsearch ingestion pipeline, visualized
+in Kibana. It offers two interchangeable paths from Kafka to Elasticsearch:
 
-## Project Structure
+1. **Kafka Connect** with the Elasticsearch sink connector (no code).
+2. **Python consumer** that reads the topic and bulk-indexes (`kafka_consumer.py`).
 
-The infrastructure is managed with **Docker Compose**, which starts the following services:
+## Services
 
-- **Zookeeper**: Manages and coordinates the Kafka brokers.
-- **Kafka**: Responsible for distributing and storing messages.
-- **Elasticsearch**: Stores and indexes the messages for analysis.
-- **Kibana**: Visualization interface for data stored in Elasticsearch.
+Managed with Docker Compose:
 
-The **Producer** code sends messages to Kafka, while the **Consumer** reads and indexes these messages in Elasticsearch.
+- **Kafka** — single node in KRaft mode (no ZooKeeper), `apache/kafka`.
+- **Kafka Connect** — hosts the Elasticsearch sink connector.
+- **Elasticsearch** — stores and indexes messages (single node, security off for
+  the demo).
+- **Kibana** — visualization at http://localhost:5601.
 
----
+Versions come from the environment: `ELASTIC_VERSION` (default `9.4.3`),
+`KAFKA_IMAGE`, `CONNECT_IMAGE`, `ES_SINK_VERSION`.
 
 ## Prerequisites
 
-- **Docker and Docker Compose**: Ensure you have Docker and Docker Compose installed on your machine.
-- **Python 3.x**: To run the Producer and Consumer scripts.
+- Docker and Docker Compose.
+- Python 3.x for the producer/consumer scripts (`pip install -r requirements.txt`).
 
----
+## Bring up the stack
 
-## Configure the Producer and Consumer
+```bash
+docker compose up -d
+```
 
-### Producer
-The producer.py sends messages to the logs topic in Kafka in batches.
-It uses the batch_size and linger_ms settings to optimize message sending.
-````
-python producer.py
-````
+Kafka is on `localhost:9092` (host) / `kafka:29092` (in-network), Connect on
+`:8083`, Elasticsearch on `:9200`, Kibana on `:5601`.
 
-### Consumer
-The consumer.py reads messages from the logs topic and indexes them in Elasticsearch. It consumes messages in batches and automatically commits the processing of messages.
+## Path 1 — Kafka Connect sink
 
-````
-python consumer.py
-````
+Register the Elasticsearch sink once Connect is healthy:
 
-## Data Verification in Kibana
-After running the producer.py and consumer.py scripts, access Kibana at http://localhost:5601 to visualize the indexed data. Messages sent by the producer and processed by the consumer will be in the Elasticsearch index.
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data @kafka-connect/es-sink.json \
+  http://localhost:8083/connectors
+```
 
+It consumes the `logs` topic and indexes into the `logs` index.
+
+## Path 2 — Python consumer
+
+```bash
+python kafka_consumer.py
+```
+
+Reads the `logs` topic in batches and bulk-indexes into Elasticsearch.
+
+## Produce sample data
+
+```bash
+python kafka_producer.py
+```
+
+Sends batches of synthetic log messages to the `logs` topic.
+
+## Verify in Kibana
+
+Open http://localhost:5601, create a data view on the `logs` index, and explore
+the messages in Discover.

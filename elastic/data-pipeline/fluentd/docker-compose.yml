@@ -3,7 +3,7 @@ x-common-vars-apps: &common-vars-apps
     - no-new-privileges:true
   restart: on-failure
   env_file:
-    - ./.env
+    - ../.env
   networks:
     - elastic
 
@@ -12,15 +12,31 @@ services:
     <<: *common-vars-apps
     build: .
     volumes:
-      - ./fluentd/conf:/fluentd/etc
-    links:
-      - "elasticsearch"
+      - certs:/certs:ro,z
+    environment:
+      FLUENT_ELASTICSEARCH_HOST: elasticsearch
+      FLUENT_ELASTICSEARCH_PORT: "9200"
+      FLUENT_ELASTICSEARCH_SCHEME: https
+      FLUENT_ELASTICSEARCH_CA_FILE: /certs/ca/ca.crt
+      FLUENT_ELASTICSEARCH_USER: elastic
+      FLUENT_ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-}
     ports:
       - "5140:5140/udp"
+      - "9880:9880"
       - "24224:24224"
       - "24224:24224/udp"
     logging:
-        driver: "json-file"
-        options:
-            max-size: 100m
-            max-file: "5"
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "5"
+
+networks:
+  elastic:
+    external: true
+    name: ${STACK_NETWORK:-elastic_elastic}
+
+volumes:
+  certs:
+    external: true
+    name: ${STACK_CERTS:-elastic_certs}

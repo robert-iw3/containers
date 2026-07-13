@@ -1,7 +1,23 @@
 ---
-- name: Render docker-compose for Podman
-  template:
-    src: docker-compose.j2
+# Render the compose from stack.config.yml via gen_stack.py, so the topology
+# (3-7 Elasticsearch, 1-2 Kibana, Fleet/Logstash/TLS) is driven by one config
+# instead of a hardcoded template.
+- name: Copy the config-driven stack generator + config
+  copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ project_dir }}/{{ item }}"
+  loop:
+    - gen_stack.py
+    - stack.config.yml
+
+- name: Render compose from stack.config.yml (any topology)
+  command: "python3 {{ project_dir }}/gen_stack.py {{ project_dir }}/stack.config.yml"
+  register: rendered_compose
+  changed_when: true
+
+- name: Write generated compose
+  copy:
+    content: "{{ rendered_compose.stdout }}"
     dest: "{{ project_dir }}/docker-compose-podman.yml"
 
 - name: Start Podman stack
