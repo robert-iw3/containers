@@ -14,9 +14,13 @@ plugins.security.ssl.transport.pemtrustedcas_filepath: root-ca.pem
 plugins.security.ssl.transport.resolve_hostname: false
 
 plugins.security.authcz.admin_dn:
-  - 'CN=,OU=,O=,L=,ST=,C=US'
+  - 'CN=admin,OU=opensearch,O=opensearch,L=SanFrancisco,ST=CA,C=US'
 
 plugins.security.nodes_dn:
-  - 'CN=node*.dns.a-record,OU=,O=,L=,ST=,C=US'
+  - 'CN=node*.dns.a-record,OU=opensearch,O=opensearch,L=SanFrancisco,ST=CA,C=US'
 
 plugins.security.audit.type: internal_opensearch
+plugins.security.allow_default_init_securityindex: true
+plugins.security.restapi.roles_enabled:
+  - 'all_access'
+  - 'security_rest_api_access'

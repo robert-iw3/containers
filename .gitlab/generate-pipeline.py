@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Generate a GitLab child pipeline with one build/scan/push job per Dockerfile."""
+"""Generate a GitLab child pipeline with one build/scan/push job per selected
+Dockerfile. Usage: generate-pipeline.py <mode> [items...] (see ci/dockerfile_targets)."""
 import os
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "ci"))
+from dockerfile_targets import entries, select  # noqa: E402
 
 TEMPLATE = """
 build:{job_name}:
@@ -44,24 +48,19 @@ no-op:
 """
 
 
-def sanitize(name: str) -> str:
-    name = name.strip("./").lower()
-    return "".join(c if (c.isalnum() or c in "-_/.") else "-" for c in name)
-
-
-def main(files: list[str]) -> None:
+def render(dockerfiles):
     jobs = []
-    for f in files:
-        if not f or not os.path.isfile(f):
-            continue
-        d = os.path.dirname(f) or "."
-        base = os.path.basename(f)
-        suffix = base[len("Dockerfile"):].lstrip(".") if base.startswith("Dockerfile") else base
-        image = sanitize(d if not suffix else f"{d}-{suffix}")
-        job_name = image.replace("/", "-")
-        jobs.append(TEMPLATE.format(job_name=job_name, image=image, dockerfile=f, context=d))
+    for e in entries(dockerfiles):
+        job_name = e["safe"]
+        jobs.append(TEMPLATE.format(
+            job_name=job_name, image=e["image"], dockerfile=e["dockerfile"], context=e["context"]))
+    return "\n".join(jobs) if jobs else NOOP
 
-    print("\n".join(jobs) if jobs else NOOP)
+
+def main(argv):
+    mode = argv[0] if argv else "all"
+    items = argv[1:]
+    print(render(select(mode, items)))
 
 
 if __name__ == "__main__":

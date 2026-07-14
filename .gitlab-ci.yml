@@ -6,8 +6,11 @@
 #     GitLab has no built-in equivalent of GitHub Actions' automatic GITHUB_TOKEN for ghcr.io,
 #     so a real GitHub PAT must be supplied for the push step to work.
 #
-# Trigger a full rebuild of every Dockerfile (not just changed ones) by running this
-# pipeline manually with the BUILD_ALL variable set to "true".
+# By default the pipeline builds the images declared in ci/build.yaml (an empty
+# manifest builds nothing). Override on a manual run with BUILD_PATHS to build a
+# chosen subset (comma-separated globs or dirs, e.g. "elastic/data-pipeline/*,elastic/apm-server"),
+# BUILD_ALL="true" to rebuild every Dockerfile, or BUILD_CHANGED="true" to build
+# only Dockerfiles whose build context changed.
 
 stages:
   - validate
@@ -54,22 +57,28 @@ discover:
   stage: discover
   image: alpine:3.24
   before_script:
-    - apk add --no-cache git python3 bash
+    - apk add --no-cache git python3 py3-yaml bash
   script:
     - |
-      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
-        git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --depth=50 || true
-        FILES=$(git diff --name-only "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}...HEAD" -- '*Dockerfile*' 2>/dev/null || true)
-      elif [ "$BUILD_ALL" = "true" ]; then
-        FILES=$(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##')
-      else
-        if [ -z "$CI_COMMIT_BEFORE_SHA" ] || [ "$CI_COMMIT_BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$CI_COMMIT_BEFORE_SHA" 2>/dev/null; then
-          FILES=$(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##')
-        else
-          FILES=$(git diff --name-only "$CI_COMMIT_BEFORE_SHA" "$CI_COMMIT_SHA" -- '*Dockerfile*' 2>/dev/null || true)
+      # Default: build what ci/build.yaml declares (empty manifest -> nothing).
+      # Override with BUILD_PATHS / BUILD_ALL / BUILD_CHANGED variables.
+      MODE=manifest
+      ITEMS=""
+      if [ -n "${BUILD_PATHS:-}" ]; then
+        MODE=paths
+        ITEMS=$(echo "$BUILD_PATHS" | tr ',' ' ')
+      elif [ "${BUILD_ALL:-}" = "true" ]; then
+        MODE=all
+      elif [ "${BUILD_CHANGED:-}" = "true" ]; then
+        MODE=changed
+        if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
+          git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --depth=50 || true
+          ITEMS=$(git diff --name-only "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}...HEAD" 2>/dev/null || true)
+        elif [ -n "$CI_COMMIT_BEFORE_SHA" ] && [ "$CI_COMMIT_BEFORE_SHA" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$CI_COMMIT_BEFORE_SHA" 2>/dev/null; then
+          ITEMS=$(git diff --name-only "$CI_COMMIT_BEFORE_SHA" "$CI_COMMIT_SHA" 2>/dev/null || true)
         fi
       fi
-      python3 .gitlab/generate-pipeline.py $FILES > generated-pipeline.yml
+      python3 .gitlab/generate-pipeline.py "$MODE" $ITEMS > generated-pipeline.yml
     - cat generated-pipeline.yml
   artifacts:
     paths:

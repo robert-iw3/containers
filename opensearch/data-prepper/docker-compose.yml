@@ -1,0 +1,25 @@
+services:
+  data-prepper:
+    build:
+      context: .
+    container_name: data-prepper
+    security_opt:
+      - no-new-privileges:true
+    restart: on-failure
+    environment:
+      OS_USER: admin
+      OS_PASS: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-}
+    volumes:
+      - ./config/pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml:ro,z
+      - ./config/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml:ro,z
+      - ../certs/root-ca.pem:/usr/share/data-prepper/certs/root-ca.pem:ro,z
+    ports:
+      - "2021:2021"
+      - "21892:21892"
+    networks:
+      - opensearch
+
+networks:
+  opensearch:
+    external: true
+    name: ${STACK_NETWORK:-opensearch_opensearch}

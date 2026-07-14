@@ -146,8 +146,6 @@ if curl "${CURL_CONFIG_PARAMS[@]}" -fsSL -XGET "$DASHB_URL/api/status" ; then
   # # end Index pattern
   # #############################################################################################################################
 
-  # index-refresh.py -i "$INDEX_PATTERN" -t "$TEMPLATE_NAME" --unassigned
-
 fi # dashboards is running
 
 echo "Success" >&2

@@ -1,0 +1,58 @@
+---
+# Config-driven multi-host OpenSearch deployment. Renders the compose from
+# stack.config.yml with gen_opensearch.py, prepares each host, ships certs +
+# config, and brings the cluster up over TLS.
+#
+#   ansible-playbook -i inventory.ini deploy-opensearch.yml
+- name: Prepare hosts and deploy OpenSearch
+  hosts: opensearch
+  become: true
+  vars:
+    project_dir: /opt/opensearch
+  tasks:
+    - name: Ensure project directory exists
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy stack sources
+      copy:
+        src: "{{ playbook_dir }}/../{{ item }}"
+        dest: "{{ project_dir }}/{{ item }}"
+      loop:
+        - gen_opensearch.py
+        - stack.config.yml
+        - opensearch.yml
+        - opensearch_dashboards.yml
+        - opensearch.Dockerfile
+        - dashboards.Dockerfile
+
+    - name: Copy security, certs, scripts, shared-objects
+      copy:
+        src: "{{ playbook_dir }}/../{{ item }}"
+        dest: "{{ project_dir }}/"
+      loop:
+        - security
+        - certs
+        - scripts
+        - shared-objects
+
+    - name: Apply host tuning (sysctl, memlock, THP)
+      script: "{{ playbook_dir }}/../host-prep/prepare-host.sh"
+
+    - name: Render compose from stack.config.yml
+      command: "python3 {{ project_dir }}/gen_opensearch.py {{ project_dir }}/stack.config.yml"
+      register: rendered
+      changed_when: true
+
+    - name: Write generated compose
+      copy:
+        content: "{{ rendered.stdout }}"
+        dest: "{{ project_dir }}/docker-compose.generated.yml"
+
+    - name: Start the OpenSearch stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        files: [docker-compose.generated.yml]
+        state: present

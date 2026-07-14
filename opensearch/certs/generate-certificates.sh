@@ -4,11 +4,11 @@ set -e
 
 ENCODING="utf-8"
 
-COUNTRY=""
-STATE=""
-LOCALITY=""
-ORGANIZATION=""
-UNIT=""
+COUNTRY="US"
+STATE="CA"
+LOCALITY="SanFrancisco"
+ORGANIZATION="opensearch"
+UNIT="opensearch"
 NODE_COUNT=4
 while getopts 'vc:s:l:o:n:u' OPTION; do
   case "$OPTION" in

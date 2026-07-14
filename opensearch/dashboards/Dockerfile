@@ -1,4 +1,4 @@
-ARG DASHBOARDS_VERSION
+ARG DASHBOARDS_VERSION=3.2.0
 
 FROM docker.io/opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}
 

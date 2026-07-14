@@ -6,8 +6,16 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      paths:
+        description: "Build only these Dockerfiles (comma/space-separated globs or dirs, e.g. 'elastic/data-pipeline/*, elastic/apm-server')"
+        type: string
+        default: ""
       build_all:
-        description: "Build every Dockerfile in the repo, not just changed ones"
+        description: "Build every Dockerfile in the repo"
+        type: boolean
+        default: false
+      build_changed:
+        description: "Build Dockerfiles whose build context changed in this push/PR"
         type: boolean
         default: false
 
@@ -79,41 +87,35 @@ jobs:
       - name: Discover Dockerfiles to build
         id: discover
         shell: bash
+        env:
+          ONLY_PATHS: ${{ inputs.paths }}
+          BUILD_ALL: ${{ inputs.build_all }}
+          BUILD_CHANGED: ${{ inputs.build_changed }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_all }}" == "true" ]]; then
-            mapfile -t FILES < <(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##' | sort)
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}" --depth=1
-            mapfile -t FILES < <(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- '**/Dockerfile*' | sort)
-          else
-            BEFORE="${{ github.event.before }}"
-            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
-              mapfile -t FILES < <(find . -type f -iname 'Dockerfile*' -not -path './.git/*' | sed 's#^\./##' | sort)
-            else
-              mapfile -t FILES < <(git diff --name-only "$BEFORE" HEAD -- '**/Dockerfile*' | sort)
+          # Default: build what ci/build.yaml declares (empty manifest -> nothing).
+          # Manual runs override with paths / build_all / build_changed.
+          MODE=manifest
+          ITEMS=()
+          if [[ -n "${ONLY_PATHS// /}" ]]; then
+            MODE=paths
+            IFS=', ' read -r -a ITEMS <<< "$ONLY_PATHS"
+          elif [[ "$BUILD_ALL" == "true" ]]; then
+            MODE=all
+          elif [[ "$BUILD_CHANGED" == "true" ]]; then
+            MODE=changed
+            if [[ -n "$BASE_REF" ]]; then
+              git fetch origin "$BASE_REF" --depth=1
+              mapfile -t ITEMS < <(git diff --name-only "origin/${BASE_REF}...HEAD")
+            elif [[ -n "$BEFORE" && "$BEFORE" != "0000000000000000000000000000000000000000" ]] && git cat-file -e "$BEFORE" 2>/dev/null; then
+              mapfile -t ITEMS < <(git diff --name-only "$BEFORE" HEAD)
             fi
           fi
 
-          python3 - "${FILES[@]}" <<'PY' >> "$GITHUB_OUTPUT"
-          import json, os, sys
-
-          files = [f for f in sys.argv[1:] if f and os.path.isfile(f)]
-          entries = []
-          for f in files:
-              d = os.path.dirname(f) or "."
-              base = os.path.basename(f)
-              suffix = base[len("Dockerfile"):].lstrip(".") if base.startswith("Dockerfile") else base
-              name = d if not suffix else f"{d}-{suffix}"
-              name = name.strip("./").lower()
-              name = "".join(c if (c.isalnum() or c in "-_/.") else "-" for c in name)
-              entries.append({"dockerfile": f, "context": d, "image": name})
-
-          matrix = {"include": entries}
-          print(f"matrix={json.dumps(matrix)}")
-          print(f"has_targets={'true' if entries else 'false'}")
-          PY
+          python3 .github/discover.py "$MODE" "${ITEMS[@]}" >> "$GITHUB_OUTPUT"
 
   build-scan-publish:
     needs: discover
@@ -160,7 +162,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-${{ matrix.image }}
+          name: sbom-${{ matrix.safe }}
           path: sbom.cdx.json
 
       - name: Vulnerability scan (SARIF, non-blocking)
@@ -174,11 +176,11 @@ jobs:
           exit-code: '0'
 
       - name: Upload SARIF to code scanning
-        if: always()
+        if: always() && hashFiles('trivy.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy.sarif
-          category: trivy-${{ matrix.image }}
+          category: trivy-${{ matrix.safe }}
 
       - name: Fail on fixable CRITICAL/HIGH vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
