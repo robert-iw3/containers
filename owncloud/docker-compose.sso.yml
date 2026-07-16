@@ -1,0 +1,18 @@
+# SSO overlay — use together with the base file and the sso profile:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.sso.yml \
+#     --profile sso up -d
+#
+# The ownCloud openidconnect app makes back-channel calls (discovery, token,
+# JWKS) to the OIDC *issuer* URL, which is the public Authelia address served by
+# Traefik. The ownCloud app already sits on the frontend network, so all this
+# overlay adds is a Traefik alias for the Authelia hostname there, letting the
+# issuer URL resolve and terminate at Traefik exactly as it does for a browser.
+# In production Traefik serves a valid ACME certificate, so the app trusts it.
+
+services:
+  traefik:
+    networks:
+      frontend:
+        aliases:
+          - ${AUTHELIA_HOSTNAME:-auth.example.com}

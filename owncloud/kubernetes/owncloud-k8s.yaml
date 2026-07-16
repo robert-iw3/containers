@@ -1,0 +1,373 @@
+# Production-oriented ownCloud 10.x on Kubernetes.
+#
+#   1. Edit the Secret below (or replace it with ExternalSecrets/SealedSecrets).
+#   2. Set the host in the Ingress; use a ReadWriteMany storage class for
+#      owncloud-files if you plan to scale the web tier beyond one replica.
+#   3. kubectl apply -f owncloud-k8s.yaml
+#
+# Assumes an nginx ingress controller and cert-manager with a ClusterIssuer
+# named "letsencrypt". Adjust annotations for your environment.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: owncloud
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: owncloud-secrets
+  namespace: owncloud
+type: Opaque
+stringData:
+  mysql-root-password: CHANGE_ME_STRONG_PASSWORD
+  mysql-database: owncloud
+  mysql-user: owncloud
+  mysql-password: CHANGE_ME_STRONG_PASSWORD
+  redis-password: CHANGE_ME_STRONG_PASSWORD
+  owncloud-admin-username: ocadmin
+  owncloud-admin-password: CHANGE_ME_STRONG_PASSWORD
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: owncloud-files
+  namespace: owncloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  namespace: owncloud
+  labels:
+    app.kubernetes.io/name: mariadb
+    app.kubernetes.io/part-of: owncloud
+spec:
+  serviceName: mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mariadb
+      app.kubernetes.io/part-of: owncloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mariadb
+        app.kubernetes.io/part-of: owncloud
+    spec:
+      containers:
+        - name: mariadb
+          image: docker.io/mariadb:10.11
+          args:
+            - "--max-allowed-packet=128M"
+            - "--innodb-log-file-size=64M"
+            - "--character-set-server=utf8mb4"
+            - "--collation-server=utf8mb4_general_ci"
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-password
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "healthcheck.sh --connect --innodb_initialized"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "healthcheck.sh --connect --innodb_initialized"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: owncloud
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: mariadb
+    app.kubernetes.io/part-of: owncloud
+  ports:
+    - port: 3306
+      targetPort: mysql
+      name: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: owncloud
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: owncloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/part-of: owncloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: owncloud
+    spec:
+      containers:
+        - name: redis
+          image: docker.io/redis:7-alpine
+          command: ["redis-server"]
+          args:
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
+            - "--maxmemory"
+            - "512mb"
+            - "--maxmemory-policy"
+            - "allkeys-lru"
+          ports:
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: redis-password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: owncloud
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: owncloud
+  ports:
+    - port: 6379
+      targetPort: redis
+      name: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: owncloud
+  namespace: owncloud
+  labels:
+    app.kubernetes.io/name: owncloud
+    app.kubernetes.io/part-of: owncloud
+spec:
+  # Scaling beyond 1 replica requires a ReadWriteMany PVC for owncloud-files.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: owncloud
+      app.kubernetes.io/part-of: owncloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: owncloud
+        app.kubernetes.io/part-of: owncloud
+    spec:
+      containers:
+        - name: owncloud
+          image: docker.io/owncloud/server:10.15.0
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: OWNCLOUD_DOMAIN
+              value: owncloud.example.com
+            - name: OWNCLOUD_TRUSTED_DOMAINS
+              value: owncloud.example.com
+            - name: OWNCLOUD_PROTOCOL
+              value: https
+            - name: OWNCLOUD_DB_TYPE
+              value: mysql
+            - name: OWNCLOUD_DB_HOST
+              value: mariadb
+            - name: OWNCLOUD_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-database
+            - name: OWNCLOUD_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-user
+            - name: OWNCLOUD_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: mysql-password
+            - name: OWNCLOUD_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: owncloud-admin-username
+            - name: OWNCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: owncloud-admin-password
+            - name: OWNCLOUD_MYSQL_UTF8MB4
+              value: "true"
+            - name: OWNCLOUD_REDIS_ENABLED
+              value: "true"
+            - name: OWNCLOUD_REDIS_HOST
+              value: redis
+            - name: OWNCLOUD_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secrets
+                  key: redis-password
+            - name: OWNCLOUD_BACKGROUND_MODE
+              value: cron
+          volumeMounts:
+            - name: owncloud-files
+              mountPath: /mnt/data
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+          startupProbe:
+            httpGet:
+              path: /status.php
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: owncloud.example.com
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /status.php
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: owncloud.example.com
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /status.php
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: owncloud.example.com
+            periodSeconds: 15
+            timeoutSeconds: 10
+      volumes:
+        - name: owncloud-files
+          persistentVolumeClaim:
+            claimName: owncloud-files
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: owncloud
+  namespace: owncloud
+spec:
+  selector:
+    app.kubernetes.io/name: owncloud
+    app.kubernetes.io/part-of: owncloud
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: owncloud
+  namespace: owncloud
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 10g
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /.well-known/carddav { return 301 $scheme://$host/remote.php/dav/; }
+      location = /.well-known/caldav  { return 301 $scheme://$host/remote.php/dav/; }
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - owncloud.example.com
+      secretName: owncloud-tls
+  rules:
+    - host: owncloud.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: owncloud
+                port:
+                  name: http

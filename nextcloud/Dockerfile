@@ -1,18 +1,31 @@
 # syntax=docker/dockerfile:1
 # nextcloud: a suite of client-server software for creating and using file hosting services.
+# Synced with the official 34/fpm-alpine image definition (nextcloud/docker).
 ARG repo="docker.io" \
-    base_image="php:8.2-fpm-alpine3.21" \
-    image_hash="f3300d3ead8dcacd19e72433c1bca7343db2a826505a2329dc14cb15b18b450a"
+    base_image="php:8.5-fpm-alpine3.24" \
+    image_hash="79def1d16ece3ab1a6656c46a23bfd80ad33887fbd33626e7bd743cef54ef9c6"
 
 FROM ${repo}/${base_image}@sha256:${image_hash}
 
-ENV NEXTCLOUD_VERSION="27.1.2"
+LABEL org.opencontainers.image.name='Nextcloud' \
+    org.opencontainers.image.description='Self-hosted content collaboration platform (php-fpm build).' \
+    org.opencontainers.image.usage='https://docs.nextcloud.com/server/latest/admin_manual/' \
+    org.opencontainers.image.source='https://github.com/nextcloud/server'
+
+ENV NEXTCLOUD_VERSION="34.0.1"
 
 # entrypoint.sh and cron.sh dependencies
 RUN set -ex; \
     \
     apk add --no-cache \
         imagemagick \
+        imagemagick-pdf \
+        imagemagick-jpeg \
+        imagemagick-raw \
+        imagemagick-tiff \
+        imagemagick-heic \
+        imagemagick-webp \
+        imagemagick-svg \
         rsync \
     ; \
     \
@@ -32,7 +45,6 @@ RUN set -ex; \
         imagemagick-dev \
         libevent-dev \
         libjpeg-turbo-dev \
-        libmcrypt-dev \
         libmemcached-dev \
         libpng-dev \
         libwebp-dev \
@@ -43,16 +55,17 @@ RUN set -ex; \
         postgresql-dev \
     ; \
     \
+    docker-php-ext-configure ftp --with-ftp-ssl; \
     docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp; \
     docker-php-ext-configure ldap; \
     docker-php-ext-install -j "$(nproc)" \
         bcmath \
         exif \
+        ftp \
         gd \
         gmp \
         intl \
         ldap \
-        opcache \
         pcntl \
         pdo_mysql \
         pdo_pgsql \
@@ -61,13 +74,17 @@ RUN set -ex; \
     ; \
     \
 # pecl will claim success even if one install fails, so we need to perform each install separately
-    pecl install APCu-5.1.22; \
-    pecl install imagick-3.7.0; \
-    pecl install memcached-3.2.0; \
-    pecl install redis-6.0.0; \
+    pecl install APCu-5.1.28; \
+    pecl install igbinary-3.2.17RC1; \
+    pecl install imagick-3.8.1; \
+    pecl install --configureoptions 'enable-memcached-igbinary="yes"' \
+        memcached-3.4.0; \
+    pecl install --configureoptions 'enable-redis-igbinary="yes" enable-redis-zstd="yes" enable-redis-lz4="yes"' \
+        redis-6.3.0; \
     \
     docker-php-ext-enable \
         apcu \
+        igbinary \
         imagick \
         memcached \
         redis \
@@ -85,21 +102,27 @@ RUN set -ex; \
 
 # set recommended PHP.ini settings
 # see https://docs.nextcloud.com/server/latest/admin_manual/installation/server_tuning.html#enable-php-opcache
-ENV PHP_MEMORY_LIMIT 512M \
-    PHP_UPLOAD_LIMIT 512M
+ENV PHP_MEMORY_LIMIT=512M \
+    PHP_UPLOAD_LIMIT=512M \
+    PHP_OPCACHE_MEMORY_CONSUMPTION=128
 
 RUN { \
         echo 'opcache.enable=1'; \
         echo 'opcache.interned_strings_buffer=32'; \
         echo 'opcache.max_accelerated_files=10000'; \
-        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.memory_consumption=${PHP_OPCACHE_MEMORY_CONSUMPTION}'; \
         echo 'opcache.save_comments=1'; \
         echo 'opcache.revalidate_freq=60'; \
         echo 'opcache.jit=1255'; \
-        echo 'opcache.jit_buffer_size=128M'; \
+        echo 'opcache.jit_buffer_size=8M'; \
     } > "${PHP_INI_DIR}/conf.d/opcache-recommended.ini"; \
     \
     echo 'apc.enable_cli=1' >> "${PHP_INI_DIR}/conf.d/docker-php-ext-apcu.ini"; \
+    \
+    { \
+        echo 'apc.serializer=igbinary'; \
+        echo 'session.serialize_handler=igbinary'; \
+    } >> "${PHP_INI_DIR}/conf.d/docker-php-ext-igbinary.ini"; \
     \
     { \
         echo 'memory_limit=${PHP_MEMORY_LIMIT}'; \
@@ -124,8 +147,8 @@ RUN set -ex; \
         gnupg \
     ; \
     \
-    curl -fsSL -o nextcloud.tar.bz2 "https://download.nextcloud.com/server/releases/nextcloud-${NEXTCLOUD_VERSION}.tar.bz2"; \
-    curl -fsSL -o nextcloud.tar.bz2.asc "https://download.nextcloud.com/server/releases/nextcloud-${NEXTCLOUD_VERSION}.tar.bz2.asc"; \
+    curl -fsSL -o nextcloud.tar.bz2 "https://github.com/nextcloud-releases/server/releases/download/v${NEXTCLOUD_VERSION}/nextcloud-${NEXTCLOUD_VERSION}.tar.bz2"; \
+    curl -fsSL -o nextcloud.tar.bz2.asc "https://github.com/nextcloud-releases/server/releases/download/v${NEXTCLOUD_VERSION}/nextcloud-${NEXTCLOUD_VERSION}.tar.bz2.asc"; \
     export GNUPGHOME="$(mktemp -d)"; \
 # gpg key from https://nextcloud.com/nextcloud.asc
     gpg --batch --keyserver keyserver.ubuntu.com  --recv-keys 28806A878AE423A28372792ED75899B9A724937A; \

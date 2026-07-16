@@ -1,32 +1,34 @@
 #!/bin/bash
-set -e
+# Restore a PostgreSQL dump produced by the backups sidecar or
+# nextcloud-backup.sh. Stops the app, drops/recreates the DB, restores,
+# restarts. Uses the superuser connection from the backups container env.
+set -euo pipefail
 
-NEXTCLOUD_CONTAINER=$(docker ps -aqf "name=nextcloud")
-NEXTCLOUD_BACKUPS_CONTAINER=$(docker ps -aqf "name=postgres_backup")
+APP_CONTAINER=$(docker ps -aqf "name=nextcloud-app")
+CRON_CONTAINER=$(docker ps -aqf "name=nextcloud-cron")
+BACKUPS_CONTAINER=$(docker ps -qf "name=nextcloud-backups")
 
-echo "--> All available database backups:"
+echo "--> Available database backups:"
+docker exec "$BACKUPS_CONTAINER" sh -c "ls -1 /srv/backups/db/"
 
-for entry in $(docker container exec -it $NEXTCLOUD_BACKUPS_CONTAINER sh -c "ls /srv/nextcloud-postgres/backups/")
-do
-  echo "$entry"
-done
-
-echo "--> Copy and paste the backup name from the list above to restore database and press [ENTER]
---> Example: nextcloud-postgres-backup-YYYY-MM-DD_hh-mm.gz"
+echo "--> Paste the backup file name to restore and press [ENTER]"
+echo "--> Example: nextcloud-postgres-backup-YYYY-MM-DD_hh-mm.sql.gz"
 echo -n "--> "
+read -r SELECTED_BACKUP
 
-read SELECTED_DATABASE_BACKUP
+echo "--> Stopping Nextcloud..."
+docker stop "$APP_CONTAINER" "$CRON_CONTAINER"
 
-echo "--> $SELECTED_DATABASE_BACKUP was selected"
+echo "--> Restoring database from $SELECTED_BACKUP ..."
+docker exec "$BACKUPS_CONTAINER" sh -c '
+  set -e
+  psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d postgres \
+    -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";" \
+    -c "CREATE DATABASE \"$POSTGRES_DB\" OWNER \"$POSTGRES_USER\";"
+  gunzip -c "/srv/backups/db/'"$SELECTED_BACKUP"'" \
+    | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+'
+echo "--> Database restore complete."
 
-echo "--> Stopping service..."
-docker stop $NEXTCLOUD_CONTAINER
-
-echo "--> Restoring database..."
-docker exec -it $NEXTCLOUD_BACKUPS_CONTAINER sh -c 'PGPASSWORD="$(echo $NEXTCLOUD_DB_PASS)" dropdb -h postgres-nextcloud.io -p 5432 nextcloud -U nextcloud \
-&& PGPASSWORD="$(echo $NEXTCLOUD_DB_PASS)" createdb -h postgres-nextcloud.io -p 5432 nextcloud -U nextcloud \
-&& PGPASSWORD="$(echo $NEXTCLOUD_DB_PASS)" gunzip -c /srv/nextcloud-postgres/backups/'$SELECTED_DATABASE_BACKUP' | PGPASSWORD=$(echo $NEXTCLOUD_DB_PASS) psql -h postgres-nextcloud.io -p 5432 nextcloud -U nextcloud'
-echo "--> Database recovery completed..."
-
-echo "--> Starting service..."
-docker start $NEXTCLOUD_CONTAINER
+echo "--> Starting Nextcloud..."
+docker start "$APP_CONTAINER" "$CRON_CONTAINER"

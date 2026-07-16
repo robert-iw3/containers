@@ -84,15 +84,15 @@ identity_providers:
     # signing key provided via
     #   AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE
     clients:
-      - client_id: nextcloud
-        client_name: Nextcloud
+      - client_id: owncloud
+        client_name: ownCloud
         # pbkdf2 hash of the plaintext secret (env, never committed):
-        client_secret: '{{ env "OIDC_NEXTCLOUD_CLIENT_SECRET_HASH" }}'
+        client_secret: '{{ env "OIDC_OWNCLOUD_CLIENT_SECRET_HASH" }}'
         public: false
         authorization_policy: one_factor
         require_pkce: false
         redirect_uris:
-          - '{{ env "NEXTCLOUD_OIDC_REDIRECT_URI" }}'
+          - '{{ env "OWNCLOUD_OIDC_REDIRECT_URI" }}'
         scopes:
           - openid
           - profile
@@ -103,5 +103,5 @@ identity_providers:
         grant_types:
           - authorization_code
         userinfo_signed_response_alg: none
-        token_endpoint_auth_method: client_secret_post
+        token_endpoint_auth_method: client_secret_basic
 ...

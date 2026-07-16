@@ -1,0 +1,22 @@
+---
+###############################################################
+#                       Users Database                        #
+###############################################################
+# Copy to ./authelia/secrets/users_database.yml (git-ignored) and replace the
+# password hash. Generate a hash with the Authelia CLI:
+#
+#   docker run --rm authelia/authelia:4.38 \
+#     authelia crypto hash generate argon2 --password 'yourpassword'
+#
+# The digest it prints ($argon2id$...) goes in the `password` field verbatim.
+
+users:
+  ncadmin:
+    disabled: false
+    displayname: 'Nextcloud Admin'
+    # argon2id digest of the account password — NOT the plaintext.
+    password: '$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_GENERATED_HASH'
+    email: ncadmin@example.com
+    groups:
+      - admins
+...

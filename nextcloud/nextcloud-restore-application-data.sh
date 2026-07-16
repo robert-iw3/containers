@@ -1,30 +1,32 @@
 #!/bin/bash
-set -e
+# Restore a /var/www/html archive produced by the backups sidecar or
+# nextcloud-backup.sh into the nextcloud-data volume.
+set -euo pipefail
 
-NEXTCLOUD_CONTAINER=$(docker ps -aqf "name=nextcloud")
-NEXTCLOUD_BACKUPS_CONTAINER=$(docker ps -aqf "name=postgres_backup")
+APP_CONTAINER=$(docker ps -aqf "name=nextcloud-app")
+CRON_CONTAINER=$(docker ps -aqf "name=nextcloud-cron")
+BACKUPS_CONTAINER=$(docker ps -qf "name=nextcloud-backups")
 
-echo "--> All available application data backups:"
+echo "--> Available application data backups:"
+docker exec "$BACKUPS_CONTAINER" sh -c "ls -1 /srv/backups/data/"
 
-for entry in $(docker container exec -it $NEXTCLOUD_BACKUPS_CONTAINER sh -c "ls /srv/nextcloud-application-data/backups/")
-do
-  echo "$entry"
-done
-
-echo "--> Copy and paste the backup name from the list above to restore application data and press [ENTER]
---> Example: nextcloud-application-data-backup-YYYY-MM-DD_hh-mm.tar.gz"
+echo "--> Paste the backup file name to restore and press [ENTER]"
+echo "--> Example: nextcloud-data-backup-YYYY-MM-DD_hh-mm.tar.gz"
 echo -n "--> "
+read -r SELECTED_BACKUP
 
-read SELECTED_APPLICATION_BACKUP
+echo "--> Stopping Nextcloud..."
+docker stop "$APP_CONTAINER" "$CRON_CONTAINER"
 
-echo "--> $SELECTED_APPLICATION_BACKUP was selected"
+# The data volume is mounted read-only in the backups container, so restore
+# through a throwaway container that mounts it read-write.
+echo "--> Restoring application data from $SELECTED_BACKUP ..."
+docker run --rm \
+  -v nextcloud_nextcloud-data:/var/www/html \
+  -v nextcloud_nextcloud-data-backups:/srv/backups/data:ro \
+  docker.io/alpine:3.21 \
+  sh -c "rm -rf /var/www/html/* /var/www/html/..?* /var/www/html/.[!.]* 2>/dev/null; tar -xzpf /srv/backups/data/$SELECTED_BACKUP -C /var/www"
+echo "--> Application data restore complete."
 
-echo "--> Stopping service..."
-docker stop $NEXTCLOUD_CONTAINER
-
-echo "--> Restoring application data..."
-docker exec -it $NEXTCLOUD_BACKUPS_CONTAINER sh -c "rm -rf /var/www/html/* && tar -zxpf /srv/nextcloud-application-data/backups/$SELECTED_APPLICATION_BACKUP -C /"
-echo "--> Application data recovery completed..."
-
-echo "--> Starting service..."
-docker start $NEXTCLOUD_CONTAINER
+echo "--> Starting Nextcloud..."
+docker start "$APP_CONTAINER" "$CRON_CONTAINER"

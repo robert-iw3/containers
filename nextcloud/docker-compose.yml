@@ -1,0 +1,438 @@
+# Production Nextcloud stack: Traefik (TLS) -> nginx -> php-fpm (local hardened
+# image), PostgreSQL 16, Redis 7, dedicated cron container and a backup sidecar.
+#
+#   cp .env.example .env   # fill in secrets first
+#   docker compose up -d --build
+#
+# Optional profiles:
+#   --profile office    Collabora Online (collaborative document editing)
+#   --profile previews  Imaginary (offloaded preview generation)
+#   --profile sso       Authelia (forward-auth in front of the Traefik dashboard)
+#
+# See README.md for the full production checklist (backups, upgrades, tuning).
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+volumes:
+  nextcloud-data:
+  nextcloud-postgres:
+  nextcloud-redis:
+  nextcloud-db-backups:
+  nextcloud-data-backups:
+  traefik-certificates:
+
+networks:
+  # Edge network: only Traefik and the services it routes to.
+  frontend:
+    driver: bridge
+  # Internal network: app <-> db/cache. No outbound routing.
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${NEXTCLOUD_SUBNET:-172.28.0.0/16}
+  # Isolated network for the container-engine socket: only Traefik and the
+  # socket proxy attach here. No outbound routing.
+  socket:
+    driver: bridge
+    internal: true
+
+services:
+  traefik:
+    <<: *common
+    image: docker.io/traefik:v3.3
+    container_name: nextcloud-traefik
+    command:
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:${TRAEFIK_WEBSECURE_PORT:-443}"
+      - "--entryPoints.websecure.http.tls=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=nextcloud_frontend"
+      # Talk to the container engine through the filtered, read-only socket
+      # proxy — Traefik never mounts the raw socket.
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:${TRAEFIK_WEBSECURE_PORT:-443}"
+    volumes:
+      - traefik-certificates:/etc/traefik/acme
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      # Default: basic-auth. With the sso profile set this to
+      # authelia-fwd@docker in .env to gate the dashboard behind Authelia.
+      - "traefik.http.routers.dashboard.middlewares=${TRAEFIK_DASHBOARD_MIDDLEWARE:-dashboard-auth}"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+    networks:
+      frontend: {}
+      socket: {}
+
+  # Filtered, read-only proxy in front of the container-engine socket. Traefik
+  # reads container/network/event metadata through this instead of mounting the
+  # raw socket — a compromised Traefik cannot create containers or reach the
+  # host. Everything not needed for service discovery is denied (POST too).
+  socket-proxy:
+    <<: *common
+    image: docker.io/tecnativa/docker-socket-proxy:0.3.0@sha256:2f92c6e85a1199b3403c99d7439695898a162c69689b11130450ffadb352f0a0
+    container_name: nextcloud-socket-proxy
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+      # Everything else stays denied (default 0), including all POST/write ops.
+      POST: 0
+      IMAGES: 0
+      INFO: 0
+      SERVICES: 0
+      TASKS: 0
+      SWARM: 0
+      SYSTEM: 0
+      EXEC: 0
+      VOLUMES: 0
+      SECRETS: 0
+      CONFIGS: 0
+    volumes:
+      # Podman: set DOCKER_SOCKET=$XDG_RUNTIME_DIR/podman/podman.sock in .env
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      socket: {}
+
+  postgres:
+    <<: *common
+    image: docker.io/postgres:16-alpine
+    container_name: nextcloud-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Fail closed: never fall back to trust auth.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - nextcloud-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - backend
+
+  redis:
+    <<: *common
+    image: docker.io/redis:7-alpine
+    container_name: nextcloud-redis
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --maxmemory 512mb --maxmemory-policy allkeys-lru --save ''"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - nextcloud-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  nextcloud:
+    <<: *common
+    build:
+      context: .
+    image: localhost/nextcloud-fpm:hardened
+    container_name: nextcloud-app
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      OVERWRITEPROTOCOL: ${OVERWRITEPROTOCOL:-https}
+      OVERWRITECLIURL: ${OVERWRITECLIURL}
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-1024M}
+      PHP_UPLOAD_LIMIT: ${PHP_UPLOAD_LIMIT:-10G}
+    volumes:
+      - nextcloud-data:/var/www/html
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'php-fpm: master' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      backend: {}
+
+  web:
+    <<: *common
+    image: docker.io/nginx:1.27-alpine
+    container_name: nextcloud-web
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nextcloud-data:/var/www/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/status.php || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      nextcloud:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud.rule=Host(`${NEXTCLOUD_HOSTNAME}`)"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls=true"
+      - "traefik.http.routers.nextcloud.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-headers,nextcloud-dav"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=8080"
+      # CalDAV/CardDAV well-known redirects (Nextcloud admin-check compliant).
+      - "traefik.http.middlewares.nextcloud-dav.redirectregex.regex=https://(.*)/.well-known/(carddav|caldav)"
+      - "traefik.http.middlewares.nextcloud-dav.redirectregex.replacement=https://$${1}/remote.php/dav"
+      - "traefik.http.middlewares.nextcloud-dav.redirectregex.permanent=true"
+      # Security headers.
+      - "traefik.http.middlewares.nextcloud-headers.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.nextcloud-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.nextcloud-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.nextcloud-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.nextcloud-headers.headers.referrerPolicy=no-referrer"
+      - "traefik.http.middlewares.nextcloud-headers.headers.customResponseHeaders.X-Robots-Tag=noindex,nofollow"
+    networks:
+      - frontend
+      - backend
+
+  cron:
+    <<: *common
+    image: localhost/nextcloud-fpm:hardened
+    container_name: nextcloud-cron
+    entrypoint: /cron.sh
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - nextcloud-data:/var/www/html
+    healthcheck:
+      # crond runs as `busybox crond`, so match the full command line.
+      test: ["CMD-SHELL", "pgrep -f crond >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      nextcloud:
+        condition: service_healthy
+    networks:
+      - backend
+
+  backups:
+    <<: *common
+    image: docker.io/postgres:16-alpine
+    container_name: nextcloud-backups
+    user: root
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP:-1800}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sleep "$$BACKUP_INIT_SLEEP"
+        while true; do
+          STAMP="$$(date +%Y-%m-%d_%H-%M)"
+          echo "[backups] starting run $$STAMP"
+          pg_dump -h "$$POSTGRES_HOST" -p 5432 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" \
+            | gzip > "/srv/backups/db/nextcloud-postgres-backup-$$STAMP.sql.gz" \
+            && echo "[backups] database dump ok"
+          tar -czf "/srv/backups/data/nextcloud-data-backup-$$STAMP.tar.gz" -C /var/www html \
+            && echo "[backups] data archive ok"
+          find /srv/backups/db   -type f -mtime "+$$BACKUP_RETENTION_DAYS" -delete
+          find /srv/backups/data -type f -mtime "+$$BACKUP_RETENTION_DAYS" -delete
+          echo "[backups] run $$STAMP complete; sleeping $$BACKUP_INTERVAL"
+          sleep "$$BACKUP_INTERVAL"
+        done
+    volumes:
+      - nextcloud-data:/var/www/html:ro
+      - nextcloud-db-backups:/srv/backups/db
+      - nextcloud-data-backups:/srv/backups/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nextcloud:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # --------------------------------------------------------------------------
+  # Optional services (enable with --profile)
+  # --------------------------------------------------------------------------
+
+  imaginary:
+    <<: *common
+    profiles: ["previews"]
+    image: docker.io/nextcloud/aio-imaginary:latest
+    container_name: nextcloud-imaginary
+    command: ["-concurrency", "50", "-enable-url-source", "-return-size", "-listen", ":9000"]
+    cap_add:
+      - SYS_NICE
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend
+
+  collabora:
+    <<: *common
+    profiles: ["office"]
+    image: docker.io/collabora/code:latest
+    container_name: nextcloud-collabora
+    cap_add:
+      - MKNOD
+    environment:
+      aliasgroup1: ${COLLABORA_ALIASGROUP}
+      username: ${COLLABORA_ADMIN_USER}
+      password: ${COLLABORA_ADMIN_PASSWORD}
+      # TLS terminates at Traefik.
+      extra_params: "--o:ssl.enable=false --o:ssl.termination=true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:9980/hosting/discovery >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.collabora.rule=Host(`${COLLABORA_HOSTNAME}`)"
+      - "traefik.http.routers.collabora.entrypoints=websecure"
+      - "traefik.http.routers.collabora.tls=true"
+      - "traefik.http.routers.collabora.tls.certresolver=letsencrypt"
+      - "traefik.http.services.collabora.loadbalancer.server.port=9980"
+    networks:
+      - frontend
+      - backend
+
+  # Authelia: OpenID Connect provider for Nextcloud (via the user_oidc app) and
+  # forward-auth for the Traefik dashboard. Secrets are read from
+  # ./authelia/secrets/* via AUTHELIA_*_FILE; see authelia/README.md to bootstrap.
+  authelia:
+    <<: *common
+    profiles: ["sso"]
+    image: docker.io/authelia/authelia:4.38
+    container_name: nextcloud-authelia
+    volumes:
+      - ./authelia:/config
+    environment:
+      # Enable Go-template filtering so `{{ env }}` works in configuration.yml.
+      X_AUTHELIA_CONFIG_FILTERS: template
+      # Non-secret values consumed by configuration.yml templates. These are
+      # deliberately NOT prefixed AUTHELIA_, so Authelia's env→config scanner
+      # ignores them (an AUTHELIA_-prefixed name would be mapped to a config key).
+      TPL_AUTHELIA_DOMAIN: ${AUTHELIA_HOSTNAME:-auth.example.com}
+      TPL_AUTHELIA_URL: ${AUTHELIA_URL:-https://auth.example.com}
+      TPL_COOKIE_DOMAIN: ${AUTHELIA_COOKIE_DOMAIN:-example.com}
+      TRAEFIK_DOMAIN: ${TRAEFIK_HOSTNAME}
+      NEXTCLOUD_OIDC_REDIRECT_URI: ${NEXTCLOUD_OIDC_REDIRECT_URI}
+      OIDC_NEXTCLOUD_CLIENT_SECRET_HASH: ${OIDC_NEXTCLOUD_CLIENT_SECRET_HASH}
+      # Scalar secrets, injected from git-ignored files.
+      AUTHELIA_SESSION_SECRET_FILE: /config/secrets/session.secret
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /config/secrets/storage.key
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /config/secrets/jwt.secret
+      AUTHELIA_SESSION_REDIS_PASSWORD_FILE: /config/secrets/redis.password
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE: /config/secrets/oidc.hmac
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE: /config/secrets/oidc.issuer.pem
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9091/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`${AUTHELIA_HOSTNAME:-auth.example.com}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls=true"
+      - "traefik.http.routers.authelia.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+      # Modern forward-auth endpoint (4.38); redirect target comes from the
+      # session cookie's authelia_url, so no ?rd= needed.
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.address=http://authelia:9091/api/authz/forward-auth"
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend

@@ -1,0 +1,341 @@
+# Production ownCloud 10.x stack: Traefik (TLS) -> ownCloud (local hardened
+# image), MariaDB 10.11, Redis 7 and a scheduled backup sidecar.
+#
+#   cp .env.example .env   # fill in secrets first
+#   docker compose up -d --build
+#
+# ownCloud's built-in cron runs inside the server container; no extra cron
+# service is required. For the Go-based next generation server, see ocis/.
+# See README.md for the full production checklist (backups, upgrades, tuning).
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+volumes:
+  owncloud-files:
+  owncloud-mariadb:
+  owncloud-redis:
+  owncloud-db-backups:
+  owncloud-data-backups:
+  traefik-certificates:
+
+networks:
+  # Edge network: only Traefik and the services it routes to.
+  frontend:
+    driver: bridge
+  # Internal network: app <-> db/cache. No outbound routing.
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${OWNCLOUD_SUBNET:-172.29.0.0/16}
+  # Isolated network for the container-engine socket: only Traefik and the
+  # socket proxy attach here. No outbound routing.
+  socket:
+    driver: bridge
+    internal: true
+
+services:
+  traefik:
+    <<: *common
+    image: docker.io/traefik:v3.3
+    container_name: owncloud-traefik
+    command:
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:${TRAEFIK_WEBSECURE_PORT:-443}"
+      - "--entryPoints.websecure.http.tls=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=owncloud_frontend"
+      # Talk to the container engine through the filtered, read-only socket
+      # proxy — Traefik never mounts the raw socket.
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:${TRAEFIK_WEBSECURE_PORT:-443}"
+    volumes:
+      - traefik-certificates:/etc/traefik/acme
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      # Default: basic-auth. With the sso profile set this to
+      # authelia-fwd@docker in .env to gate the dashboard behind Authelia.
+      - "traefik.http.routers.dashboard.middlewares=${TRAEFIK_DASHBOARD_MIDDLEWARE:-dashboard-auth}"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+    networks:
+      frontend: {}
+      socket: {}
+
+  # Filtered, read-only proxy in front of the container-engine socket. Traefik
+  # reads container/network/event metadata through this instead of mounting the
+  # raw socket — a compromised Traefik cannot create containers or reach the
+  # host. Everything not needed for service discovery is denied (POST too).
+  socket-proxy:
+    <<: *common
+    image: docker.io/tecnativa/docker-socket-proxy:0.3.0@sha256:2f92c6e85a1199b3403c99d7439695898a162c69689b11130450ffadb352f0a0
+    container_name: owncloud-socket-proxy
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+      # Everything else stays denied (default 0), including all POST/write ops.
+      POST: 0
+      IMAGES: 0
+      INFO: 0
+      SERVICES: 0
+      TASKS: 0
+      SWARM: 0
+      SYSTEM: 0
+      EXEC: 0
+      VOLUMES: 0
+      SECRETS: 0
+      CONFIGS: 0
+    volumes:
+      # Podman: set DOCKER_SOCKET=$XDG_RUNTIME_DIR/podman/podman.sock in .env
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      socket: {}
+
+  mariadb:
+    <<: *common
+    image: docker.io/mariadb:10.11
+    container_name: owncloud-mariadb
+    command:
+      - "--max-allowed-packet=128M"
+      - "--innodb-log-file-size=64M"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_general_ci"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - owncloud-mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+
+  redis:
+    <<: *common
+    image: docker.io/redis:7-alpine
+    container_name: owncloud-redis
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --maxmemory 512mb --maxmemory-policy allkeys-lru --save ''"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - owncloud-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  owncloud:
+    <<: *common
+    build:
+      context: .
+    image: localhost/owncloud-server:hardened
+    container_name: owncloud-app
+    environment:
+      OWNCLOUD_DOMAIN: ${OWNCLOUD_HOSTNAME}
+      OWNCLOUD_TRUSTED_DOMAINS: ${OWNCLOUD_TRUSTED_DOMAINS}
+      OWNCLOUD_PROTOCOL: https
+      OWNCLOUD_DB_TYPE: mysql
+      OWNCLOUD_DB_HOST: mariadb
+      OWNCLOUD_DB_NAME: ${MYSQL_DATABASE}
+      OWNCLOUD_DB_USERNAME: ${MYSQL_USER}
+      OWNCLOUD_DB_PASSWORD: ${MYSQL_PASSWORD}
+      OWNCLOUD_ADMIN_USERNAME: ${OWNCLOUD_ADMIN_USERNAME}
+      OWNCLOUD_ADMIN_PASSWORD: ${OWNCLOUD_ADMIN_PASSWORD}
+      OWNCLOUD_MYSQL_UTF8MB4: "true"
+      OWNCLOUD_REDIS_ENABLED: "true"
+      OWNCLOUD_REDIS_HOST: redis
+      OWNCLOUD_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # Background jobs handled by the image's internal cron.
+      OWNCLOUD_BACKGROUND_MODE: cron
+    volumes:
+      - owncloud-files:/mnt/data
+    healthcheck:
+      test: ["CMD", "/usr/bin/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.owncloud.rule=Host(`${OWNCLOUD_HOSTNAME}`)"
+      - "traefik.http.routers.owncloud.entrypoints=websecure"
+      - "traefik.http.routers.owncloud.tls=true"
+      - "traefik.http.routers.owncloud.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.owncloud.middlewares=owncloud-headers,owncloud-dav"
+      - "traefik.http.services.owncloud.loadbalancer.server.port=8080"
+      # CalDAV/CardDAV well-known redirects.
+      - "traefik.http.middlewares.owncloud-dav.redirectregex.regex=https://(.*)/.well-known/(carddav|caldav)"
+      - "traefik.http.middlewares.owncloud-dav.redirectregex.replacement=https://$${1}/remote.php/dav"
+      - "traefik.http.middlewares.owncloud-dav.redirectregex.permanent=true"
+      # Security headers.
+      - "traefik.http.middlewares.owncloud-headers.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.owncloud-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.owncloud-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.owncloud-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.owncloud-headers.headers.referrerPolicy=no-referrer"
+      - "traefik.http.middlewares.owncloud-headers.headers.customResponseHeaders.X-Robots-Tag=noindex,nofollow"
+    networks:
+      - frontend
+      - backend
+
+  backups:
+    <<: *common
+    image: docker.io/mariadb:10.11
+    container_name: owncloud-backups
+    user: root
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP:-1800}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sleep "$$BACKUP_INIT_SLEEP"
+        while true; do
+          STAMP="$$(date +%Y-%m-%d_%H-%M)"
+          echo "[backups] starting run $$STAMP"
+          mariadb-dump -h "$$MYSQL_HOST" -u root -p"$$MYSQL_ROOT_PASSWORD" \
+            --single-transaction --routines --events "$$MYSQL_DATABASE" \
+            | gzip > "/srv/backups/db/owncloud-mariadb-backup-$$STAMP.sql.gz" \
+            && echo "[backups] database dump ok"
+          tar -czf "/srv/backups/data/owncloud-files-backup-$$STAMP.tar.gz" -C /mnt data \
+            && echo "[backups] files archive ok"
+          find /srv/backups/db   -type f -mtime "+$$BACKUP_RETENTION_DAYS" -delete
+          find /srv/backups/data -type f -mtime "+$$BACKUP_RETENTION_DAYS" -delete
+          echo "[backups] run $$STAMP complete; sleeping $$BACKUP_INTERVAL"
+          sleep "$$BACKUP_INTERVAL"
+        done
+    volumes:
+      - owncloud-files:/mnt/data:ro
+      - owncloud-db-backups:/srv/backups/db
+      - owncloud-data-backups:/srv/backups/data
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      owncloud:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # Authelia: OpenID Connect provider for ownCloud (via the openidconnect app)
+  # and forward-auth for the Traefik dashboard. Secrets are read from
+  # ./authelia/secrets/* via AUTHELIA_*_FILE; see authelia/README.md to bootstrap.
+  # Enable with:  -f docker-compose.yml -f docker-compose.sso.yml --profile sso
+  authelia:
+    <<: *common
+    profiles: ["sso"]
+    image: docker.io/authelia/authelia:4.38
+    container_name: owncloud-authelia
+    volumes:
+      - ./authelia:/config
+    environment:
+      X_AUTHELIA_CONFIG_FILTERS: template
+      # Non-secret template values (deliberately NOT prefixed AUTHELIA_, so
+      # Authelia's env->config scanner ignores them).
+      TPL_AUTHELIA_DOMAIN: ${AUTHELIA_HOSTNAME:-auth.example.com}
+      TPL_AUTHELIA_URL: ${AUTHELIA_URL:-https://auth.example.com}
+      TPL_COOKIE_DOMAIN: ${AUTHELIA_COOKIE_DOMAIN:-example.com}
+      TRAEFIK_DOMAIN: ${TRAEFIK_HOSTNAME}
+      OWNCLOUD_OIDC_REDIRECT_URI: ${OWNCLOUD_OIDC_REDIRECT_URI}
+      OIDC_OWNCLOUD_CLIENT_SECRET_HASH: ${OIDC_OWNCLOUD_CLIENT_SECRET_HASH}
+      # Scalar secrets from git-ignored files.
+      AUTHELIA_SESSION_SECRET_FILE: /config/secrets/session.secret
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /config/secrets/storage.key
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /config/secrets/jwt.secret
+      AUTHELIA_SESSION_REDIS_PASSWORD_FILE: /config/secrets/redis.password
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE: /config/secrets/oidc.hmac
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE: /config/secrets/oidc.issuer.pem
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9091/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`${AUTHELIA_HOSTNAME:-auth.example.com}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls=true"
+      - "traefik.http.routers.authelia.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.address=http://authelia:9091/api/authz/forward-auth"
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia-fwd.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      frontend: {}
+      backend: {}

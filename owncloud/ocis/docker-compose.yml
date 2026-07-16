@@ -1,0 +1,155 @@
+# ownCloud Infinite Scale (oCIS) — the Go-based next generation server.
+# Alternative to the classic 10.x stack in the parent directory; run one or
+# the other, not both (both bind 80/443).
+#
+#   cp .env.example .env
+#   docker compose up -d
+#
+# First run initializes /etc/ocis (ocis init) and prints nothing sensitive;
+# the admin password comes from IDM_ADMIN_PASSWORD in .env.
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+volumes:
+  ocis-config:
+  ocis-data:
+  traefik-certificates:
+
+networks:
+  frontend:
+    driver: bridge
+  # Isolated network for the container-engine socket: only Traefik and the
+  # socket proxy attach here. No outbound routing.
+  socket:
+    driver: bridge
+    internal: true
+
+services:
+  traefik:
+    <<: *common
+    image: docker.io/traefik:v3.3
+    container_name: ocis-traefik
+    command:
+      - "--log.level=INFO"
+      - "--ping=true"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.http.tls=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=ocis_frontend"
+      # Talk to the container engine through the filtered, read-only socket
+      # proxy — Traefik never mounts the raw socket.
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+    volumes:
+      - traefik-certificates:/etc/traefik/acme
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      frontend: {}
+      socket: {}
+
+  # Filtered, read-only proxy in front of the container-engine socket. Traefik
+  # reads container/network/event metadata through this instead of mounting the
+  # raw socket — a compromised Traefik cannot create containers or reach the
+  # host. Everything not needed for service discovery is denied (POST too).
+  socket-proxy:
+    <<: *common
+    image: docker.io/tecnativa/docker-socket-proxy:0.3.0@sha256:2f92c6e85a1199b3403c99d7439695898a162c69689b11130450ffadb352f0a0
+    container_name: ocis-socket-proxy
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+      POST: 0
+      IMAGES: 0
+      INFO: 0
+      SERVICES: 0
+      TASKS: 0
+      SWARM: 0
+      SYSTEM: 0
+      EXEC: 0
+      VOLUMES: 0
+      SECRETS: 0
+      CONFIGS: 0
+    volumes:
+      # Podman: set DOCKER_SOCKET=$XDG_RUNTIME_DIR/podman/podman.sock in .env
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      socket: {}
+
+  ocis:
+    <<: *common
+    image: docker.io/owncloud/ocis:${OCIS_VERSION:-7.0.0}
+    container_name: ocis-server
+    entrypoint: ["/bin/sh", "-c"]
+    # ocis init is idempotent: it only writes a config if none exists yet.
+    command: ["ocis init || true; exec ocis server"]
+    environment:
+      OCIS_URL: https://${OCIS_HOSTNAME}
+      OCIS_LOG_LEVEL: ${OCIS_LOG_LEVEL:-warn}
+      OCIS_INSECURE: "false"
+      # TLS terminates at Traefik.
+      PROXY_TLS: "false"
+      IDM_ADMIN_PASSWORD: ${OCIS_ADMIN_PASSWORD}
+      IDM_CREATE_DEMO_USERS: "false"
+    volumes:
+      - ocis-config:/etc/ocis
+      - ocis-data:/var/lib/ocis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ocis.rule=Host(`${OCIS_HOSTNAME}`)"
+      - "traefik.http.routers.ocis.entrypoints=websecure"
+      - "traefik.http.routers.ocis.tls=true"
+      - "traefik.http.routers.ocis.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ocis.loadbalancer.server.port=9200"
+      - "traefik.http.middlewares.ocis-headers.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.ocis-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.ocis-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.ocis-headers.headers.referrerPolicy=no-referrer"
+      - "traefik.http.routers.ocis.middlewares=ocis-headers"
+    depends_on:
+      traefik:
+        condition: service_healthy
+    networks:
+      - frontend

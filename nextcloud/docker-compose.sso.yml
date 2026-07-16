@@ -1,0 +1,26 @@
+# SSO overlay — use together with the base file and the sso profile:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.sso.yml \
+#     --profile sso up -d
+#
+# Why this exists: Nextcloud's user_oidc app makes back-channel calls
+# (discovery, token, JWKS) to the OIDC *issuer* URL, which is the public
+# Authelia address served by Traefik. The app container normally lives only on
+# the internal backend network with no route to Traefik. This overlay:
+#   1. joins the app to the frontend network, and
+#   2. aliases the Authelia hostname to Traefik there,
+# so the issuer URL resolves and terminates at Traefik exactly as it does for a
+# browser. In production Traefik serves a valid ACME certificate, so the app
+# trusts it out of the box.
+
+services:
+  traefik:
+    networks:
+      frontend:
+        aliases:
+          - ${AUTHELIA_HOSTNAME:-auth.example.com}
+
+  nextcloud:
+    networks:
+      backend: {}
+      frontend: {}
