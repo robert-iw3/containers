@@ -1,72 +1,143 @@
-# Example: API Gateway, multiple SQL containers, and routing
+# SQL stack: nginx LB (optional) -> API gateway (safe, pooled) -> Redis +
+# sharded SQL Server.
+#
+#   cp .env.example .env      # set SA password, JWT secret, Redis password
+#   docker compose up -d --build
+#   docker compose up -d --scale api-gateway=4      # scale the stateless tier
+#
+# The gateway publishes on 127.0.0.1:3000. Put nginx/ in front for TLS + LB.
 
-version: '3.8'
+name: sql-stack
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-mssql: &mssql
+  <<: *common
+  build:
+    context: .
+    dockerfile: Dockerfile.mssql
+  image: localhost/sql-shard-tuned:latest
+  mem_limit: 2g
+  environment: &mssql-env
+    ACCEPT_EULA: "Y"
+    MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?set in .env}
+    MSSQL_PID: Developer
+    MSSQL_MEMORY_LIMIT_MB: "1536"
+  # Tuning knobs (MSSQL_MAXDOP/COST_THRESHOLD/MAX_MEMORY_MB/TEMPDB_FILES) come
+  # from .env when set; mssql-tune.sql supplies safe defaults for a 2 GB shard.
+  env_file:
+    - path: .env
+      required: false
+  # Healthy only after the engine is up AND tuning has been applied
+  # (/tmp/tuned), so the gateway bootstraps against a tuned shard.
+  healthcheck:
+    test: ["CMD-SHELL", "test -f /tmp/tuned && /opt/mssql-tools18/bin/sqlcmd -C -S 127.0.0.1 -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+    interval: 10s
+    timeout: 10s
+    retries: 18
+    start_period: 60s
+  networks:
+    - data
+
+networks:
+  # Clients / nginx reach the gateway here.
+  edge:
+    driver: bridge
+  # Gateway <-> Redis + SQL shards. Internal: no outbound routing, databases
+  # unreachable from the host.
+  data:
+    driver: bridge
+    internal: true
+
+volumes:
+  sql1-data:
+  sql2-data:
+  redis-data:
 
 services:
   api-gateway:
+    <<: *common
     build:
       context: .
       dockerfile: Dockerfile.gateway
-    ports:
-      - "3000:3000"  # Expose API
+    image: localhost/sql-api-gateway:latest
+    read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 512
+    mem_limit: 512m
+    tmpfs:
+      - /tmp
+    # Fixed values + cross-named mappings only. JWT_SECRET, REDIS_PASSWORD and
+    # the optional tuning knobs come from .env via env_file; the gateway
+    # supplies code defaults for anything unset. (Self-referencing
+    # `KEY: ${KEY:-default}` entries are avoided: podman-compose passes them
+    # through literally when the var is unset.)
     environment:
+      PORT: "3000"
+      SQL_SHARDS: sql1:1433,sql2:1433
       SQL_USER: sa
-      SQL_PASSWORD: YourStrong!Passw0rd
+      SQL_PASSWORD: ${SQL_SA_PASSWORD:?set in .env}
+      SQL_DATABASE: ${APP_DB:?set in .env}
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      # JWT_SECRET: your_jwt_secret  # For auth
-    depends_on:
-      - redis
-      - sql1
-      - sql2
-    deploy:  # For swarm or compose scaling
-      replicas: 2  # Scale gateway instances for high traffic
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-    networks:
-      - sql-net
-
-  redis:  # For dynamic shard mapping and caching
-    image: redis:7-alpine
+      REDIS_PORT: "6379"
+    env_file:
+      - path: .env
+        required: false
     ports:
-      - "6379:6379"
+      - "${GATEWAY_PUBLISHED_ADDR:-127.0.0.1:3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "/app/healthcheck.js"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # The gateway provisions each shard's database and schema on startup,
+    # so it only needs the shards and Redis to be reachable.
+    depends_on:
+      redis:
+        condition: service_healthy
+      sql1:
+        condition: service_healthy
+      sql2:
+        condition: service_healthy
+    networks:
+      - edge
+      - data
+
+  redis:
+    <<: *common
+    image: docker.io/redis:7-alpine
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --maxmemory 256mb --maxmemory-policy allkeys-lru --save ''"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set in .env}
+    mem_limit: 320m
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - sql-net
+      - data
 
   sql1:
-    image: mcr.microsoft.com/mssql/server:2025-latest
-    environment:
-      ACCEPT_EULA: Y
-      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
-    ports:
-      - "1434:1433"
+    <<: *mssql
+    container_name: sql-stack-shard1
     volumes:
       - sql1-data:/var/opt/mssql
-    networks:
-      - sql-net
 
   sql2:
-    image: mcr.microsoft.com/mssql/server:2025-latest
-    environment:
-      ACCEPT_EULA: Y
-      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
-    ports:
-      - "1435:1433"
+    <<: *mssql
+    container_name: sql-stack-shard2
     volumes:
       - sql2-data:/var/opt/mssql
-    networks:
-      - sql-net
-
-  # Add more sqlN for horizontal scaling
-
-volumes:
-  redis-data:
-  sql1-data:
-  sql2-data:
-
-networks:
-  sql-net:

@@ -1,0 +1,20 @@
+name: sql-stack-redis
+services:
+  redis:
+    image: docker.io/redis:7-alpine
+    container_name: sql-stack-redis
+    restart: unless-stopped
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --maxmemory 256mb --maxmemory-policy allkeys-lru --save ''"]
+    environment:
+      REDIS_PASSWORD: "{{ redis_password }}"
+    ports:
+      - "{{ redis_port }}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  redis-data:

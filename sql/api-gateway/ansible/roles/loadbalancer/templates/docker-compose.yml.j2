@@ -1,0 +1,22 @@
+name: sql-stack-lb
+services:
+{% if lb_engine == 'nginx' %}
+  lb:
+    image: docker.io/nginx:alpine
+    container_name: sql-stack-lb
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "{{ lb_http_port }}:80"
+{% else %}
+  lb:
+    image: docker.io/haproxy:alpine
+    container_name: sql-stack-lb
+    restart: unless-stopped
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "{{ lb_http_port }}:8080"
+      - "8404:8404"
+{% endif %}

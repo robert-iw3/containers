@@ -57,192 +57,152 @@ graph TD
     style Pages fill:#00ff00,stroke:#00ff00,color:#000
 ```
 
-### How Applications Connect to the API Gateway
----
+### The API Gateway
 
-The API Gateway acts as a centralized entry point for applications to interact with the sharded SQL Server containers (each handling a separate user database). This design ensures secure, scalable, and efficient routing of high-volume traffic. Below, is an explaination of the connection process step-by-step, including code examples for client-side integration. This assumes the gateway is running (e.g., via `docker compose up`), exposed on port 3000, and configured with JWT authentication, connection pooling, and dynamic sharding via Redis.
+The gateway ([`api-gateway/`](api-gateway/)) is the single entry point in front of
+the sharded SQL Server tier. It is safe by default: clients invoke **named,
+server-defined operations** and never send SQL. Each operation is an
+allowlisted, fully parameterized statement declared in
+[`operations.json`](api-gateway/operations.json); the gateway validates the
+supplied parameters, routes to a shard by the operation's key, and executes on a
+**persistent per-shard connection pool**.
 
-#### 1. **Prerequisites for Applications**
-   - **Endpoint URL**: Applications connect to the gateway's base URL, e.g., `http://localhost:3000` (or `https://your-domain.com:3000` in production with SSL/TLS enabled for security).
-   - **Authentication**: All requests require a JWT token in the `Authorization` header (Bearer scheme). Generate tokens server-side using a shared secret (e.g., via libraries like `jsonwebtoken` in Node.js or equivalents in other languages). Example payload: `{ user: "app_user", exp: Math.floor(Date.now() / 1000) + (60 * 60) }` (1-hour expiry).
-   - **Request Format**: Use HTTP POST to `/query` with a JSON body containing:
-     - `user_id`: Integer for sharding/routing (e.g., 42).
-     - `query`: SQL query string (e.g., "SELECT * FROM Users WHERE id = @param0").
-     - `params`: Optional array of parameters for safe binding (prevents SQL injection).
-   - **Libraries**: Use HTTP clients like `fetch` (JS), `requests` (Python), `HttpClient` (C#), or `OkHttp` (Java/Android) for sending requests.
-   - **Error Handling**: Expect HTTP status codes (e.g., 200 OK, 400 Bad Request, 401 Unauthorized, 429 Too Many Requests for rate limiting, 500 Internal Error). Implement retries with exponential backoff for transient failures.
-   - **High-Volume Considerations**: For large-scale apps, use connection pooling on the client side (if direct, but here gateway handles it), batch requests if possible, and monitor for rate limits (100 requests/IP per 15 min by default).
+```
+client ──JWT──> api-gateway ──pool──> shard = key % N ──> SQL Server
+                  │ named operations only (operations.json)
+                  │ persistent pooling, Redis shard map + rate limit
+                  └ guarded raw /query (disabled by default)
+```
 
-#### 2. **Connection Flow**
-   1. **Application Prepares Request**: The app constructs the JSON payload and includes the JWT token.
-   2. **Send Request to Gateway**: POST to `/query`. The gateway validates the token, rate-limits the IP, and determines the shard via Redis (dynamic) or fallback hash.
-   3. **Gateway Processes**: Uses pooled connections to forward the query to the correct SQL container (e.g., sql1 or sql2), executes with param binding, and handles retries internally (up to 3 attempts).
-   4. **Response**: Gateway returns JSON with results (e.g., recordset array) or errors.
-   5. **Logging/Monitoring**: Gateway logs errors; apps should log responses for debugging.
+Run it:
 
-#### 3. **Example Client-Side Code Snippets**
-Here are examples in common languages. Assume the gateway is at `http://localhost:3000`, and you have a JWT token.
+```sh
+cd api-gateway
+cp .env.example .env        # set SQL_SA_PASSWORD, JWT_SECRET, REDIS_PASSWORD
+docker compose up -d --build
+docker compose up -d --scale api-gateway=4     # scale the stateless tier
+```
 
-- **JavaScript (Node.js or Browser with fetch)**:
+The gateway self-provisions each shard's database and schema on startup, then
+listens on `127.0.0.1:3000`.
+
+#### Endpoints
+
+| Method + path | Auth | Purpose |
+| --- | --- | --- |
+| `POST /v1/op/:name` | JWT | Invoke a named operation with `{ "params": { ... } }` |
+| `GET /operations` | JWT | List callable operations and their parameters |
+| `POST /v1/admin/set-shard` | JWT | Pin a key to a shard (dynamic re-mapping) |
+| `POST /query` | JWT | Guarded raw SQL — **404 unless `GATEWAY_ALLOW_RAW_SQL=1`**, parameterized, read-only by default |
+| `GET /health` `GET /ready` | none | Liveness; readiness (Redis + every shard) |
+| `GET /metrics` | none | Prometheus metrics (throughput, latency, ops per shard) |
+
+#### Calling an operation
+
+Every request carries a JWT (`Authorization: Bearer <token>`) and a JSON body
+`{ "params": { ... } }`. Mint a token for testing with
+`docker compose exec api-gateway node mint-token.js app 3600`.
+
+- **JavaScript**
   ```javascript
-  const fetch = require('node-fetch');  // For Node.js; browser has built-in fetch
-
-  async function queryDatabase(userId, sqlQuery, params = []) {
-    const token = 'your_jwt_token_here';  // Generate securely
-    const response = await fetch('http://localhost:3000/query', {
+  async function callOp(op, params) {
+    const res = await fetch(`http://localhost:3000/v1/op/${op}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${process.env.GATEWAY_TOKEN}`,
       },
-      body: JSON.stringify({ user_id: userId, query: sqlQuery, params })
+      body: JSON.stringify({ params }),
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Error: ${error.error || response.statusText}`);
-    }
-
-    return await response.json();
+    if (!res.ok) throw new Error(`${op} failed: ${res.status}`);
+    return res.json(); // { shard, rows, rowsAffected }
   }
 
-  // Usage
-  queryDatabase(42, 'SELECT * FROM Users WHERE id = @param0', [42])
-    .then(results => console.log('Results:', results))
-    .catch(err => console.error('Query failed:', err));
+  await callOp('create_user', { id: 42, username: 'ada', email: 'ada@example.com' });
+  const { rows } = await callOp('get_user', { id: 42 });
   ```
 
-- **Python (with requests)**:
+- **Python**
   ```python
-  import requests
-  import json
+  import os, requests
 
-  def query_database(user_id, sql_query, params=[]):
-      token = 'your_jwt_token_here'  # Generate securely
-      url = 'http://localhost:3000/query'
-      headers = {
-          'Content-Type': 'application/json',
-          'Authorization': f'Bearer {token}'
-      }
-      payload = {'user_id': user_id, 'query': sql_query, 'params': params}
+  def call_op(op, params):
+      r = requests.post(
+          f"http://localhost:3000/v1/op/{op}",
+          headers={"Authorization": f"Bearer {os.environ['GATEWAY_TOKEN']}"},
+          json={"params": params},
+          timeout=15,
+      )
+      r.raise_for_status()
+      return r.json()  # {"shard": ..., "rows": [...], "rowsAffected": [...]}
 
-      try:
-          response = requests.post(url, headers=headers, json=payload)
-          response.raise_for_status()  # Raise for 4xx/5xx
-          return response.json()
-      except requests.exceptions.HTTPError as err:
-          error = response.json() if response.text else {'error': str(err)}
-          raise Exception(f"Error: {error.get('error', 'Unknown')}")
-
-  # Usage
-  try:
-      results = query_database(42, 'SELECT * FROM Users WHERE id = @param0', [42])
-      print('Results:', results)
-  except Exception as e:
-      print('Query failed:', e)
+  call_op("create_order", {"user_id": 42, "amount": 19.99, "status": "paid"})
+  print(call_op("list_orders", {"user_id": 42, "limit": 10, "offset": 0})["rows"])
   ```
 
-- **C# (.NET with HttpClient)**:
-  ```csharp
-  using System;
-  using System.Net.Http;
-  using System.Text;
-  using System.Threading.Tasks;
-  using System.Text.Json;
+The same shape applies to any HTTP client (C# `HttpClient`, Java `HttpClient`/
+OkHttp, Go, curl): `POST /v1/op/<name>` with a bearer token and a `params`
+object.
 
-  public class SqlGatewayClient
-  {
-      private static readonly HttpClient client = new HttpClient();
+#### Adding operations
 
-      public async Task<object[]> QueryDatabaseAsync(int userId, string sqlQuery, object[] paramsArray = null)
-      {
-          string token = "your_jwt_token_here";  // Generate securely
-          string url = "http://localhost:3000/query";
-          client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+Append an entry to [`operations.json`](api-gateway/operations.json) — SQL with
+`@named` parameters, a `params` type map, the `shardBy` parameter, and a
+`read`/`write` `mode` — then restart the gateway. Unknown operations, unknown or
+mistyped parameters, and requests without a valid token are rejected before any
+SQL runs.
 
-          var payload = new { user_id = userId, query = sqlQuery, params = paramsArray ?? new object[0] };
-          var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+#### Scaling and operations
 
-          HttpResponseMessage response = await client.PostAsync(url, content);
-          if (!response.IsSuccessStatusCode)
-          {
-              var error = await response.Content.ReadAsStringAsync();
-              throw new Exception($"Error: {error}");
-          }
+- **Stateless tier**: `docker compose up -d --scale api-gateway=N` behind the
+  [nginx](api-gateway/nginx/) load balancer (or Traefik/k8s).
+- **Sharding**: keys route by `key % shardCount`; override per key via
+  `POST /v1/admin/set-shard` (stored in Redis). Add a shard by extending
+  `SQL_SHARDS` and adding a `sqlN` service.
+- **Rate limiting**: global across replicas via Redis
+  (`RATE_LIMIT_MAX` per `RATE_LIMIT_WINDOW_MS` per client IP).
+- **Observability**: Prometheus at `/metrics`; JSON logs to stdout.
+- **TLS**: terminate at nginx/your LB and forward to the gateway.
 
-          var result = await response.Content.ReadAsStringAsync();
-          return JsonSerializer.Deserialize<object[]>(result);  // Adjust type as needed
-      }
-  }
+#### Load balancer (nginx or haproxy)
 
-  // Usage
-  var client = new SqlGatewayClient();
-  try
-  {
-      var results = await client.QueryDatabaseAsync(42, "SELECT * FROM Users WHERE id = @param0", new object[] { 42 });
-      Console.WriteLine("Results: " + JsonSerializer.Serialize(results));
-  }
-  catch (Exception e)
-  {
-      Console.WriteLine("Query failed: " + e.Message);
-  }
-  ```
+Front the gateway replicas with either load balancer (see [lb/](api-gateway/lb/)):
 
-- **Java (with OkHttp)**:
-  ```java
-  import okhttp3.*;
-  import com.google.gson.Gson;
-  import com.google.gson.JsonObject;
-  import java.io.IOException;
+```sh
+cd api-gateway
+docker compose -f docker-compose.yml -f lb/docker-compose.lb.yml --profile lb-nginx   up -d --build
+docker compose -f docker-compose.yml -f lb/docker-compose.lb.yml --profile lb-haproxy up -d --build
+```
 
-  public class SqlGatewayClient {
-      private static final OkHttpClient client = new OkHttpClient();
-      private static final Gson gson = new Gson();
+Both balance across three gateway replicas (published on `127.0.0.1:8088`);
+haproxy also serves a stats page on `:8404`.
 
-      public Object[] queryDatabase(int userId, String sqlQuery, Object[] params) throws IOException {
-          String token = "your_jwt_token_here";  // Generate securely
-          String url = "http://localhost:3000/query";
+#### Tuned shards
 
-          JsonObject payload = new JsonObject();
-          payload.addProperty("user_id", userId);
-          payload.addProperty("query", sqlQuery);
-          payload.add("params", gson.toJsonTree(params != null ? params : new Object[0]));
+Shards run a tuned SQL Server image ([Dockerfile.mssql](api-gateway/Dockerfile.mssql)
++ [mssql-tune.sql](api-gateway/mssql-tune.sql)): bounded MAXDOP, raised cost
+threshold, optimize-for-ad-hoc, capped memory, multiple tempdb files, Query
+Store, and RCSI — addressing the pressure points the health check surfaces
+under load.
 
-          RequestBody body = RequestBody.create(gson.toJson(payload), MediaType.parse("application/json"));
-          Request request = new Request.Builder()
-                  .url(url)
-                  .header("Authorization", "Bearer " + token)
-                  .post(body)
-                  .build();
+#### Testing
 
-          try (Response response = client.newCall(request).execute()) {
-              if (!response.isSuccessful()) {
-                  String error = response.body().string();
-                  throw new IOException("Error: " + error);
-              }
-              return gson.fromJson(response.body().string(), Object[].class);  // Adjust type
-          }
-      }
+```sh
+cd api-gateway
+./uat/run-uat.sh                       # functional battery (ops, sharding, auth, persistence)
+./stress/run-stress.sh 100 30s 1       # k6 load test (throughput/latency/error thresholds)
+./uat/final-uat.sh nginx               # end to end: LB routing + tuning + shard data flow + stress
+./uat/final-uat.sh haproxy
+./stress/scale-bench.sh 80 20s         # 1-shard vs 2-shard write benchmark
+```
 
-      // Usage
-      public static void main(String[] args) {
-          SqlGatewayClient client = new SqlGatewayClient();
-          try {
-              Object[] results = client.queryDatabase(42, "SELECT * FROM Users WHERE id = @param0", new Object[]{42});
-              System.out.println("Results: " + gson.toJson(results));
-          } catch (IOException e) {
-              System.out.println("Query failed: " + e.getMessage());
-          }
-      }
-  }
-  ```
+Measured results and the case for horizontal shard scaling are written up in
+[uat/REPORT.md](api-gateway/uat/REPORT.md).
 
-#### 4. **Best Practices for Enterprise Integration**
-   - **Security**: Always use HTTPS in production (configure via NGINX reverse proxy or Docker). Rotate JWT secrets. Validate/escape queries client-side if needed (though gateway binds params).
-   - **High Volume**: Scale gateway replicas (e.g., `--scale api-gateway=10`). Use load balancers like NGINX/Traefik in front. Monitor with Prometheus (add endpoint in gateway.js).
-   - **Dynamic Sharding**: Update mappings via `/set-shard` POST (e.g., { user_id: 42, shard_id: 2 }) for migrations.
-   - **Testing**: Simulate load with tools like Apache JMeter. Check logs for errors.
-   - **Alternatives**: For direct SQL (no API), use proxies like MaxScale or PgBouncer, but API adds control.
+#### Multi-host deployment
+
+To deploy each component (LB, gateways, redis, shards) on separate VMs or
+bare metal, see [ansible/](api-gateway/ansible/).
 
 ### Connecting to SQL Server Docker Container (Admin Purposes)
 ---
@@ -279,3 +239,10 @@ Before connecting with SSMS or Azure Data Studio, ensure the following:
    - Password: Your `MSSQL_SA_PASSWORD`.
    - Database: `<default>` or "master".
 4. Click "Connect".
+
+---
+
+> **API security note**: a hardened, firewall-fronted version of this gateway/shard
+> architecture lives at [api-firewall/integrations/sql-backend](../api-firewall/integrations/sql-backend/) —
+> OpenAPI positive-security validation + OWASP CRS WAF in front of a scalable API tier
+> over sharded SQL Server.

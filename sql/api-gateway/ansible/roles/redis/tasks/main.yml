@@ -1,0 +1,20 @@
+---
+- name: Create the redis component directory
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/redis"
+    state: directory
+    mode: "0750"
+
+- name: Template the redis compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_dir }}/redis/docker-compose.yml"
+    mode: "0640"
+  register: redis_compose
+
+- name: Start redis
+  ansible.builtin.command: "{{ compose_cmd }} up -d"
+  args:
+    chdir: "{{ deploy_dir }}/redis"
+  register: redis_up
+  changed_when: "'Started' in redis_up.stderr or 'Recreated' in redis_up.stderr or redis_compose.changed"

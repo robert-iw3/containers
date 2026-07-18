@@ -1,0 +1,30 @@
+---
+- name: Create the shard component directory
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/sql_shard"
+    state: directory
+    mode: "0750"
+
+- name: Copy the tuned-shard build context
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ deploy_dir }}/sql_shard/{{ item }}"
+    mode: "0644"
+  loop:
+    - Dockerfile.mssql
+    - mssql-tune.sh
+    - mssql-tune.sql
+
+- name: Template the shard compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_dir }}/sql_shard/docker-compose.yml"
+    mode: "0640"
+  register: sql_shard_compose
+
+- name: Build and start the tuned shard
+  ansible.builtin.command: "{{ compose_cmd }} up -d --build"
+  args:
+    chdir: "{{ deploy_dir }}/sql_shard"
+  register: sql_shard_up
+  changed_when: "'Started' in sql_shard_up.stderr or 'Recreated' in sql_shard_up.stderr or sql_shard_compose.changed"

@@ -1,0 +1,99 @@
+# UAT stack: API Firewall in front of a FastAPI mock backend.
+# Driven by ./run-uat.sh — see uat/README.md.
+#
+# Every value is a fixed literal (no ${} interpolation, no .env): the UAT
+# must be deterministic. Firewall blocks return 418 so the battery can
+# distinguish a firewall block (418) from an app answer (2xx/404/…) with
+# zero ambiguity.
+
+name: apifw-uat
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+networks:
+  uat-edge:
+    driver: bridge
+  uat-internal:
+    driver: bridge
+    internal: true
+
+services:
+  api-firewall:
+    <<: *common
+    build:
+      context: ..
+    image: localhost/api-firewall:hardened
+    container_name: apifw-uat-firewall
+    read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 512m
+    tmpfs:
+      - /tmp
+    environment:
+      APIFW_MODE: PROXY
+      APIFW_URL: http://0.0.0.0:8080
+      APIFW_HEALTH_HOST: 0.0.0.0:9667
+      APIFW_API_SPECS: /opt/resources/api-spec.json
+      APIFW_SERVER_URL: http://uat-backend:8000
+      APIFW_REQUEST_VALIDATION: BLOCK
+      # BLOCK here too: the /rogue canary proves response validation works.
+      APIFW_RESPONSE_VALIDATION: BLOCK
+      # 418: unambiguous marker that the firewall (not the app) blocked.
+      APIFW_CUSTOM_BLOCK_STATUS_CODE: "418"
+      APIFW_LOG_LEVEL: INFO
+      APIFW_LOG_FORMAT: JSON
+      # WAF layer: Coraza + OWASP CRS (run ../get-crs.sh first).
+      APIFW_MODSEC_CONF_FILES: /opt/resources/config/coraza.conf;/opt/resources/crs/crs-setup.conf
+      APIFW_MODSEC_RULES_DIR: /opt/resources/crs/rules
+      # Token denylist checked on the same header the spec requires.
+      APIFW_DENYLIST_TOKENS_FILE: /opt/resources/uat/tokens.denylist.db
+      APIFW_DENYLIST_TOKENS_HEADER_NAME: X-API-Key
+    volumes:
+      - ./openapi.json:/opt/resources/api-spec.json:ro
+      - ../config:/opt/resources/config:ro
+      - ../crs:/opt/resources/crs:ro
+      - ./tokens.denylist.db:/opt/resources/uat/tokens.denylist.db:ro
+    ports:
+      # 8081 to avoid clashing with the main stack.
+      - "127.0.0.1:8081:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9667/v1/liveness"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    depends_on:
+      uat-backend:
+        condition: service_healthy
+    networks:
+      - uat-edge
+      - uat-internal
+
+  uat-backend:
+    <<: *common
+    build:
+      context: ./backend
+    image: localhost/apifw-uat-backend:latest
+    container_name: apifw-uat-backend
+    read_only: true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "python3", "/app/healthcheck.py"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    networks:
+      - uat-internal

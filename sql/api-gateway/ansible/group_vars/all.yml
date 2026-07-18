@@ -1,0 +1,40 @@
+---
+# Container engine and compose command used on the target hosts.
+container_engine: docker
+compose_cmd: "docker compose"
+
+# Where component files/build contexts are staged on each host.
+deploy_dir: /opt/sql-stack
+
+# --- Secrets -------------------------------------------------------------
+# Override these with Ansible Vault (ansible-vault) or --extra-vars; never
+# commit real secrets. See ansible/README.md.
+sql_sa_password: "ChangeMe_Str0ng!Pass"
+jwt_secret: "ChangeMe_jwt_secret"
+redis_password: "ChangeMe_redis_password"
+
+# --- Application ---------------------------------------------------------
+app_db: AppDb
+redis_port: 6379
+sql_port: 1433
+gateway_port: 3000
+
+# Load balancer: "nginx" or "haproxy".
+lb_engine: nginx
+lb_http_port: 80
+
+# Gateway pool / rate limit (per gateway host).
+sql_pool_max: 20
+sql_pool_min: 2
+rate_limit_max: 100
+rate_limit_window_ms: 60000
+
+# Shard tuning (per shard host).
+mssql_maxdop: 2
+mssql_cost_threshold: 50
+mssql_max_memory_mb: 1300
+mssql_tempdb_files: 4
+
+# Derived at runtime from the inventory (do not edit):
+#   shard_list  = "shard0_ip:1433,shard1_ip:1433" in inventory order
+#   redis_host  = first host in [redis]

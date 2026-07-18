@@ -1,0 +1,90 @@
+# Production Wallarm API Firewall: a positive-security reverse proxy that
+# validates every request (and optionally every response) against your
+# OpenAPI 3 specification, with optional Coraza WAF + OWASP CRS, token
+# denylisting and source-IP allowlisting.
+#
+#   cp .env.example .env        # point APIFW_SERVER_URL at your API
+#   ./get-crs.sh                # optional: fetch OWASP CRS for the WAF layer
+#   docker compose up -d --build
+#
+# End-to-end demo (go-httpbin backend + bundled spec):
+#   docker compose --profile demo up -d --build
+#
+# See README.md for the full production checklist (TLS, tuning, monitoring).
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+networks:
+  # Edge network: clients / your load balancer reach the firewall here.
+  edge:
+    driver: bridge
+  # Internal network: firewall <-> protected API. No outbound routing.
+  backend:
+    driver: bridge
+    internal: true
+
+services:
+  api-firewall:
+    <<: *common
+    build:
+      context: .
+    image: localhost/api-firewall:hardened
+    container_name: api-firewall
+    read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: ${APIFW_MEM_LIMIT:-512m}
+    cpus: ${APIFW_CPUS:-1.0}
+    tmpfs:
+      # Coraza SecDataDir and scratch space; rootfs stays read-only.
+      - /tmp
+    # All APIFW_* tuning lives in .env (see .env.example); sane defaults are
+    # baked into the image ENV, so the stack runs with no .env at all.
+    # NOTE: deliberately no `environment:` block — compose `environment`
+    # entries would shadow .env values, and podman-compose does not
+    # interpolate self-referencing `KEY: ${KEY:-default}` entries.
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./${APIFW_SPEC_FILE:-specs/httpbin-demo.json}:/opt/resources/api-spec.json:ro
+      - ./config:/opt/resources/config:ro
+      - ./crs:/opt/resources/crs:ro
+      - ./certs:/opt/resources/certs:ro
+    ports:
+      # Bound to loopback by default; front with your LB/ingress, or set
+      # APIFW_PUBLISHED_ADDR=0.0.0.0:8080 to expose directly.
+      - "${APIFW_PUBLISHED_ADDR:-127.0.0.1:8080}:8080"
+      # - "127.0.0.1:9010:9010"   # Prometheus metrics, if scraping from the host
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9667/v1/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - edge
+      - backend
+
+  # Disposable backend for end-to-end testing of the firewall itself.
+  # Pairs with specs/httpbin-demo.json. Enable with: --profile demo
+  demo-backend:
+    <<: *common
+    profiles: ["demo"]
+    image: docker.io/mccutchen/go-httpbin:2.24
+    container_name: apifw-demo-backend
+    read_only: true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    networks:
+      - backend

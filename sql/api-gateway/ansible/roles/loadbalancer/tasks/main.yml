@@ -1,0 +1,41 @@
+---
+- name: Create the load-balancer component directory
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/lb"
+    state: directory
+    mode: "0750"
+
+- name: Template the nginx configuration
+  when: lb_engine == 'nginx'
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ deploy_dir }}/lb/nginx.conf"
+    mode: "0644"
+  register: loadbalancer_nginx_conf
+
+- name: Template the haproxy configuration
+  when: lb_engine == 'haproxy'
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ deploy_dir }}/lb/haproxy.cfg"
+    mode: "0644"
+  register: loadbalancer_haproxy_conf
+
+- name: Template the load-balancer compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_dir }}/lb/docker-compose.yml"
+    mode: "0640"
+  register: loadbalancer_compose
+
+- name: Start the load balancer
+  ansible.builtin.command: "{{ compose_cmd }} up -d"
+  args:
+    chdir: "{{ deploy_dir }}/lb"
+  register: loadbalancer_up
+  changed_when: >-
+    'Started' in loadbalancer_up.stderr or
+    'Recreated' in loadbalancer_up.stderr or
+    loadbalancer_compose.changed or
+    (loadbalancer_nginx_conf.changed | default(false)) or
+    (loadbalancer_haproxy_conf.changed | default(false))

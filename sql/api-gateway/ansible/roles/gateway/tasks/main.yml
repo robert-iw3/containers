@@ -1,0 +1,33 @@
+---
+- name: Create the gateway component directory
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/gateway"
+    state: directory
+    mode: "0750"
+
+- name: Copy the gateway build context
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ deploy_dir }}/gateway/{{ item }}"
+    mode: "0644"
+  loop:
+    - Dockerfile.gateway
+    - gateway.js
+    - package.json
+    - operations.json
+    - mint-token.js
+    - healthcheck.js
+
+- name: Template the gateway compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_dir }}/gateway/docker-compose.yml"
+    mode: "0640"
+  register: gateway_compose
+
+- name: Build and start the gateway
+  ansible.builtin.command: "{{ compose_cmd }} up -d --build"
+  args:
+    chdir: "{{ deploy_dir }}/gateway"
+  register: gateway_up
+  changed_when: "'Started' in gateway_up.stderr or 'Recreated' in gateway_up.stderr or gateway_compose.changed"

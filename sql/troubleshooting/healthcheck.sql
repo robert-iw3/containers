@@ -134,7 +134,7 @@ BEGIN
         -- 6. Plan Cache Bloat (Low impact: Aggregate, threshold >1000)
         -- =============================================
         DECLARE @AdHocEnabled int;
-        SELECT @AdHocEnabled = value_in_use FROM sys.configurations WHERE name = 'optimize for ad hoc workloads';
+        SELECT @AdHocEnabled = CONVERT(int, value_in_use) FROM sys.configurations WHERE name = 'optimize for ad hoc workloads';
         INSERT INTO #HealthReport (Category, Issue, Severity, CurrentStatus, Recommendation, FixQuery)
         SELECT
             'Plan Cache',
@@ -166,19 +166,21 @@ BEGIN
         -- =============================================
         -- 8. Parameter Sniffing Detection (Low impact: Query Store check, variance >10k)
         -- =============================================
-        IF EXISTS (SELECT 1 FROM sys.databases WHERE is_query_store_on = 1)
+        IF EXISTS (SELECT 1 FROM sys.databases WHERE database_id = DB_ID() AND is_query_store_on = 1)
         INSERT INTO #HealthReport (Category, Issue, Severity, CurrentStatus, Recommendation, FixQuery)
         SELECT TOP 5
             'Optimization',
             'Parameter Sniffing Suspected',
             'High',
-            CONCAT('Query ID: ', query_id, ' | Duration Variance: ', ROUND(STDEV(duration_ms),0)),
+            CONCAT('Query ID: ', q.query_id, ' | Duration StDev (us): ', ROUND(MAX(rs.stdev_duration), 0)),
             'Use OPTIMIZE FOR UNKNOWN or Query Store to force plan.',
-            'EXEC sys.sp_query_store_force_plan @query_id = ' + CAST(query_id AS varchar) + ', @plan_id = (SELECT TOP 1 plan_id FROM sys.query_store_plan WHERE query_id = ' + CAST(query_id AS varchar) + ' ORDER BY avg_duration DESC);'
-        FROM sys.query_store_runtime_stats
-        GROUP BY query_id
-        HAVING STDEV(duration_ms) > 10000 -- High variance threshold
-        ORDER BY STDEV(duration_ms) DESC;
+            'EXEC sys.sp_query_store_force_plan @query_id = ' + CAST(q.query_id AS varchar) + ', @plan_id = (SELECT TOP 1 plan_id FROM sys.query_store_plan WHERE query_id = ' + CAST(q.query_id AS varchar) + ' ORDER BY avg_duration DESC);'
+        FROM sys.query_store_runtime_stats rs
+        JOIN sys.query_store_plan p ON rs.plan_id = p.plan_id
+        JOIN sys.query_store_query q ON p.query_id = q.query_id
+        GROUP BY q.query_id
+        HAVING MAX(rs.stdev_duration) > 10000 -- High duration variance (microseconds)
+        ORDER BY MAX(rs.stdev_duration) DESC;
 
         -- =============================================
         -- 9. Large Row / LOB Issues (Low impact: Check row sizes >7k bytes)
@@ -207,14 +209,13 @@ BEGIN
         WHERE object_id = OBJECT_ID('sys.dbcc_checkdb');  -- Approximate via stats
 
         INSERT INTO #HealthReport (Category, Issue, Severity, CurrentStatus, Recommendation, FixQuery)
-        VALUES (
+        SELECT
             'Storage',
             'Potential Corruption',
             'Critical',
             'Last CHECKDB Approx: ' + ISNULL(CAST(@LastCheckDate AS varchar), 'Unknown'),
             'Run DBCC CHECKDB during maintenance. Restore if errors.',
             'DBCC CHECKDB (''' + ISNULL(@DatabaseName, DB_NAME()) + ''') WITH NO_INFOMSGS;'
-        )
         WHERE @LastCheckDate IS NULL OR @LastCheckDate < DATEADD(MONTH, -1, GETDATE()); -- Stale if >1 month
 
         -- Final Output (batched select)

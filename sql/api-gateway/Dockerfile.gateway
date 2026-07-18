@@ -1,12 +1,24 @@
-# ode.js API Gateway for routing to SQL containers
+# SQL API Gateway: Node service that routes safe, parameterized operations to
+# the sharded SQL Server tier with persistent connection pooling.
+ARG repo="docker.io" \
+    base_image="library/node" \
+    image_hash="c9f02360d2bc66e709b300214395588acd2d3603f600db8141117e67c0faf4ff"
 
-FROM docker.io/node:25-alpine
+FROM ${repo}/${base_image}@sha256:${image_hash}
 
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY package.json .
-RUN npm install express mssql redis jsonwebtoken winston express-rate-limit cluster
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 
-COPY gateway.js .
+COPY gateway.js operations.json mint-token.js healthcheck.js ./
+
+# node:alpine ships an unprivileged "node" user (uid 1000).
+USER node
+EXPOSE 3000
+
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=10s \
+    CMD ["node", "/app/healthcheck.js"]
 
 CMD ["node", "gateway.js"]

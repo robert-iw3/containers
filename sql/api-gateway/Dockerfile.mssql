@@ -1,0 +1,17 @@
+# Tuned SQL Server shard: applies performance configuration at startup
+# (parallelism, memory cap, tempdb files, Query Store, RCSI) so shards hold up
+# under concurrent load.
+ARG repo="mcr.microsoft.com" \
+    base_image="mssql/server" \
+    tag="2022-latest"
+
+FROM ${repo}/${base_image}:${tag}
+
+COPY mssql-tune.sh /usr/local/bin/mssql-tune.sh
+COPY mssql-tune.sql /usr/local/bin/mssql-tune.sql
+
+USER root
+RUN chmod +x /usr/local/bin/mssql-tune.sh
+USER mssql
+
+ENTRYPOINT ["/usr/local/bin/mssql-tune.sh"]

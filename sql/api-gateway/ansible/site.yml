@@ -1,0 +1,42 @@
+---
+# Deploy the SQL stack across separate hosts, one component group per play.
+# Order matters: data services first, then the gateways that depend on them,
+# then the load balancer that fronts the gateways.
+#
+#   ansible-playbook -i inventory.ini site.yml
+#   ansible-playbook -i inventory.ini site.yml --tags gateway   # one component
+
+- name: Prepare all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+
+- name: Redis (shard map + rate-limit store)
+  hosts: redis
+  become: true
+  roles:
+    - role: redis
+      tags: [redis]
+
+- name: Tuned SQL Server shards
+  hosts: sql_shards
+  become: true
+  roles:
+    - role: sql_shard
+      tags: [shard, sql]
+
+- name: API gateways
+  hosts: gateways
+  become: true
+  roles:
+    - role: gateway
+      tags: [gateway]
+
+- name: Load balancer
+  hosts: loadbalancer
+  become: true
+  roles:
+    - role: loadbalancer
+      tags: [lb, loadbalancer]

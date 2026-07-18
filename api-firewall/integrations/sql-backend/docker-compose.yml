@@ -1,0 +1,157 @@
+# Full-stack reference: API Firewall -> record-store API -> sharded SQL Server.
+#
+#   cp .env.example .env       # set the SA password + API keys
+#   ./smoke-test.sh            # builds, starts, verifies end-to-end
+#
+# Scaling:
+#   docker compose up -d --scale api=3       # stateless API tier
+#   add sqlN + volume + extend SQL_SHARDS    # more shards (see README)
+#
+# Interpolation vars (SQL_SA_PASSWORD, SQL_API_KEYS) are deliberately named
+# differently from the container env keys they feed — podman-compose does
+# not interpolate self-referencing `KEY: ${KEY:-...}` entries.
+
+name: apifw-sql
+
+x-common: &common
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-mssql: &mssql
+  <<: *common
+  image: mcr.microsoft.com/mssql/server:2022-latest
+  mem_limit: 2g
+  environment: &mssql-env
+    ACCEPT_EULA: "Y"
+    MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:-ApiFw_Str0ng!Pass}
+    MSSQL_PID: Developer
+    MSSQL_MEMORY_LIMIT_MB: "1536"
+  healthcheck:
+    test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S 127.0.0.1 -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+    interval: 10s
+    timeout: 10s
+    retries: 10
+    start_period: 60s
+  networks:
+    - data
+
+networks:
+  # Clients / LB reach the firewall here.
+  edge:
+    driver: bridge
+  # Firewall <-> API. Internal: the API is unreachable from the host.
+  app:
+    driver: bridge
+    internal: true
+  # API <-> SQL shards. Internal: the databases only see the API tier.
+  data:
+    driver: bridge
+    internal: true
+
+volumes:
+  sql1-data:
+  sql2-data:
+
+services:
+  api-firewall:
+    <<: *common
+    build:
+      context: ../..
+    image: localhost/api-firewall:hardened
+    container_name: apifw-sql-firewall
+    read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 512m
+    tmpfs:
+      - /tmp
+    environment:
+      APIFW_MODE: PROXY
+      APIFW_URL: http://0.0.0.0:8080
+      APIFW_HEALTH_HOST: 0.0.0.0:9667
+      APIFW_API_SPECS: /opt/resources/api-spec.json
+      # The firewall load-balances across the api A-records it resolves when
+      # its upstream pool initialises — but it does NOT re-resolve per
+      # request, so replicas added later aren't picked up until the pool
+      # re-dials (restart, or idle-conn expiry). For elastic scaling put a
+      # stable Service/LB VIP here instead (the k8s manifest uses a Service).
+      APIFW_SERVER_URL: http://api:8000
+      APIFW_REQUEST_VALIDATION: BLOCK
+      APIFW_RESPONSE_VALIDATION: LOG_ONLY
+      APIFW_CUSTOM_BLOCK_STATUS_CODE: "403"
+      APIFW_LOG_LEVEL: INFO
+      APIFW_LOG_FORMAT: JSON
+      # WAF: Coraza + OWASP CRS (../../get-crs.sh fetches the rules).
+      APIFW_MODSEC_CONF_FILES: /opt/resources/config/coraza.conf;/opt/resources/crs/crs-setup.conf
+      APIFW_MODSEC_RULES_DIR: /opt/resources/crs/rules
+    volumes:
+      - ./openapi.json:/opt/resources/api-spec.json:ro
+      - ../../config:/opt/resources/config:ro
+      - ../../crs:/opt/resources/crs:ro
+    ports:
+      - "127.0.0.1:8082:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9667/v1/liveness"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - edge
+      - app
+
+  # Stateless record-store API. No container_name so it can scale:
+  #   docker compose up -d --scale api=3
+  api:
+    <<: *common
+    build:
+      context: ./api
+    image: localhost/apifw-sql-api:latest
+    read_only: true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    tmpfs:
+      - /tmp
+    environment:
+      SQL_SHARDS: sql1:1433,sql2:1433
+      SQL_USER: sa
+      SQL_PASSWORD: ${SQL_SA_PASSWORD:-ApiFw_Str0ng!Pass}
+      SQL_DATABASE: records
+      API_KEYS: ${SQL_API_KEYS:-demo-key-1}
+    healthcheck:
+      test: ["CMD", "python3", "/app/healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    depends_on:
+      sql1:
+        condition: service_healthy
+      sql2:
+        condition: service_healthy
+    networks:
+      - app
+      - data
+
+  sql1:
+    <<: *mssql
+    container_name: apifw-sql-shard1
+    volumes:
+      - sql1-data:/var/opt/mssql
+
+  sql2:
+    <<: *mssql
+    container_name: apifw-sql-shard2
+    volumes:
+      - sql2-data:/var/opt/mssql

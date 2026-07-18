@@ -1,0 +1,31 @@
+name: sql-stack-shard
+services:
+  shard:
+    build:
+      context: .
+      dockerfile: Dockerfile.mssql
+    image: localhost/sql-shard-tuned:latest
+    container_name: sql-stack-shard
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "{{ sql_sa_password }}"
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+      MSSQL_MAXDOP: "{{ mssql_maxdop }}"
+      MSSQL_COST_THRESHOLD: "{{ mssql_cost_threshold }}"
+      MSSQL_MAX_MEMORY_MB: "{{ mssql_max_memory_mb }}"
+      MSSQL_TEMPDB_FILES: "{{ mssql_tempdb_files }}"
+    ports:
+      - "{{ sql_port }}:1433"
+    volumes:
+      - shard-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/tuned && /opt/mssql-tools18/bin/sqlcmd -C -S 127.0.0.1 -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 60s
+volumes:
+  shard-data:

@@ -1,0 +1,33 @@
+{
+  "$comment": "Allowlisted, parameterized SQL operations. Clients call these by name at POST /v1/op/:name and never send SQL. Each op declares its params (name -> type), the param used to pick a shard (shardBy), and mode (read|write). Add operations here; nothing else is executable. Users and their orders both shard by the user id, so they co-locate on the same shard.",
+  "get_user": {
+    "sql": "SELECT id, username, email, created_at FROM dbo.Users WHERE id = @id",
+    "params": { "id": "int" },
+    "shardBy": "id",
+    "mode": "read"
+  },
+  "create_user": {
+    "sql": "INSERT INTO dbo.Users (id, username, email) OUTPUT INSERTED.id, INSERTED.username, INSERTED.email, INSERTED.created_at VALUES (@id, @username, @email)",
+    "params": { "id": "int", "username": "string", "email": "string" },
+    "shardBy": "id",
+    "mode": "write"
+  },
+  "list_orders": {
+    "sql": "SELECT id, user_id, amount, status, created_at FROM dbo.Orders WHERE user_id = @user_id ORDER BY id OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY",
+    "params": { "user_id": "int", "limit": "int", "offset": "int" },
+    "shardBy": "user_id",
+    "mode": "read"
+  },
+  "create_order": {
+    "sql": "INSERT INTO dbo.Orders (user_id, amount, status) OUTPUT INSERTED.id, INSERTED.user_id, INSERTED.amount, INSERTED.status, INSERTED.created_at VALUES (@user_id, @amount, @status)",
+    "params": { "user_id": "int", "amount": "decimal", "status": "string" },
+    "shardBy": "user_id",
+    "mode": "write"
+  },
+  "count_orders": {
+    "sql": "SELECT COUNT(*) AS n FROM dbo.Orders WHERE user_id = @user_id",
+    "params": { "user_id": "int" },
+    "shardBy": "user_id",
+    "mode": "read"
+  }
+}

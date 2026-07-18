@@ -1,0 +1,183 @@
+# Production-oriented Wallarm API Firewall on Kubernetes.
+#
+#   1. Put your OpenAPI 3 spec in the api-firewall-spec ConfigMap below.
+#   2. Point APIFW_SERVER_URL at the in-cluster Service of your API.
+#   3. kubectl apply -f api-firewall-k8s.yaml
+#
+# The image is the locally hardened build (see ../Dockerfile); push it to
+# your registry and update the image reference. Route external traffic to
+# the api-firewall Service instead of your API's Service — the firewall is
+# the only path to the backend.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-firewall
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-firewall-spec
+  namespace: api-firewall
+  labels:
+    app.kubernetes.io/name: api-firewall
+data:
+  # Replace with your API's OpenAPI 3 specification.
+  api-spec.json: |
+    {
+      "openapi": "3.0.3",
+      "info": {"title": "replace-me", "version": "1.0.0"},
+      "paths": {
+        "/healthz": {
+          "get": {"responses": {"200": {"description": "OK"}}}
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-firewall-config
+  namespace: api-firewall
+  labels:
+    app.kubernetes.io/name: api-firewall
+data:
+  APIFW_MODE: "PROXY"
+  APIFW_URL: "http://0.0.0.0:8080"
+  APIFW_HEALTH_HOST: "0.0.0.0:9667"
+  APIFW_API_SPECS: "/opt/resources/api-spec.json"
+  # In-cluster Service of the API being protected.
+  APIFW_SERVER_URL: "http://your-api.default.svc.cluster.local:3000"
+  APIFW_REQUEST_VALIDATION: "BLOCK"
+  APIFW_RESPONSE_VALIDATION: "LOG_ONLY"
+  APIFW_CUSTOM_BLOCK_STATUS_CODE: "403"
+  APIFW_SHADOW_API_UNKNOWN_PARAMETERS_DETECTION: "true"
+  APIFW_LOG_LEVEL: "INFO"
+  APIFW_LOG_FORMAT: "JSON"
+  APIFW_METRICS_ENABLED: "true"
+  APIFW_METRICS_HOST: "0.0.0.0:9010"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-firewall
+  namespace: api-firewall
+  labels:
+    app.kubernetes.io/name: api-firewall
+spec:
+  # The firewall is stateless: scale horizontally as needed.
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-firewall
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api-firewall
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9010"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65535
+        runAsGroup: 65535
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api-firewall
+          # Push the locally built hardened image to your registry:
+          #   docker build -t <registry>/api-firewall:0.9.6 . && docker push ...
+          image: localhost/api-firewall:hardened
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: api-firewall-config
+          ports:
+            - containerPort: 8080
+              name: proxy
+            - containerPort: 9667
+              name: health
+            - containerPort: 9010
+              name: metrics
+          livenessProbe:
+            httpGet:
+              path: /v1/liveness
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            # Readiness also checks connectivity to APIFW_SERVER_URL.
+            httpGet:
+              path: /v1/readiness
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: api-spec
+              mountPath: /opt/resources
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: api-spec
+          configMap:
+            name: api-firewall-spec
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-firewall
+  namespace: api-firewall
+  labels:
+    app.kubernetes.io/name: api-firewall
+spec:
+  selector:
+    app.kubernetes.io/name: api-firewall
+  ports:
+    - name: proxy
+      port: 8080
+      targetPort: proxy
+---
+# Only the firewall may talk to the protected API; adjust the podSelector /
+# namespace to match your backend, then apply a similar ingress rule there.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-firewall-egress
+  namespace: api-firewall
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api-firewall
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Protected backend (adjust to your API's namespace/labels/port).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000

@@ -74,9 +74,11 @@ BEGIN
         SELECT
             @PreCPU = SUM(cpu_time),
             @PreIO = SUM(reads + writes),
-            @PreLogicalReads = SUM(logical_reads),
-            @PreSpills = SUM(spills)
+            @PreLogicalReads = SUM(logical_reads)
         FROM sys.dm_exec_requests;
+        -- Spills are sourced from the XE session (dm_exec_requests has no
+        -- spills column); default to 0 when tracing is off.
+        SET @PreSpills = 0;
 
         SELECT @PreWaits = (
             SELECT TOP 10 wait_type, wait_time_ms
@@ -85,19 +87,26 @@ BEGIN
             FOR XML RAW('wait'), ROOT('waits')
         );
 
-        -- Optional XE tracing (add spills event, filter by SP)
+        -- Optional XE tracing (add spills event, filter by SP). Built as
+        -- dynamic SQL because event-session predicates and target filenames
+        -- cannot reference T-SQL variables directly.
         IF @EnableTracing = 1
         BEGIN
             IF EXISTS (SELECT 1 FROM sys.server_event_sessions WHERE name = 'DBA_SPTrace')
                 DROP EVENT SESSION DBA_SPTrace ON SERVER;
-            CREATE EVENT SESSION DBA_SPTrace ON SERVER
-            ADD EVENT sqlserver.sql_statement_completed(
-                ACTION(sqlserver.query_plan_hash, sqlserver.sql_text)
-                WHERE sql_text LIKE '%' + @ProcedureName + '%'),
-            ADD EVENT sqlserver.rpc_completed(
-                WHERE sql_text LIKE '%' + @ProcedureName + '%'),
-            ADD EVENT sqlserver.spill_to_tempdb
-            ADD TARGET package0.event_file(PATH = @XEPath);
+            DECLARE @xeName nvarchar(300) = REPLACE(@ProcedureName, '''', '''''');
+            DECLARE @xeFile nvarchar(300) = REPLACE(@XEPath, '''', '''''');
+            DECLARE @xeSQL nvarchar(MAX) = N'
+                CREATE EVENT SESSION DBA_SPTrace ON SERVER
+                ADD EVENT sqlserver.sql_statement_completed(
+                    ACTION(sqlserver.query_plan_hash, sqlserver.sql_text)
+                    WHERE sqlserver.sql_text LIKE ''%' + @xeName + '%''),
+                ADD EVENT sqlserver.rpc_completed(
+                    ACTION(sqlserver.sql_text)
+                    WHERE sqlserver.sql_text LIKE ''%' + @xeName + '%''),
+                ADD EVENT sqlserver.spill_to_tempdb
+                ADD TARGET package0.event_file(SET filename = ''' + @xeFile + ''');';
+            EXEC sp_executesql @xeSQL;
             ALTER EVENT SESSION DBA_SPTrace ON SERVER STATE = START;
         END
 
@@ -114,9 +123,9 @@ BEGIN
         SELECT
             @PostCPU = SUM(cpu_time),
             @PostIO = SUM(reads + writes),
-            @PostLogicalReads = SUM(logical_reads),
-            @PostSpills = SUM(spills)
+            @PostLogicalReads = SUM(logical_reads)
         FROM sys.dm_exec_requests;
+        SET @PostSpills = 0;  -- set from the XE spill count below if tracing is on
 
         SELECT @PostWaits = (
             SELECT TOP 10 wait_type, wait_time_ms
@@ -138,17 +147,21 @@ BEGIN
         BEGIN
             ALTER EVENT SESSION DBA_SPTrace ON SERVER STATE = STOP;
             SELECT @XEData = CAST(event_data AS xml)
-            FROM sys.fn_xe_file_target_read_file(@XEPath + '*', NULL, NULL, NULL);
+            FROM sys.fn_xe_file_target_read_file(@XEPath + '*', NULL, NULL, NULL) AS xe;
 
-            -- Parse XE: Waits (aggregate)
+            -- Parse XE: Waits (aggregate). XML values are projected in the
+            -- inner query first; GROUP BY cannot operate on an XML method.
             SET @XEWaits = (
                 SELECT STRING_AGG(CONCAT(wait_type, ': ', wait_time_ms), '; ')
                 FROM (
-                    SELECT
-                        x.n.value('(data[@name="wait_type"]/value)[1]', 'nvarchar(50)') AS wait_type,
-                        SUM(x.n.value('(data[@name="wait_time_ms"]/value)[1]', 'bigint')) AS wait_time_ms
-                    FROM @XEData.nodes('//event') AS x(n)
-                    GROUP BY x.n.value('(data[@name="wait_type"]/value)[1]', 'nvarchar(50)')
+                    SELECT e.wait_type, SUM(e.wait_time_ms) AS wait_time_ms
+                    FROM (
+                        SELECT
+                            x.n.value('(data[@name="wait_type"]/value)[1]', 'nvarchar(50)') AS wait_type,
+                            x.n.value('(data[@name="wait_time_ms"]/value)[1]', 'bigint') AS wait_time_ms
+                        FROM @XEData.nodes('//event') AS x(n)
+                    ) e
+                    GROUP BY e.wait_type
                 ) w
             );
 
@@ -159,7 +172,7 @@ BEGIN
             );
 
             -- Parse Spills
-            DECLARE @SpillCount int = (SELECT COUNT(*) FROM @XEData.nodes('//event[@name="spill_to_tempdb"]'));
+            SET @PostSpills = (SELECT COUNT(*) FROM @XEData.nodes('//event[@name="spill_to_tempdb"]') AS s(n));
 
             -- Cleanup XE files (optimize storage)
             DECLARE @CleanupCmd nvarchar(500) = 'DEL ' + @XEPath + '*';
@@ -181,12 +194,17 @@ BEGIN
 
         -- Query Store integration (if enabled)
         DECLARE @QSRecommendations nvarchar(MAX) = '';
-        IF EXISTS (SELECT 1 FROM sys.databases WHERE is_query_store_on = 1)
+        IF EXISTS (SELECT 1 FROM sys.databases WHERE database_id = DB_ID() AND is_query_store_on = 1)
         BEGIN
-            SELECT @QSRecommendations = STRING_AGG(CONCAT('QS Suggestion: Force Plan ID ', plan_id), '; ')
-            FROM sys.query_store_plan
-            WHERE query_id IN (SELECT query_id FROM sys.query_store_query_text WHERE query_text LIKE '%' + @ProcedureName + '%')
-              AND is_forced_plan = 0;  -- Suggest forcing good plans
+            SELECT @QSRecommendations = STRING_AGG(CONCAT('QS Suggestion: Force Plan ID ', p.plan_id), '; ')
+            FROM sys.query_store_plan p
+            WHERE p.query_id IN (
+                    SELECT q.query_id
+                    FROM sys.query_store_query q
+                    JOIN sys.query_store_query_text t ON q.query_text_id = t.query_text_id
+                    WHERE t.query_sql_text LIKE '%' + @ProcedureName + '%'
+                )
+              AND p.is_forced_plan = 0;  -- Suggest forcing good plans
             IF @QSRecommendations <> '' SET @Recommendations += @QSRecommendations;
         END
 

@@ -1,0 +1,39 @@
+{# Shards addressed by their inventory host IPs, in order (shard 0 first). #}
+{% set shard_list = groups['sql_shards'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', ':' ~ sql_port) | join(',') %}
+name: sql-stack-gateway
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    image: localhost/sql-api-gateway:latest
+    container_name: sql-stack-gateway
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    tmpfs:
+      - /tmp
+    environment:
+      PORT: "3000"
+      SQL_SHARDS: "{{ shard_list }}"
+      SQL_USER: sa
+      SQL_PASSWORD: "{{ sql_sa_password }}"
+      SQL_DATABASE: "{{ app_db }}"
+      SQL_POOL_MAX: "{{ sql_pool_max }}"
+      SQL_POOL_MIN: "{{ sql_pool_min }}"
+      JWT_SECRET: "{{ jwt_secret }}"
+      REDIS_HOST: "{{ hostvars[groups['redis'][0]].ansible_host }}"
+      REDIS_PORT: "{{ redis_port }}"
+      REDIS_PASSWORD: "{{ redis_password }}"
+      RATE_LIMIT_MAX: "{{ rate_limit_max }}"
+      RATE_LIMIT_WINDOW_MS: "{{ rate_limit_window_ms }}"
+    ports:
+      - "{{ gateway_port }}:3000"
+    healthcheck:
+      test: ["CMD", "node", "/app/healthcheck.js"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

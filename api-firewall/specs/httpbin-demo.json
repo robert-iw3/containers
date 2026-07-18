@@ -1,0 +1,133 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "go-httpbin demo",
+    "description": "Minimal spec for the bundled demo backend (compose profile: demo). Anything outside these paths/types is rejected by the firewall, not the backend.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://demo-backend:8080"
+    }
+  ],
+  "paths": {
+    "/get": {
+      "get": {
+        "summary": "Echo request data",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Echoed request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/post": {
+      "post": {
+        "summary": "Echo a posted task",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Echoed request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/{code}": {
+      "get": {
+        "summary": "Return the given status code",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 200,
+              "maximum": 599
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested status"
+          },
+          "default": {
+            "description": "Requested status"
+          }
+        }
+      }
+    },
+    "/uuid": {
+      "get": {
+        "summary": "Generate a UUID",
+        "responses": {
+          "200": {
+            "description": "A UUIDv4",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

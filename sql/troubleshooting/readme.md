@@ -1,6 +1,31 @@
 ## SQL Troubleshooting Info
 ---
 
+Two ready-to-run DBA procedures plus a runner:
+
+| File | Procedure | Purpose |
+| --- | --- | --- |
+| [`healthcheck.sql`](healthcheck.sql) | `sp_DBA_HealthCheck` | Server/database health report: fragmentation, missing indexes, heaps, waits, plan-cache bloat, memory pressure, parameter sniffing, corruption, large rows. Read-only (READ UNCOMMITTED, TOP-limited DMV queries). |
+| [`stored_proc_monitoring.sql`](stored_proc_monitoring.sql) | `sp_DBA_MonitorSP` | Benchmarks a given stored procedure: CPU/IO/logical-read/wait deltas, plan capture, optional Extended Events tracing, logs to `DBA_SPMonitorLog`, and recommends fixes. |
+
+Install and run both against a shard with:
+
+```sh
+./run-checks.sh <container> <sa-password> [database]
+./run-checks.sh sql-stack-shard1 "$SQL_SA_PASSWORD" AppDb
+```
+
+Or invoke directly once installed:
+
+```sql
+EXEC dbo.sp_DBA_HealthCheck @LogToTable = 0, @ShowFixQueries = 1;
+EXEC dbo.sp_DBA_MonitorSP @ProcedureName = 'dbo.YourProc', @Params = '@ID=1', @Execute = 1;
+```
+
+The reference below documents the SQL Server internals each check maps to.
+
+---
+
 ```mermaid
 graph TD
     subgraph ClientLayer["Client / Application Layer"]

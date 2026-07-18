@@ -1,0 +1,34 @@
+global
+    log stdout format raw local0 info
+    maxconn 20000
+defaults
+    mode http
+    log global
+    option httplog
+    option dontlognull
+    timeout connect 5s
+    timeout client  30s
+    timeout server  30s
+    default-server inter 3s fall 3 rise 2
+resolvers dns
+    parse-resolv-conf
+    resolve_retries 3
+    timeout resolve 1s
+    timeout retry   1s
+    hold valid 10s
+frontend fe_gateway
+    bind :8080
+    http-response set-header X-Upstream %[srv_name]
+    default_backend be_gateway
+backend be_gateway
+    balance roundrobin
+    option httpchk GET /health
+    http-check expect status 200
+{% for h in groups['gateways'] %}
+    server gw{{ loop.index }} {{ hostvars[h].ansible_host }}:{{ gateway_port }} check resolvers dns init-addr none
+{% endfor %}
+frontend fe_stats
+    bind :8404
+    stats enable
+    stats uri /
+    stats refresh 5s
