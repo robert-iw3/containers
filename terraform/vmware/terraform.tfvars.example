@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars and adjust.
+# Credentials: export TF_VAR_vsphere_server, TF_VAR_vsphere_user, TF_VAR_vsphere_password.
+
+name_prefix = "hashistack"
+
+datacenter = "dc1"
+cluster    = "cluster1"
+datastore  = "datastore1"
+network    = "VM Network"
+
+# Ubuntu 24.04 cloud image template with cloud-init + VMware guestinfo
+# datasource (import the official Ubuntu OVA and mark it as a template)
+template = "ubuntu-24.04-cloudimg"
+
+num_cpus  = 2
+memory_mb = 4096
+disk_gb   = 40
+
+network_prefix_length = 24
+gateway               = "10.70.0.1"
+dns_servers           = ["10.70.0.2", "1.1.1.1"]
+
+consul_ips             = ["10.70.0.11", "10.70.0.12", "10.70.0.13"]
+vault_ips              = ["10.70.0.21", "10.70.0.22", "10.70.0.23"]
+boundary_controller_ip = "10.70.0.31"
+boundary_worker_ips    = ["10.70.0.32"]
+postgres_ip            = "10.70.0.41"

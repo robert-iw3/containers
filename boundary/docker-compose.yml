@@ -1,65 +1,93 @@
 ---
-volumes:
-  boundary_db:
-  postgresql_data:
+# Boundary controller + worker backed by PostgreSQL.
+# Quick start:
+#   ./scripts/bootstrap-env.sh     # generates .env with random keys
+#   podman-compose up -d --build
+#   ./scripts/smoke-test.sh
+# KMS keys are rendered into the config at container start from .env;
+# nothing secret is baked into the image.
+
+x-boundary-common: &boundary-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: localhost/boundary:0.21.3
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - boundary
+  env_file:
+    - .env
+  environment:
+    - SKIP_CHOWN=true
+    - SKIP_SETCAP=true
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    container_name: postgres-boundary
+    hostname: postgres-boundary
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - boundary
+
+  # database init (idempotent) and server run in one container: keeping the
+  # dependency chain one level deep avoids a podman dependency-graph bug with
+  # exited init containers. First-run admin credentials appear in this
+  # container's logs (scripts/smoke-test.sh captures them).
+  boundary:
+    <<: *boundary-common
+    container_name: boundary-main
+    hostname: boundary
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        : "$${BOUNDARY_PUBLIC_HOST:=127.0.0.1}"
+        export BOUNDARY_POSTGRES_URL="postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@postgres-boundary:5432/$${POSTGRES_DB}?sslmode=disable"
+        sed -e "s|__BOUNDARY_ROOT_KEY__|$${BOUNDARY_ROOT_KEY}|" \
+            -e "s|__BOUNDARY_WORKER_AUTH_KEY__|$${BOUNDARY_WORKER_AUTH_KEY}|" \
+            -e "s|__BOUNDARY_RECOVERY_KEY__|$${BOUNDARY_RECOVERY_KEY}|" \
+            -e "s|__BOUNDARY_PUBLIC_HOST__|$${BOUNDARY_PUBLIC_HOST}|" \
+            /boundary/config.hcl > /home/boundary/config.rendered.hcl
+        out=$$(boundary database init -config /home/boundary/config.rendered.hcl 2>&1); rc=$$?
+        echo "$$out"
+        if [ $$rc -ne 0 ] && ! echo "$$out" | grep -qi 'already.*initialized'; then
+          exit $$rc
+        fi
+        exec boundary server -config /home/boundary/config.rendered.hcl
+    ports:
+      - "9200:9200"
+      - "9201:9201"
+      - "9202:9202"
+      - "9203:9203"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:9203/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   boundary:
     driver: bridge
 
-services:
-  postgres:
-    image: docker.io/bitnami/postgresql:latest
-    container_name: postgres-boundary
-    hostname: postgres-boundary.testing.io
-    security_opt:
-      - no-new-privileges:true
-    restart: unless-stopped
-    ports:
-      - 5432:5432
-    environment:
-      - POSTGRESQL_USERNAME=${POSTGRESQL_USERNAME}
-      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
-      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
-      - POSTGRESQL_REPLICATION_USER=${POSTGRESQL_REPLICATION_USER}
-      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRESQL_REPLICATION_PASSWORD}
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - postgresql_data:/bitnami/postgresql:z
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-    networks:
-      - boundary
-
-  boundary:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: boundary-main
-    hostname: boundary.testing.io
-    security_opt:
-      - no-new-privileges:true
-    restart: unless-stopped
-    ports:
-      - "9200:9200"
-      - "9201:9201"
-      - "9202:9202"
-    environment:
-      - BOUNDARY_POSTGRES_URL=postgresql://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@postgres-boundary.testing.io:5432/${POSTGRESQL_DATABASE}?sslmode=disable
-      - BOUNDARY_ROOT_KEY=${BOUNDARY_ROOT_KEY}
-      - BOUNDARY_WORKER_AUTH_KEY=${BOUNDARY_WORKER_AUTH_KEY}
-      - BOUNDARY_RECOVERY_KEY=${BOUNDARY_RECOVERY_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:9200/v1/health"]
-      interval: 3s
-      timeout: 5s
-      retries: 5
-    networks:
-      - boundary
+volumes:
+  postgresql_data:

@@ -1,9 +1,31 @@
 ---
+# Standalone Vault server with integrated (raft) storage and TLS.
+# Quick start:
+#   podman-compose up -d --build
+#   ./scripts/smoke-test.sh
+# For the full Consul + Vault + Boundary stack see integration-demos/hashicorp-stack.
+
 services:
+  vault-certs-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/vault:2.0.3
+    container_name: vault-certs-init
+    command: ["/bin/sh", "-c", "python3 /opt/vault-init/generate_certs.py"]
+    environment:
+      - VAULT_NODE_ID=0
+    volumes:
+      - vault-certs:/certs
+      - ./config:/opt/vault-init:ro
+    networks:
+      - vault
+
   vault:
     build:
       context: .
       dockerfile: Dockerfile
+    image: localhost/vault:2.0.3
     container_name: vault
     hostname: vault.local
     security_opt:
@@ -17,29 +39,28 @@ services:
     volumes:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
-      - vault-policies:/vault/policies
-      - vault-config:/vault/config
       - vault-certs:/certs
+      - ./config:/vault/config:ro
     environment:
       - VAULT_ADDR=https://127.0.0.1:8200
-      - VAULT_API_ADDR=https://127.0.0.1:8200
-      - VAULT_NODE_ID=0
-    cap_add:
-      - IPC_LOCK
+      - VAULT_CACERT=/certs/vault-ca.crt.pem
+      - SKIP_CHOWN=true
+      - SKIP_SETCAP=true
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while [ ! -s /certs/vault-0.crt.pem ]; do echo 'waiting for TLS certs...'; sleep 1; done
+        exec vault server -config=/vault/config/vault-server.hcl
+    depends_on:
+      vault-certs-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost:8200/v1/sys/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    init:
-      image: python:3.9-slim
-      command: ["python", "/vault/config/generate_certs.py"]
-      environment:
-        - VAULT_NODE_ID=0
-      volumes:
-        - vault-certs:/certs
-        - vault-config:/vault/config
-      user: "65535:65535"
+      test: ["CMD", "curl", "-sf", "--cacert", "/certs/vault-ca.crt.pem", "https://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   vault:
@@ -48,6 +69,4 @@ networks:
 volumes:
   vault-data:
   vault-logs:
-  vault-policies:
-  vault-config:
   vault-certs:

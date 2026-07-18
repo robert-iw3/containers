@@ -1,0 +1,303 @@
+---
+# Full HashiCorp stack, end to end:
+#   Consul  = service mesh (Connect mTLS + intentions) and service catalog
+#   Vault   = dynamic PostgreSQL credentials (database secrets engine)
+#   Boundary= brokered access: sessions to postgres get fresh Vault creds
+#   demo-api= app tier reaching postgres only through the mesh
+#
+#   ./run_demo.sh          # bring everything up + configure + smoke test
+#
+# Ports are offset (18xxx/19xxx) so this stack can run alongside the
+# standalone product stacks in ../../{consul,vault,boundary}.
+
+services:
+  # --- service mesh / catalog ----------------------------------------------
+  consul:
+    build:
+      context: ../../consul
+      dockerfile: Dockerfile
+    image: localhost/consul:2.0.2
+    container_name: demo-consul
+    hostname: consul
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command: ["agent"]
+    environment:
+      - CONSUL_DISABLE_PERM_MGMT=true
+    volumes:
+      - consul-data:/consul/data
+      - ./consul:/consul/config:ro
+    ports:
+      - "18500:8500"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8500/v1/status/leader"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - hashi-demo
+
+  # --- protected backend: application database ------------------------------
+  postgres-app:
+    image: docker.io/library/postgres:17-alpine
+    container_name: postgres-app
+    hostname: postgres-app
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=app_admin
+      - POSTGRES_PASSWORD=${APP_DB_PASSWORD}
+      - POSTGRES_DB=appdb
+    volumes:
+      - pg-app-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_admin -d appdb -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - hashi-demo
+
+  # --- Connect sidecars (built-in proxy, mTLS) -------------------------------
+  postgres-sidecar:
+    image: localhost/consul:2.0.2
+    container_name: postgres-sidecar
+    hostname: postgres-sidecar
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf http://consul:8500/v1/agent/services | grep -q 'postgres-app-sidecar-proxy'; do
+          echo 'waiting for postgres-app sidecar registration...'; sleep 2
+        done
+        exec consul connect proxy -sidecar-for postgres-app -http-addr=http://consul:8500
+    networks:
+      - hashi-demo
+
+  api-sidecar:
+    image: localhost/consul:2.0.2
+    container_name: api-sidecar
+    hostname: api-sidecar
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf http://consul:8500/v1/agent/services | grep -q 'demo-api-sidecar-proxy'; do
+          echo 'waiting for demo-api sidecar registration...'; sleep 2
+        done
+        exec consul connect proxy -sidecar-for demo-api -http-addr=http://consul:8500
+    networks:
+      - hashi-demo
+
+  # --- secrets: Vault --------------------------------------------------------
+  vault-certs-init:
+    build:
+      context: ../../vault
+      dockerfile: Dockerfile
+    image: localhost/vault:2.0.3
+    container_name: demo-vault-certs-init
+    command: ["/bin/sh", "-c", "python3 /opt/vault-init/generate_certs.py"]
+    environment:
+      - VAULT_NODE_ID=0
+    volumes:
+      - vault-certs:/certs
+      - ../../vault/config:/opt/vault-init:ro
+    networks:
+      - hashi-demo
+
+  vault:
+    image: localhost/vault:2.0.3
+    container_name: demo-vault
+    hostname: vault
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while [ ! -s /certs/vault-0.crt.pem ]; do echo 'waiting for TLS certs...'; sleep 1; done
+        exec vault server -config=/vault/config/vault-server.hcl
+    environment:
+      - VAULT_ADDR=https://127.0.0.1:8200
+      - VAULT_CACERT=/certs/vault-ca.crt.pem
+      - SKIP_CHOWN=true
+      - SKIP_SETCAP=true
+    volumes:
+      - vault-data:/vault/data
+      - vault-certs:/certs
+      - ./vault:/vault/config:ro
+    ports:
+      - "18200:8200"
+    depends_on:
+      vault-certs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "--cacert", "/certs/vault-ca.crt.pem", "https://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - hashi-demo
+
+  vault-setup:
+    image: localhost/vault:2.0.3
+    container_name: demo-vault-setup
+    # root inside the container maps to the invoking host user under rootless
+    # podman; needed to write the shared demo-state volume
+    user: root
+    command: ["/bin/bash", "/opt/demo/vault-setup.sh"]
+    environment:
+      - VAULT_ADDR=https://vault:8200
+      - VAULT_CACERT=/certs/vault-ca.crt.pem
+      - APP_DB_PASSWORD=${APP_DB_PASSWORD}
+    volumes:
+      - ./scripts:/opt/demo:ro
+      - demo-state:/demo-state
+      - vault-certs:/certs:ro
+    networks:
+      - hashi-demo
+
+  # --- access: Boundary ------------------------------------------------------
+  boundary-db:
+    image: docker.io/library/postgres:17-alpine
+    container_name: boundary-db
+    hostname: boundary-db
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=boundary
+      - POSTGRES_PASSWORD=${BOUNDARY_DB_PASSWORD}
+      - POSTGRES_DB=boundary
+    volumes:
+      - boundary-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boundary -d boundary -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - hashi-demo
+
+  boundary:
+    build:
+      context: ../../boundary
+      dockerfile: Dockerfile
+    image: localhost/boundary:0.21.3
+    container_name: demo-boundary
+    hostname: boundary
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - SKIP_CHOWN=true
+      - SKIP_SETCAP=true
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        : "$${BOUNDARY_PUBLIC_ADDR:=127.0.0.1:19202}"
+        export BOUNDARY_POSTGRES_URL="postgresql://boundary:$${BOUNDARY_DB_PASSWORD}@boundary-db:5432/boundary?sslmode=disable"
+        sed -e "s|__BOUNDARY_ROOT_KEY__|$${BOUNDARY_ROOT_KEY}|" \
+            -e "s|__BOUNDARY_WORKER_AUTH_KEY__|$${BOUNDARY_WORKER_AUTH_KEY}|" \
+            -e "s|__BOUNDARY_RECOVERY_KEY__|$${BOUNDARY_RECOVERY_KEY}|" \
+            -e "s|__BOUNDARY_PUBLIC_ADDR__|$${BOUNDARY_PUBLIC_ADDR}|" \
+            /boundary/demo-config.hcl > /home/boundary/config.rendered.hcl
+        out=$$(boundary database init -config /home/boundary/config.rendered.hcl 2>&1); rc=$$?
+        echo "$$out"
+        if [ $$rc -ne 0 ] && ! echo "$$out" | grep -qi 'already.*initialized'; then
+          exit $$rc
+        fi
+        exec boundary server -config /home/boundary/config.rendered.hcl
+    volumes:
+      - ./boundary/config.hcl:/boundary/demo-config.hcl:ro
+    ports:
+      - "19200:9200"
+      - "19202:9202"
+      - "19203:9203"
+    depends_on:
+      boundary-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:9203/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - hashi-demo
+
+  boundary-setup:
+    image: localhost/boundary:0.21.3
+    container_name: demo-boundary-setup
+    user: root
+    command: ["/bin/sh", "/opt/demo/boundary-setup.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./scripts:/opt/demo:ro
+      - demo-state:/demo-state
+      - vault-certs:/certs:ro
+    networks:
+      - hashi-demo
+
+  # --- app tier --------------------------------------------------------------
+  demo-api:
+    build:
+      context: ./demo-api
+      dockerfile: Dockerfile
+    image: localhost/hashicorp-demo-api:latest
+    container_name: demo-api
+    hostname: demo-api
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    environment:
+      - VAULT_ADDR=https://vault:8200
+      - VAULT_CACERT=/vault-certs/vault-ca.crt.pem
+      - VAULT_TOKEN_FILE=/demo-state/app-token
+      - MESH_UPSTREAM_HOST=api-sidecar
+      - MESH_UPSTREAM_PORT=20001
+      - APP_DB_NAME=appdb
+    volumes:
+      - demo-state:/demo-state:ro
+      - vault-certs:/vault-certs:ro
+    ports:
+      - "18080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - hashi-demo
+
+networks:
+  hashi-demo:
+    driver: bridge
+
+volumes:
+  consul-data:
+  pg-app-data:
+  vault-data:
+  vault-certs:
+  boundary-db-data:
+  demo-state:

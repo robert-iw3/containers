@@ -7,6 +7,7 @@ FROM ${repo}/${base_image}@sha256:${image_hash} AS base
 RUN \
     apk add --no-cache \
         bash \
+        curl \
         libcap \
         su-exec \
         dumb-init \

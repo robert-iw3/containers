@@ -1,0 +1,26 @@
+# Copy to terraform.tfvars and adjust.
+
+region      = "us-east-1"
+name_prefix = "hashistack"
+
+# REQUIRED: lock admin access down to your own address, e.g. "203.0.113.7/32"
+allowed_admin_cidrs = []
+
+# Optional EC2 key pair for SSH
+# key_name = "my-keypair"
+
+consul_servers   = 3
+vault_servers    = 3
+boundary_workers = 1
+
+instance_type = {
+  consul   = "t3.small"
+  vault    = "t3.small"
+  boundary = "t3.small"
+}
+
+db_instance_class = "db.t4g.micro"
+
+tags = {
+  environment = "uat"
+}

@@ -1,81 +1,77 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
-# This is a default configuration provided for our Docker image. It's meant to
-# be a starting point and to help new users get started. It's strongly
-# recommended that this configuration is not used outside of demonstrations
-# because it uses hard coded AEAD keys.
-
-# Note: This is mostly used for dev workflows or testing. The key will be exposed to anyone that can view the configuration file.
-# If using this KMS, consider using boundary config encrypt to encrypt all but the config KMS and using an external KMS for config purposes.
+# Combined Boundary controller + worker configuration.
+#
+# __PLACEHOLDER__ values are rendered from environment variables at container
+# start by the docker-compose command wrapper (see docker-compose.yml), so no
+# key material is baked into the image. The AEAD KMS blocks are for dev/UAT;
+# use a cloud KMS (awskms/azurekeyvault/gcpckms/transit) in production:
+# https://developer.hashicorp.com/boundary/docs/configuration/kms
 
 disable_mlock = true
 
 controller {
-  name = "demo-controller"
-  description = "A default controller created for demonstration"
+  name        = "boundary-controller-0"
+  description = "Boundary controller"
 
   database {
-    # This configuration setting requires the user to execute the container with the URL as an env var
-    # to connect to the Boundary postgres DB. An example of how this can be done assuming the postgres
-    # database is running as a container and you're using Docker for Mac (replace host.docker.internal with
-    # localhost if you're on Linux):
-    #
-    #    $  docker run -e 'BOUNDARY_POSTGRES_URL=postgresql://postgres:postgres@host.docker.internal:5432/postgres?sslmode=disable' [other options] boundary:[version]
     url = "env://BOUNDARY_POSTGRES_URL"
   }
-
-  public_cluster_addr = "env://HOSTNAME"
 }
 
+# combined controller+worker process: upstream must be a DNS name pointing
+# at the local cluster listener (bare IPs are rejected when they differ from
+# the listener address)
 worker {
-  name = "demo-worker"
-  description = "A default worker created for demonstration"
+  name              = "boundary-worker-0"
+  description       = "Boundary worker"
+  public_addr       = "__BOUNDARY_PUBLIC_HOST__"
+  initial_upstreams = ["localhost:9201"]
 }
 
+# API; front with TLS-terminating LB or set tls_cert_file/tls_key_file in production
 listener "tcp" {
-  address = "0.0.0.0"
-  purpose = "api"
+  address     = "0.0.0.0"
+  purpose     = "api"
   tls_disable = true
 }
 
+# controller <-> worker
 listener "tcp" {
-  address = "0.0.0.0"
-  purpose = "cluster"
-  tls_disable   = true
+  address     = "0.0.0.0"
+  purpose     = "cluster"
+  tls_disable = true
 }
 
+# client -> worker session proxy
 listener "tcp" {
-  address = "0.0.0.0"
-  purpose       = "proxy"
-  tls_disable   = true
+  address     = "0.0.0.0"
+  purpose     = "proxy"
+  tls_disable = true
 }
 
-# Root KMS configuration block: this is the root key for Boundary
-# Use a production KMS such as AWS KMS in production installs
-# https://developer.hashicorp.com/boundary/docs/configuration/kms/aead
-kms "aead" {
-  purpose = "root"
-  aead_type = "aes-gcm"
-  key = "uC8zAQ3sLJ9o0ZlH5lWIgxNZrNn0FiFqYj4802VKLKQ=" #changeme
-  key_id = "global_root"
+# health/metrics endpoint (:9203/health, :9203/metrics)
+listener "tcp" {
+  address     = "0.0.0.0"
+  purpose     = "ops"
+  tls_disable = true
 }
 
-# Worker authorization KMS
-# Use a production KMS such as AWS KMS for production installs
-# This key is the same key used in the worker configuration
 kms "aead" {
-  purpose = "worker-auth"
+  purpose   = "root"
   aead_type = "aes-gcm"
-  key = "cOQ9fiszFoxu/c20HbxRQ5E9dyDM6PqMY1GwqVLihsI=" #changeme
-  key_id = "global_worker-auth"
+  key       = "__BOUNDARY_ROOT_KEY__"
+  key_id    = "global_root"
 }
 
-# Recovery KMS block: configures the recovery key for Boundary
-# Use a production KMS such as AWS KMS for production installs
 kms "aead" {
-  purpose = "recovery"
+  purpose   = "worker-auth"
   aead_type = "aes-gcm"
-  key = "nIRSASgoP91KmaEcg/EAaM4iAkksyB+Lkes0gzrLIRM=" #changeme
-  key_id = "global_recovery"
+  key       = "__BOUNDARY_WORKER_AUTH_KEY__"
+  key_id    = "global_worker-auth"
+}
+
+kms "aead" {
+  purpose   = "recovery"
+  aead_type = "aes-gcm"
+  key       = "__BOUNDARY_RECOVERY_KEY__"
+  key_id    = "global_recovery"
 }

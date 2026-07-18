@@ -25,7 +25,7 @@ RUN \
 
 FROM base as build-env
 
-ENV CONSUL_VER=2.0.1 \
+ENV CONSUL_VER=2.0.2 \
     CONSUL_GPGKEY=C874011F0AB405110D02105534365D9472D7468F
 
 RUN \
@@ -69,7 +69,7 @@ RUN \
 	    rm -rf /tmp/build; \
 	    gpgconf --kill dirmngr; \
 	    gpgconf --kill gpg-agent; \
-	    apk del --no-network --purge .consul-deps; \
+	    apk del --no-network --purge .build-deps; \
 	    rm -rf /root/.gnupg /var/cache/apk/*
 
 FROM base
@@ -80,8 +80,8 @@ LABEL \
     org.opencontainers.image.usage='https://developer.hashicorp.com/consul/docs' \
     org.opencontainers.image.url='https://www.hashicorp.com/products/consul' \
     org.opencontainers.image.vendor='Hashicorp' \
-    org.opencontainers.image.licenses='Mozilla Public License 2.0' \
-    org.opencontainers.image.schema-version='2.0.1' \
+    org.opencontainers.image.licenses='Business Source License 1.1' \
+    org.opencontainers.image.schema-version='2.0.2' \
     MAINTAINER="@rw"
 
 RUN \
@@ -89,14 +89,16 @@ RUN \
     adduser --shell /sbin/nologin --disabled-password -h /home/consul --uid 65535 --ingroup consul consul; \
     mkdir -p /consul/data; \
     mkdir -p /consul/config; \
+    mkdir -p /consul/certs; \
+    mkdir -p /consul/secrets; \
     chown -R consul:consul /consul
 
 COPY --chown=consul:consul --from=build-env /bin/consul /usr/local/bin/
 COPY --chmod=755 entrypoint.sh /usr/local/bin/
-# quick single node bootstrap, advise use compose to create cluster
-#COPY --chown=consul:consul single-node.json /bootstrap.json
-COPY --chown=consul:consul vault-storage.json /consul/config/
 
+# TLS material and the gossip key are intentionally NOT baked into the image;
+# they are generated at deploy time (see docker-compose.yml consul-init) so
+# every deployment gets unique key material.
 RUN \
 	#smoke
 	consul version; \
@@ -106,20 +108,7 @@ RUN \
     grep -Hrn FOUND /home/consul/last_scan.log; \
     apk del --no-network clamav freshclam; \
     rm -rf /var/cache/apk/*; \
-    test -e /etc/nsswitch.conf || echo 'hosts: files dns' > /etc/nsswitch.conf; \
-	\
-	# replace encrypt: in "consul-agent.json" with this key (podman exec consul-leader sh -c "cat /consul/config/key.txt")
-	mkdir -p /consul/certs; \
-	cd /consul/certs; \
-	consul keygen 2>&1 | tee /consul/config/key.txt; \
-	consul tls ca create -domain=consul; \
-	consul tls cert create -server -dc=dc1 -domain=consul; \
-	# Create API certs for Vault
-	mkdir -p /consul/certs/vault; \
-	consul tls cert create -cli -ca="consul-agent-ca.pem"; \
-	mv dc1-cli-consul-0.pem /consul/certs/vault/; \
-	mv dc1-cli-consul-0-key.pem /consul/certs/vault/; \
-	chown -R consul:consul /consul
+    test -e /etc/nsswitch.conf || echo 'hosts: files dns' > /etc/nsswitch.conf
 
 VOLUME /consul/data
 EXPOSE 8300

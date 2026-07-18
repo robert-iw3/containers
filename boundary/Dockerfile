@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     su-exec \
     iputils \
     libc6-compat \
+    libcap \
     tzdata \
     wget
 
@@ -57,23 +58,31 @@ RUN apk add --no-cache -t .boundary-deps \
     apk del --purge .boundary-deps; \
     rm -rf /root/.gnupg /var/cache/apk/*
 
-FROM gcr.io/distroless/static-debian12
+FROM base
 
-COPY --from=build-env /bin/boundary /usr/local/bin/
-COPY --from=base /usr/bin/dumb-init /usr/bin/dumb-init
-COPY --from=base /usr/bin/su-exec /usr/bin/su-exec
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY config.hcl /boundary/config.hcl
+LABEL org.opencontainers.image.name='HashiCorp Boundary' \
+    org.opencontainers.image.description='Simple and secure remote access to hosts and critical systems.' \
+    org.opencontainers.image.usage='https://developer.hashicorp.com/boundary/docs' \
+    org.opencontainers.image.url='https://www.hashicorp.com/products/boundary' \
+    org.opencontainers.image.vendor='HashiCorp' \
+    org.opencontainers.image.licenses='Business Source License 1.1' \
+    org.opencontainers.image.schema-version='0.21.3' \
+    MAINTAINER="@rw"
 
-RUN mkdir /boundary/tls && \
-    addgroup -g 65535 boundary && \
+RUN addgroup -g 65535 boundary && \
     adduser --shell /sbin/nologin --disabled-password -h /home/boundary --uid 65535 --ingroup boundary boundary && \
-    mkdir /boundary && \
+    mkdir -p /boundary/tls && \
     chown -R boundary:boundary /boundary && \
-    chmod -R 640 /boundary/*
+    chmod -R 750 /boundary
+
+COPY --chown=boundary:boundary --from=build-env /bin/boundary /usr/local/bin/
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chown=boundary:boundary config.hcl /boundary/config.hcl
+
+RUN boundary version
 
 VOLUME /boundary
-EXPOSE 9200 9201 9202
+EXPOSE 9200 9201 9202 9203
 USER boundary
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["boundary", "server", "-config", "/boundary/config.hcl"]
+CMD ["server", "-config", "/boundary/config.hcl"]

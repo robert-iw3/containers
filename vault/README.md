@@ -9,129 +9,59 @@
   <img src="https://www.datocms-assets.com/2885/1620082983-blog-library-product-vault-dark-graphics.jpg" />
 </p>
 
-# Vault Deployment Guide
+Hardened Vault **2.0.3** image (GPG-verified release binary on Alpine, non-root
+user) with a production-shaped standalone deployment: integrated raft storage,
+TLS listener from a locally generated CA, JSON logging, UI enabled.
 
-This guide provides instructions for deploying a secure HashiCorp Vault cluster using an Ansible playbook with Docker, Podman, or Kubernetes. TLS certificates are dynamically generated during the deployment process.
+For Vault wired into Consul + Boundary end to end, see
+[`integration-demos/hashicorp-stack`](../integration-demos/hashicorp-stack).
 
-## Prerequisites
-- **For Ansible**:
-  - Ansible 2.9+ installed (`pip install ansible`)
-  - Root or sudo access on the deployment host
-- **For Docker/Podman**:
-  - Docker or Podman installed
-  - Docker Compose plugin (for Docker) or Podman Compose
-- **For Kubernetes**:
-  - Kubernetes cluster (v1.21+)
-  - kubectl configured with cluster access
-- **Common**:
-  - Python 3.9+ with required packages: `pip install kubernetes pyyaml`
-  - Vault binary installed (for Ansible dependency installation)
-  - Sufficient resources (at least 1 node with 2GB RAM for Docker/Podman, or 3 nodes for Kubernetes)
+## Quick start (UAT / smoke)
 
-## Directory Structure
 ```bash
-vault-deployment/
-├── certs/                    # Generated TLS certificates will be stored here
-├── config/                   # Configuration files (vault-server.hcl, generate_certs.py)
-├── vars/
-│   └── vault.yml            # Ansible variables
-├── deploy_vault.yml         # Ansible playbook
-├── Dockerfile               # Vault Docker image
-├── entrypoint.sh            # Entry point script
-├── docker-compose.yml       # Docker/Podman configuration
-└── vault-deployment.yaml    # Kubernetes manifest
+podman-compose up -d --build     # docker compose works too
+./scripts/smoke-test.sh
 ```
 
-## Deployment Steps
+The smoke test:
+1. waits for the API over TLS,
+2. initializes with 1 key share / threshold 1 (**UAT only**) — unseal key and
+   root token land in `vault/.vault-init.json` (`chmod 600`, gitignored),
+3. unseals, enables `kv-v2`, does a write/read round-trip, enables file audit.
 
-### Deploy with Ansible
-1. **Clone the Repository**
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+UI: <https://localhost:8200/ui> (self-signed cert — accept the warning; the CA
+lives in the `vault-certs` volume as `vault-ca.crt.pem`).
 
-2. **Install Ansible and Dependencies**
-   ```bash
-   pip install ansible kubernetes pyyaml
-   ```
+## Layout
 
-3. **Configure Runtime**
-   Edit `vars/vault.yml` to set `vault_runtime` to `docker`, `podman`, or `kubernetes`.
+| Path | Purpose |
+|---|---|
+| `Dockerfile` | multi-stage build, GPG + SHA256 verified binary |
+| `config/vault-server.hcl` | raft + TLS server config (the main deploy knob) |
+| `config/generate_certs.py` | idempotent CA/server cert generation (runs in the `vault-certs-init` container) |
+| `docker-compose.yml` | cert init + server |
+| `scripts/smoke-test.sh` | init/unseal/KV UAT |
+| `agent/`, `api/`, `baremetal/`, `deploy_vault.yml` | Vault agent example, API gateway, Vagrant, Ansible extras |
 
-4. **Run the Ansible Playbook**
-   ```bash
-   ansible-playbook deploy_vault.yml
-   ```
-   The playbook automatically generates TLS certificates and deploys the Vault cluster.
+## Configuring for other environments
 
-## Verify Deployment
-- **Kubernetes**:
-  ```bash
-  kubectl -n vault get pods
-  ```
-- **Docker/Podman**:
-  ```bash
-  docker compose -f docker-compose.yml ps
-  # or
-  podman compose -f docker-compose.yml ps
-  ```
-
-## Access Vault UI
-- **Kubernetes**:
-  ```bash
-  kubectl -n vault port-forward service/vault 8200:8200
-  ```
-- **Docker/Podman**:
-  The UI is directly accessible at `https://localhost:8200`
-
-Access the UI at `https://localhost:8200`.
-
-## Initialize Vault
-After deployment, initialize Vault to obtain the unseal key and root token:
-```bash
-# For Docker/Podman
-docker exec vault vault operator init -key-shares=1 -key-threshold=1
-
-# For Kubernetes
-kubectl -n vault exec -it vault-0 -- vault operator init -key-shares=1 -key-threshold=1
-```
-
-## Security Features
-- TLS certificates dynamically generated during deployment
-- Non-root container execution
-- Resource limits to prevent resource exhaustion
-- Health checks for service reliability
-- Consul backend for high availability
-- RBAC with least privilege principles (Kubernetes)
-
-## Troubleshooting
-- **Ansible**:
-  - Check playbook logs for errors
-  - Verify certificate generation: `ls certs/` (Docker/Podman) or pod logs (Kubernetes)
-- **Kubernetes**:
-  - Check pod logs: `kubectl -n vault logs -l app=vault`
-  - Verify service status: `kubectl -n vault get svc`
-- **Docker/Podman**:
-  - Check container logs: `docker compose -f docker-compose.yml logs`
-  - Verify services: `docker compose -f docker-compose.yml ps`
+- **Addresses / SANs**: set `VAULT_TLS_EXTRA_SANS` (e.g.
+  `DNS:vault.example.com,IP:10.0.0.5`) on `vault-certs-init`, and adjust
+  `api_addr` / `cluster_addr` in `config/vault-server.hcl`.
+- **Real certificates**: drop them into the `vault-certs` volume (or bind-mount
+  a directory over `/certs`) and remove the init container.
+- **Production seal**: replace Shamir with a `seal` stanza (awskms /
+  azurekeyvault / gcpckms) — working cloud examples with KMS auto-unseal live
+  in [`terraform/`](../terraform).
+- **Clustering**: add raft `retry_join` blocks (static addresses or cloud
+  auto-join) — per-cloud configs in `terraform/`.
+- `disable_mlock = true` follows HashiCorp's recommendation for integrated
+  storage (disable swap on the host instead); it also lets the container keep
+  `no-new-privileges`.
 
 ## Cleanup
-- **Kubernetes**:
-  ```bash
-  kubectl delete -f vault-deployment.yaml
-  kubectl delete namespace vault
-  ```
-- **Docker/Podman**:
-  ```bash
-  docker compose -f docker-compose.yml down -v
-  # or
-  podman compose -f docker-compose.yml down -v
-  ```
 
-## Notes
-- TLS certificates are generated automatically during deployment using a Python script.
-- The Docker/Podman deployment uses an init container to generate certificates, stored in a shared `vault-certs` volume.
-- Kubernetes uses an init container to generate certificates, stored in an `emptyDir` volume.
-- The Vault configuration integrates with a Consul backend for storage.
-- Ensure the Consul service is accessible at `0.0.0.0:8501` for the storage backend.
+```bash
+podman-compose down -v        # -v wipes raft data and certs
+rm -f .vault-init.json
+```

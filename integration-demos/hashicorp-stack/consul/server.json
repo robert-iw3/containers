@@ -1,0 +1,45 @@
+{
+  "datacenter": "dc1",
+  "server": true,
+  "bootstrap_expect": 1,
+  "node_name": "consul-demo",
+  "data_dir": "/consul/data",
+  "log_level": "INFO",
+  "client_addr": "0.0.0.0",
+  "ui_config": {
+    "enabled": true
+  },
+  "connect": {
+    "enabled": true
+  },
+  "ports": {
+    "http": 8500,
+    "grpc": 8502,
+    "dns": 8600
+  },
+  "config_entries": {
+    "bootstrap": [
+      {
+        "kind": "proxy-defaults",
+        "name": "global",
+        "config": {
+          "protocol": "tcp"
+        }
+      },
+      {
+        "kind": "service-intentions",
+        "name": "postgres-app",
+        "sources": [
+          {
+            "name": "demo-api",
+            "action": "allow"
+          },
+          {
+            "name": "*",
+            "action": "deny"
+          }
+        ]
+      }
+    ]
+  }
+}

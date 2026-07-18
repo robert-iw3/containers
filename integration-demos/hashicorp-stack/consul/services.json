@@ -1,0 +1,61 @@
+{
+  "services": [
+    {
+      "name": "postgres-app",
+      "port": 5432,
+      "address": "postgres-app",
+      "tags": ["demo", "database"],
+      "checks": [
+        {
+          "name": "postgres tcp",
+          "tcp": "postgres-app:5432",
+          "interval": "10s",
+          "timeout": "3s"
+        }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "postgres-sidecar",
+          "port": 21000,
+          "proxy": {
+            "local_service_address": "postgres-app",
+            "local_service_port": 5432
+          },
+          "checks": []
+        }
+      }
+    },
+    {
+      "name": "demo-api",
+      "port": 8080,
+      "address": "demo-api",
+      "tags": ["demo", "api"],
+      "checks": [
+        {
+          "name": "api http",
+          "http": "http://demo-api:8080/healthz",
+          "interval": "10s",
+          "timeout": "3s"
+        }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "api-sidecar",
+          "port": 21001,
+          "proxy": {
+            "local_service_address": "demo-api",
+            "local_service_port": 8080,
+            "upstreams": [
+              {
+                "destination_name": "postgres-app",
+                "local_bind_address": "0.0.0.0",
+                "local_bind_port": 20001
+              }
+            ]
+          },
+          "checks": []
+        }
+      }
+    }
+  ]
+}
