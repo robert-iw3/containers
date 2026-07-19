@@ -7,8 +7,8 @@ command_exists() {
 # Check if docker-compose exists
 if command_exists docker-compose; then
     echo "Using docker-compose"
-    DOCKER_COMPOSE_COMMAND="docker-compose"
+    DOCKER_COMPOSE_COMMAND="docker-compose -f build/docker-compose-builder.yml"
 else
     echo "Using docker compose"
-    DOCKER_COMPOSE_COMMAND="docker compose"
+    DOCKER_COMPOSE_COMMAND="docker compose -f build/docker-compose-builder.yml"
 fi

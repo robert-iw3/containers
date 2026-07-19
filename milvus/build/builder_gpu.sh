@@ -8,7 +8,7 @@ source ./build/util.sh
 toplevel=$(dirname "$(cd "$(dirname "${0}")"; pwd)")
 
 if [[ "$IS_NETWORK_MODE_HOST" == "true" ]]; then
-  sed -i '/gpubuilder:/,/^\s*$/s/image: \${IMAGE_REPO}\/milvus-env:gpu-\${OS_NAME}-\${GPU_DATE_VERSION}/&\n    network_mode: "host"/'   $toplevel/docker-compose.yml
+  sed -i '/gpubuilder:/,/^\s*$/s/image: \${IMAGE_REPO}\/milvus-env:gpu-\${OS_NAME}-\${GPU_DATE_VERSION}/&\n    network_mode: "host"/'   $toplevel/build/docker-compose-builder.yml
 fi
 
 export OS_NAME="${OS_NAME:-ubuntu22.04}"

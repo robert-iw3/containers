@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import subprocess
 import sys
 import os
@@ -48,9 +49,8 @@ def main():
         'reduction_factor': args.reduction_factor,
         'cpus_per_worker': args.cpus_per_worker,
     }
-    extra_vars_str = ' '.join([f"{k}={v}" for k, v in extra_vars.items()])
-
-    ansible_cmd = ["ansible-playbook", "deploy_cribl.yml", "-e", extra_vars_str]
+    # JSON keeps values with spaces/empty strings intact through ansible -e
+    ansible_cmd = ["ansible-playbook", "deploy_cribl.yml", "-e", json.dumps(extra_vars)]
     if args.dry_run:
         ansible_cmd.append("--check")
     if args.verbose:
@@ -67,6 +67,15 @@ def main():
         print("Generating certs...")
         cert_cmd = ["python3", "generate_cert.py", "--key-pass", "defaultpass"]  # Use vault in prod
         subprocess.check_call(cert_cmd)
+
+    # The compose/k8s stacks mount certs/client.pem; build it from the
+    # generated server cert+key if it is missing.
+    if not os.path.exists('./certs/client.pem'):
+        with open('./certs/client.pem', 'wb') as bundle:
+            for part in ('./certs/server.crt', './certs/server.key'):
+                with open(part, 'rb') as fh:
+                    bundle.write(fh.read())
+        print("Wrote certs/client.pem (server cert + key bundle)")
 
     try:
         subprocess.check_call(ansible_cmd)

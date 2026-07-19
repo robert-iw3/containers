@@ -1,0 +1,49 @@
+---
+# Application connectors for the pgvector stack. Joins the running stack's
+# network; start the main stack first (podman-compose up -d in pgvector/).
+#
+#   podman-compose -f docker-compose.connectors.yml up -d search-api
+#   podman-compose -f docker-compose.connectors.yml run --rm search-api \
+#       python loader.py --sample 500
+#   curl -s -X POST http://127.0.0.1:8803/search \
+#       -H 'Content-Type: application/json' \
+#       -d '{"query":"invoice charged twice","top_k":3}'
+#   podman-compose -f docker-compose.connectors.yml run --rm langchain-rag
+
+services:
+  search-api:
+    build:
+      context: ..
+      dockerfile: connectors/search-api/Dockerfile
+    image: localhost/pgvector-search-api:latest
+    container_name: pgvector-search-api
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - PGHOST=pgvector
+    ports:
+      - "127.0.0.1:8803:8000"
+    networks:
+      - pgvector
+
+  langchain-rag:
+    build:
+      context: ..
+      dockerfile: connectors/langchain-rag/Dockerfile
+    image: localhost/pgvector-langchain-rag:latest
+    container_name: pgvector-langchain-rag
+    restart: "no"
+    env_file:
+      - ../.env
+    environment:
+      - PGHOST=pgvector
+    networks:
+      - pgvector
+
+networks:
+  pgvector:
+    external: true
+    name: pgvector_pgvector

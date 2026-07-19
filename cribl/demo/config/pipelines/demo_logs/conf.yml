@@ -1,0 +1,48 @@
+# Demo pipeline: extract structure, drop noise, mask PII, enrich.
+# The syslog source puts the message body in `message` and keeps the
+# full frame in `_raw`; functions therefore key off `message`.
+# Order matters — each function sees the previous one's output.
+asyncFuncTimeout: 1000
+functions:
+  # app logs arrive as JSON in the syslog message body
+  - id: serde
+    disabled: false
+    filter: "message && message.trim().startsWith('{')"
+    conf:
+      mode: extract
+      type: json
+      srcField: message
+  # debug-level events are noise; shed them at the edge
+  - id: drop
+    disabled: false
+    filter: "level == 'debug'"
+    conf: {}
+  # nginx/apache combined access-log lines
+  - id: regex_extract
+    disabled: false
+    filter: "message && message.includes('HTTP/')"
+    conf:
+      regex: /^(?<clientip>\S+) \S+ \S+ \[[^\]]+\] "(?<method>\S+) (?<path>\S+) [^"]*" (?<status>\d+) (?<bytes>\d+)/
+      source: message
+  # never let email addresses reach a destination
+  - id: mask
+    disabled: false
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /[\w.+-]+@[\w-]+\.[\w.]{2,}/g
+          replaceExpr: "'<redacted-email>'"
+      fields:
+        - _raw
+        - message
+        - user_email
+  # normalize types and tag provenance
+  - id: eval
+    disabled: false
+    filter: "true"
+    conf:
+      add:
+        - name: status
+          value: "status ? Number(status) : undefined"
+        - name: demo_pipeline
+          value: "'demo_logs'"

@@ -14,9 +14,13 @@ if command -v terraform &> /dev/null; then
 else
   log "INFO" "Installing Terraform..."
   sudo apt-get update -y || { log "ERROR" "Failed to update"; exit 1; }
-  sudo apt-get install -y gnupg software-properties-common curl || { log "ERROR" "Failed prereqs"; exit 1; }
-  curl -fsSL https://apt.releases.hashicorp/gpg | sudo apt-key add - || { log "ERROR" "GPG failed"; exit 1; }
-  sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp $(lsb_release -cs) main" || { log "ERROR" "Repo failed"; exit 1; }
+  sudo apt-get install -y gnupg curl lsb-release || { log "ERROR" "Failed prereqs"; exit 1; }
+  curl -fsSL https://apt.releases.hashicorp.com/gpg \
+    | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+    || { log "ERROR" "GPG failed"; exit 1; }
+  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+    | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null \
+    || { log "ERROR" "Repo failed"; exit 1; }
   sudo apt-get update -y || { log "ERROR" "Update failed"; exit 1; }
   sudo apt-get install terraform -y || { log "ERROR" "Install failed"; exit 1; }
   log "INFO" "Terraform installed: $(terraform --version)"

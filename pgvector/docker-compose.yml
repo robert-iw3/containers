@@ -1,0 +1,52 @@
+---
+# PostgreSQL 17 + pgvector 0.8 with role separation (admin / app_rw /
+# app_ro), tuned settings, and a documents schema with an HNSW index.
+# Quick start:
+#   ./scripts/bootstrap-env.sh     # generates .env with random passwords
+#   podman-compose up -d
+#   ./scripts/smoke-test.sh
+# UAT battery: uat/run-uat.sh   Connectors: connectors/
+
+services:
+  pgvector:
+    image: docker.io/pgvector/pgvector:0.8.5-pg17-trixie
+    container_name: pgvector-main
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - .env
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - work_mem=32MB
+      - -c
+      - max_wal_size=2GB
+      - -c
+      - logging_collector=off
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro,z
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pgvector
+
+networks:
+  pgvector:
+    driver: bridge
+
+volumes:
+  pgvector_data:

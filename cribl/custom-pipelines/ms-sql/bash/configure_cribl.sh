@@ -14,7 +14,7 @@ log() {
 
 parse_ini() {
   local section="$1" key="$2"
-  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a && $1=="'"$key"'" {gsub(/ /,"",$2); print $2}' "$INI_FILE"
+  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a {k=$1; gsub(/ /,"",k); if (k=="'"$key"'") {v=$2; gsub(/ /,"",v); print v}}' "$INI_FILE"
 }
 
 if [ ! -f "$INI_FILE" ]; then
@@ -32,13 +32,15 @@ SQL_USER=$(parse_ini "sql" "user")
 SQL_PASS=$(parse_ini "sql" "pass")
 QUERIES_DIR=$(parse_ini "sql" "queries_dir")
 PIPELINE_ID=$(parse_ini "sql" "pipeline_id" || echo "my_pipeline")
-PIPELINE_GROUP=$(parse_ini "sql" "pipeline_group" || echo "local")
+PIPELINE_GROUP=$(parse_ini "sql" "pipeline_group" || echo "default")
 SOURCE_TAG=$(parse_ini "sql" "source_tag" || echo "mssql_db")
 AGG_INTERVAL=$(parse_ini "sql" "aggregate_interval" || echo "1m")
-SAMPLE_RATE=$(parse_ini "sql" "sample_rate" || echo 0.5)
+SAMPLE_RATE=$(parse_ini "sql" "sample_rate" || echo 5)
 LIMIT_EVENTS=$(parse_ini "sql" "limit_max_events" || echo 100000)
 ERROR_OUTPUT=$(parse_ini "sql" "error_output" || echo "error_destination")
-MAIN_OUTPUT=$(parse_ini "sql" "main_output" || echo "main_destination")
+MAIN_OUTPUT=$(parse_ini "sql" "main_output" || echo "default")
+METRICS_OUTPUT=$(parse_ini "sql" "metrics_output" || echo "devnull")
+METRICS_OUTPUT=${METRICS_OUTPUT:-devnull}
 PIPELINE_VARIANT=$(parse_ini "sql" "pipeline_variant" || echo "logs")
 
 if [ -z "$CRIBL_HOST" ] || [ -z "$CRIBL_USER" ] || [ -z "$CRIBL_PASS" ]; then
@@ -53,7 +55,11 @@ log "INFO" "Loaded: SOURCE_TAG=$SOURCE_TAG, AGG_INTERVAL=$AGG_INTERVAL, SAMPLE_R
 log "INFO" "Loaded: ERROR_OUTPUT=$ERROR_OUTPUT, MAIN_OUTPUT=$MAIN_OUTPUT"
 log "INFO" "Loaded: PIPELINE_VARIANT=$PIPELINE_VARIANT"
 
-AUTH_HEADER="Authorization: Basic $(echo -n $CRIBL_USER:$CRIBL_PASS | base64)"
+TOKEN=$(curl -s -X POST "$CRIBL_HOST/api/v1/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"$CRIBL_USER\",\"password\":\"$CRIBL_PASS\"}" \
+  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+if [ -z "$TOKEN" ]; then echo "ERROR: Cribl API login failed for $CRIBL_USER"; exit 1; fi
+AUTH_HEADER="Authorization: Bearer $TOKEN"
 
 api_call() {
   local method="$1" endpoint="$2" payload="$3" mode="$4" response_code attempt=1 backoff=$BACKOFF
@@ -90,7 +96,7 @@ api_call() {
 
 PIPELINE_ENDPOINT="m/$PIPELINE_GROUP/pipelines"
 log "INFO" "Checking/creating pipeline $PIPELINE_ID"
-PIPELINE_ID_VARIANT="$PIPELINE_ID_$PIPELINE_VARIANT"
+PIPELINE_ID_VARIANT="${PIPELINE_ID}_${PIPELINE_VARIANT}"
 api_call "GET" "$PIPELINE_ENDPOINT/$PIPELINE_ID_VARIANT" "" "check_only"
 if [ $? -eq 0 ]; then
   log "INFO" "Pipeline exists. Skipping creation."
@@ -103,6 +109,7 @@ else
   sed -i "s/{{limit_max_events}}/$LIMIT_EVENTS/g" temp.json
   sed -i "s/{{error_output}}/$ERROR_OUTPUT/g" temp.json
   sed -i "s/{{main_output}}/$MAIN_OUTPUT/g" temp.json
+  sed -i "s/{{metrics_destination}}/$METRICS_OUTPUT/g" temp.json
 
   PIPELINE_PAYLOAD=$(cat temp.json)
   api_call "POST" "$PIPELINE_ENDPOINT" "$PIPELINE_PAYLOAD" || exit 1
@@ -128,7 +135,11 @@ CONN_PAYLOAD='{
     "password": "'"$SQL_PASS"'"
   }
 }'
-api_call "POST" "connections" "$CONN_PAYLOAD" || exit 1
+if api_call "GET" "m/$PIPELINE_GROUP/lib/database-connections/$CONN_ID" "" "check_only"; then
+  log "INFO" "Connection exists. Skipping creation."
+else
+  api_call "POST" "m/$PIPELINE_GROUP/lib/database-connections" "$CONN_PAYLOAD" || exit 1
+fi
 
 failed=0
 for sql_file in "$QUERIES_DIR"/*.sql; do
@@ -141,26 +152,17 @@ for sql_file in "$QUERIES_DIR"/*.sql; do
   log "INFO" "Creating collector $collector_id from $sql_file"
   COLLECTOR_PAYLOAD='{
     "id": "'"$collector_id"'",
-    "type": "database",
-    "description": "Collector for '"$query_name"' with incremental loads",
-    "config": {
-      "connectionId": "'"$CONN_ID"'",
-      "sqlQuery": "'"$wrapped_query"'",
-      "schedule": "0 2 * * *",
-      "stateEnabled": true,
-      "trackingColumn": "tracking_ts",
-      "validateQuery": true,
-      "batchSize": 5000,
-      "pipelineId": "'"$PIPELINE_ID_VARIANT"'",
-      "throttlingRate": "5 MB",
-      "maxRetries": 3,
-      "retryDelay": 10,
-      "connectionTimeout": 30000,
-      "requestTimeout": 60000,
-      "addFields": {"query_type": "'"$PIPELINE_VARIANT"'"}
-    }
+    "type": "collection",
+    "ttl": "4h",
+    "removeFields": [],
+    "resumeOnBoot": false,
+    "schedule": {"cronSchedule": "0 2 * * *", "maxConcurrentRuns": 1, "skippable": true, "run": {"rescheduleDroppedTasks": true, "maxTaskReschedule": 1, "logLevel": "info", "jobTimeout": "0", "mode": "run", "timeRangeType": "relative", "timestampTimezone": "UTC", "expression": "true", "minTaskSize": "1MB", "maxTaskSize": "10MB"}},
+    "collector": {"type": "database", "conf": {"connectionId": "'"$CONN_ID"'", "query": "'"$wrapped_query"'"}},
+    "input": {"type": "collection", "staleChannelFlushMs": 10000, "sendToRoutes": false, "preprocess": {"disabled": true}, "throttleRatePerSec": "0", "pipeline": "'"$PIPELINE_ID_VARIANT"'", "output": "default"}
   }'
-  if ! api_call "POST" "collectors" "$COLLECTOR_PAYLOAD"; then
+  if api_call "GET" "m/$PIPELINE_GROUP/lib/jobs/$collector_id" "" "check_only"; then
+    log "INFO" "Collector $collector_id exists. Skipping."
+  elif ! api_call "POST" "m/$PIPELINE_GROUP/lib/jobs" "$COLLECTOR_PAYLOAD"; then
     failed=$((failed + 1))
   fi
   sleep 1

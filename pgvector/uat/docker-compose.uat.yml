@@ -1,0 +1,22 @@
+---
+# UAT runner for the pgvector stack. Joins the running stack's network.
+# Run via ./run-uat.sh (it sequences the two phases around a restart).
+
+services:
+  uat-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/pgvector-uat:latest
+    container_name: pgvector-uat-runner
+    env_file:
+      - ../.env
+    environment:
+      - PGHOST=pgvector
+    networks:
+      - pgvector
+
+networks:
+  pgvector:
+    external: true
+    name: pgvector_pgvector

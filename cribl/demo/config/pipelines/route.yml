@@ -1,0 +1,20 @@
+id: default
+groups: {}
+comments: []
+routes:
+  - id: demo_syslog
+    name: demo_logs
+    final: true
+    disabled: false
+    pipeline: demo_logs
+    output: out_demo_fs
+    filter: "__inputId.startsWith('syslog:in_demo_syslog')"
+    description: synthetic web/app/auth logs from the generator
+  - id: default
+    name: default
+    final: true
+    disabled: false
+    pipeline: devnull
+    output: devnull
+    filter: "true"
+    description: everything else

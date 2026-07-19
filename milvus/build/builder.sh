@@ -8,12 +8,12 @@ source ./build/util.sh
 toplevel=$(dirname "$(cd "$(dirname "${0}")"; pwd)")
 
 if [[ "$IS_NETWORK_MODE_HOST" == "true" ]]; then
-  sed -i '/builder:/,/^\s*$/s/image: \${IMAGE_REPO}\/milvus-env:\${OS_NAME}-\${DATE_VERSION}/&\n    network_mode: "host"/' $toplevel/docker-compose.yml
+  sed -i '/builder:/,/^\s*$/s/image: \${IMAGE_REPO}\/milvus-env:\${OS_NAME}-\${DATE_VERSION}/&\n    network_mode: "host"/' $toplevel/build/docker-compose-builder.yml
 fi
 
-if [[ -f "$toplevel/.env" ]]; then
+if [[ -f "$toplevel/build/builder.env" ]]; then
     set -a  # automatically export all variables from .env
-    source $toplevel/.env
+    source $toplevel/build/builder.env
     set +a  # stop automatically exporting
 fi
 

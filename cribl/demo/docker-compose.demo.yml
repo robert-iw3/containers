@@ -1,0 +1,55 @@
+---
+# Self-contained Cribl Stream log-processing demo.
+#
+#   podman-compose -f docker-compose.demo.yml up -d
+#   ./smoke-test.sh
+#
+# log-generator streams synthetic web/app/auth logs over syslog TCP into
+# Cribl; the pre-seeded demo_logs pipeline (config/) parses access logs,
+# extracts JSON, drops debug noise, masks emails, and writes JSON events
+# to ./output/. UI: http://127.0.0.1:19001 (admin/admin on first boot —
+# change it). Everything in config/ is plain files: edit, restart, build.
+
+services:
+  cribl-demo:
+    image: docker.io/cribl/cribl:4.18.2
+    container_name: cribl-demo
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19001:9000"   # web UI
+    volumes:
+      - ./config:/opt/cribl/local/cribl:Z
+      - ./output:/opt/cribl/demo-output:Z
+      - cribl_demo_state:/opt/cribl/state
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cribl-demo
+
+  log-generator:
+    image: docker.io/library/python:3.12-slim
+    container_name: cribl-demo-loggen
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command: ["python", "/gen/generate_logs.py", "--host", "cribl-demo", "--port", "5140", "--rate", "20"]
+    volumes:
+      - ./generator:/gen:ro,z
+    depends_on:
+      cribl-demo:
+        condition: service_healthy
+    networks:
+      - cribl-demo
+
+networks:
+  cribl-demo:
+    driver: bridge
+
+volumes:
+  cribl_demo_state:

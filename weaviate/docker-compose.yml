@@ -1,0 +1,53 @@
+---
+# Weaviate single node with API-key authentication (admin + read-only),
+# persistence, and Prometheus metrics.
+# Quick start:
+#   ./scripts/bootstrap-env.sh     # generates .env with random API keys
+#   podman-compose up -d
+#   ./scripts/smoke-test.sh
+# UAT battery: uat/run-uat.sh   Connectors: connectors/
+
+services:
+  weaviate:
+    image: docker.io/semitechnologies/weaviate:1.38.4
+    container_name: weaviate-main
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command: ["--host", "0.0.0.0", "--port", "8080", "--scheme", "http"]
+    environment:
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false
+      - AUTHENTICATION_APIKEY_ENABLED=true
+      - AUTHENTICATION_APIKEY_ALLOWED_KEYS=${WEAVIATE_ADMIN_KEY},${WEAVIATE_READONLY_KEY}
+      - AUTHENTICATION_APIKEY_USERS=admin,readonly
+      - AUTHORIZATION_ADMINLIST_ENABLED=true
+      - AUTHORIZATION_ADMINLIST_USERS=admin
+      - AUTHORIZATION_ADMINLIST_READONLY_USERS=readonly
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+      - ENABLE_MODULES=
+      - QUERY_DEFAULTS_LIMIT=25
+      - CLUSTER_HOSTNAME=node1
+      - PROMETHEUS_MONITORING_ENABLED=true
+      - DISABLE_TELEMETRY=true
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    ports:
+      - "8080:8080"             # REST
+      - "50051:50051"           # gRPC
+      - "127.0.0.1:2112:2112"   # Prometheus metrics (scrape via localhost only)
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - weaviate
+
+networks:
+  weaviate:
+    driver: bridge
+
+volumes:
+  weaviate_data:

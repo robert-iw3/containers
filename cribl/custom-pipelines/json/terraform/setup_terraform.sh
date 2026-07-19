@@ -11,7 +11,7 @@ log() {
 
 parse_ini() {
   local section="$1" key="$2"
-  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a && $1=="'"$key"'" {gsub(/ /,"",$2); print $2}' "$INI_FILE"
+  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a {k=$1; gsub(/ /,"",k); if (k=="'"$key"'") {v=$2; gsub(/ /,"",v); print v}}' "$INI_FILE"
 }
 
 if [ ! -f "$INI_FILE" ]; then
@@ -26,13 +26,13 @@ JSON_DIR=$(parse_ini "json" "dir")
 FILE_FILTER=$(parse_ini "json" "file_filter" || echo "*.json")
 TRACKING_FIELD=$(parse_ini "json" "tracking_field" || echo "modtime")
 PIPELINE_ID=$(parse_ini "json" "pipeline_id" || echo "my_json_pipeline")
-PIPELINE_GROUP=$(parse_ini "json" "pipeline_group" || echo "local")
+PIPELINE_GROUP=$(parse_ini "json" "pipeline_group" || echo "default")
 SOURCE_TAG=$(parse_ini "json" "source_tag" || echo "json_files")
 AGG_INTERVAL=$(parse_ini "json" "aggregate_interval" || echo "1m")
-SAMPLE_RATE=$(parse_ini "json" "sample_rate" || echo 0.5)
+SAMPLE_RATE=$(parse_ini "json" "sample_rate" || echo 5)
 LIMIT_EVENTS=$(parse_ini "json" "limit_max_events" || echo 100000)
 ERROR_OUTPUT=$(parse_ini "json" "error_output" || echo "error_destination")
-MAIN_OUTPUT=$(parse_ini "json" "main_output" || echo "main_destination")
+MAIN_OUTPUT=$(parse_ini "json" "main_output" || echo "default")
 PIPELINE_VARIANT=$(parse_ini "json" "pipeline_variant" || echo "logs")
 
 if [ -z "$CRIBL_HOST" ] || [ -z "$CRIBL_USER" ] || [ -z "$CRIBL_PASS" ]; then
@@ -42,6 +42,7 @@ fi
 
 log "INFO" "Loaded config: CRIBL_HOST=$CRIBL_HOST, CRIBL_USER=$CRIBL_USER, CRIBL_PASS=****"
 
+export TF_VAR_cribl_host="$CRIBL_HOST"
 export TF_VAR_cribl_username="$CRIBL_USER"
 export TF_VAR_cribl_password="$CRIBL_PASS"
 export TF_VAR_json_dir="$JSON_DIR"
@@ -52,8 +53,6 @@ export TF_VAR_pipeline_group="$PIPELINE_GROUP"
 export TF_VAR_source_tag="$SOURCE_TAG"
 export TF_VAR_aggregate_interval="$AGG_INTERVAL"
 export TF_VAR_sample_rate="$SAMPLE_RATE"
-export TF_VAR_limit_max_events="$LIMIT_EVENTS"
-export TF_VAR_error_output="$ERROR_OUTPUT"
 export TF_VAR_main_output="$MAIN_OUTPUT"
 export TF_VAR_pipeline_variant="$PIPELINE_VARIANT"
 

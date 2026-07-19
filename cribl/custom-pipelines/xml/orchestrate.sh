@@ -1,6 +1,14 @@
 #!/bin/bash
+# Orchestrate pipeline provisioning: ./orchestrate.sh --method [terraform|bash|python|all]
+set -euo pipefail
 
-METHOD="$1"  # e.g., --method terraform (or bash, python, all)
+usage() {
+  echo "Usage: ./orchestrate.sh --method [terraform|bash|python|all]"
+  exit 1
+}
+
+[ "${1:-}" = "--method" ] && [ -n "${2:-}" ] || usage
+METHOD="$2"
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $*"
@@ -43,10 +51,10 @@ run_test() {
 }
 
 case "$METHOD" in
-  --method terraform) run_splunk; run_terraform; run_test ;;
-  --method bash) run_splunk; run_bash; run_test ;;
-  --method python) run_splunk; run_python; run_test ;;
-  --method all)
+  terraform) run_splunk; run_terraform; run_test ;;
+  bash) run_splunk; run_bash; run_test ;;
+  python) run_splunk; run_python; run_test ;;
+  all)
     run_splunk
     run_terraform
     run_bash
@@ -54,9 +62,6 @@ case "$METHOD" in
     run_test
     ;;
   *)
-    echo "Usage: ./orchestrate.sh --method [terraform|bash|python|all]"
-    exit 1
+    usage
     ;;
 esac
-
-log "Orchestration complete"

@@ -4,7 +4,6 @@ import logging
 import configparser
 import requests
 import json
-from cribl import CriblClient
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.FileHandler('cribl_config.log'), logging.StreamHandler()])
@@ -29,13 +28,14 @@ try:
     FILE_FILTER = config.get('json', 'file_filter', fallback='*.json')
     TRACKING_FIELD = config.get('json', 'tracking_field', fallback='modtime')
     PIPELINE_ID = config.get('json', 'pipeline_id', fallback='my_json_pipeline')
-    PIPELINE_GROUP = config.get('json', 'pipeline_group', fallback='local')
+    PIPELINE_GROUP = config.get('json', 'pipeline_group', fallback='default')
     SOURCE_TAG = config.get('json', 'source_tag', fallback='json_files')
     AGG_INTERVAL = config.get('json', 'aggregate_interval', fallback='1m')
-    SAMPLE_RATE = config.get('json', 'sample_rate', fallback=0.5)
+    SAMPLE_RATE = config.get('json', 'sample_rate', fallback=5)
     LIMIT_EVENTS = config.get('json', 'limit_max_events', fallback=100000)
     ERROR_OUTPUT = config.get('json', 'error_output', fallback='error_destination')
-    MAIN_OUTPUT = config.get('json', 'main_output', fallback='main_destination')
+    MAIN_OUTPUT = config.get('json', 'main_output', fallback='default')
+    METRICS_OUTPUT = config.get('json', 'metrics_output', fallback='devnull')
     PIPELINE_VARIANT = config.get('json', 'pipeline_variant', fallback='logs')
 except KeyError as e:
     logging.error(f"Missing key in {INI_FILE}: {e}")
@@ -48,7 +48,6 @@ logging.info(f"Loaded: SOURCE_TAG={SOURCE_TAG}, AGG_INTERVAL={AGG_INTERVAL}, SAM
 logging.info(f"Loaded: ERROR_OUTPUT={ERROR_OUTPUT}, MAIN_OUTPUT={MAIN_OUTPUT}")
 logging.info(f"Loaded: PIPELINE_VARIANT={PIPELINE_VARIANT}")
 
-client = CriblClient(host=CRIBL_HOST, username=CRIBL_USER, password=CRIBL_PASS)
 
 def retry_api_call(func, *args, **kwargs):
     backoff = BACKOFF
@@ -65,13 +64,32 @@ def retry_api_call(func, *args, **kwargs):
             time.sleep(backoff)
             backoff *= 2
 
-auth = (CRIBL_USER, CRIBL_PASS)
+login = requests.post(f"{CRIBL_HOST}/api/v1/auth/login",
+                      json={'username': CRIBL_USER, 'password': CRIBL_PASS}, verify=False)
+login.raise_for_status()
+AUTH_HEADERS = {'Authorization': f"Bearer {login.json()['token']}"}
 headers = {'Content-Type': 'application/json'}
+
+def cribl_post(path, payload):
+    rid = payload.get('id')
+    if rid:
+        check = requests.get(f"{CRIBL_HOST}/api/v1/{path}/{rid}", headers=AUTH_HEADERS, verify=False)
+        if check.status_code == 200:
+            logging.info(f"{path}/{rid} exists. Skipping creation.")
+            return
+
+    def do_post():
+        response = requests.post(f"{CRIBL_HOST}/api/v1/{path}", headers=AUTH_HEADERS, json=payload, verify=False)
+        if response.status_code in (400, 409) and 'exists' in response.text:
+            logging.warning(f"{path}: resource exists. Skipping.")
+            return
+        response.raise_for_status()
+    retry_api_call(do_post)
 
 logging.info(f"Checking/creating pipeline {PIPELINE_ID}")
 pipeline_endpoint = f"{CRIBL_HOST}/api/v1/m/{PIPELINE_GROUP}/pipelines"
 PIPELINE_ID_VARIANT = f"{PIPELINE_ID}_{PIPELINE_VARIANT}"
-check_response = requests.get(f"{pipeline_endpoint}/{PIPELINE_ID_VARIANT}", auth=auth, verify=False)
+check_response = requests.get(f"{pipeline_endpoint}/{PIPELINE_ID_VARIANT}", headers=AUTH_HEADERS, verify=False)
 if check_response.status_code == 200:
     logging.info("Pipeline exists. Skipping creation.")
 else:
@@ -85,11 +103,12 @@ else:
     pipeline_template = pipeline_template.replace('{{limit_max_events}}', str(LIMIT_EVENTS))
     pipeline_template = pipeline_template.replace('{{error_output}}', ERROR_OUTPUT)
     pipeline_template = pipeline_template.replace('{{main_output}}', MAIN_OUTPUT)
+    pipeline_template = pipeline_template.replace('{{metrics_destination}}', METRICS_OUTPUT)
 
     pipeline_payload = json.loads(pipeline_template)
 
     def create_pipeline():
-        response = requests.post(pipeline_endpoint, auth=auth, json=pipeline_payload, verify=False)
+        response = requests.post(pipeline_endpoint, headers=AUTH_HEADERS, json=pipeline_payload, verify=False)
         response.raise_for_status()
     retry_api_call(create_pipeline)
 
@@ -99,26 +118,28 @@ if not os.path.isdir(JSON_DIR):
 
 logging.info("Creating file collector")
 collector_id = 'json_file_collector'
-collector_config = {
-    'type': 'file',
-    'description': 'File Collector for JSON files with incremental loads',
-    'config': {
-        'path': JSON_DIR,
-        'fileFilter': FILE_FILTER,
-        'schedule': '0 2 * * *',
-        'stateEnabled': True,
-        'trackingColumn': TRACKING_FIELD,
-        'incrementalLoad': True,
-        'batchSize': 5000,
-        'pipelineId': PIPELINE_ID_VARIANT,
-        'throttlingRate': '5 MB',
-        'maxRetries': 3,
-        'retryDelay': 10,
-        'connectionTimeout': 30000,
-        'requestTimeout': 60000,
-        'addFields': {'query_type': PIPELINE_VARIANT}
-    }
+collector_payload = {
+    'id': collector_id,
+    'type': 'collection',
+    'ttl': '4h',
+    'removeFields': [],
+    'resumeOnBoot': False,
+    'schedule': {
+        'cronSchedule': '0 2 * * *', 'maxConcurrentRuns': 1, 'skippable': True,
+        'run': {
+            'rescheduleDroppedTasks': True, 'maxTaskReschedule': 1, 'logLevel': 'info',
+            'jobTimeout': '0', 'mode': 'run', 'timeRangeType': 'relative',
+            'timestampTimezone': 'UTC', 'expression': 'true',
+            'minTaskSize': '1MB', 'maxTaskSize': '10MB',
+        },
+    },
+    'collector': {'type': 'filesystem', 'conf': {'path': JSON_DIR, 'extractors': [], 'filenames': [FILE_FILTER]}},
+    'input': {
+        'type': 'collection', 'staleChannelFlushMs': 10000, 'sendToRoutes': False,
+        'preprocess': {'disabled': True}, 'throttleRatePerSec': '0',
+        'pipeline': PIPELINE_ID_VARIANT, 'output': 'default',
+    },
 }
-retry_api_call(client.create_collector, collector_id, collector_config)
+cribl_post(f"m/{PIPELINE_GROUP}/lib/jobs", collector_payload)
 
 logging.info("Completed")

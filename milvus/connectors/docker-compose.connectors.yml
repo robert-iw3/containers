@@ -1,0 +1,49 @@
+---
+# Application connectors for the Milvus stack. Joins the running stack's
+# network; start the main stack first (podman-compose up -d in milvus/).
+#
+#   podman-compose -f docker-compose.connectors.yml up -d search-api
+#   podman-compose -f docker-compose.connectors.yml run --rm search-api \
+#       python loader.py --sample 500
+#   curl -s -X POST http://127.0.0.1:8801/search \
+#       -H 'Content-Type: application/json' \
+#       -d '{"query":"invoice charged twice","top_k":3}'
+#   podman-compose -f docker-compose.connectors.yml run --rm langchain-rag
+
+services:
+  search-api:
+    build:
+      context: ..
+      dockerfile: connectors/search-api/Dockerfile
+    image: localhost/milvus-search-api:latest
+    container_name: milvus-search-api
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - MILVUS_URI=http://milvus:19530
+    ports:
+      - "127.0.0.1:8801:8000"
+    networks:
+      - milvus
+
+  langchain-rag:
+    build:
+      context: ..
+      dockerfile: connectors/langchain-rag/Dockerfile
+    image: localhost/milvus-langchain-rag:latest
+    container_name: milvus-langchain-rag
+    restart: "no"
+    env_file:
+      - ../.env
+    environment:
+      - MILVUS_URI=http://milvus:19530
+    networks:
+      - milvus
+
+networks:
+  milvus:
+    external: true
+    name: milvus_milvus

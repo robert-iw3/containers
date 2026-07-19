@@ -4,7 +4,6 @@ import logging
 import configparser
 import requests
 import json
-from cribl import CriblClient
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.FileHandler('cribl_config.log'), logging.StreamHandler()])
@@ -32,13 +31,14 @@ try:
     SQL_PASS = config['sql']['pass']
     QUERIES_DIR = config['sql']['queries_dir']
     PIPELINE_ID = config.get('sql', 'pipeline_id', fallback='my_pipeline')
-    PIPELINE_GROUP = config.get('sql', 'pipeline_group', fallback='local')
+    PIPELINE_GROUP = config.get('sql', 'pipeline_group', fallback='default')
     SOURCE_TAG = config.get('sql', 'source_tag', fallback='mssql_db')
     AGG_INTERVAL = config.get('sql', 'aggregate_interval', fallback='1m')
-    SAMPLE_RATE = config.get('sql', 'sample_rate', fallback=0.5)
+    SAMPLE_RATE = config.get('sql', 'sample_rate', fallback=5)
     LIMIT_EVENTS = config.get('sql', 'limit_max_events', fallback=100000)
     ERROR_OUTPUT = config.get('sql', 'error_output', fallback='error_destination')
-    MAIN_OUTPUT = config.get('sql', 'main_output', fallback='main_destination')
+    MAIN_OUTPUT = config.get('sql', 'main_output', fallback='default')
+    METRICS_OUTPUT = config.get('sql', 'metrics_output', fallback='devnull')
     PIPELINE_VARIANT = config.get('sql', 'pipeline_variant', fallback='logs')
 except KeyError as e:
     logging.error(f"Missing key in {INI_FILE}: {e}")
@@ -51,7 +51,6 @@ logging.info(f"Loaded: SOURCE_TAG={SOURCE_TAG}, AGG_INTERVAL={AGG_INTERVAL}, SAM
 logging.info(f"Loaded: ERROR_OUTPUT={ERROR_OUTPUT}, MAIN_OUTPUT={MAIN_OUTPUT}")
 logging.info(f"Loaded: PIPELINE_VARIANT={PIPELINE_VARIANT}")
 
-client = CriblClient(host=CRIBL_HOST, username=CRIBL_USER, password=CRIBL_PASS)
 
 def retry_api_call(func, *args, **kwargs):
     backoff = BACKOFF
@@ -68,13 +67,32 @@ def retry_api_call(func, *args, **kwargs):
             time.sleep(backoff)
             backoff *= 2
 
-auth = (CRIBL_USER, CRIBL_PASS)
+login = requests.post(f"{CRIBL_HOST}/api/v1/auth/login",
+                      json={'username': CRIBL_USER, 'password': CRIBL_PASS}, verify=False)
+login.raise_for_status()
+AUTH_HEADERS = {'Authorization': f"Bearer {login.json()['token']}"}
 headers = {'Content-Type': 'application/json'}
+
+def cribl_post(path, payload):
+    rid = payload.get('id')
+    if rid:
+        check = requests.get(f"{CRIBL_HOST}/api/v1/{path}/{rid}", headers=AUTH_HEADERS, verify=False)
+        if check.status_code == 200:
+            logging.info(f"{path}/{rid} exists. Skipping creation.")
+            return
+
+    def do_post():
+        response = requests.post(f"{CRIBL_HOST}/api/v1/{path}", headers=AUTH_HEADERS, json=payload, verify=False)
+        if response.status_code in (400, 409) and 'exists' in response.text:
+            logging.warning(f"{path}: resource exists. Skipping.")
+            return
+        response.raise_for_status()
+    retry_api_call(do_post)
 
 logging.info(f"Checking/creating pipeline {PIPELINE_ID}")
 pipeline_endpoint = f"{CRIBL_HOST}/api/v1/m/{PIPELINE_GROUP}/pipelines"
 PIPELINE_ID_VARIANT = f"{PIPELINE_ID}_{PIPELINE_VARIANT}"
-check_response = requests.get(f"{pipeline_endpoint}/{PIPELINE_ID_VARIANT}", auth=auth, verify=False)
+check_response = requests.get(f"{pipeline_endpoint}/{PIPELINE_ID_VARIANT}", headers=AUTH_HEADERS, verify=False)
 if check_response.status_code == 200:
     logging.info("Pipeline exists. Skipping creation.")
 else:
@@ -88,11 +106,12 @@ else:
     pipeline_template = pipeline_template.replace('{{limit_max_events}}', str(LIMIT_EVENTS))
     pipeline_template = pipeline_template.replace('{{error_output}}', ERROR_OUTPUT)
     pipeline_template = pipeline_template.replace('{{main_output}}', MAIN_OUTPUT)
+    pipeline_template = pipeline_template.replace('{{metrics_destination}}', METRICS_OUTPUT)
 
     pipeline_payload = json.loads(pipeline_template)
 
     def create_pipeline():
-        response = requests.post(pipeline_endpoint, auth=auth, json=pipeline_payload, verify=False)
+        response = requests.post(pipeline_endpoint, headers=AUTH_HEADERS, json=pipeline_payload, verify=False)
         response.raise_for_status()
     retry_api_call(create_pipeline)
 
@@ -113,7 +132,7 @@ conn_config = {
         'password': SQL_PASS
     }
 }
-retry_api_call(client.create_connection, conn_id, conn_config)
+cribl_post(f"m/{PIPELINE_GROUP}/lib/database-connections", {'id': conn_id, **conn_config})
 
 failed = 0
 for sql_file in os.listdir(QUERIES_DIR):
@@ -124,29 +143,31 @@ for sql_file in os.listdir(QUERIES_DIR):
         sql_content = f.read().strip()
     wrapped_query = f"`{sql_content} ${{state && state.tracking_ts ? `AND tracking_ts > ${{state.tracking_ts.value}}` : ''}}`"
     logging.info(f"Creating collector {collector_id} from {sql_file}")
-    collector_config = {
-        'type': 'database',
-        'description': f'Collector for {query_name} with incremental loads',
-        'config': {
-            'connectionId': conn_id,
-            'sqlQuery': wrapped_query,
-            'schedule': '0 2 * * *',
-            'stateEnabled': True,
-            'trackingColumn': 'tracking_ts',
-            'validateQuery': True,
-            'batchSize': 5000,
-            'pipelineId': PIPELINE_ID_VARIANT,
-            'throttlingRate': '5 MB',
-            'maxRetries': 3,
-            'retryDelay': 10,
-            'connectionTimeout': 30000,
-            'requestTimeout': 60000,
-            'addFields': {'query_type': PIPELINE_VARIANT}
-        }
+    collector_payload = {
+        'id': collector_id,
+        'type': 'collection',
+        'ttl': '4h',
+        'removeFields': [],
+        'resumeOnBoot': False,
+        'schedule': {
+            'cronSchedule': '0 2 * * *', 'maxConcurrentRuns': 1, 'skippable': True,
+            'run': {
+                'rescheduleDroppedTasks': True, 'maxTaskReschedule': 1, 'logLevel': 'info',
+                'jobTimeout': '0', 'mode': 'run', 'timeRangeType': 'relative',
+                'timestampTimezone': 'UTC', 'expression': 'true',
+                'minTaskSize': '1MB', 'maxTaskSize': '10MB',
+            },
+        },
+        'collector': {'type': 'database', 'conf': {'connectionId': conn_id, 'query': wrapped_query}},
+        'input': {
+            'type': 'collection', 'staleChannelFlushMs': 10000, 'sendToRoutes': False,
+            'preprocess': {'disabled': True}, 'throttleRatePerSec': '0',
+            'pipeline': PIPELINE_ID_VARIANT, 'output': 'default',
+        },
     }
     try:
-        retry_api_call(client.create_collector, collector_id, collector_config)
-    except RuntimeError:
+        cribl_post(f"m/{PIPELINE_GROUP}/lib/jobs", collector_payload)
+    except Exception:
         failed += 1
     time.sleep(1)
 

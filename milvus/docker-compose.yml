@@ -1,150 +1,150 @@
 ---
-
-x-ccache: &ccache
-  CCACHE_COMPILERCHECK: content
-  CCACHE_COMPRESS: 1
-  CCACHE_COMPRESSLEVEL: 5
-  CCACHE_MAXSIZE: 2G
-  CCACHE_DIR: /ccache
+# Milvus standalone (etcd + MinIO + Milvus + Attu UI) with authentication.
+# Quick start:
+#   ./scripts/bootstrap-env.sh     # generates .env with random credentials
+#   podman-compose up -d
+#   ./scripts/smoke-test.sh
+# The milvus-init one-shot rotates the default root password to
+# MILVUS_ROOT_PASSWORD from .env; nothing secret is baked into an image.
+# UAT battery: uat/run-uat.sh   Connectors: connectors/
 
 services:
-  builder:
-    image: ${IMAGE_REPO}/milvus-env:${OS_NAME}-${DATE_VERSION}
-    # Build devcontainer
-    build:
-      context: .
-      dockerfile: build/docker/builder/cpu/${OS_NAME}/Dockerfile
-      args:
-        TARGETARCH: ${IMAGE_ARCH}
-      cache_from:
-        - ${IMAGE_REPO}/milvus-env:${OS_NAME}-${LATEST_DATE_VERSION}
-    platform: linux/${IMAGE_ARCH}
-    shm_size: 2G
-    # expose 19530 port so we can directly access milvus inside build container
-    # ports:
-    #  - "19530:19530"
-    environment:
-      <<: *ccache
-      OS_NAME: ${OS_NAME}
-      PULSAR_ADDRESS: ${PULSAR_ADDRESS}
-      ETCD_ENDPOINTS: ${ETCD_ENDPOINTS}
-      MINIO_ADDRESS: ${MINIO_ADDRESS}
-      CONAN_USER_HOME: /home/milvus
-      AZURE_STORAGE_CONNECTION_STRING: ${AZURITE_CONNECTION_STRING}
-      ENABLE_GCP_NATIVE: ${ENABLE_GCP_NATIVE}
-    volumes: &builder-volumes
-      - .:/go/src/github.com/milvus-io/milvus:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker}/${IMAGE_ARCH}-${OS_NAME}-ccache:/ccache:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker}/${IMAGE_ARCH}-${OS_NAME}-go-mod:/go/pkg/mod:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker}/${IMAGE_ARCH}-${OS_NAME}-vscode-extensions:/home/milvus/.vscode-server/extensions:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker}/${IMAGE_ARCH}-${OS_NAME}-conan:/home/milvus/.conan:delegated
-    working_dir: '/go/src/github.com/milvus-io/milvus'
-    depends_on:
-      - etcd
-      - minio
-      - pulsar
-      - azurite
-      - gcpnative
-    # Command
-    command: &builder-command >
-      /bin/bash -c "
-        make check-proto-product && make verifiers && make unittest"
-
-  gpubuilder:
-    image: ${IMAGE_REPO}/milvus-env:gpu-${OS_NAME}-${GPU_DATE_VERSION}
-    # Build devcontainer
-    build:
-      context: .
-      dockerfile: build/docker/builder/gpu/${OS_NAME}/Dockerfile
-      args:
-        TARGETARCH: ${IMAGE_ARCH}
-      cache_from:
-        - ${IMAGE_REPO}/milvus-env:gpu-${OS_NAME}-${LATEST_GPU_DATE_VERSION}
-    # user: {{ CURRENT_ID }}
-    shm_size: 2G
-    # expose 19530 port so we can directly access milvus inside build container
-    # ports:
-    #  - "19530:19530"
-    environment:
-      <<: *ccache
-      OS_NAME: ${OS_NAME}
-      PULSAR_ADDRESS: ${PULSAR_ADDRESS}
-      ETCD_ENDPOINTS: ${ETCD_ENDPOINTS}
-      MINIO_ADDRESS: ${MINIO_ADDRESS}
-      CONAN_USER_HOME: /home/milvus
-      AZURE_STORAGE_CONNECTION_STRING: ${AZURITE_CONNECTION_STRING}
-      ENABLE_GCP_NATIVE: ${ENABLE_GCP_NATIVE}
-    volumes: &builder-volumes-gpu
-      - .:/go/src/github.com/milvus-io/milvus:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker-gpu}/${OS_NAME}-ccache:/ccache:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker-gpu}/${OS_NAME}-go-mod:/go/pkg/mod:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker-gpu}/${OS_NAME}-vscode-extensions:/home/milvus/.vscode-server/extensions:delegated
-      - ${DOCKER_VOLUME_DIRECTORY:-.docker-gpu}/${OS_NAME}-conan:/home/milvus/.conan:delegated
-    working_dir: '/go/src/github.com/milvus-io/milvus'
-    depends_on:
-      - etcd
-      - minio
-      - pulsar
-      - azurite
-      - gcpnative
-    # Command
-    command: &builder-command-gpu >
-      /bin/bash -c "
-        make check-proto-product && make verifiers && make unittest"
-
   etcd:
-    image: milvusdb/etcd:3.5.5-r2
+    image: docker.io/milvusdb/etcd:3.5.30-r1
+    container_name: milvus-etcd
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
       - ETCD_AUTO_COMPACTION_MODE=revision
       - ETCD_AUTO_COMPACTION_RETENTION=1000
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
       - ETCD_SNAPSHOT_COUNT=50000
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ALLOW_NONE_AUTHENTICATION=yes
+    volumes:
+      - etcd_data:/bitnami/etcd
     healthcheck:
-      test: [ 'CMD', '/opt/bitnami/scripts/etcd/healthcheck.sh' ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
-  pulsar:
-    image: apachepulsar/pulsar:2.8.2
-    command: |
-      /bin/bash -c \
-      "bin/apply-config-from-env.py conf/standalone.conf && \
-      exec bin/pulsar standalone --no-functions-worker --no-stream-storage"
-    environment:
-      # 10MB
-      - PULSAR_PREFIX_maxMessageSize=10485760
-      # this is 104857600 + 10240 (padding)
-      - nettyMaxFrameSizeBytes=104867840
-      - PULSAR_GC=-XX:+UseG1GC
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - milvus
 
   minio:
-    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    command: minio server /minio_data
+    image: docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: milvus-minio
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: minio server /minio_data --console-address ":9001"
+    volumes:
+      - minio_data:/minio_data
     healthcheck:
-      test: [ 'CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live' ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - milvus
 
-  azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
-    command: azurite-blob --blobHost 0.0.0.0
-
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-
-  gcpnative:
-    image: fsouza/fake-gcs-server
-    command: -scheme http -public-host storage.gcs.127.0.0.1.nip.io:4443 -external-url "http://storage.gcs.127.0.0.1.nip.io:4443"
-    hostname: storage.gcs.127.0.0.1.nip.io
+  milvus:
+    image: docker.io/milvusdb/milvus:v2.6.20
+    container_name: milvus-standalone
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+      - MINIO_ACCESSKEYID=${MINIO_ROOT_USER}
+      - MINIO_SECRETACCESSKEY=${MINIO_ROOT_PASSWORD}
+      - COMMON_SECURITY_AUTHORIZATIONENABLED=true
+    volumes:
+      - milvus_data:/var/lib/milvus
     ports:
-      - "4443:4443"
+      - "19530:19530"   # gRPC + RESTful v2
+      - "127.0.0.1:9091:9091"   # metrics / health (scrape via localhost only)
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    networks:
+      - milvus
+
+  # One-shot: rotates the built-in root password (Milvus) to
+  # MILVUS_ROOT_PASSWORD. Idempotent - exits 0 if already rotated.
+  milvus-init:
+    image: docker.io/curlimages/curl:8.10.1
+    container_name: milvus-init
+    restart: "no"
+    env_file:
+      - .env
+    depends_on:
+      milvus:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        base=http://milvus:19530/v2/vectordb
+        auth_ok() {
+          curl -s -o /dev/null -w '%{http_code}' -X POST "$$base/databases/list" \
+            -H "Authorization: Bearer root:$$1" -H 'Content-Type: application/json' -d '{}' \
+            | grep -q 200 && \
+          curl -s -X POST "$$base/databases/list" \
+            -H "Authorization: Bearer root:$$1" -H 'Content-Type: application/json' -d '{}' \
+            | grep -q '"code":0'
+        }
+        if auth_ok "$$MILVUS_ROOT_PASSWORD"; then
+          echo "root password already rotated"; exit 0
+        fi
+        echo "rotating root password from factory default"
+        out=$$(curl -s -X POST "$$base/users/update_password" \
+          -H 'Authorization: Bearer root:Milvus' -H 'Content-Type: application/json' \
+          -d "{\"userName\":\"root\",\"password\":\"Milvus\",\"newPassword\":\"$$MILVUS_ROOT_PASSWORD\"}")
+        echo "$$out" | grep -q '"code":0' || { echo "rotation failed: $$out"; exit 1; }
+        auth_ok "$$MILVUS_ROOT_PASSWORD" || { echo "post-rotation auth check failed"; exit 1; }
+        echo "root password rotated"
+    networks:
+      - milvus
+
+  attu:
+    image: docker.io/zilliz/attu:v2.6.5
+    container_name: milvus-attu
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    environment:
+      - MILVUS_URL=milvus:19530
+    ports:
+      - "127.0.0.1:3001:3000"   # web UI; log in with root / MILVUS_ROOT_PASSWORD
+    depends_on:
+      milvus:
+        condition: service_healthy
+    networks:
+      - milvus
 
 networks:
-  default:
-    name: milvus_dev
+  milvus:
+    driver: bridge
+
+volumes:
+  etcd_data:
+  minio_data:
+  milvus_data:

@@ -14,7 +14,7 @@ log() {
 
 parse_ini() {
   local section="$1" key="$2"
-  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a && $1=="'"$key"'" {gsub(/ /,"",$2); print $2}' "$INI_FILE"
+  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a {k=$1; gsub(/ /,"",k); if (k=="'"$key"'") {v=$2; gsub(/ /,"",v); print v}}' "$INI_FILE"
 }
 
 if [ ! -f "$INI_FILE" ]; then
@@ -31,13 +31,15 @@ DELIMITER=$(parse_ini "csv" "delimiter" || echo ",")
 HAS_HEADER=$(parse_ini "csv" "has_header" || echo true)
 TRACKING_FIELD=$(parse_ini "csv" "tracking_field" || echo "modtime")
 PIPELINE_ID=$(parse_ini "csv" "pipeline_id" || echo "my_csv_pipeline")
-PIPELINE_GROUP=$(parse_ini "csv" "pipeline_group" || echo "local")
+PIPELINE_GROUP=$(parse_ini "csv" "pipeline_group" || echo "default")
 SOURCE_TAG=$(parse_ini "csv" "source_tag" || echo "csv_files")
 AGG_INTERVAL=$(parse_ini "csv" "aggregate_interval" || echo "1m")
-SAMPLE_RATE=$(parse_ini "csv" "sample_rate" || echo 0.5)
+SAMPLE_RATE=$(parse_ini "csv" "sample_rate" || echo 5)
 LIMIT_EVENTS=$(parse_ini "csv" "limit_max_events" || echo 100000)
 ERROR_OUTPUT=$(parse_ini "csv" "error_output" || echo "error_destination")
-MAIN_OUTPUT=$(parse_ini "csv" "main_output" || echo "main_destination")
+MAIN_OUTPUT=$(parse_ini "csv" "main_output" || echo "default")
+METRICS_OUTPUT=$(parse_ini "csv" "metrics_output" || echo "devnull")
+METRICS_OUTPUT=${METRICS_OUTPUT:-devnull}
 PIPELINE_VARIANT=$(parse_ini "csv" "pipeline_variant" || echo "logs")
 
 if [ -z "$CRIBL_HOST" ] || [ -z "$CRIBL_USER" ] || [ -z "$CRIBL_PASS" ]; then
@@ -52,15 +54,48 @@ log "INFO" "Loaded: SOURCE_TAG=$SOURCE_TAG, AGG_INTERVAL=$AGG_INTERVAL, SAMPLE_R
 log "INFO" "Loaded: ERROR_OUTPUT=$ERROR_OUTPUT, MAIN_OUTPUT=$MAIN_OUTPUT"
 log "INFO" "Loaded: PIPELINE_VARIANT=$PIPELINE_VARIANT"
 
-AUTH_HEADER="Authorization: Basic $(echo -n $CRIBL_USER:$CRIBL_PASS | base64)"
+TOKEN=$(curl -s -X POST "$CRIBL_HOST/api/v1/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"$CRIBL_USER\",\"password\":\"$CRIBL_PASS\"}" \
+  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+if [ -z "$TOKEN" ]; then echo "ERROR: Cribl API login failed for $CRIBL_USER"; exit 1; fi
+AUTH_HEADER="Authorization: Bearer $TOKEN"
 
 api_call() {
-  # ... (same as previous)
+  local method="$1" endpoint="$2" payload="$3" mode="$4" response_code attempt=1 backoff=$BACKOFF
+  while [ $attempt -le $MAX_RETRIES ]; do
+    if [ -n "$payload" ]; then
+      curl -s -X "$method" -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+        "$CRIBL_HOST/api/v1/$endpoint" -d "$payload" -o response.json -w "%{http_code}" > code.txt
+    else
+      curl -s -X "$method" -H "$AUTH_HEADER" "$CRIBL_HOST/api/v1/$endpoint" -o response.json -w "%{http_code}" > code.txt
+    fi
+    response_code=$(cat code.txt)
+    if [ "$mode" = "check_only" ]; then
+      if [ "$response_code" -eq 200 ]; then rm code.txt response.json; return 0; fi
+      rm code.txt response.json; return 1
+    fi
+    if [ "$response_code" -eq 200 ] || [ "$response_code" -eq 201 ]; then
+      log "INFO" "Success: $endpoint (Attempt $attempt)"
+      rm code.txt response.json
+      return 0
+    elif [ "$response_code" -eq 409 ]; then
+      log "WARN" "Resource exists: $endpoint. Skipping."
+      rm code.txt response.json
+      return 0
+    fi
+    log "ERROR" "$endpoint failed: $response_code (Attempt $attempt). Response: $(cat response.json)"
+    sleep $backoff
+    backoff=$((backoff * 2))
+    attempt=$((attempt + 1))
+  done
+  log "ERROR" "Failed $endpoint after $MAX_RETRIES attempts"
+  rm -f code.txt response.json
+  return 1
 }
 
 PIPELINE_ENDPOINT="m/$PIPELINE_GROUP/pipelines"
 log "INFO" "Checking/creating pipeline $PIPELINE_ID"
-PIPELINE_ID_VARIANT="$PIPELINE_ID_$PIPELINE_VARIANT"
+PIPELINE_ID_VARIANT="${PIPELINE_ID}_${PIPELINE_VARIANT}"
 api_call "GET" "$PIPELINE_ENDPOINT/$PIPELINE_ID_VARIANT" "" "check_only"
 if [ $? -eq 0 ]; then
   log "INFO" "Pipeline exists. Skipping creation."
@@ -73,6 +108,9 @@ else
   sed -i "s/{{limit_max_events}}/$LIMIT_EVENTS/g" temp.json
   sed -i "s/{{error_output}}/$ERROR_OUTPUT/g" temp.json
   sed -i "s/{{main_output}}/$MAIN_OUTPUT/g" temp.json
+  sed -i "s/{{metrics_destination}}/$METRICS_OUTPUT/g" temp.json
+  sed -i "s/{{delimiter}}/$DELIMITER/g" temp.json
+  sed -i "s/{{has_header}}/$HAS_HEADER/g" temp.json
 
   PIPELINE_PAYLOAD=$(cat temp.json)
   api_call "POST" "$PIPELINE_ENDPOINT" "$PIPELINE_PAYLOAD" || exit 1
@@ -86,27 +124,20 @@ fi
 
 log "INFO" "Creating file collector"
 COLLECTOR_ID="csv_file_collector"
-COLLECTOR_PAYLOAD='{
-  "id": "'"$COLLECTOR_ID"'",
-  "type": "file",
-  "description": "File Collector for CSV files with incremental loads",
-  "config": {
-    "path": "'"$CSV_DIR"'",
-    "fileFilter": "'"$FILE_FILTER"'",
-    "schedule": "0 2 * * *",
-    "stateEnabled": true,
-    "trackingColumn": "'"$TRACKING_FIELD"'",
-    "incrementalLoad": true,
-    "batchSize": 5000,
-    "pipelineId": "'"$PIPELINE_ID_VARIANT"'",
-    "throttlingRate": "5 MB",
-    "maxRetries": 3,
-    "retryDelay": 10,
-    "connectionTimeout": 30000,
-    "requestTimeout": 60000,
-    "addFields": {"query_type": "'"$PIPELINE_VARIANT"'"}
-  }
-}'
-api_call "POST" "collectors" "$COLLECTOR_PAYLOAD" || exit 1
+if api_call "GET" "m/$PIPELINE_GROUP/lib/jobs/$COLLECTOR_ID" "" "check_only"; then
+  log "INFO" "Collector exists. Skipping creation."
+else
+  COLLECTOR_PAYLOAD='{
+    "id": "'"$COLLECTOR_ID"'",
+    "type": "collection",
+    "ttl": "4h",
+    "removeFields": [],
+    "resumeOnBoot": false,
+    "schedule": {"cronSchedule": "0 2 * * *", "maxConcurrentRuns": 1, "skippable": true, "run": {"rescheduleDroppedTasks": true, "maxTaskReschedule": 1, "logLevel": "info", "jobTimeout": "0", "mode": "run", "timeRangeType": "relative", "timestampTimezone": "UTC", "expression": "true", "minTaskSize": "1MB", "maxTaskSize": "10MB"}},
+    "collector": {"type": "filesystem", "conf": {"path": "'"$CSV_DIR"'", "extractors": [], "filenames": ["'"$FILE_FILTER"'"]}},
+    "input": {"type": "collection", "staleChannelFlushMs": 10000, "sendToRoutes": false, "preprocess": {"disabled": true}, "throttleRatePerSec": "0", "pipeline": "'"$PIPELINE_ID_VARIANT"'", "output": "default"}
+  }'
+  api_call "POST" "m/$PIPELINE_GROUP/lib/jobs" "$COLLECTOR_PAYLOAD" || exit 1
+fi
 
 log "INFO" "Completed"

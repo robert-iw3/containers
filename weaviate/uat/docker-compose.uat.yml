@@ -1,0 +1,23 @@
+---
+# UAT runner for the Weaviate stack. Joins the running stack's network.
+# Run via ./run-uat.sh (it sequences the two phases around a restart).
+
+services:
+  uat-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/weaviate-uat:latest
+    container_name: weaviate-uat-runner
+    env_file:
+      - ../.env
+    environment:
+      - WEAVIATE_HTTP_HOST=weaviate
+      - WEAVIATE_GRPC_HOST=weaviate
+    networks:
+      - weaviate
+
+networks:
+  weaviate:
+    external: true
+    name: weaviate_weaviate

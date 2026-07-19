@@ -1,35 +1,28 @@
 # syntax=docker/dockerfile:1
 # cribl: The Data Engine for IT and Security.
+# Cribl ships glibc-linked binaries, so the base must be glibc (not alpine).
 ARG repo="docker.io" \
-    base_image="alpine:3.24" \
-    image_hash="79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f"
+    base_image="debian:trixie-slim" \
+    cribl_version="4.18.2" \
+    cribl_build="fd1f0d2f"
 
-FROM ${repo}/${base_image}@sha256:${image_hash}
+FROM ${repo}/${base_image}
 
-RUN \
-    apk update ; \
-    apk add --no-cache \
+ARG cribl_version cribl_build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
         bash \
-        curl \
-        tar \
-        jq \
         ca-certificates \
-        git \
-        openssh-client \
-        iproute2 \
-        libstdc++ \
-        libcap-utils \
-        uuidgen \
+        curl \
+        jq \
+        tar \
         tini \
-        bash \
-        python3 \
-        py3-pip; \
-    apk cache clean; \
-    rm -rf /var/cache/apk/*; \
-    curl -Lso - $(curl https://cdn.cribl.io/dl/latest-x64) | tar zxv -C /opt; \
-    chown -R root:root /opt/cribl; \
-    chmod +x /opt/cribl/bin/cribl; \
-    chmod -R +x /opt/cribl/bin/*.sh
+        uuid-runtime && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -fLso - "https://cdn.cribl.io/dl/${cribl_version}/cribl-${cribl_version}-${cribl_build}-linux-x64.tgz" \
+        | tar zx -C /opt && \
+    chown -R root:root /opt/cribl && \
+    chmod +x /opt/cribl/bin/cribl
 
 WORKDIR /opt/cribl/bin
 COPY --chmod=755 entrypoint.sh .
@@ -37,4 +30,4 @@ COPY --chmod=755 start-cribl.sh .
 EXPOSE 9000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:9000/api/v1/health
-ENTRYPOINT ["/sbin/tini", "--", "/opt/cribl/bin/start-cribl.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/cribl/bin/start-cribl.sh"]

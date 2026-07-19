@@ -108,3 +108,11 @@ This repository deploys Cribl LogStream (master-workers architecture) using Ansi
 - **Security**: Replace placeholder `client.pem`, secure `CRIBL_DIST_TOKEN` (e.g., via HashiCorp Vault), and update default credentials.
 - **Production**: Use Cribl’s official Helm charts directly and integrate with a secret management system.
 - **Monitoring**: Prometheus annotations are included in Kubernetes manifests. Deploy Prometheus/Grafana for full observability.
+## Log-data demo
+
+A self-contained, runnable demo (generator -> syslog -> pipeline -> filesystem)
+lives in [demo/](demo/README.md) - pre-seeded config-as-files to build off of:
+
+```bash
+cd demo && podman-compose -f docker-compose.demo.yml up -d && ./smoke-test.sh
+```

@@ -1,26 +1,38 @@
 #!/bin/bash
+# Verify the terraform-provisioned connection and collector exist on the leader.
+set -euo pipefail
 
-CRIBL_HOST="https://your-cribl-instance.example.com"
-CRIBL_USER="admin"
-CRIBL_PASS="password"
-AUTH_HEADER="Authorization: Basic $(echo -n $CRIBL_USER:$CRIBL_PASS | base64)"
-CONN_ID="mssql_conn"
+INI_FILE="../config/config.ini"
+
+parse_ini() {
+  local section="$1" key="$2"
+  awk -F "=" '/^\['"$section"'\]/{a=1;next}/^\[/{a=0} a {k=$1; gsub(/ /,"",k); if (k=="'"$key"'") {v=$2; gsub(/ /,"",v); print v}}' "$INI_FILE"
+}
+
+CRIBL_HOST=$(parse_ini "cribl" "host")
+CRIBL_USER=$(parse_ini "cribl" "user")
+CRIBL_PASS=$(parse_ini "cribl" "pass")
+PIPELINE_GROUP=$(parse_ini "sql" "pipeline_group")
+PIPELINE_GROUP=${PIPELINE_GROUP:-default}
+CONN_ID="mssql_connection"
 COLLECTOR_ID="mssql_collector"
 
-# Function to check API response
-check_response() {
-  if [ "$1" -ne 200 ] && [ "$1" -ne 201 ]; then
-    echo "Error: API returned status $1"
+TOKEN=$(curl -s -X POST "$CRIBL_HOST/api/v1/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"$CRIBL_USER\",\"password\":\"$CRIBL_PASS\"}" \
+  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+if [ -z "$TOKEN" ]; then echo "ERROR: Cribl API login failed for $CRIBL_USER"; exit 1; fi
+AUTH_HEADER="Authorization: Bearer $TOKEN"
+
+check_resource() { # check_resource <path> <label>
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH_HEADER" "$CRIBL_HOST/api/v1/$1")
+  if [ "$status" = "200" ]; then
+    echo "$2 exists."
+  else
+    echo "Error: $2 missing (HTTP $status)"
     exit 1
   fi
 }
 
-# Check connection
-CONN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH_HEADER" "$CRIBL_HOST/api/v1/connections/$CONN_ID")
-check_response "$CONN_RESPONSE"
-echo "Connection $CONN_ID exists."
-
-# Check collector
-COL_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH_HEADER" "$CRIBL_HOST/api/v1/collectors/$COLLECTOR_ID")
-check_response "$COL_RESPONSE"
-echo "Collector $COLLECTOR_ID exists."
+check_resource "m/$PIPELINE_GROUP/lib/database-connections/$CONN_ID" "Connection $CONN_ID"
+check_resource "m/$PIPELINE_GROUP/lib/jobs/$COLLECTOR_ID" "Collector $COLLECTOR_ID"
