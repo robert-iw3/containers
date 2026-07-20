@@ -1,137 +1,597 @@
 ---
-volumes:
-  backstage-postgres:
-    driver: local
-  backstage-postgres-backups:
-    driver: local
+# Internal dev portal, enterprise pattern end to end:
+#   Boundary  = the ONLY way in from outside: brokered, audited sessions to
+#               the portal and to the database (the portal publishes no port)
+#   Keycloak  = user identity: Backstage signs users in over OIDC
+#   Vault     = secrets: rotates the portal's Postgres password (static role),
+#               issues short-lived DBA creds, holds the Gitea + OIDC secrets
+#   Consul    = service mesh: portal -> postgres and portal -> gitea run over
+#               Connect mTLS with deny-by-default intentions
+#   Gitea     = storage for dev projects (git repos + catalog-info.yaml)
+#   Backstage = the portal: split deployments A/B behind a path-routing
+#               proxy (horizontal-scaling shape), catalog on Postgres
+#
+# TLS everywhere: a one-shot CA (portal-certs-init) issues certs for every
+# HTTP/SQL endpoint; the mesh adds Connect mTLS on top; Vault runs its own
+# TLS from ../vault tooling.
+#
+#   ./run_portal.sh        # bring everything up + configure + UAT
+#
+# Host ports are offset (2xxxx) so this stack can run alongside the
+# standalone product stacks in ../{consul,vault,boundary} and the
+# hashicorp-stack demo.
 
-networks:
-  backstage-net:
-    driver: bridge
-
-x-common-vars-apps: &common-vars-apps
+x-common: &common
   security_opt:
     - no-new-privileges:true
-  networks:
-    - backstage-net
-  env_file:
-    - .env
   restart: unless-stopped
+  networks:
+    - portal-net
 
 services:
-  postgresql:
-    <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
-    container_name: postgres-backstage
-    hostname: postgres-backstage.dev.io
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
-      start_period: 20s
-      interval: 30s
-      retries: 5
-      timeout: 5s
+  # --- stack CA / certificates ----------------------------------------------
+  portal-certs-init:
+    image: localhost/vault:2.0.3
+    container_name: backstage-portal-certs-init
+    restart: "no"
+    networks:
+      - portal-net
+    user: root
+    command: ["/bin/bash", "/opt/portal/gen-certs.sh"]
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - backstage-postgres:/bitnami/postgresql:z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-    ports:
-      - 5432:5432
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 2048M
-        reservations:
-          memory: 512M
+      - portal-certs:/portal-certs
+      - ./scripts:/opt/portal:ro
 
-  backstage:
-    <<: *common-vars-apps
-    build: .
-    container_name: backstage
-    hostname: backstage.dev.io
+  # --- service mesh / catalog ----------------------------------------------
+  consul:
+    <<: *common
+    build:
+      context: ../consul
+      dockerfile: Dockerfile
+    image: localhost/consul:2.0.2
+    container_name: backstage-consul
+    hostname: consul
+    command: ["agent"]
+    environment:
+      CONSUL_DISABLE_PERM_MGMT: "true"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./app-config.yaml:/backstage/app-config.yaml:ro
-      - ./app-config.local.yaml:/backstage/app-config.local.yaml:ro
-    environment:
-      POSTGRES_HOST: postgresql
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRESQL_USERNAME}
-      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      - consul-data:/consul/data
+      - ./consul:/consul/config:ro
+      - portal-certs:/portal-certs:ro
     ports:
-      - 3000:3000
+      - "28500:8501"
     depends_on:
-      postgresql:
-        condition: service_healthy
+      portal-certs-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "http://localhost:3000/", "--spider"]
+      test: ["CMD", "curl", "-sf", "--cacert", "/portal-certs/ca.crt", "https://127.0.0.1:8501/v1/status/leader"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 5s
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 2048M
-        reservations:
-          memory: 512M
+      retries: 5
+      start_period: 30s
 
-  backups:
-    <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
-    container_name: postgres2-backstage
-    hostname: postgres2-backstage.dev.io
+  # --- catalog database (TLS-only: hostssl + scram) --------------------------
+  postgres:
+    <<: *common
+    image: docker.io/library/postgres:18-alpine
+    container_name: backstage-postgres
+    hostname: postgres
     command:
       - sh
       - -c
       - |
-        sleep 30m
+        cp /portal-certs/postgres.crt /tmp/server.crt
+        cp /portal-certs/postgres.key /tmp/server.key
+        chown postgres:postgres /tmp/server.crt /tmp/server.key
+        chmod 600 /tmp/server.key
+        exec docker-entrypoint.sh postgres \
+          -c ssl=on \
+          -c ssl_cert_file=/tmp/server.crt \
+          -c ssl_key_file=/tmp/server.key \
+          -c hba_file=/etc/postgresql/pg_hba.conf
+    environment:
+      POSTGRES_USER: pgadmin
+      POSTGRES_PASSWORD: ${PG_SUPER_PASSWORD}
+      POSTGRES_DB: postgres
+      BACKSTAGE_DB_BOOTSTRAP_PASSWORD: ${BOOTSTRAP_DB_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      # postgres 18+ image expects the mount one level up (data lands in a
+      # versioned subdirectory)
+      - pg-data:/var/lib/postgresql
+      - ./postgres/init-portal-db.sh:/docker-entrypoint-initdb.d/init-portal-db.sh:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      portal-certs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgadmin -d postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  pgbackup:
+    <<: *common
+    image: docker.io/library/postgres:18-alpine
+    container_name: backstage-pgbackup
+    hostname: pgbackup
+    environment:
+      PGPASSWORD: ${PG_SUPER_PASSWORD}
+      PGSSLMODE: require
+    command:
+      - sh
+      - -c
+      - |
+        sleep 300
         while true; do
-          pg_dump -h postgres-backstage.dev.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/backstage-postgres/backups/backstage-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
-            echo "Backup failed at $(date)"; exit 1;
-          }
-          find /srv/backstage-postgres/backups -type f -mtime +7 -delete
+          pg_dumpall -h postgres -U pgadmin | gzip \
+            > /backups/portal-backup-$(date "+%Y-%m-%d_%H-%M").sql.gz \
+            || echo "backup failed at $(date)"
+          find /backups -type f -mtime +7 -delete
           sleep 24h
         done
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - backstage-postgres:/bitnami/postgresql:z
-      - backstage-postgres-backups:/srv/backstage-postgres/backups:Z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: slave
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-      POSTGRESQL_MASTER_HOST: postgres-backstage.dev.io
-      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      - pg-backups:/backups
     depends_on:
-      postgresql:
+      postgres:
         condition: service_healthy
-      backstage:
-        condition: service_healthy
+
+  # --- storage for dev projects ----------------------------------------------
+  gitea:
+    <<: *common
+    image: docker.io/gitea/gitea:1.27.0-rootless
+    container_name: backstage-gitea
+    hostname: gitea
+    environment:
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__server__PROTOCOL: https
+      GITEA__server__CERT_FILE: /portal-certs/gitea.crt
+      GITEA__server__KEY_FILE: /portal-certs/gitea.key
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__ROOT_URL: https://127.0.0.1:23000/
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - gitea-data:/var/lib/gitea
+      - gitea-config:/etc/gitea
+      - portal-certs:/portal-certs:ro
+    ports:
+      - "127.0.0.1:23000:3000"
+    depends_on:
+      portal-certs-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      test: ["CMD", "curl", "-sf", "--cacert", "/portal-certs/ca.crt", "https://127.0.0.1:3000/api/healthz"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 30s
+
+  # --- user identity: Keycloak (OIDC) ----------------------------------------
+  keycloak:
+    <<: *common
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: backstage-keycloak
+    hostname: keycloak
+    command: ["start"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak?ssl=true&sslmode=require
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      # browser-facing URLs use the published port; backchannel-dynamic lets
+      # in-cluster clients (Backstage) use https://keycloak:8443 directly
+      KC_HOSTNAME: https://127.0.0.1:28443
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "false"
+      KC_HTTPS_CERTIFICATE_FILE: /portal-certs/keycloak.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /portal-certs/keycloak.key
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - portal-certs:/portal-certs:ro
     ports:
-      - 5432:5432
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 2048M
-        reservations:
-          memory: 512M
+      - "127.0.0.1:28443:8443"
+    depends_on:
+      portal-certs-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # management interface (9000) readiness; no curl in the image, so a
+      # bash tcp probe has to do
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && exec 3<&- 3>&-"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+
+  keycloak-setup:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: backstage-keycloak-setup
+    restart: "no"
+    networks:
+      - portal-net
+    user: root
+    entrypoint: ["/bin/bash", "/opt/portal/keycloak-setup.sh"]
+    environment:
+      KC_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      PORTAL_DEV_PASSWORD: ${PORTAL_DEV_PASSWORD}
+      PORTAL_BASE_URL: https://127.0.0.1:27007
+    volumes:
+      - ./scripts:/opt/portal:ro
+      - portal-state:/portal-state
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # --- Connect sidecars (built-in proxy, mTLS) -------------------------------
+  postgres-sidecar:
+    <<: *common
+    image: localhost/consul:2.0.2
+    container_name: backstage-postgres-sidecar
+    hostname: postgres-sidecar
+    environment:
+      CONSUL_HTTP_ADDR: https://consul:8501
+      CONSUL_CACERT: /portal-certs/ca.crt
+    volumes:
+      - portal-certs:/portal-certs:ro
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf --cacert /portal-certs/ca.crt https://consul:8501/v1/agent/services | grep -q 'postgres-sidecar-proxy'; do
+          echo 'waiting for postgres sidecar registration...'; sleep 2
+        done
+        exec consul connect proxy -sidecar-for postgres
+
+  gitea-sidecar:
+    <<: *common
+    image: localhost/consul:2.0.2
+    container_name: backstage-gitea-sidecar
+    hostname: gitea-sidecar
+    environment:
+      CONSUL_HTTP_ADDR: https://consul:8501
+      CONSUL_CACERT: /portal-certs/ca.crt
+    volumes:
+      - portal-certs:/portal-certs:ro
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf --cacert /portal-certs/ca.crt https://consul:8501/v1/agent/services | grep -q 'gitea-sidecar-proxy'; do
+          echo 'waiting for gitea sidecar registration...'; sleep 2
+        done
+        exec consul connect proxy -sidecar-for gitea
+
+  backstage-sidecar:
+    <<: *common
+    image: localhost/consul:2.0.2
+    container_name: backstage-portal-sidecar
+    hostname: backstage-sidecar
+    environment:
+      CONSUL_HTTP_ADDR: https://consul:8501
+      CONSUL_CACERT: /portal-certs/ca.crt
+    volumes:
+      - portal-certs:/portal-certs:ro
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf --cacert /portal-certs/ca.crt https://consul:8501/v1/agent/services | grep -q 'backstage-sidecar-proxy'; do
+          echo 'waiting for backstage sidecar registration...'; sleep 2
+        done
+        exec consul connect proxy -sidecar-for backstage
+
+  # --- secrets: Vault --------------------------------------------------------
+  vault-certs-init:
+    build:
+      context: ../vault
+      dockerfile: Dockerfile
+    image: localhost/vault:2.0.3
+    container_name: backstage-vault-certs-init
+    restart: "no"
+    networks:
+      - portal-net
+    command: ["/bin/sh", "-c", "python3 /opt/vault-init/generate_certs.py"]
+    environment:
+      VAULT_NODE_ID: "0"
+    volumes:
+      - vault-certs:/certs
+      - ../vault/config:/opt/vault-init:ro
+
+  vault:
+    <<: *common
+    image: localhost/vault:2.0.3
+    container_name: backstage-vault
+    hostname: vault
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while [ ! -s /certs/vault-0.crt.pem ]; do echo 'waiting for TLS certs...'; sleep 1; done
+        exec vault server -config=/vault/config/vault-server.hcl
+    environment:
+      VAULT_ADDR: https://127.0.0.1:8200
+      VAULT_CACERT: /certs/vault-ca.crt.pem
+      SKIP_CHOWN: "true"
+      SKIP_SETCAP: "true"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - vault-data:/vault/data
+      - vault-certs:/certs
+      - ./vault:/vault/config:ro
+      - portal-certs:/portal-certs:ro
+    ports:
+      - "28200:8200"
+    depends_on:
+      vault-certs-init:
+        condition: service_completed_successfully
+      portal-certs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "--cacert", "/certs/vault-ca.crt.pem", "https://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  vault-setup:
+    image: localhost/vault:2.0.3
+    container_name: backstage-vault-setup
+    restart: "no"
+    networks:
+      - portal-net
+    # root inside the container maps to the invoking host user under rootless
+    # podman; needed to write the shared portal-state volume
+    user: root
+    command: ["/bin/bash", "/opt/portal/vault-setup.sh"]
+    environment:
+      VAULT_ADDR: https://vault:8200
+      VAULT_CACERT: /certs/vault-ca.crt.pem
+      PG_ADMIN_PASSWORD: ${PG_SUPER_PASSWORD}
+    volumes:
+      - ./scripts:/opt/portal:ro
+      - portal-state:/portal-state
+      - vault-certs:/certs:ro
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      vault:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # --- access: Boundary ------------------------------------------------------
+  boundary-db:
+    <<: *common
+    image: docker.io/library/postgres:18-alpine
+    container_name: backstage-boundary-db
+    hostname: boundary-db
+    command:
+      - sh
+      - -c
+      - |
+        cp /portal-certs/boundary-db.crt /tmp/server.crt
+        cp /portal-certs/boundary-db.key /tmp/server.key
+        chown postgres:postgres /tmp/server.crt /tmp/server.key
+        chmod 600 /tmp/server.key
+        exec docker-entrypoint.sh postgres \
+          -c ssl=on \
+          -c ssl_cert_file=/tmp/server.crt \
+          -c ssl_key_file=/tmp/server.key \
+          -c hba_file=/etc/postgresql/pg_hba.conf
+    environment:
+      POSTGRES_USER: boundary
+      POSTGRES_PASSWORD: ${BOUNDARY_PG_PASSWORD}
+      POSTGRES_DB: boundary
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - boundary-db-data:/var/lib/postgresql
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      portal-certs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boundary -d boundary -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  boundary:
+    <<: *common
+    build:
+      context: ../boundary
+      dockerfile: Dockerfile
+    image: localhost/boundary:0.21.3
+    container_name: backstage-boundary
+    hostname: boundary
+    environment:
+      SKIP_CHOWN: "true"
+      SKIP_SETCAP: "true"
+      BOUNDARY_DB_PASSWORD: ${BOUNDARY_PG_PASSWORD}
+      BOUNDARY_ROOT_KEY: ${PORTAL_KMS_ROOT_KEY}
+      BOUNDARY_WORKER_AUTH_KEY: ${PORTAL_KMS_WORKER_KEY}
+      BOUNDARY_RECOVERY_KEY: ${PORTAL_KMS_RECOVERY_KEY}
+      BOUNDARY_PUBLIC_ADDR: ${PORTAL_PUBLIC_ADDR}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        : "$${BOUNDARY_PUBLIC_ADDR:=boundary:9202}"
+        export BOUNDARY_POSTGRES_URL="postgresql://boundary:$${BOUNDARY_DB_PASSWORD}@boundary-db:5432/boundary?sslmode=require"
+        sed -e "s|__BOUNDARY_ROOT_KEY__|$${BOUNDARY_ROOT_KEY}|" \
+            -e "s|__BOUNDARY_WORKER_AUTH_KEY__|$${BOUNDARY_WORKER_AUTH_KEY}|" \
+            -e "s|__BOUNDARY_RECOVERY_KEY__|$${BOUNDARY_RECOVERY_KEY}|" \
+            -e "s|__BOUNDARY_PUBLIC_ADDR__|$${BOUNDARY_PUBLIC_ADDR}|" \
+            /boundary/portal-config.hcl > /home/boundary/config.rendered.hcl
+        out=$$(boundary database init -config /home/boundary/config.rendered.hcl 2>&1); rc=$$?
+        echo "$$out"
+        if [ $$rc -ne 0 ] && ! echo "$$out" | grep -qi 'already.*initialized'; then
+          exit $$rc
+        fi
+        exec boundary server -config /home/boundary/config.rendered.hcl
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./boundary/config.hcl:/boundary/portal-config.hcl:ro
+      - portal-certs:/portal-certs:ro
+    ports:
+      - "29200:9200"
+      - "29202:9202"
+      - "29203:9203"
+      # published end-user session listener (scripts/portal-session.sh)
+      - "127.0.0.1:27007:27007"
+    depends_on:
+      boundary-db:
+        condition: service_healthy
+      portal-certs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "--ca-certificate=/portal-certs/ca.crt", "https://127.0.0.1:9203/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  boundary-setup:
+    image: localhost/boundary:0.21.3
+    container_name: backstage-boundary-setup
+    restart: "no"
+    networks:
+      - portal-net
+    user: root
+    command: ["/bin/sh", "/opt/portal/boundary-setup.sh"]
+    environment:
+      BOUNDARY_RECOVERY_KEY: ${PORTAL_KMS_RECOVERY_KEY}
+      BOUNDARY_ADDR: https://boundary:9200
+      BOUNDARY_CACERT: /portal-certs/ca.crt
+    volumes:
+      - ./scripts:/opt/portal:ro
+      - portal-state:/portal-state
+      - vault-certs:/certs:ro
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      boundary:
+        condition: service_healthy
+
+  # --- the portal: split deployments (Backstage horizontal-scaling shape) ----
+  # Same image in both deployments; the proxy routes /api/{catalog,search} to
+  # B and everything else to A. Each plugin keeps its own logical Postgres
+  # database (backstage_plugin_*), auto-created on first boot.
+  backstage-a:
+    <<: *common
+    build: .
+    image: localhost/backstage-portal:1.1.0
+    container_name: backstage-portal-a
+    hostname: backstage-a
+    # no published ports on purpose: end users come in through Boundary
+    environment:
+      VAULT_ADDR: https://vault:8200
+      VAULT_CACERT: /vault-certs/vault-ca.crt.pem
+      VAULT_TOKEN_FILE: /portal-state/backstage-token
+      POSTGRES_HOST: backstage-sidecar
+      POSTGRES_PORT: "20001"
+      BACKSTAGE_API_TOKEN: ${UAT_STATIC_TOKEN}
+      AUTH_SESSION_SECRET: ${PORTAL_SESSION_SECRET}
+      NODE_EXTRA_CA_CERTS: /portal-certs/ca.crt
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - portal-state:/portal-state:ro
+      - vault-certs:/vault-certs:ro
+      - portal-certs:/portal-certs:ro
+      - ./app-config.yaml:/app/app-config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:7007/.backstage/health/v1/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  backstage-b:
+    <<: *common
+    image: localhost/backstage-portal:1.1.0
+    container_name: backstage-portal-b
+    hostname: backstage-b
+    environment:
+      VAULT_ADDR: https://vault:8200
+      VAULT_CACERT: /vault-certs/vault-ca.crt.pem
+      VAULT_TOKEN_FILE: /portal-state/backstage-token
+      POSTGRES_HOST: backstage-sidecar
+      POSTGRES_PORT: "20001"
+      BACKSTAGE_API_TOKEN: ${UAT_STATIC_TOKEN}
+      AUTH_SESSION_SECRET: ${PORTAL_SESSION_SECRET}
+      NODE_EXTRA_CA_CERTS: /portal-certs/ca.crt
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - portal-state:/portal-state:ro
+      - vault-certs:/vault-certs:ro
+      - portal-certs:/portal-certs:ro
+      - ./app-config.yaml:/app/app-config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      # deployment A applies the logical-DB migrations first; starting B
+      # after A is ready avoids racing knex DDL on a fresh database
+      backstage-a:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:7007/.backstage/health/v1/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  portal-proxy:
+    <<: *common
+    image: docker.io/library/nginx:1.30-alpine
+    container_name: backstage-portal-proxy
+    hostname: portal-proxy
+    # routing tier only — the Boundary dev-portal target points here
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - portal-certs:/portal-certs:ro
+    depends_on:
+      - backstage-a
+      - backstage-b
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "--no-check-certificate", "https://127.0.0.1:8443/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+networks:
+  portal-net:
+    driver: bridge
+
+volumes:
+  consul-data:
+  pg-data:
+  pg-backups:
+  gitea-data:
+  gitea-config:
+  vault-data:
+  vault-certs:
+  portal-certs:
+  boundary-db-data:
+  portal-state:

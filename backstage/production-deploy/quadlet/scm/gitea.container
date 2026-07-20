@@ -1,0 +1,38 @@
+# Dev project storage: Gitea over TLS, SSH disabled, registration disabled.
+# Key material: /etc/backstage-portal/tls/gitea.key must be readable by the
+# gitea uid (1000) on the host.
+[Unit]
+Description=Portal Gitea (dev project storage)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/gitea/gitea:1.27.0-rootless
+ContainerName=portal-gitea
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/scm.env
+Environment=GITEA__database__DB_TYPE=sqlite3
+Environment=GITEA__server__PROTOCOL=https
+Environment=GITEA__server__CERT_FILE=/tls/gitea.crt
+Environment=GITEA__server__KEY_FILE=/tls/gitea.key
+Environment=GITEA__server__HTTP_PORT=3000
+Environment=GITEA__server__DISABLE_SSH=true
+Environment=GITEA__security__INSTALL_LOCK=true
+Environment=GITEA__service__DISABLE_REGISTRATION=true
+Volume=gitea-data.volume:/var/lib/gitea
+Volume=gitea-config.volume:/etc/gitea
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+PublishPort=3000:3000
+NoNewPrivileges=true
+HealthCmd=curl -sf --cacert /tls/ca.crt https://127.0.0.1:3000/api/healthz
+HealthInterval=10s
+HealthRetries=5
+HealthStartPeriod=30s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+# Daily pg_dumpall over TLS into the pg-backups volume, pruned after 7 days.
+[Unit]
+Description=Portal Postgres backup loop
+After=postgres.service
+Requires=postgres.service
+
+[Container]
+Image=docker.io/library/postgres:18-alpine
+ContainerName=portal-pgbackup
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/data.env
+Environment=PGSSLMODE=require
+Exec=sh -c 'sleep 300; while true; do pg_dumpall -h portal-postgres -U pgadmin | gzip > /backups/portal-backup-$(date "+%%Y-%%m-%%d_%%H-%%M").sql.gz || echo "backup failed at $(date)"; find /backups -type f -mtime +7 -delete; sleep 24h; done'
+Volume=pg-backups.volume:/backups
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

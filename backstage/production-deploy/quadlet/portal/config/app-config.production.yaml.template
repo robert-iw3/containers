@@ -1,0 +1,76 @@
+# Production portal config, rendered by deploy.sh into
+# /etc/backstage-portal/backstage/app-config.yaml. Differs from the local
+# compose app-config only in addresses: public URL, Keycloak metadata, and
+# the mesh upstream host alias.
+app:
+  title: Internal Dev Portal
+  baseUrl: ${PORTAL_PUBLIC_URL}
+  packages: all
+
+organization:
+  name: Platform Engineering
+
+backend:
+  baseUrl: ${PORTAL_PUBLIC_URL}
+  listen: ':7007'
+  cors:
+    origin: ${PORTAL_PUBLIC_URL}
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+  csp:
+    connect-src: ["'self'", 'http:', 'https:']
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+      ssl: true
+  reading:
+    allow:
+      - host: host.containers.internal:20002
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${BACKSTAGE_API_TOKEN}
+          subject: uat-smoke-test
+
+integrations:
+  gitea:
+    - host: host.containers.internal:20002
+      baseUrl: https://host.containers.internal:20002
+      username: ${GITEA_USERNAME}
+      password: ${GITEA_PASSWORD}
+
+auth:
+  environment: production
+  session:
+    secret: ${AUTH_SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: https://${IDENTITY_HOST}:8443/realms/portal/.well-known/openid-configuration
+        clientId: backstage-portal
+        clientSecret: ${OIDC_CLIENT_SECRET}
+        prompt: auto
+        signIn:
+          resolvers:
+            - resolver: emailMatchingUserEntityProfileEmail
+
+techdocs:
+  builder: local
+  generator:
+    runIn: local
+  publisher:
+    type: local
+
+catalog:
+  rules:
+    - allow: [Component, API, Resource, System, Domain, Location, User, Group, Template]
+  locations:
+    - type: url
+      target: https://host.containers.internal:20002/devteam/sample-service/src/branch/main/catalog-info.yaml
+    - type: url
+      target: https://host.containers.internal:20002/devteam/sample-service/src/branch/main/org.yaml

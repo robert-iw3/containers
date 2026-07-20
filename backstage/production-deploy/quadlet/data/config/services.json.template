@@ -1,0 +1,24 @@
+{
+  "services": [
+    {
+      "name": "postgres",
+      "port": 5432,
+      "address": "${DATA_HOST}",
+      "tags": ["portal", "database"],
+      "checks": [
+        { "name": "postgres tcp", "tcp": "127.0.0.1:5432", "interval": "10s", "timeout": "3s" }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "${DATA_HOST}",
+          "port": 21000,
+          "proxy": {
+            "local_service_address": "127.0.0.1",
+            "local_service_port": 5432
+          },
+          "checks": []
+        }
+      }
+    }
+  ]
+}

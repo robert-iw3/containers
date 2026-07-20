@@ -1,0 +1,33 @@
+# Catalog DBMS: Postgres 18, TLS-only (hostssl + scram), per-plugin logical
+# databases. Key material: /etc/backstage-portal/tls/postgres.key must be
+# owned 70:70 mode 0600 on the host (alpine postgres uid).
+[Unit]
+Description=Portal Postgres (catalog + keycloak + boundary databases)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/library/postgres:18-alpine
+ContainerName=portal-postgres
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/data.env
+Exec=postgres -c ssl=on -c ssl_cert_file=/tls/postgres.crt -c ssl_key_file=/tls/postgres.key -c hba_file=/etc/postgresql/pg_hba.conf
+Volume=pg-data.volume:/var/lib/postgresql
+Volume=/etc/backstage-portal/postgres/init-portal-db.sh:/docker-entrypoint-initdb.d/init-portal-db.sh:ro,Z
+Volume=/etc/backstage-portal/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro,Z
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+PublishPort=5432:5432
+NoNewPrivileges=true
+HealthCmd=pg_isready -U pgadmin -d postgres -h 127.0.0.1
+HealthInterval=10s
+HealthRetries=5
+HealthStartPeriod=30s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

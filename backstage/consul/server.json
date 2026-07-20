@@ -1,0 +1,70 @@
+{
+  "datacenter": "dc1",
+  "server": true,
+  "bootstrap_expect": 1,
+  "node_name": "consul-portal",
+  "data_dir": "/consul/data",
+  "log_level": "INFO",
+  "client_addr": "0.0.0.0",
+  "ui_config": {
+    "enabled": true
+  },
+  "connect": {
+    "enabled": true
+  },
+  "ports": {
+    "http": -1,
+    "https": 8501,
+    "grpc": -1,
+    "grpc_tls": 8502,
+    "dns": 8600
+  },
+  "tls": {
+    "defaults": {
+      "cert_file": "/portal-certs/consul.crt",
+      "key_file": "/portal-certs/consul.key",
+      "ca_file": "/portal-certs/ca.crt",
+      "verify_incoming": false,
+      "verify_outgoing": false
+    }
+  },
+  "config_entries": {
+    "bootstrap": [
+      {
+        "kind": "proxy-defaults",
+        "name": "global",
+        "config": {
+          "protocol": "tcp"
+        }
+      },
+      {
+        "kind": "service-intentions",
+        "name": "postgres",
+        "sources": [
+          {
+            "name": "backstage",
+            "action": "allow"
+          },
+          {
+            "name": "*",
+            "action": "deny"
+          }
+        ]
+      },
+      {
+        "kind": "service-intentions",
+        "name": "gitea",
+        "sources": [
+          {
+            "name": "backstage",
+            "action": "allow"
+          },
+          {
+            "name": "*",
+            "action": "deny"
+          }
+        ]
+      }
+    ]
+  }
+}

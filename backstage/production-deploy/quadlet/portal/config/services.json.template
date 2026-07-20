@@ -1,0 +1,28 @@
+{
+  "services": [
+    {
+      "name": "backstage",
+      "port": 8443,
+      "address": "${PORTAL_HOST}",
+      "tags": ["portal", "web"],
+      "checks": [
+        { "name": "portal proxy https", "http": "https://127.0.0.1:8443/healthz", "tls_skip_verify": true, "interval": "10s", "timeout": "3s" }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "${PORTAL_HOST}",
+          "port": 21002,
+          "proxy": {
+            "local_service_address": "127.0.0.1",
+            "local_service_port": 8443,
+            "upstreams": [
+              { "destination_name": "postgres", "local_bind_address": "0.0.0.0", "local_bind_port": 20001 },
+              { "destination_name": "gitea", "local_bind_address": "0.0.0.0", "local_bind_port": 20002 }
+            ]
+          },
+          "checks": []
+        }
+      }
+    }
+  ]
+}

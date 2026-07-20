@@ -1,0 +1,34 @@
+# Portal deployment A (all traffic except /api/{catalog,search}). Boots by
+# fetching its secrets from Vault; migrates the logical DBs first (B orders
+# after A's health).
+# DB/Gitea reach the mesh through the host-networked egress sidecar's
+# upstream listeners, addressed as host.containers.internal from this
+# bridged container — include that name in the postgres/gitea cert SANs.
+[Unit]
+Description=Portal Backstage deployment A
+After=network-online.target consul-agent.service
+Wants=network-online.target
+
+[Container]
+Image=__REGISTRY__/backstage-portal:1.1.0
+ContainerName=portal-backstage-a
+HostName=backstage-a
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/portal.env
+Volume=/etc/backstage-portal/backstage/app-config.yaml:/app/app-config.yaml:ro,Z
+Volume=/etc/backstage-portal/state:/portal-state:ro,Z
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+NoNewPrivileges=true
+HealthCmd=curl -sf http://127.0.0.1:7007/.backstage/health/v1/readiness
+HealthInterval=15s
+HealthRetries=10
+HealthStartPeriod=180s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=420
+
+[Install]
+WantedBy=multi-user.target

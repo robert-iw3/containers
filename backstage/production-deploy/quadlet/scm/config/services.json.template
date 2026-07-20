@@ -1,0 +1,24 @@
+{
+  "services": [
+    {
+      "name": "gitea",
+      "port": 3000,
+      "address": "${SCM_HOST}",
+      "tags": ["portal", "scm"],
+      "checks": [
+        { "name": "gitea https", "http": "https://127.0.0.1:3000/api/healthz", "tls_skip_verify": true, "interval": "10s", "timeout": "3s" }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "${SCM_HOST}",
+          "port": 21001,
+          "proxy": {
+            "local_service_address": "127.0.0.1",
+            "local_service_port": 3000
+          },
+          "checks": []
+        }
+      }
+    }
+  ]
+}

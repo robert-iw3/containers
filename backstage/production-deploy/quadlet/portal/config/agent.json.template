@@ -1,0 +1,20 @@
+{
+  "datacenter": "dc1",
+  "server": false,
+  "node_name": "portal-agent",
+  "retry_join": ["${MESH_HOST}"],
+  "advertise_addr": "${PORTAL_ADVERTISE_IP}",
+  "data_dir": "/consul/data",
+  "client_addr": "0.0.0.0",
+  "ports": { "http": -1, "https": 8501, "grpc": -1, "grpc_tls": 8502, "dns": 8600 },
+  "connect": { "enabled": true },
+  "tls": {
+    "defaults": {
+      "cert_file": "/tls/consul.crt",
+      "key_file": "/tls/consul.key",
+      "ca_file": "/tls/ca.crt",
+      "verify_incoming": false,
+      "verify_outgoing": false
+    }
+  }
+}

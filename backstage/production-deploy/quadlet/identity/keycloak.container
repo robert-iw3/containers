@@ -1,0 +1,33 @@
+# Keycloak (OIDC IdP), backed by the data host's Postgres over TLS.
+[Unit]
+Description=Portal Keycloak (identity)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=quay.io/keycloak/keycloak:26.4
+ContainerName=portal-keycloak
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/identity.env
+Environment=KC_HTTP_ENABLED=false
+Environment=KC_HTTPS_CERTIFICATE_FILE=/tls/keycloak.crt
+Environment=KC_HTTPS_CERTIFICATE_KEY_FILE=/tls/keycloak.key
+Environment=KC_HEALTH_ENABLED=true
+Environment=KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true
+Exec=start
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+PublishPort=8443:8443
+NoNewPrivileges=true
+HealthCmd=bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000 && exec 3<&- 3>&-'
+HealthInterval=10s
+HealthRetries=10
+HealthStartPeriod=120s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

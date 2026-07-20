@@ -1,27 +1,30 @@
+# Portal configuration. Baked into the frontend at image build and read by
+# the backend at start; POSTGRES_* / GITEA_* env vars are exported by
+# entrypoint.sh from Vault.
+#
+# End users reach the portal through a Boundary session listening on
+# 127.0.0.1:27007 (boundary connect -listen-port 27007), so all public URLs
+# point there. The backend itself listens on 7007 inside the container.
 app:
-  title: Backstage Example App
-  baseUrl: http://localhost:3000
-  experimental:
-    packages: all
-  support:
-    url: https://github.com/backstage/backstage/issues
-    items:
-      - title: Issues
-        icon: github
-        links:
-          - url: https://github.com/backstage/backstage/issues
-            title: GitHub Issues
-      - title: Discord Chatroom
-        icon: chat
-        links:
-          - url: https://discord.gg/backstage-687207715902193673
-            title: '#backstage'
-  packageName: example-app
+  title: Internal Dev Portal
+  baseUrl: https://127.0.0.1:27007
+  # new-frontend-system feature discovery: bundle + register every installed
+  # frontend plugin (notifications, search, scaffolder, ...) — without this
+  # only explicitly listed features exist and the app shell breaks post-login
+  packages: all
+
+organization:
+  name: Platform Engineering
 
 backend:
-  baseUrl: http://localhost:7007
-  listen:
-    port: 7007
+  baseUrl: https://127.0.0.1:27007
+  listen: ':7007'
+  cors:
+    origin: https://127.0.0.1:27007
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+  csp:
+    connect-src: ["'self'", 'http:', 'https:']
   database:
     client: pg
     connection:
@@ -29,87 +32,66 @@ backend:
       port: ${POSTGRES_PORT}
       user: ${POSTGRES_USER}
       password: ${POSTGRES_PASSWORD}
-  cors:
-    origin: http://localhost:3000
-    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
-    credentials: true
-  csp:
-    connect-src: ["'self'", 'http:', 'https:']
+      # Postgres enforces hostssl; the stack CA is trusted via
+      # NODE_EXTRA_CA_CERTS and the server cert carries the sidecar SAN
+      ssl: true
   reading:
     allow:
-      - host: example.com
-      - host: '*.mozilla.org'
-
-proxy:
-  endpoints:
-    '/circleci/api':
-      target: https://circleci.com/api/v1.1
-      headers:
-        Circle-Token: ${CIRCLECI_AUTH_TOKEN}
-    '/jenkins/api':
-      target: http://localhost:8080
-      headers:
-        Authorization: ${JENKINS_BASIC_AUTH_HEADER}
-    '/travisci/api':
-      target: https://api.travis-ci.com
-      changeOrigin: true
-      headers:
-        Authorization: ${TRAVISCI_AUTH_TOKEN}
-        travis-api-version: '3'
-
-organization:
-  name: My Company
-
-techdocs:
-  builder: 'local'
-  generator:
-    runIn: 'docker'
-  publisher:
-    type: 'local'
+      # Gitea, reached through the portal's Consul Connect sidecar upstream
+      - host: backstage-sidecar:20002
+  auth:
+    externalAccess:
+      # Service-to-service access for the UAT battery (scripts/smoke-test.sh)
+      - type: static
+        options:
+          token: ${BACKSTAGE_API_TOKEN}
+          subject: uat-smoke-test
 
 integrations:
-  github:
-    - host: github.com
-      token: ${GITHUB_TOKEN}
-
-catalog:
-  import:
-    entityFilename: catalog-info.yaml
-    pullRequestBranchName: backstage-integration
-  rules:
-    - allow:
-        - Component
-        - API
-        - Resource
-        - System
-        - Domain
-        - Location
-  locations:
-    - type: file
-      target: ../catalog-model/examples/all.yaml
-    - type: file
-      target: ../catalog-model/examples/acme-corp.yaml
-      rules:
-        - allow: [User, Group]
-    - type: file
-      target: ../../plugins/github-actions/examples/sample.yaml
-    - type: file
-      target: ../../plugins/techdocs-backend/examples/documented-component/catalog-info.yaml
-    - type: file
-      target: ../../plugins/adr/examples/component/catalog-info.yaml
-    - type: file
-      target: ../../plugins/scaffolder-backend/sample-templates/all-templates.yaml
-      rules:
-        - allow: [Template]
+  gitea:
+    - host: backstage-sidecar:20002
+      baseUrl: https://backstage-sidecar:20002
+      username: ${GITEA_USERNAME}
+      password: ${GITEA_PASSWORD}
 
 auth:
-  environment: development
+  environment: production
+  session:
+    secret: ${AUTH_SESSION_SECRET}
   providers:
-    github:
-      development:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-        enterpriseInstanceUrl: ${AUTH_GITHUB_ENTERPRISE_INSTANCE_URL}
+    # Primary sign-in: company SSO via Keycloak (OIDC). The client secret is
+    # exported by entrypoint.sh from Vault kv.
+    oidc:
+      production:
+        metadataUrl: https://keycloak:8443/realms/portal/.well-known/openid-configuration
+        clientId: backstage-portal
+        clientSecret: ${OIDC_CLIENT_SECRET}
+        prompt: auto
+        signIn:
+          resolvers:
+            # portal-dev@portal.internal matches the User entity seeded in
+            # the Gitea org.yaml
+            - resolver: emailMatchingUserEntityProfileEmail
+    # Demo fallback (network access is already Boundary-gated); remove for
+    # a strict SSO-only portal.
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
 
-permission:
-  enabled: true
+techdocs:
+  builder: local
+  generator:
+    runIn: local
+  publisher:
+    type: local
+
+catalog:
+  rules:
+    - allow: [Component, API, Resource, System, Domain, Location, User, Group, Template]
+  locations:
+    # Dev projects live in Gitea; discovered over the mesh.
+    - type: url
+      target: https://backstage-sidecar:20002/devteam/sample-service/src/branch/main/catalog-info.yaml
+    # Org model (Group devteam, User portal-dev) — the OIDC sign-in resolver
+    # matches users against these entities.
+    - type: url
+      target: https://backstage-sidecar:20002/devteam/sample-service/src/branch/main/org.yaml

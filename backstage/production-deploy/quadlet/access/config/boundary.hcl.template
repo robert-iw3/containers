@@ -1,0 +1,67 @@
+# Production Boundary: combined controller + worker, TLS api/ops listeners.
+# Rendered by deploy.sh (KMS keys + db url substituted).
+
+disable_mlock = true
+
+controller {
+  name        = "portal-controller"
+  description = "Dev portal Boundary controller"
+
+  database {
+    url = "postgresql://boundary:${BOUNDARY_PG_PASSWORD}@${DATA_HOST}:5432/boundary?sslmode=require"
+  }
+}
+
+worker {
+  name              = "portal-worker"
+  description       = "Dev portal Boundary worker"
+  public_addr       = "${BOUNDARY_PUBLIC_ADDR}"
+  initial_upstreams = ["localhost:9201"]
+}
+
+listener "tcp" {
+  address       = "0.0.0.0"
+  purpose       = "api"
+  tls_cert_file = "/tls/boundary.crt"
+  tls_key_file  = "/tls/boundary.key"
+}
+
+listener "tcp" {
+  address     = "0.0.0.0"
+  purpose     = "cluster"
+  tls_disable = true
+}
+
+listener "tcp" {
+  address     = "0.0.0.0"
+  purpose     = "proxy"
+  tls_disable = true
+}
+
+listener "tcp" {
+  address       = "0.0.0.0"
+  purpose       = "ops"
+  tls_cert_file = "/tls/boundary.crt"
+  tls_key_file  = "/tls/boundary.key"
+}
+
+kms "aead" {
+  purpose   = "root"
+  aead_type = "aes-gcm"
+  key       = "${PORTAL_KMS_ROOT_KEY}"
+  key_id    = "global_root"
+}
+
+kms "aead" {
+  purpose   = "worker-auth"
+  aead_type = "aes-gcm"
+  key       = "${PORTAL_KMS_WORKER_KEY}"
+  key_id    = "global_worker-auth"
+}
+
+kms "aead" {
+  purpose   = "recovery"
+  aead_type = "aes-gcm"
+  key       = "${PORTAL_KMS_RECOVERY_KEY}"
+  key_id    = "global_recovery"
+}

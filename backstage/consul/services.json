@@ -1,0 +1,93 @@
+{
+  "services": [
+    {
+      "name": "postgres",
+      "port": 5432,
+      "address": "postgres",
+      "tags": ["portal", "database"],
+      "checks": [
+        {
+          "name": "postgres tcp",
+          "tcp": "postgres:5432",
+          "interval": "10s",
+          "timeout": "3s"
+        }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "postgres-sidecar",
+          "port": 21000,
+          "proxy": {
+            "local_service_address": "postgres",
+            "local_service_port": 5432
+          },
+          "checks": []
+        }
+      }
+    },
+    {
+      "name": "gitea",
+      "port": 3000,
+      "address": "gitea",
+      "tags": ["portal", "scm"],
+      "checks": [
+        {
+          "name": "gitea http",
+          "http": "https://gitea:3000/api/healthz",
+          "tls_skip_verify": true,
+          "interval": "10s",
+          "timeout": "3s"
+        }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "gitea-sidecar",
+          "port": 21001,
+          "proxy": {
+            "local_service_address": "gitea",
+            "local_service_port": 3000
+          },
+          "checks": []
+        }
+      }
+    },
+    {
+      "name": "backstage",
+      "port": 8443,
+      "address": "portal-proxy",
+      "tags": ["portal", "web"],
+      "checks": [
+        {
+          "name": "portal proxy http",
+          "http": "https://portal-proxy:8443/healthz",
+          "tls_skip_verify": true,
+          "interval": "10s",
+          "timeout": "3s"
+        }
+      ],
+      "connect": {
+        "sidecar_service": {
+          "address": "backstage-sidecar",
+          "port": 21002,
+          "proxy": {
+            "local_service_address": "portal-proxy",
+            "local_service_port": 8443,
+            "upstreams": [
+              {
+                "destination_name": "postgres",
+                "local_bind_address": "0.0.0.0",
+                "local_bind_port": 20001
+              },
+              {
+                "destination_name": "gitea",
+                "local_bind_address": "0.0.0.0",
+                "local_bind_port": 20002
+              }
+            ]
+          },
+          "checks": []
+        }
+      }
+    }
+  ]
+}

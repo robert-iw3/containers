@@ -1,0 +1,23 @@
+# Connect sidecar for postgres (mTLS ingress from the portal's egress
+# sidecar). Host networking: its public listener (21000) must be reachable
+# from the portal host.
+[Unit]
+Description=Connect sidecar for postgres
+After=consul-agent.service
+Requires=consul-agent.service
+
+[Container]
+Image=__REGISTRY__/consul:2.0.2
+ContainerName=portal-postgres-sidecar
+Network=host
+Environment=CONSUL_HTTP_ADDR=https://127.0.0.1:8501
+Environment=CONSUL_CACERT=/tls/ca.crt
+Exec=connect proxy -sidecar-for postgres
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

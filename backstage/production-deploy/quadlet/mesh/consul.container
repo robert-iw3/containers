@@ -1,0 +1,33 @@
+# Consul server: Connect CA, catalog, deny-by-default intentions.
+# Host networking: gossip + server RPC must be reachable by agents on the
+# other VMs without NAT indirection.
+# Config: /etc/backstage-portal/consul (server.json rendered by deploy.sh)
+# TLS:    /etc/backstage-portal/tls (per-host cert from your PKI)
+[Unit]
+Description=Consul server (portal service mesh)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=__REGISTRY__/consul:2.0.2
+ContainerName=portal-consul
+Network=host
+Exec=agent
+Environment=CONSUL_DISABLE_PERM_MGMT=true
+Volume=consul-data.volume:/consul/data
+Volume=/etc/backstage-portal/consul:/consul/config:ro,Z
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+NoNewPrivileges=true
+HealthCmd=curl -sf --cacert /tls/ca.crt https://127.0.0.1:8501/v1/status/leader
+HealthInterval=10s
+HealthRetries=5
+HealthStartPeriod=30s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

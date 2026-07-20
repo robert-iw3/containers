@@ -1,0 +1,30 @@
+# Portal deployment B (/api/{catalog,search}). Ordered after A is healthy
+# so fresh logical-DB migrations are applied by exactly one replica.
+[Unit]
+Description=Portal Backstage deployment B
+After=backstage-a.service
+Requires=backstage-a.service
+
+[Container]
+Image=__REGISTRY__/backstage-portal:1.1.0
+ContainerName=portal-backstage-b
+HostName=backstage-b
+Network=portal.network
+EnvironmentFile=/etc/backstage-portal/portal.env
+Volume=/etc/backstage-portal/backstage/app-config.yaml:/app/app-config.yaml:ro,Z
+Volume=/etc/backstage-portal/state:/portal-state:ro,Z
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+NoNewPrivileges=true
+HealthCmd=curl -sf http://127.0.0.1:7007/.backstage/health/v1/readiness
+HealthInterval=15s
+HealthRetries=10
+HealthStartPeriod=180s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=420
+
+[Install]
+WantedBy=multi-user.target

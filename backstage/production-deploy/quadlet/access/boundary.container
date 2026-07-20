@@ -1,0 +1,35 @@
+# Boundary controller+worker: the only public door to the portal. Uses the
+# data host's Postgres (boundary database) over TLS.
+# Config: /etc/backstage-portal/boundary/{boundary.hcl,launch.sh} (rendered)
+[Unit]
+Description=Portal Boundary (brokered access)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=__REGISTRY__/boundary:0.21.3
+ContainerName=portal-boundary
+Network=portal.network
+Environment=SKIP_CHOWN=true
+Environment=SKIP_SETCAP=true
+EnvironmentFile=/etc/backstage-portal/access.env
+Exec=/bin/sh /cfg/launch.sh
+Volume=/etc/backstage-portal/boundary:/cfg:ro,Z
+Volume=/etc/backstage-portal/tls:/tls:ro,Z
+PublishPort=9200:9200
+PublishPort=9202:9202
+PublishPort=9203:9203
+NoNewPrivileges=true
+HealthCmd=wget -q -O- --ca-certificate=/tls/ca.crt https://127.0.0.1:9203/health
+HealthInterval=10s
+HealthRetries=5
+HealthStartPeriod=60s
+Notify=healthy
+
+[Service]
+Restart=always
+LimitNOFILE=262144
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
