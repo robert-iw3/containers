@@ -1,4 +1,11 @@
 ---
+# Configure a multi-host FreeIPA cluster (server + replicas + clients)
+# using the freeipa.ansible_freeipa collection. Install the collection
+# first:  ansible-galaxy collection install -r requirements.yml
+# Sensitive values live in playbook_sensitive_data.yml (gitignored),
+# e.g. encrypted with ansible-vault.
+#
+#   ansible-playbook -i ../inventory/hosts install-cluster.yml
 - name: Playbook to configure IPA cluster
   hosts: ipacluster
   become: true
@@ -12,26 +19,23 @@
     - name: Verify connectivity
       ansible.builtin.ping:
   roles:
-    - role: ipaserver
+    - role: freeipa.ansible_freeipa.ipaserver
       when: inventory_hostname in groups['ipaserver']
       vars:
-        ipaserver_setup_dns: yes
-        ipaserver_auto_forwarders: yes
-        ipaserver_install_packages: yes
-        ipaserver_setup_firewalld: yes
-      state: present
-    - role: ipareplica
+        ipaserver_setup_dns: true
+        ipaserver_auto_forwarders: true
+        ipaserver_install_packages: true
+        ipaserver_setup_firewalld: true
+    - role: freeipa.ansible_freeipa.ipareplica
       when: inventory_hostname in groups['ipareplicas']
       vars:
-        ipareplica_setup_dns: yes
-        ipareplica_auto_forwarders: yes
-        ipareplica_install_packages: yes
-        ipareplica_setup_firewalld: yes
-      state: present
-    - role: ipaclient
+        ipareplica_setup_dns: true
+        ipareplica_auto_forwarders: true
+        ipareplica_install_packages: true
+        ipareplica_setup_firewalld: true
+    - role: freeipa.ansible_freeipa.ipaclient
       when: inventory_hostname in groups['ipaclients']
       vars:
-        ipaclient_use_otp: yes
-        ipaclient_install_packages: yes
-        ipaclient_setup_firewalld: yes
-      state: present
+        ipaclient_use_otp: true
+        ipaclient_install_packages: true
+        ipaclient_setup_firewalld: true

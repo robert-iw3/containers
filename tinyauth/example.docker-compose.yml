@@ -3,94 +3,87 @@ networks:
   auth:
     driver: bridge
     name: auth
-    driver_opts:
-      com.docker.network.bridge.name: auth-br
+
+x-common: &common
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  networks:
+    - auth
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 services:
   traefik:
-    container_name: traefik
-    image: docker.io/traefik:v3.7.7
-    user: "1000:1000" # Run as non-root user
+    <<: *common
+    container_name: traefik-tinyauth
+    image: docker.io/traefik:v3.7.8
+    user: "1000:1000"
+    # Allow the non-root traefik process to bind :80/:443 inside its netns
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=80
     command:
-      - --api.insecure=false # Disable insecure API in production
+      - --api.insecure=false
       - --api.dashboard=true
-      - --providers.docker
+      - --ping=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=auth
       - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
-      - --certificatesresolvers.myresolver.acme.email=admin@example.com
+      - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - "${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt" # Persist Let's Encrypt certificates
-    networks:
-      - auth
+      - "${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - "traefik.http.routers.traefik.rule=Host(`traefik.example.com`)"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.tls=true"
-      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
-
-  whoami:
-    container_name: whoami
-    image: traefik/whoami:latest
-    user: "1000:1000" # Run as non-root user
-    networks:
-      - auth
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.example.com`)"
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
+      - "traefik.http.routers.traefik.middlewares=tinyauth"
+
+  whoami:
+    <<: *common
+    profiles: ["dev"]
+    container_name: whoami-tinyauth
+    image: docker.io/traefik/whoami:v1.11.0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`${WHOAMI_DOMAIN}`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
       - "traefik.http.routers.whoami.middlewares=tinyauth"
       - "traefik.http.routers.whoami.tls=true"
       - "traefik.http.routers.whoami.tls.certresolver=myresolver"
 
   tinyauth:
+    <<: *common
     container_name: tinyauth
-    image: ghcr.io/steveiliop56/tinyauth:v3
-    user: "1000:1000" # Run as non-root user
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
     env_file:
       - .env
-    networks:
-      - auth
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tinyauth.rule=Host(`tinyauth.example.com`)"
+      - "traefik.http.routers.tinyauth.rule=Host(`${TINYAUTH_DOMAIN}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
       - "traefik.http.routers.tinyauth.tls=true"
       - "traefik.http.routers.tinyauth.tls.certresolver=myresolver"
       - "traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth/traefik"

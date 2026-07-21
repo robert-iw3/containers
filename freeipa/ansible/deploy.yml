@@ -1,0 +1,76 @@
+---
+# Deploy a single-server FreeIPA container from the settings in
+# config.yaml. For a multi-host IPA cluster (server + replicas + clients)
+# use ../playbooks/install-cluster.yml with the freeipa.ansible_freeipa
+# collection instead.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+- name: Deploy a single-server FreeIPA container
+  hosts: freeipa
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/..') | realpath }}"
+    config_file: "{{ stack_dir }}/config.yaml"
+    image: quay.io/freeipa/freeipa-server:almalinux-10
+  tasks:
+    - name: Load the FreeIPA configuration
+      ansible.builtin.include_vars:
+        file: "{{ config_file }}"
+        name: ipa
+
+    - name: Assert the passwords are not placeholders
+      ansible.builtin.assert:
+        that:
+          - ipa.admin_password is defined
+          - ipa.admin_password != 'CHANGE_ME'
+          - ipa.dm_password != 'CHANGE_ME'
+        fail_msg: "Set real admin_password and dm_password in config.yaml before deploying."
+
+    - name: Ensure the data directory exists
+      ansible.builtin.file:
+        path: "{{ ipa.data_dir | default('/var/lib/ipa-data') }}"
+        state: directory
+        mode: "0700"
+
+    - name: Run the FreeIPA server container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - "-d"
+          - "--name"
+          - freeipa-server
+          - "-h"
+          - "ipa.{{ ipa.domain }}"
+          - "--read-only"
+          - "-v"
+          - "{{ ipa.data_dir | default('/var/lib/ipa-data') }}:/data:Z"
+          - "-e"
+          - "PASSWORD={{ ipa.admin_password }}"
+          - "-p"
+          - "443:443"
+          - "-p"
+          - "80:80"
+          - "-p"
+          - "389:389"
+          - "-p"
+          - "636:636"
+          - "-p"
+          - "88:88"
+          - "-p"
+          - "464:464"
+          - "--sysctl"
+          - net.ipv6.conf.all.disable_ipv6=0
+          - "{{ image }}"
+          - ipa-server-install
+          - "-U"
+          - "-r"
+          - "{{ ipa.realm }}"
+          - "--no-ntp"
+          - "--skip-mem-check"
+      register: ipa_run
+      changed_when: ipa_run.rc == 0
+      failed_when:
+        - ipa_run.rc != 0
+        - "'already in use' not in (ipa_run.stderr | default(''))"
+      no_log: true

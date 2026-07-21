@@ -2,6 +2,37 @@
 
 This repository provides an optimized deployment setup for the Hanko Authentication Service, implementing zero trust security principles and automated deployment using Docker, Kubernetes, and Ansible. The setup includes TLS certificate management, Vault secret integration, and comprehensive monitoring.
 
+## Quick start (compose)
+
+```bash
+cp .env.example .env       # dev defaults; change passwords for real deployments
+./generate-tls.sh          # self-signed certs into ./tls (SANs cover service names)
+podman-compose up -d postgresql
+podman-compose up -d hanko-migrate hanko backups
+podman-compose --profile dev up -d elements mailslurper   # dev-only extras
+```
+
+The compose stack uses the upstream `ghcr.io/teamhanko/hanko:v2.7.0`
+image by default; set `HANKO_IMAGE`/`HANKO_TAG` (or build via
+`backend/backend.Dockerfile`) to override. `config.yml` carries local
+development defaults — its database credentials must match `.env`, and
+both must be replaced for any non-local deployment. postgres runs TLS
+with certs copied to a private path at startup and publishes no host
+ports; the admin API (8001) binds to localhost only.
+
+## Smoke test / UAT
+
+```bash
+./uat/run-uat.sh        # TLS hanko API + login page + mailslurper
+./uat/run-uat.sh --down # tear down
+```
+The UAT is TLS end to end: a local CA, PostgreSQL with TLS, the hanko
+API fronted by an nginx TLS terminator on `https://localhost:8000`
+(hanko has no native TLS), and a TLS-served hanko-elements login page on
+`https://localhost:8888` that, after login, calls the backend `/me`
+endpoint — the same call a relying application makes — to prove the
+integration. Passcode e-mails land in mailslurper (`http://localhost:8086`).
+
 ## Prerequisites
 
 - Docker >= 24.0.0 or Podman >= 4.4.0
@@ -168,3 +199,19 @@ The Ansible playbook (`ansible/deploy.yml`) manages:
 - Ensure a `standard` storage class exists or update `k8s/postgres.yml`.
 - For non-Vault setups, provide static credentials in `helm/hanko/values.yaml`.
 - Verify cert-manager is installed for production TLS.
+## Deploy with Ansible
+
+The stack ships two Ansible playbooks:
+
+```bash
+cd hanko/ansible
+ansible-playbook -i inventory.ini deploy.yml       # local podman-compose deploy
+ansible-playbook -i inventory.ini deploy-k8s.yml   # Helm/Kubernetes deploy
+```
+`deploy.yml` seeds `.env` from `.env.example` and generates local TLS certs
+on first run. Validate playbook syntax with ansible-lint (containerised, no
+host install needed) from the repo root:
+
+```bash
+ci/ansible-lint.sh
+```

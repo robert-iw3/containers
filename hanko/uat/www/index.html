@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hanko UAT login</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f4f4f5; }
+    .card { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); min-width: 320px; max-width: 420px; }
+    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+    p  { color: #555; font-size: .85rem; }
+    #status { font-weight: 600; }
+    code { background: #eee; padding: 0 .3em; border-radius: 4px; }
+  </style>
+  <script type="module">
+    const API = "https://localhost:8000";
+    import { register } from "https://cdn.jsdelivr.net/npm/@teamhanko/hanko-elements/dist/elements.js";
+    register(API).catch(console.error);
+    // Integration demo: once hanko-elements reports a session, call the
+    // backend /me endpoint with the session cookie — the same call any
+    // relying application would make.
+    document.addEventListener("hanko-session-created", async () => {
+      const s = document.getElementById("status");
+      s.textContent = "Session created; calling " + API + "/me ...";
+      try {
+        const r = await fetch(API + "/me", { credentials: "include" });
+        const me = await r.json();
+        s.textContent = "Integration OK — /me returned user id " + me.id;
+      } catch (e) {
+        s.textContent = "Session created, but /me call failed: " + e;
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h1>Hanko UAT login</h1>
+    <hanko-auth></hanko-auth>
+    <p>Register with any e-mail (passcodes arrive in mailslurper at
+    <a href="http://localhost:8086">localhost:8086</a>) or use a password.</p>
+    <p>First visit <a href="https://localhost:8000/health/alive">https://localhost:8000/health/alive</a>
+    once and accept the self-signed certificate (or trust <code>uat/tls/ca.crt</code>).</p>
+    <p id="status"></p>
+  </div>
+</body>
+</html>

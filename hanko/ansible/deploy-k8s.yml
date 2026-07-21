@@ -1,0 +1,53 @@
+---
+# Deploy Hanko to Kubernetes via the bundled Helm chart. For the local
+# podman-compose deployment use deploy.yml instead.
+#
+#   ansible-playbook -i inventory.ini deploy-k8s.yml
+- name: Deploy Hanko Authentication Service to Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    hanko_namespace: hanko
+    hanko_registry: "{{ lookup('ansible.builtin.env', 'CONTAINER_REGISTRY') }}"
+    hanko_tag: latest
+  tasks:
+    - name: Create namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ hanko_namespace }}"
+            labels:
+              name: "{{ hanko_namespace }}"
+
+    - name: Deploy Helm chart
+      kubernetes.core.helm:
+        name: hanko
+        chart_ref: ./helm/hanko
+        namespace: "{{ hanko_namespace }}"
+        values:
+          image:
+            repository: "{{ hanko_registry }}/hanko"
+            tag: "{{ hanko_tag }}"
+          vault:
+            address: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"
+          ingress:
+            enabled: true
+            hostname: hanko.your-domain.com
+            tls: true
+          podSecurityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+    - name: Wait for deployments
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ hanko_namespace }}"
+        wait: true
+        wait_timeout: 300
+        label_selectors:
+          - app in (hanko, elements, postgresql, mailslurper)

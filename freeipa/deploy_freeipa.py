@@ -38,6 +38,9 @@ class FreeIPADeployer:
         for field in required_fields:
             if field not in self.config or not self.config[field]:
                 raise ValueError(f"Missing or empty required config field: {field}")
+        for field in ('admin_password', 'dm_password'):
+            if self.config[field] == 'CHANGE_ME':
+                raise ValueError(f"{field} still has the placeholder value; set a real password in the config file")
         if not self.config['domain'].lower() == self.config['realm'].lower():
             logger.warning("Domain and realm should typically match in case")
 
@@ -148,11 +151,11 @@ class FreeIPADeployer:
                 k8s_config = yaml.safe_load(f)
 
             k8s_config['metadata']['namespace'] = namespace
-            k8s_config['spec']['template']['spec']['containers'][0]['env'].append({
+            k8s_config['spec']['containers'][0]['env'].append({
                 'name': 'PASSWORD',
                 'value': self.admin_password
             })
-            k8s_config['spec']['template']['spec']['containers'][0]['args'] = [
+            k8s_config['spec']['containers'][0]['args'] = [
                 'ipa-server-install', '-U',
                 '-r', self.realm,
                 '--setup-dns',

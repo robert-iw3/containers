@@ -14,11 +14,25 @@ This guide provides step-by-step instructions to deploy Authentik, an open-sourc
 
 Ensure the following files are in your working directory:
 - `deploy.py`: Python script for deployment.
-- `prod-docker-compose.yml`: Docker Compose configuration.
+- `prod-docker-compose.yml`: Docker Compose configuration (pinned images, internal DB network, socket proxy for outposts, pg_dump backup sidecar).
 - `authentik-k8s.yml`: Kubernetes manifest.
 - `.env.example`: Template for environment variables.
 - `Makefile`: Simplifies deployment tasks.
-- `haproxy.cfg`: Configuration for Docker socket proxy.
+- `uat/`: self-contained TLS smoke test + integration demo. `uat/run-uat.sh` generates a local CA, fronts authentik with an nginx TLS terminator on `https://localhost:9443`, provisions an OAuth2/OIDC provider + application declaratively via `uat/blueprints/uat-app.yaml`, then runs a **mock relying application** (oauth2-proxy + `whoami`) that authenticates against authentik over OIDC and performs a full end-to-end login. Prints the admin and mock-app URLs with credentials (`--down` tears it down).
+
+  **MFA is configurable** via the `UAT_MFA` environment variable — production keeps MFA on (the compose stack never touches the login flow; only the UAT script optionally relaxes it):
+  - `UAT_MFA=skip` (default): removes the MFA-validation stage so password-only login works — fastest for smoke tests and the browser demo.
+  - `UAT_MFA=totp`: keeps MFA enabled (production-like) and validates it end to end — enrolls a TOTP device for `akadmin` with a known secret and completes the login by computing the current TOTP code (via `python3`). The run prints the TOTP secret and current code so you can also log in from a browser with an authenticator app.
+
+    ```bash
+    UAT_MFA=totp ./uat/run-uat.sh      # keep MFA, validate with TOTP
+    ./uat/run-uat.sh                   # default: password-only (MFA skipped)
+    ```
+
+Security notes:
+- postgres and redis are on an internal network and publish no host ports.
+- The worker manages outposts through `docker-socket-proxy` (`DOCKER_HOST=tcp://docker-socket-proxy:2375`); the runtime socket is never mounted into authentik itself.
+- The first start seeds `akadmin` from `AUTHENTIK_BOOTSTRAP_PASSWORD`/`AUTHENTIK_BOOTSTRAP_EMAIL` in `.env`; rotate after first login.
 
 ## Deployment Steps
 
@@ -139,3 +153,20 @@ This stops and removes containers (Docker/Podman) or deletes Kubernetes resource
 - **Secrets Management**: For enhanced security, integrate with a secrets manager like HashiCorp Vault.
 
 For more details, refer to the [Authentik Documentation](https://goauthentik.io/docs/).
+
+## Deploy with Ansible
+
+Each stack ships an Ansible deploy playbook (`ansible/deploy.yml`) that
+brings the stack up via podman-compose:
+
+```bash
+cd authentik/ansible
+ansible-playbook -i inventory.ini deploy.yml
+```
+It generates `.env` (secrets) via `deploy.py` on first run.
+Validate playbook syntax with ansible-lint (run from a container, no host
+install needed) from the repo root:
+
+```bash
+ci/ansible-lint.sh
+```

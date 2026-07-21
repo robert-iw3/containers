@@ -1,0 +1,40 @@
+---
+# Deploy the authentik identity stack with podman-compose.
+# Idempotent: generates the .env (secrets) on first run via deploy.py,
+# then brings the compose project up.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+- name: Deploy the authentik identity stack
+  hosts: authentik
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/..') | realpath }}"
+    compose_file: prod-docker-compose.yml
+    secret_generator: "python3 deploy.py --generate-env"
+  tasks:
+    - name: Verify podman-compose is available
+      ansible.builtin.command: podman-compose --version
+      register: podman_compose_version
+      changed_when: false
+
+    - name: Check for an existing .env file
+      ansible.builtin.stat:
+        path: "{{ stack_dir }}/.env"
+      register: env_file
+
+    - name: Generate the .env file with secrets
+      ansible.builtin.command: "{{ secret_generator }}"
+      args:
+        chdir: "{{ stack_dir }}"
+        creates: "{{ stack_dir }}/.env"
+      when: not env_file.stat.exists
+
+    - name: Bring up the compose project
+      ansible.builtin.command: "podman-compose -f {{ compose_file }} up -d"
+      args:
+        chdir: "{{ stack_dir }}"
+      register: compose_up
+      changed_when: >-
+        ('Creating' in (compose_up.stderr | default('')))
+        or ('Recreating' in (compose_up.stderr | default('')))
+        or ('done' in (compose_up.stderr | default('')))

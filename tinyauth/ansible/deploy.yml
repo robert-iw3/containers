@@ -1,0 +1,41 @@
+---
+# Deploy the tinyauth stack (traefik + tinyauth) with podman-compose.
+# Idempotent: seeds .env from .env.example on first run (set SECRET and a
+# real USERS hash before deploying), then brings the compose project up.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+- name: Deploy the tinyauth forward-auth stack
+  hosts: tinyauth
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/..') | realpath }}"
+    compose_file: example.docker-compose.yml
+  tasks:
+    - name: Verify podman-compose is available
+      ansible.builtin.command: podman-compose --version
+      register: podman_compose_version
+      changed_when: false
+
+    - name: Check for an existing .env file
+      ansible.builtin.stat:
+        path: "{{ stack_dir }}/.env"
+      register: env_file
+
+    - name: Seed .env from .env.example on first run
+      ansible.builtin.copy:
+        src: "{{ stack_dir }}/.env.example"
+        dest: "{{ stack_dir }}/.env"
+        mode: "0600"
+        force: false
+        remote_src: true
+      when: not env_file.stat.exists
+
+    - name: Bring up the compose project
+      ansible.builtin.command: "podman-compose -f {{ compose_file }} up -d"
+      args:
+        chdir: "{{ stack_dir }}"
+      register: compose_up
+      changed_when: >-
+        ('Creating' in (compose_up.stderr | default('')))
+        or ('Recreating' in (compose_up.stderr | default('')))
+        or ('done' in (compose_up.stderr | default('')))

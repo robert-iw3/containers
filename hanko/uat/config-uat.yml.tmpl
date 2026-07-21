@@ -1,0 +1,43 @@
+# UAT-only Hanko config template; run-uat.sh substitutes __PG_PASSWORD__
+# and __JWT_KEY__ and writes config-uat.yml (gitignored).
+#
+# hanko has no native TLS: the nginx proxy terminates HTTPS in front of
+# it (see docker-compose.uat.yml). Database TLS is requested through the
+# `url` DSN (verify-ca: encrypted + CA-pinned, hostname not checked).
+database:
+  url: postgres://hanko:__PG_PASSWORD__@postgres:5432/hanko?sslmode=verify-ca&sslrootcert=/etc/tls/ca.crt
+  dialect: postgres
+secrets:
+  keys:
+    - __JWT_KEY__
+service:
+  name: Hanko UAT
+email_delivery:
+  enabled: true
+  from_address: no-reply@uat.local
+  from_name: Hanko UAT
+  smtp:
+    host: mailslurper
+    port: "2500"
+password:
+  enabled: true
+  min_password_length: 8
+webauthn:
+  relying_party:
+    id: localhost
+    display_name: Hanko UAT
+    origins:
+      - "https://localhost:8888"
+session:
+  cookie:
+    http_only: true
+    same_site: lax
+    secure: true
+server:
+  public:
+    address: ":8000"
+    cors:
+      allow_origins:
+        - "https://localhost:8888"
+  admin:
+    address: ":8001"

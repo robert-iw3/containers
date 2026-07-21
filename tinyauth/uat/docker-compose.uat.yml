@@ -1,0 +1,67 @@
+# Self-contained UAT stack demonstrating tinyauth's native integration
+# pattern: traefik (TLS, shared CA) routes a protected app (whoami)
+# through tinyauth's forwardAuth middleware. Unauthenticated requests are
+# bounced to the tinyauth login UI; authenticated ones reach whoami.
+#   https://app.localhost:8443      -> whoami, protected by tinyauth
+#   https://tinyauth.localhost:8443 -> tinyauth login UI
+# Credentials come from uat/.env; certs from uat/tls. Both are generated
+# by run-uat.sh.
+---
+networks:
+  tinyauth-uat:
+    driver: bridge
+    name: tinyauth-uat
+
+services:
+  traefik:
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-tinyauth-uat
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=tinyauth-uat
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+    ports:
+      - "127.0.0.1:8444:8443"
+    volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - ./tls:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      - tinyauth-uat
+
+  tinyauth:
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-uat
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tinyauth.rule=Host(`tinyauth.localhost`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth/traefik"
+      - "traefik.http.middlewares.tinyauth.forwardauth.trustForwardHeader=true"
+    networks:
+      - tinyauth-uat
+
+  whoami:
+    image: docker.io/traefik/whoami:v1.11.0
+    container_name: whoami-tinyauth-uat
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`app.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.whoami.middlewares=tinyauth"
+    networks:
+      - tinyauth-uat

@@ -23,10 +23,27 @@ This repository provides an automated deployment solution for the TinyAuth appli
 - Traefik as a reverse proxy for secure routing
 - Namespace isolation in Kubernetes
 
+## Smoke test / UAT
+
+```bash
+./uat/run-uat.sh        # TLS traefik + tinyauth protecting a demo app
+./uat/run-uat.sh --down # tear down
+```
+The UAT generates a local CA and demonstrates the native integration
+pattern: traefik (TLS) protects a `whoami` app at
+`https://app.localhost:8444` with tinyauth's forwardAuth middleware.
+Unauthenticated API calls get `401`; browsers are redirected to the
+tinyauth login UI (`https://tinyauth.localhost:8444`) with a return URL,
+and after login are sent back to the protected app. The script prints
+the generated `uat-admin` credentials.
+
 ## Deployment Methods
 
 ### 1. Docker Compose
-Deploys TinyAuth with Traefik and a Whoami test service using Docker Compose.
+Deploys TinyAuth (pinned `v3.6.2`) behind Traefik using Docker Compose.
+The `whoami` demo service sits behind the `dev` profile
+(`podman-compose --profile dev up -d`); domains, the ACME e-mail and the
+runtime socket path come from `.env`.
 
 ```bash
 python deploy_tinyauth.py --method docker
@@ -111,7 +128,9 @@ To protect additional applications with TinyAuth:
    - Reference the `tinyauth-auth` middleware for authentication.
 
 3. **Ansible**:
-   - Update `ansible/tinyauth-playbook.yml` with additional `podman_container` tasks for new services.
+   - Add the new service (with the Traefik labels above) to
+     `example.docker-compose.yml`; `ansible/deploy.yml` brings the whole
+     compose project up.
 
 ## Troubleshooting
 
@@ -133,3 +152,19 @@ Contributions are welcome! Please submit pull requests or open issues for improv
 ## License
 
 MIT License
+## Deploy with Ansible
+
+Each stack ships an Ansible deploy playbook (`ansible/deploy.yml`) that
+brings the stack up via podman-compose:
+
+```bash
+cd tinyauth/ansible
+ansible-playbook -i inventory.ini deploy.yml
+```
+It seeds `.env` from `.env.example` on first run — set `SECRET` and a real `USERS` hash first.
+Validate playbook syntax with ansible-lint (run from a container, no host
+install needed) from the repo root:
+
+```bash
+ci/ansible-lint.sh
+```

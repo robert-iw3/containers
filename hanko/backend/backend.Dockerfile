@@ -19,5 +19,7 @@ FROM gcr.io/distroless/static:nonroot
 COPY --chown=nonroot:nonroot --from=go-builder /hanko /hanko
 COPY --chown=nonroot:nonroot --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 USER nonroot:nonroot
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD ["curl", "-f", "http://localhost:8000/health"]
+# No HEALTHCHECK: distroless/static ships no curl or shell, so any
+# exec-based probe would fail. Health is exposed at :8000/health for
+# external monitoring.
 ENTRYPOINT ["/hanko"]

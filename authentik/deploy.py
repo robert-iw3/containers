@@ -14,10 +14,7 @@ def generate_secret(length: int = 50) -> str:
 def validate_env(env: Dict[str, str]) -> bool:
     """Validate required environment variables."""
     required = [
-        "AUTHENTIK_SUBNET", "AUTHENTIK_GATEWAY", "POSTGRESQL_IPv4", "BACKUP_POSTGRESQL_IPv4",
-        "REDIS_IPv4", "SERVER_IPv4", "WORKER_IPv4", "SOCKETPROXY_IPv4",
-        "POSTGRESQL_USERNAME", "POSTGRESQL_PASSWORD", "POSTGRESQL_DATABASE",
-        "POSTGRESQL_REPLICATION_USER", "POSTGRESQL_REPLICATION_PASSWORD",
+        "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB",
         "AUTHENTIK_SECRET_KEY"
     ]
     missing = [var for var in required if not env.get(var)]
@@ -40,20 +37,14 @@ def load_env_file(env_file: str = ".env") -> Dict[str, str]:
 def generate_env_file(env_file: str = ".env"):
     """Generate a .env file with secure defaults."""
     env = {
-        "AUTHENTIK_SUBNET": "172.20.0.0/16",
-        "AUTHENTIK_GATEWAY": "172.20.0.1",
-        "POSTGRESQL_IPv4": "172.20.0.2",
-        "BACKUP_POSTGRESQL_IPv4": "172.20.0.3",
-        "REDIS_IPv4": "172.20.0.4",
-        "SERVER_IPv4": "172.20.0.5",
-        "WORKER_IPv4": "172.20.0.6",
-        "SOCKETPROXY_IPv4": "172.20.0.7",
-        "POSTGRESQL_USERNAME": "authentik",
-        "POSTGRESQL_PASSWORD": generate_secret(40),
-        "POSTGRESQL_DATABASE": "authentik",
-        "POSTGRESQL_REPLICATION_USER": "repl_user",
-        "POSTGRESQL_REPLICATION_PASSWORD": generate_secret(40),
+        "POSTGRES_USER": "authentik",
+        "POSTGRES_PASSWORD": generate_secret(40),
+        "POSTGRES_DB": "authentik",
+        "AUTHENTIK_IMAGE": "ghcr.io/goauthentik/server",
+        "AUTHENTIK_TAG": "2026.5.5",
         "AUTHENTIK_SECRET_KEY": generate_secret(50),
+        "AUTHENTIK_BOOTSTRAP_PASSWORD": generate_secret(16),
+        "AUTHENTIK_BOOTSTRAP_EMAIL": "akadmin@example.com",
         "AUTHENTIK_EMAIL__HOST": "smtp.example.com",
         "AUTHENTIK_EMAIL__PORT": "587",
         "AUTHENTIK_EMAIL__USERNAME": "",
@@ -92,7 +83,7 @@ def deploy_kubernetes(manifest_file: str, env_file: str):
 def main():
     parser = argparse.ArgumentParser(description="Deploy Authentik with Docker, Podman, or Kubernetes.")
     parser.add_argument("--generate-env", action="store_true", help="Generate a new .env file.")
-    parser.add_argument("--deploy", choices=["docker", "podman", "kubernetes"], required=True, help="Deployment method.")
+    parser.add_argument("--deploy", choices=["docker", "podman", "kubernetes"], help="Deployment method.")
     parser.add_argument("--compose-file", default="prod-docker-compose.yml", help="Docker Compose file path.")
     parser.add_argument("--k8s-manifest", default="authentik-k8s.yml", help="Kubernetes manifest file path.")
     parser.add_argument("--env-file", default=".env", help="Environment file path.")

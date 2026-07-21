@@ -25,7 +25,26 @@ This project deploys Keycloak with PostgreSQL and Traefik for identity managemen
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your credentials and a valid Let's Encrypt email.
+   Edit `.env` with your credentials, domains and a valid Let's Encrypt email.
+   The compose stack runs Keycloak 26 (Quarkus) with modern `KC_*`
+   configuration: TLS terminates at traefik, Keycloak serves HTTP on an
+   internal network with `KC_PROXY_HEADERS=xforwarded`, and postgres is
+   reachable only from the internal `keycloak-backend` network. The
+   `KEYCLOAK_USER`/`KEYCLOAK_PASSWORD` values bootstrap the initial admin
+   (`KC_BOOTSTRAP_ADMIN_*`) — rotate them after first login.
+
+   **Smoke test / UAT** (self-contained, no DNS needed):
+   ```bash
+   ./uat/run-uat.sh        # TLS Keycloak on https://localhost:8543 + mock OIDC app
+   ./uat/run-uat.sh --down # tear down
+   ```
+   The UAT generates a local CA, serves Keycloak over HTTPS (management
+   port included), bootstraps a `uat` realm + demo user + confidential
+   client via `kcadm`, then runs a **mock relying application**
+   (oauth2-proxy in front of a `whoami` upstream) that performs the full
+   OIDC authorization-code flow against Keycloak — demonstrating exactly
+   how an application integrates with Keycloak as its IdP. The script
+   prints both the admin console and mock-app URLs with credentials.
 
 3. **Deploy**
    - **Kubernetes**:
@@ -68,3 +87,19 @@ This project deploys Keycloak with PostgreSQL and Traefik for identity managemen
 - Generate a secure `TRAEFIK_AUTH_HASHED_PASSWORD` with `openssl passwd -6`.
 - Monitor logs with `kubectl logs` or `podman logs`.
 - Backups are stored in `keycloak-postgres-backups` volume, kept for 7 days.
+## Deploy with Ansible
+
+Each stack ships an Ansible deploy playbook (`ansible/deploy.yml`) that
+brings the stack up via podman-compose:
+
+```bash
+cd keycloak/ansible
+ansible-playbook -i inventory.ini deploy.yml
+```
+It seeds `.env` from `.env.example` on first run — fill in secrets first.
+Validate playbook syntax with ansible-lint (run from a container, no host
+install needed) from the repo root:
+
+```bash
+ci/ansible-lint.sh
+```

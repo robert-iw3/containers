@@ -4,53 +4,52 @@ volumes:
     driver: local
   authentik-postgres-backups:
     driver: local
-  redis:
+  authentik-redis:
     driver: local
 
 networks:
-  authentik-net:
+  authentik-frontend:
     driver: bridge
-    ipam:
-      config:
-        - subnet: ${AUTHENTIK_SUBNET}
-          gateway: ${AUTHENTIK_GATEWAY}
+  authentik-backend:
+    driver: bridge
+    internal: true
 
-x-common-vars-apps: &common-vars-apps
+x-common: &common
   security_opt:
     - no-new-privileges:true
   restart: unless-stopped
-  env_file:
-    - .env
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-authentik-env: &authentik-env
+  AUTHENTIK_REDIS__HOST: redis
+  AUTHENTIK_POSTGRESQL__HOST: postgresql
+  AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER}
+  AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
+  AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
 
 services:
   postgresql:
-    <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
+    <<: *common
+    image: docker.io/library/postgres:17.10
     container_name: postgres-authentik
-    hostname: postgres-authentik.dev.io
+    env_file:
+      - .env
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       start_period: 20s
       interval: 30s
       retries: 5
       timeout: 5s
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - authentik-postgres:/bitnami/postgresql:z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-    ports:
-      - 5432:5432
+      - authentik-postgres:/var/lib/postgresql/data:z
     networks:
-      authentik-net:
-        ipv4_address: ${POSTGRESQL_IPv4}
+      - authentik-backend
     deploy:
-      mode: global
       resources:
         limits:
           cpus: "1.0"
@@ -60,47 +59,38 @@ services:
           memory: 512M
 
   redis:
-    <<: *common-vars-apps
-    image: docker.io/redis:alpine
+    <<: *common
+    image: docker.io/library/redis:8.8.0-alpine
     container_name: redis-authentik
-    hostname: redis-authentik.dev.io
     command: --save 60 1 --loglevel warning
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       start_period: 20s
       interval: 30s
       retries: 5
       timeout: 3s
     volumes:
-      - redis:/data:z
-    ports:
-      - 6379:6379
+      - authentik-redis:/data:z
     networks:
-      authentik-net:
-        ipv4_address: ${REDIS_IPv4}
+      - authentik-backend
     deploy:
-      mode: global
       resources:
         limits:
           cpus: "0.5"
-          memory: 2048M
+          memory: 1024M
         reservations:
           cpus: "0.25"
-          memory: 512M
+          memory: 256M
 
   server:
-    <<: *common-vars-apps
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.3}
+    <<: *common
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.5}
     container_name: authentik-server
-    hostname: authentik-server.dev.io
     command: server
+    env_file:
+      - .env
     environment:
-      AUTHENTIK_REDIS__HOST: redis-authentik.dev.io
-      AUTHENTIK_POSTGRESQL__HOST: postgres-authentik.dev.io
-      AUTHENTIK_POSTGRESQL__USER: ${POSTGRESQL_USERNAME}
-      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRESQL_DATABASE}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRESQL_PASSWORD}
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      <<: *authentik-env
     volumes:
       - ./media:/media
       - ./custom-templates:/templates
@@ -114,20 +104,15 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/if/healthz"]
+      test: ["CMD", "ak", "healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 60s
     networks:
-      authentik-net:
-        ipv4_address: ${SERVER_IPv4}
+      - authentik-frontend
+      - authentik-backend
     deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
       resources:
         limits:
           cpus: "1.0"
@@ -137,20 +122,18 @@ services:
           memory: 512M
 
   worker:
-    <<: *common-vars-apps
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.3}
+    <<: *common
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.5}
     container_name: authentik-worker
-    hostname: authentik-worker.dev.io
     command: worker
+    env_file:
+      - .env
     environment:
-      AUTHENTIK_REDIS__HOST: redis-authentik.dev.io
-      AUTHENTIK_POSTGRESQL__HOST: postgres-authentik.dev.io
-      AUTHENTIK_POSTGRESQL__USER: ${POSTGRESQL_USERNAME}
-      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRESQL_DATABASE}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRESQL_PASSWORD}
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      <<: *authentik-env
+      # Outpost management goes through the socket proxy; the docker
+      # socket itself is never mounted into the worker.
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./media:/media
       - ./certs:/certs
       - ./custom-templates:/templates
@@ -159,17 +142,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/if/healthz"]
+      test: ["CMD", "ak", "healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 60s
     networks:
-      authentik-net:
-        ipv4_address: ${WORKER_IPv4}
+      - authentik-frontend
+      - authentik-backend
     deploy:
-      mode: global
       resources:
         limits:
           cpus: "1.0"
@@ -179,29 +163,19 @@ services:
           memory: 512M
 
   docker-socket-proxy:
-    image: docker.io/tecnativa/docker-socket-proxy
+    <<: *common
+    image: docker.io/tecnativa/docker-socket-proxy:v0.4.2
     container_name: docker-socket-proxy
-    hostname: docker-socket-proxy
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
     environment:
-      - CONTAINERS=1
-      - EXEC=1
-      - NETWORKS=1
-      - POST=1
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      POST: 1
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-    env_file:
-      - .env
+      - ${SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:
-      authentik-net:
-        ipv4_address: ${SOCKETPROXY_IPv4}
+      - authentik-backend
     deploy:
-      mode: global
       resources:
         limits:
           cpus: "0.5"
@@ -211,54 +185,39 @@ services:
           memory: 256M
 
   backups:
-    <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
-    container_name: postgres2-authentik
-    hostname: postgres2-authentik.dev.io
+    <<: *common
+    image: docker.io/library/postgres:17.10
+    container_name: postgres-backups-authentik
     command:
       - sh
       - -c
       - |
-        sleep 30m
         while true; do
-          pg_dump -h postgres-authentik.dev.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/authentik-postgres/backups/authentik-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
-            echo "Backup failed at $(date)"; exit 1;
+          pg_dump | gzip > /backups/authentik-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+            echo "Backup failed at $(date)"
           }
-          find /srv/authentik-postgres/backups -type f -mtime +7 -delete
+          find /backups -type f -name '*.gz' -mtime +7 -delete
           sleep 24h
         done
+    environment:
+      PGHOST: postgresql
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - authentik-postgres:/bitnami/postgresql:z
-      - authentik-postgres-backups:/srv/authentik-postgres/backups:Z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: slave
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-      POSTGRESQL_MASTER_HOST: postgres-authentik.dev.io
-      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      - authentik-postgres-backups:/backups:Z
     depends_on:
       postgresql:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-    ports:
-      - 5433:5432
     networks:
-      authentik-net:
-        ipv4_address: ${BACKUP_POSTGRESQL_IPv4}
+      - authentik-backend
     deploy:
-      mode: global
       resources:
         limits:
           cpus: "0.5"
-          memory: 2048M
+          memory: 512M
         reservations:
           cpus: "0.25"
-          memory: 512M
+          memory: 128M

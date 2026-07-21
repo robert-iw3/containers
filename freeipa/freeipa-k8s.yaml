@@ -25,7 +25,6 @@ spec:
     volumeMounts:
     - name: ipa-data
       mountPath: /data
-      readOnly: true
     ports:
     - containerPort: 53
       protocol: UDP
@@ -52,8 +51,6 @@ spec:
     env:
     - name: IPA_SERVER_IP
       value: "no-update"
-    - name: DEBUG_TRACE
-      value: "1"
     livenessProbe:
       exec:
         command: ["systemctl", "is-active", "ipa"]
