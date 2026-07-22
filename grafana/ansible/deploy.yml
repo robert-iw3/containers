@@ -1,0 +1,69 @@
+---
+# Deploy the Grafana SSO stack: traefik TLS, tinyauth and Grafana with
+# header sign-in. Runs the same compose file uat/run-uat.sh validates.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# Seeds sso/.env from sso/.env.example on first run; fill in the
+# placeholders before the stack will start.
+- name: Deploy the Grafana SSO stack
+  hosts: grafana
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/../sso') | realpath }}"
+  tasks:
+    - name: Verify podman-compose is available
+      ansible.builtin.command: podman-compose --version
+      changed_when: false
+
+    - name: Check for an existing .env file
+      ansible.builtin.stat:
+        path: "{{ stack_dir }}/.env"
+      register: env_file
+
+    - name: Seed .env from .env.example on first run
+      ansible.builtin.copy:
+        src: "{{ stack_dir }}/.env.example"
+        dest: "{{ stack_dir }}/.env"
+        mode: "0600"
+        force: false
+        remote_src: true
+      when: not env_file.stat.exists
+
+    - name: Fail when .env still holds placeholders
+      ansible.builtin.command: grep -c CHANGE_ME .env
+      args:
+        chdir: "{{ stack_dir }}"
+      register: placeholders
+      changed_when: false
+      failed_when: placeholders.stdout | int > 0
+
+    - name: Bring up the datastore
+      ansible.builtin.command: podman-compose up -d --no-recreate postgres
+      args:
+        chdir: "{{ stack_dir }}"
+      register: db_up
+      changed_when: "'done' in (db_up.stderr | default(''))"
+
+    - name: Wait for the datastore to accept connections
+      ansible.builtin.command: podman exec postgres-grafana-sso pg_isready -U grafana -d grafana
+      register: pg_ready
+      until: pg_ready.rc == 0
+      retries: 20
+      delay: 5
+      changed_when: false
+
+    - name: Bring up the gateway and application
+      ansible.builtin.command: podman-compose up -d --no-recreate tinyauth traefik grafana
+      args:
+        chdir: "{{ stack_dir }}"
+      register: app_up
+      changed_when: "'done' in (app_up.stderr | default(''))"
+
+    - name: Wait for Grafana to report healthy
+      ansible.builtin.command: podman exec grafana-sso wget -q -O /dev/null http://127.0.0.1:3000/api/health
+      register: gf_health
+      until: gf_health.rc == 0
+      retries: 30
+      delay: 5
+      changed_when: false

@@ -1,0 +1,150 @@
+# SaltStack (salt-master + salt-api + a minion) behind traefik TLS with a
+# tinyauth single sign-on gate.
+#
+# salt-api is an HTTP API. tinyauth gates browser access to it; programmatic
+# callers — anything presenting a salt auth token, or logging in at /login —
+# bypass the interactive gate and authenticate with salt's own eauth. The
+# ZeroMQ minion transport (4505/4506) is not HTTP and is published directly,
+# entirely outside the gate.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  salt-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  salt-master-data:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-salt-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`salt`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      salt-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-salt-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: SaltStack SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=salt"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - salt-sso
+
+  salt:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/salt-sso:3008
+    container_name: salt-sso
+    environment:
+      SALT_ROLE: master-api
+      # sharedsecret eauth maps this api user to the runner/wheel/execution
+      # ACL; the entrypoint renders it into the master config.
+      SALT_API_USER: ${SALT_API_USER}
+      SALT_SHARED_SECRET: ${SALT_SHARED_SECRET}
+    volumes:
+      - salt-master-data:/etc/salt:Z
+    ports:
+      # ZeroMQ publish + return transport for minions, published directly.
+      # Not HTTP and not behind the SSO gate.
+      - "${BIND_ADDR}:4505:4505"
+      - "${BIND_ADDR}:4506:4506"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=salt"
+      - "traefik.http.services.salt.loadbalancer.server.port=8000"
+      # Interactive: a browser without a salt token is gated by tinyauth.
+      - "traefik.http.routers.salt.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.salt.entrypoints=websecure"
+      - "traefik.http.routers.salt.tls=true"
+      - "traefik.http.routers.salt.priority=10"
+      - "traefik.http.routers.salt.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine: the /login token exchange and any request carrying a salt
+      # auth token skip the interactive gate; salt-api's eauth is the
+      # credential. Identity headers are stripped so none can be forged.
+      - "traefik.http.routers.salt-machine.rule=Host(`${APP_HOST}`) && (PathPrefix(`/login`) || PathPrefix(`/logout`) || HeaderRegexp(`X-Auth-Token`, `.+`))"
+      - "traefik.http.routers.salt-machine.entrypoints=websecure"
+      - "traefik.http.routers.salt-machine.tls=true"
+      - "traefik.http.routers.salt-machine.priority=100"
+      - "traefik.http.routers.salt-machine.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.salt-machine.service=salt"
+    networks:
+      - salt-sso
+
+  salt-minion:
+    <<: *app
+    image: localhost/salt-sso:3008
+    container_name: salt-minion-sso
+    environment:
+      SALT_ROLE: minion
+      SALT_MASTER: salt
+      SALT_MINION_ID: uat-minion
+    depends_on:
+      salt:
+        condition: service_healthy
+    networks:
+      - salt-sso

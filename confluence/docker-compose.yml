@@ -1,4 +1,8 @@
-version: '3'
+# Confluence with PostgreSQL and Traefik (Let's Encrypt TLS), plus a
+# pg_dump + application-data backup sidecar.
+#
+# Credentials come from .env (POSTGRES_USER / POSTGRES_PASSWORD /
+# POSTGRES_DB). For a single-sign-on deployment see sso/.
 
 volumes:
   confluence-postgres:
@@ -23,24 +27,18 @@ x-common-vars-apps: &common-vars-apps
 services:
   postgres:
     <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
+    image: docker.io/postgres:17.10-alpine
     container_name: postgres-confluence
     hostname: postgres-confluence.io
-    ports:
-      - 5432:5432
     environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - confluence-postgres:/bitnami/postgresql:z
+      - confluence-postgres:/var/lib/postgresql/data:z
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRESQL_DATABASE} -U $${POSTGRESQL_USERNAME}"]
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -54,9 +52,11 @@ services:
           memory: 512M
 
   confluence:
-    image: docker.io/atlassian/confluence-server:latest
+    image: docker.io/atlassian/confluence:10.2.7
     container_name: confluence
     hostname: confluence.io
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - confluence-data:/var/atlassian/application-data/confluence:z
     environment:
@@ -71,7 +71,7 @@ services:
     networks:
       - traefik
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8090/status"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -106,14 +106,14 @@ services:
 
   traefik:
     <<: *common-vars-apps
-    image: docker.io/traefik:latest
+    image: docker.io/traefik:v3.7.8
     container_name: traefik
     hostname: traefik.io
     command:
       - "--log.level=WARN"
       - "--accesslog=true"
       - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.insecure=false"
       - "--ping=true"
       - "--ping.entrypoint=ping"
       - "--entryPoints.ping.address=:8082"
@@ -131,12 +131,11 @@ services:
       - "--global.checkNewVersion=true"
       - "--global.sendAnonymousUsage=false"
     volumes:
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
       # systemctl --user enable podman.socket
       #- $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certificates:/etc/traefik/acme:ro
+      - traefik-certificates:/etc/traefik/acme
     ports:
       - "80:80"
       - "443:443"
@@ -174,16 +173,18 @@ services:
 
   backups:
     <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
+    image: docker.io/postgres:17.10-alpine
     container_name: psql-backup
     hostname: confluence-backup-psql.io
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     command:
       - sh
       - -c
       - |
         sleep 30m
         while true; do
-          pg_dump -h postgres-confluence.io -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/confluence-postgres/backups/confluence-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+          pg_dump -h postgres-confluence.io -p 5432 -d "${POSTGRES_DB}" -U "${POSTGRES_USER}" | gzip > /srv/confluence-postgres/backups/confluence-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
             echo "postgres backup failed at $(date)"; exit 1;
           }
           tar -zcpf /srv/confluence-application-data/backups/confluence-application-data-backup-$(date "+%Y-%m-%d_%H-%M").tar.gz /var/atlassian/application-data/confluence || {
@@ -194,18 +195,10 @@ services:
           sleep 24h
         done
     volumes:
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - confluence-postgres:/bitnami/postgresql:z
-      - confluence-data:/var/atlassian/application-data/confluence:z
+      - confluence-data:/var/atlassian/application-data/confluence:ro
       - confluence-data-backups:/srv/confluence-application-data/backups:z
       - confluence-postgres-backups:/srv/confluence-postgres/backups:Z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: slave
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-      POSTGRESQL_MASTER_HOST: postgres-confluence.io
-      POSTGRESQL_MASTER_PORT_NUMBER: 5432
     depends_on:
       postgres:
         condition: service_healthy

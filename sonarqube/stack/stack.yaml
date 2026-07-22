@@ -1,0 +1,64 @@
+# stack.yaml — single source of truth for the SonarQube + Keycloak stack.
+# Consumed by scripts/render.sh (compose artifacts: .env, tinyauth.env,
+# Keycloak realm), scripts/scan.sh (scan.*), and the Ansible playbooks
+# (ansible/ reads this file as vars). Replace example values before use.
+
+stack:
+  bind_addr: "0.0.0.0"
+  # tls_port MUST equal traefik's internal entrypoint (8443) so the Keycloak
+  # issuer URL is identical for the browser and tinyauth's backchannel.
+  tls_port: 8443
+  net_subnet: "172.31.20.0/24"     # keep in sync with postgres/pg_hba.conf
+  traefik_ip: "172.31.20.10"
+  tls_dir: "/etc/ssl/sonar-stack"  # holds tls.crt, tls.key, ca.crt
+  docker_socket: "/var/run/docker.sock"
+
+# Public hostnames (browser-facing, terminated by traefik).
+hosts:
+  app: "sonarqube.example.com"
+  auth: "sso.sonarqube.example.com"
+  keycloak: "keycloak.example.com"
+
+# Per-service target hosts for the multi-VM Ansible deployment.
+vms:
+  proxy: "10.0.0.10"
+  keycloak: "10.0.0.11"
+  keycloak_db: "10.0.0.12"
+  sonarqube: "10.0.0.13"
+  sonar_db: "10.0.0.14"
+
+images:
+  traefik: "docker.io/traefik:v3.7.8"
+  tinyauth: "ghcr.io/steveiliop56/tinyauth:v3.6.2"
+  keycloak: "quay.io/keycloak/keycloak:26.7.0"
+  sonarqube: "docker.io/sonarqube:26.7.0.124771-community"
+  postgres: "docker.io/postgres:17.10-alpine"
+
+keycloak:
+  realm: "sonar"
+  admin_user: "admin"
+  client_id: "tinyauth"
+  users:
+    - username: "demo"
+      email: "demo@example.com"
+      first_name: "Demo"
+      last_name: "User"
+      groups: ["sonar-admins"]
+
+# Secrets — leave blank to auto-generate on first render. Generated values
+# are written to .env / tinyauth.env (both gitignored), not back here.
+secrets:
+  keycloak_admin_password: ""
+  keycloak_db_password: ""
+  sonar_db_password: ""
+  tinyauth_secret: ""
+  tinyauth_client_secret: ""
+  demo_password: ""
+
+scan:
+  server: "https://sonarqube.example.com:8443"
+  token: ""            # a squ_ analysis token
+  network: ""          # container network to join for internal access (optional)
+  paths:
+    - "/srv/code/project-a"
+    - "/srv/code/project-b"

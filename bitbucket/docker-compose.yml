@@ -136,7 +136,7 @@ services:
           memory: 1G
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.13.1
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
@@ -158,7 +158,7 @@ services:
           memory: 512M
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4.6
     container_name: grafana
     volumes:
       - grafana-data:/var/lib/grafana
@@ -180,7 +180,7 @@ services:
           memory: 512M
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.29.0
     container_name: alertmanager
     ports:
       - 9093:9093
@@ -198,7 +198,7 @@ services:
           memory: 128M
 
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:latest
+    image: prometheuscommunity/postgres-exporter:v0.19.1
     container_name: postgres-exporter
     environment:
       DATA_SOURCE_NAME: postgresql://${POSTGRESQL_USERNAME:-bitbucket_user}@postgres-bitbucket:5432/${POSTGRESQL_DATABASE:-bitbucket}?sslmode=disable

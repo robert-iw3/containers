@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# Traefik reverse proxy on the proxy VM. Multi-VM: the file provider routes
+# to each service by its VM address (no shared Docker socket).
+[Unit]
+Description=Traefik proxy for the SonarQube stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.traefik }}
+ContainerName=traefik
+Exec=--api.insecure=false --global.checknewversion=false --global.sendanonymoususage=false --log.level=INFO --accesslog=true --providers.file.filename=/etc/traefik/dynamic.yml --entrypoints.websecure.address=:{{ tls_port }} --entrypoints.websecure.http.tls=true
+Volume={{ tls_dir }}:/etc/tls:ro,Z
+Volume={{ traefik_conf_dir }}/dynamic.yml:/etc/traefik/dynamic.yml:ro,Z
+# Host networking: traefik binds :{{ tls_port }} on the proxy VM and reaches
+# the co-located tinyauth at 127.0.0.1:3000.
+Network=host
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,67 @@
+---
+# Deploy the Confluence SSO stack: traefik TLS and a tinyauth gate in front
+# of Confluence. Runs the same compose file uat/run-uat.sh validates. Without
+# an Atlassian licence the stack reaches the setup wizard and stops there.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+- name: Deploy the Confluence SSO stack
+  hosts: confluence
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/../sso') | realpath }}"
+  tasks:
+    - name: Verify podman-compose is available
+      ansible.builtin.command: podman-compose --version
+      changed_when: false
+
+    - name: Check for an existing .env file
+      ansible.builtin.stat:
+        path: "{{ stack_dir }}/.env"
+      register: env_file
+
+    - name: Seed .env from .env.example on first run
+      ansible.builtin.copy:
+        src: "{{ stack_dir }}/.env.example"
+        dest: "{{ stack_dir }}/.env"
+        mode: "0600"
+        force: false
+        remote_src: true
+      when: not env_file.stat.exists
+
+    - name: Fail when .env still holds placeholders
+      ansible.builtin.command: grep -c CHANGE_ME .env
+      args:
+        chdir: "{{ stack_dir }}"
+      register: placeholders
+      changed_when: false
+      failed_when: placeholders.stdout | int > 0
+
+    - name: Bring up the datastore
+      ansible.builtin.command: podman-compose up -d --no-recreate postgres
+      args:
+        chdir: "{{ stack_dir }}"
+      register: db_up
+      changed_when: "'done' in (db_up.stderr | default(''))"
+
+    - name: Wait for the datastore to accept connections
+      ansible.builtin.command: podman exec postgres-confluence-sso pg_isready -U confluence -d confluence
+      register: pg_ready
+      until: pg_ready.rc == 0
+      retries: 20
+      delay: 5
+      changed_when: false
+
+    - name: Bring up the gateway and application
+      ansible.builtin.command: podman-compose up -d --no-recreate tinyauth traefik confluence
+      args:
+        chdir: "{{ stack_dir }}"
+      register: app_up
+      changed_when: "'done' in (app_up.stderr | default(''))"
+
+    - name: Wait for Confluence to reach a ready state
+      ansible.builtin.command: podman exec confluence-sso curl -sf http://localhost:8090/status
+      register: cf_status
+      until: cf_status.rc == 0 and (cf_status.stdout is search('FIRST_RUN') or cf_status.stdout is search('RUNNING'))
+      retries: 60
+      delay: 10
+      changed_when: false

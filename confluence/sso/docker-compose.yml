@@ -1,0 +1,162 @@
+# Atlassian Confluence behind traefik TLS with a tinyauth single sign-on
+# gate.
+#
+# tinyauth gates the web UI as a perimeter. Confluence Data Center's own SSO
+# needs a licensed SSO/SAML app, so without a licence the stack boots to the
+# setup wizard — the terminal state this deployment reaches. Supply a licence
+# in the wizard to complete setup. The REST API (/rest) bypasses the
+# interactive gate and authenticates with Confluence's own credentials.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  confluence-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  confluence-data:
+  confluence-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-confluence-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`confluence`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      confluence-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-confluence-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: Confluence SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=confluence"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - confluence-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-confluence-sso
+    environment:
+      POSTGRES_USER: confluence
+      POSTGRES_DB: confluence
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - confluence-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence -d confluence"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - confluence-sso
+
+  confluence:
+    <<: *app
+    image: docker.io/atlassian/confluence:10.2.7
+    container_name: confluence-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Confluence sits behind traefik's TLS; tell it the public URL so
+      # generated links and cookies are correct.
+      ATL_PROXY_NAME: ${APP_HOST}
+      ATL_PROXY_PORT: ${TLS_PORT}
+      ATL_TOMCAT_SCHEME: https
+      ATL_TOMCAT_SECURE: "true"
+      # Pre-seed the database connection so setup skips straight to the
+      # licence step rather than asking for DB details.
+      ATL_DB_TYPE: postgresql
+      ATL_JDBC_URL: jdbc:postgresql://postgres:5432/confluence
+      ATL_JDBC_USER: confluence
+      ATL_JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+      JVM_MINIMUM_MEMORY: ${CONFLUENCE_JVM_MINIMUM_MEMORY}
+      JVM_MAXIMUM_MEMORY: ${CONFLUENCE_JVM_MAXIMUM_MEMORY}
+    volumes:
+      - confluence-data:/var/atlassian/application-data/confluence:Z
+    healthcheck:
+      # FIRST_RUN = booted and waiting at the setup wizard; RUNNING = a
+      # licensed, set-up instance. Either is a terminal ready state.
+      test: ["CMD-SHELL", "curl -sf http://localhost:8090/status | grep -qE 'FIRST_RUN|RUNNING' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=confluence"
+      - "traefik.http.services.confluence.loadbalancer.server.port=8090"
+      # Interactive UI: gated, client identity headers stripped.
+      - "traefik.http.routers.confluence.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.confluence.entrypoints=websecure"
+      - "traefik.http.routers.confluence.tls=true"
+      - "traefik.http.routers.confluence.priority=10"
+      - "traefik.http.routers.confluence.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine: the REST API skips the interactive gate; Confluence
+      # authenticates these callers itself. Identity headers are stripped so
+      # none can be forged.
+      - "traefik.http.routers.confluence-machine.rule=Host(`${APP_HOST}`) && PathPrefix(`/rest`)"
+      - "traefik.http.routers.confluence-machine.entrypoints=websecure"
+      - "traefik.http.routers.confluence-machine.tls=true"
+      - "traefik.http.routers.confluence-machine.priority=100"
+      - "traefik.http.routers.confluence-machine.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.confluence-machine.service=confluence"
+    networks:
+      - confluence-sso

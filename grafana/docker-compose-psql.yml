@@ -8,7 +8,7 @@ networks:
 
 services:
   postgres:
-    image: docker.io/bitnami/postgresql:latest
+    image: docker.io/postgres:17.10-alpine
     container_name: postgres
     hostname: postgres-grafana.io
     ports:
@@ -16,9 +16,9 @@ services:
     volumes:
       - grafana-postgres:/var/lib/postgresql/data
     environment:
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
+      POSTGRES_USER: ${POSTGRESQL_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL_DATABASE}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
       interval: 10s

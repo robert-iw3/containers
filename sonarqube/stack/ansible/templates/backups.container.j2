@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# pg_dump backup sidecar, co-located on the sonar_db VM. Dumps both databases
+# nightly over the private network and prunes dumps older than a week.
+[Unit]
+Description=PostgreSQL backup sidecar for the SonarQube stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.postgres }}
+ContainerName=backups
+Environment=SONAR_DB_PASSWORD={{ sonar_db_password }}
+Environment=KEYCLOAK_DB_PASSWORD={{ keycloak_db_password }}
+Environment=SONAR_DB_HOST={{ vms.sonar_db }}
+Environment=KEYCLOAK_DB_HOST={{ vms.keycloak_db }}
+Volume={{ backup_dir }}:/backups:Z
+Exec=/bin/sh -c 'while true; do ts=$(date "+%%Y-%%m-%%d_%%H-%%M"); PGPASSWORD="$SONAR_DB_PASSWORD" pg_dump -h "$SONAR_DB_HOST" -U sonar -d sonar | gzip > /backups/sonar-$ts.sql.gz || echo "sonar backup failed"; PGPASSWORD="$KEYCLOAK_DB_PASSWORD" pg_dump -h "$KEYCLOAK_DB_HOST" -U keycloak -d keycloak | gzip > /backups/keycloak-$ts.sql.gz || echo "keycloak backup failed"; find /backups -type f -mtime +7 -delete; sleep 24h; done'
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target default.target

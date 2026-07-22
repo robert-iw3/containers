@@ -1,0 +1,167 @@
+# Atlassian Bitbucket behind traefik TLS with a tinyauth single sign-on
+# gate.
+#
+# tinyauth gates the web UI as a perimeter. Bitbucket Data Center's own SSO
+# needs a licensed SSO/SAML app, so without a licence the stack boots to the
+# setup wizard — the terminal state this deployment reaches. Supply
+# BITBUCKET_LICENSE to complete setup. Git-over-HTTP (/scm) and the REST API
+# (/rest) bypass the interactive gate and authenticate with Bitbucket's own
+# credentials or access tokens.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  bitbucket-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  bitbucket-data:
+  bitbucket-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-bitbucket-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`bitbucket`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      bitbucket-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-bitbucket-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: Bitbucket SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=bitbucket"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - bitbucket-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-bitbucket-sso
+    environment:
+      POSTGRES_USER: bitbucket
+      POSTGRES_DB: bitbucket
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "max_connections=200"]
+    volumes:
+      - bitbucket-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bitbucket -d bitbucket"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - bitbucket-sso
+
+  bitbucket:
+    <<: *app
+    image: docker.io/atlassian/bitbucket:10.4.1
+    container_name: bitbucket-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Bitbucket sits behind traefik's TLS; tell it the public URL so
+      # generated links and cookies are correct.
+      SERVER_PROXY_NAME: ${APP_HOST}
+      SERVER_PROXY_PORT: ${TLS_PORT}
+      SERVER_SCHEME: https
+      SERVER_SECURE: "true"
+      SETUP_BASEURL: https://${APP_HOST}:${TLS_PORT}
+      SETUP_DISPLAYNAME: Bitbucket SSO
+      # Pre-seed the database connection so setup skips straight to the
+      # licence step rather than asking for DB details.
+      JDBC_DRIVER: org.postgresql.Driver
+      JDBC_URL: jdbc:postgresql://postgres:5432/bitbucket
+      JDBC_USER: bitbucket
+      JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+      JVM_MINIMUM_MEMORY: ${BITBUCKET_JVM_MINIMUM_MEMORY}
+      JVM_MAXIMUM_MEMORY: ${BITBUCKET_JVM_MAXIMUM_MEMORY}
+      ELASTICSEARCH_ENABLED: "false"
+    volumes:
+      - bitbucket-data:/var/atlassian/application-data/bitbucket:Z
+    healthcheck:
+      # FIRST_RUN = booted and waiting at the setup wizard; RUNNING = a
+      # licensed, set-up instance. Either is a terminal ready state.
+      test: ["CMD-SHELL", "curl -sf http://localhost:7990/status | grep -qE 'FIRST_RUN|RUNNING' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 90s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=bitbucket"
+      - "traefik.http.services.bitbucket.loadbalancer.server.port=7990"
+      # Interactive UI: gated, client identity headers stripped.
+      - "traefik.http.routers.bitbucket.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.bitbucket.entrypoints=websecure"
+      - "traefik.http.routers.bitbucket.tls=true"
+      - "traefik.http.routers.bitbucket.priority=10"
+      - "traefik.http.routers.bitbucket.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine: git-over-HTTP (/scm) and REST (/rest) skip the interactive
+      # gate; Bitbucket authenticates these callers itself. Identity headers
+      # are stripped so none can be forged.
+      - "traefik.http.routers.bitbucket-machine.rule=Host(`${APP_HOST}`) && (PathPrefix(`/scm`) || PathPrefix(`/rest`))"
+      - "traefik.http.routers.bitbucket-machine.entrypoints=websecure"
+      - "traefik.http.routers.bitbucket-machine.tls=true"
+      - "traefik.http.routers.bitbucket-machine.priority=100"
+      - "traefik.http.routers.bitbucket-machine.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.bitbucket-machine.service=bitbucket"
+    networks:
+      - bitbucket-sso

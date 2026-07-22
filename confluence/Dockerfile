@@ -5,7 +5,8 @@ ARG CONF_INSTALL=/opt/atlassian/confluence
 ARG CONF_VERSION=10.2.13
 ARG MYSQL_CONNECTOR_VERSION=9.7.0
 
-ARG JAVA_CACERTS=$JAVA_HOME/jre/lib/security/cacerts
+ARG JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+ARG JAVA_CACERTS=$JAVA_HOME/lib/security/cacerts
 ARG CERTIFICATE=$CONF_HOME/certificate
 
 RUN set -x; \
@@ -26,16 +27,16 @@ RUN set -x; \
     chown -R daemon:daemon  "${CONF_INSTALL}/logs"; \
     chown -R daemon:daemon  "${CONF_INSTALL}/work"; \
     echo -e                 "\nconfluence.home=$CONF_HOME" >> "${CONF_INSTALL}/confluence/WEB-INF/classes/confluence-init.properties"; \
-    xmlstarlet              ed --inplace; \
-        --delete               "Server/@debug"; \
-        --delete               "Server/Service/Connector/@debug"; \
-        --delete               "Server/Service/Connector/@useURIValidationHack"; \
-        --delete               "Server/Service/Connector/@minProcessors"; \
-        --delete               "Server/Service/Connector/@maxProcessors"; \
-        --delete               "Server/Service/Engine/@debug"; \
-        --delete               "Server/Service/Engine/Host/@debug"; \
-        --delete               "Server/Service/Engine/Host/Context/@debug"; \
-                               "${CONF_INSTALL}/conf/server.xml"; \
+    xmlstarlet ed --inplace \
+        --delete "Server/@debug" \
+        --delete "Server/Service/Connector/@debug" \
+        --delete "Server/Service/Connector/@useURIValidationHack" \
+        --delete "Server/Service/Connector/@minProcessors" \
+        --delete "Server/Service/Connector/@maxProcessors" \
+        --delete "Server/Service/Engine/@debug" \
+        --delete "Server/Service/Engine/Host/@debug" \
+        --delete "Server/Service/Engine/Host/Context/@debug" \
+        "${CONF_INSTALL}/conf/server.xml"; \
     touch -d "@0"           "${CONF_INSTALL}/conf/server.xml"; \
     chown daemon:daemon     "${JAVA_CACERTS}"
 

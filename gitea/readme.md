@@ -1,5 +1,27 @@
 # Gitea Deployment
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs Gitea behind traefik TLS with tinyauth single
+sign-on. Interactive traffic is gated by tinyauth, and traefik hands the
+authenticated identity to Gitea's reverse proxy authentication (`Remote-User`)
+so the browser session signs in and, on first visit, auto-registers. Git
+over HTTP and `/api/` paths bypass the interactive gate — a git or CI client
+cannot complete a login redirect — with client identity headers stripped so
+nothing can be forged; those callers authenticate with Gitea's own tokens.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 This project deploys a production-ready Gitea instance with PostgreSQL (via Patroni), PgBouncer, Traefik, MinIO, Prometheus, Grafana, and Loki for logging and monitoring. It supports deployment via Docker, Podman, or Kubernetes using Ansible for orchestration.
 
 ## Prerequisites

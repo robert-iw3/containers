@@ -1,5 +1,27 @@
 # Artifactory Deployment Guide
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs Artifactory OSS behind traefik TLS with a
+tinyauth single sign-on gate. Artifactory OSS has no HTTP header SSO (a
+licensed feature), so tinyauth gates the web UI as a perimeter while
+Artifactory keeps its own authentication. Registry (`/v2`, docker), REST
+API (`/artifactory`) and access-token paths bypass the interactive gate — a
+docker, Maven or CI client cannot complete a login redirect — and
+authenticate with Artifactory access tokens.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 This guide provides instructions to deploy JFrog Artifactory using Docker, Podman, or Kubernetes.
 
 ## Prerequisites

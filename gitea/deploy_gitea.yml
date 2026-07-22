@@ -12,11 +12,18 @@
     use_letsencrypt: "{{ use_letsencrypt | default(true) }}"
     docker_compose_version: 5.3.1
     gitea_image: docker.io/gitea/gitea:1.26.4
-    postgresql_image: docker.io/bitnami/postgresql:latest
+    # Patroni-based HA cluster: needs a Patroni-capable image. The official
+    # postgres image has no Patroni, so this stays on the (archived, pinned)
+    # Bitnami build; the pg_dump backup sidecars use official postgres.
+    postgresql_image: docker.io/bitnamilegacy/postgresql:16
     traefik_image: docker.io/traefik:v3.7.6
-    minio_image: quay.io/minio/minio:latest
+    minio_image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
     loki_image: docker.io/grafana/loki:3.7.3
     pgbouncer_image: docker.io/edoburu/pgbouncer:v1.25.2-p0
+    # Backup runner image, built from backup/Dockerfile (postgres + gpg +
+    # aws). For Kubernetes, build and push this to a registry the cluster
+    # can pull; for compose it is built locally on the host.
+    backup_image: localhost/gitea-backup:pg17
     vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://vault:8200', true) }}"
     vault_role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
     vault_secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
@@ -188,7 +195,7 @@
         -keyout {{ ca_key }} -out {{ ca_cert }}
         -config {{ cert_dir }}/ca.conf
       args:
-        creates: {{ ca_cert }}
+        creates: "{{ ca_cert }}"
       when: not use_letsencrypt
     - name: Generate server key and CSR
       command: >
@@ -196,7 +203,7 @@
         -keyout {{ server_key }} -out {{ cert_dir }}/server.csr
         -config {{ cert_dir }}/server.conf
       args:
-        creates: {{ server_key }}
+        creates: "{{ server_key }}"
       when: not use_letsencrypt
     - name: Sign server certificate
       command: >
@@ -204,7 +211,7 @@
         -CAkey {{ ca_key }} -CAcreateserial -out {{ server_cert }}
         -days 365 -sha256 -extfile {{ cert_dir }}/server.conf -extensions v3_req
       args:
-        creates: {{ server_cert }}
+        creates: "{{ server_cert }}"
       when: not use_letsencrypt
     - name: Ensure certificate permissions
       file:
@@ -259,6 +266,15 @@
         - { src: templates/traefik.yml.j2, dest: traefik.yml, mode: '0644' }
         - { src: templates/pgbouncer.ini.j2, dest: pgbouncer.ini, mode: '0644' }
         - { src: templates/grafana-datasource.yml.j2, dest: grafana-datasource.yml, mode: '0644' }
+        - { src: templates/backup.sh.j2, dest: backup.sh, mode: '0755' }
+      when: not kubernetes_enabled
+    - name: Copy the backup image Dockerfile
+      copy:
+        src: backup/Dockerfile
+        dest: "{{ gitea_compose_dir }}/backup/Dockerfile"
+        owner: "{{ gitea_user }}"
+        group: "{{ gitea_user }}"
+        mode: '0644'
       when: not kubernetes_enabled
     - name: Copy certificates to compose directory
       copy:

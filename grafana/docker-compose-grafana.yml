@@ -26,20 +26,17 @@ x-common-vars-apps: &common-vars-apps
 services:
   postgres:
     <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
+    image: docker.io/postgres:17.10-alpine
     container_name: postgres
     hostname: postgres-grafana.io
     ports:
       - 5432:5432
     volumes:
-      - grafana-postgres:/bitnami/postgresql:z
+      - grafana-postgres:/var/lib/postgresql/data:z
     environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRES_USER: ${POSTGRESQL_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL_DATABASE}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USERNAME} -h 127.0.0.1"]
       interval: 10s
@@ -57,7 +54,7 @@ services:
 
   grafana:
     <<: *common-vars-apps
-    image: docker.io/bitnami/grafana:latest
+    image: docker.io/grafana/grafana:12.4.6
     container_name: grafana
     hostname: grafana.io
     volumes:
@@ -90,7 +87,7 @@ services:
       GF_SECURITY_COOKIE_SECURE: 'true'  # Enforce secure cookies
       GF_SERVER_ENFORCE_DOMAIN: 'true'  # Prevent DNS rebinding
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -189,7 +186,7 @@ services:
 
   backups:
     <<: *common-vars-apps
-    image: docker.io/bitnami/postgresql:latest
+    image: docker.io/postgres:17.10-alpine
     container_name: psql-backup
     hostname: grafana-backup-psql.io
     command:
@@ -206,8 +203,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - grafana-postgres-backups:/srv/grafana-postgres/backups
     environment:
+      PGPASSWORD: ${POSTGRESQL_PASSWORD}
       POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
       POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
     depends_on:
       postgres:

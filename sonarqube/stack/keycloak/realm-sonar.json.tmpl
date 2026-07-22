@@ -1,0 +1,63 @@
+{
+  "realm": "sonar",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      { "name": "sonar-admin", "description": "SonarQube administrators" },
+      { "name": "sonar-user", "description": "SonarQube users" }
+    ]
+  },
+  "groups": [
+    { "name": "sonar-admins", "realmRoles": ["sonar-admin"] },
+    { "name": "sonar-users", "realmRoles": ["sonar-user"] }
+  ],
+  "users": [
+    {
+      "username": "@DEMO_USER@",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "@DEMO_EMAIL@",
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [
+        { "type": "password", "value": "@DEMO_PASSWORD@", "temporary": false }
+      ],
+      "groups": ["/sonar-admins"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "@CLIENT_ID@",
+      "name": "SonarQube SSO gateway (tinyauth)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "@CLIENT_SECRET@",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["@REDIRECT_URI@"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["email", "profile", "roles"],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+---
+# Shared vars for the multi-VM deployment. The single source of truth is
+# stack.yaml at the stack root; secrets are generated once on the controller
+# and persisted under ansible/.secrets/ (gitignored).
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# Container runtime: 'podman' deploys systemd Quadlet units; 'docker' uses
+# the compose file instead.
+container_runtime: podman
+
+# Convenience handles.
+tls_port: "{{ stack_config.stack.tls_port }}"
+net_subnet: "{{ stack_config.stack.net_subnet }}"
+app_host: "{{ stack_config.hosts.app }}"
+auth_host: "{{ stack_config.hosts.auth }}"
+keycloak_host: "{{ stack_config.hosts.keycloak }}"
+realm: "{{ stack_config.keycloak.realm }}"
+vms: "{{ stack_config.vms }}"
+images: "{{ stack_config.images }}"
+
+# Where Quadlet unit files live (rootful podman), plus per-service state.
+quadlet_dir: /etc/containers/systemd
+tls_dir: "{{ stack_config.stack.tls_dir }}"
+pg_conf_dir: /etc/sonar-stack/postgres
+pg_data_dir: /var/lib/sonar-stack/pgdata
+keycloak_import_dir: /etc/sonar-stack/keycloak
+sonar_data_dir: /var/lib/sonar-stack/sonarqube
+traefik_conf_dir: /etc/sonar-stack/traefik
+backup_dir: /var/lib/sonar-stack/backups
+
+# Generated secrets (persisted on the controller for idempotency).
+secret_dir: "{{ playbook_dir }}/.secrets"
+keycloak_admin_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/keycloak_admin length=24 chars=ascii_letters,digits') }}"
+keycloak_db_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/keycloak_db length=32 chars=ascii_letters,digits') }}"
+sonar_db_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/sonar_db length=32 chars=ascii_letters,digits') }}"
+tinyauth_secret: "{{ lookup('ansible.builtin.password', secret_dir ~ '/tinyauth_secret length=32 chars=ascii_letters,digits') }}"
+tinyauth_client_secret: "{{ lookup('ansible.builtin.password', secret_dir ~ '/tinyauth_client length=48 chars=hexdigits') }}"
+demo_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/demo_user length=16 chars=ascii_letters,digits') }}"

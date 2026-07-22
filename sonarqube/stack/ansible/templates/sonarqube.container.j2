@@ -1,0 +1,36 @@
+# {{ ansible_managed }}
+# SonarQube. Reached only through the proxy VM (traefik); signs users in from
+# the Remote-User header traefik sets from tinyauth's Keycloak decision.
+[Unit]
+Description=SonarQube for the stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.sonarqube }}
+ContainerName=sonarqube
+Environment=SONAR_JDBC_URL=jdbc:postgresql://{{ vms.sonar_db }}:5432/sonar
+Environment=SONAR_JDBC_USERNAME=sonar
+Environment=SONAR_JDBC_PASSWORD={{ sonar_db_password }}
+Environment=SONAR_WEB_PORT=9000
+Environment=SONAR_CORE_SERVERBASEURL=https://{{ app_host }}:{{ tls_port }}
+Environment=SONAR_WEB_SSO_ENABLE=true
+Environment=SONAR_WEB_SSO_LOGINHEADER=Remote-User
+Environment=SONAR_WEB_SSO_NAMEHEADER=Remote-Name
+Environment=SONAR_WEB_SSO_EMAILHEADER=Remote-Email
+Environment=SONAR_WEB_SSO_GROUPSHEADER=Remote-Groups
+Environment=SONAR_WEB_SSO_REFRESHINTERVALINMINUTES=5
+Volume={{ sonar_data_dir }}/data:/opt/sonarqube/data:Z
+Volume={{ sonar_data_dir }}/extensions:/opt/sonarqube/extensions:Z
+Volume={{ sonar_data_dir }}/logs:/opt/sonarqube/logs:Z
+PublishPort={{ hostvars[inventory_hostname]['ansible_host'] }}:9000:9000
+Ulimit=nofile=65536:65536
+Ulimit=nproc=8192:8192
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target default.target

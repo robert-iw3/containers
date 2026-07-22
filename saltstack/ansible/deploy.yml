@@ -1,0 +1,68 @@
+---
+# Deploy the SaltStack SSO stack: traefik TLS, tinyauth and a Salt 3008
+# master/api plus a minion, built from the local Dockerfile. Runs the same
+# compose file uat/run-uat.sh validates.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+- name: Deploy the SaltStack SSO stack
+  hosts: saltstack
+  gather_facts: false
+  vars:
+    stack_dir: "{{ (playbook_dir ~ '/../sso') | realpath }}"
+  tasks:
+    - name: Verify podman-compose is available
+      ansible.builtin.command: podman-compose --version
+      changed_when: false
+
+    - name: Check for an existing .env file
+      ansible.builtin.stat:
+        path: "{{ stack_dir }}/.env"
+      register: env_file
+
+    - name: Seed .env from .env.example on first run
+      ansible.builtin.copy:
+        src: "{{ stack_dir }}/.env.example"
+        dest: "{{ stack_dir }}/.env"
+        mode: "0600"
+        force: false
+        remote_src: true
+      when: not env_file.stat.exists
+
+    - name: Fail when .env still holds placeholders
+      ansible.builtin.command: grep -c CHANGE_ME .env
+      args:
+        chdir: "{{ stack_dir }}"
+      register: placeholders
+      changed_when: false
+      failed_when: placeholders.stdout | int > 0
+
+    - name: Build the Salt 3008 image from the local Dockerfile
+      ansible.builtin.command: podman-compose build salt
+      args:
+        chdir: "{{ stack_dir }}"
+      register: build
+      changed_when: "'COMMIT' in (build.stdout | default('')) or 'Successfully tagged' in (build.stderr | default(''))"
+
+    - name: Bring up the gateway
+      ansible.builtin.command: podman-compose up -d --no-recreate tinyauth traefik
+      args:
+        chdir: "{{ stack_dir }}"
+      register: gw_up
+      changed_when: "'done' in (gw_up.stderr | default(''))"
+
+    - name: Bring up the master/api and minion
+      ansible.builtin.command: podman-compose up -d --no-recreate salt salt-minion
+      args:
+        chdir: "{{ stack_dir }}"
+      register: app_up
+      changed_when: "'done' in (app_up.stderr | default(''))"
+
+    - name: Wait for salt-api to answer
+      ansible.builtin.command: >-
+        podman exec salt-sso python3 -c
+        "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"
+      register: api_health
+      until: api_health.rc == 0
+      retries: 30
+      delay: 5
+      changed_when: false

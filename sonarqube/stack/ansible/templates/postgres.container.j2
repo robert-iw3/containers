@@ -1,0 +1,30 @@
+# {{ ansible_managed }}
+# PostgreSQL for {{ q_db_name }}, tuned + SCRAM-secured. Reachable only from
+# the stack's private network (firewall + pg_hba scope access).
+[Unit]
+Description=PostgreSQL ({{ q_db_name }}) for the SonarQube stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.postgres }}
+ContainerName=postgres-{{ q_db_name }}
+Environment=POSTGRES_USER={{ q_db_user }}
+Environment=POSTGRES_DB={{ q_db_name }}
+Environment=POSTGRES_PASSWORD={{ q_db_password }}
+Volume={{ pg_conf_dir }}/postgresql.conf:/etc/postgresql/postgresql.conf:ro,Z
+Volume={{ pg_conf_dir }}/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro,Z
+Volume={{ pg_data_dir }}:/var/lib/postgresql/data:Z
+PublishPort={{ hostvars[inventory_hostname]['ansible_host'] }}:5432:5432
+Exec=postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+HealthCmd=pg_isready -U {{ q_db_user }} -d {{ q_db_name }}
+HealthInterval=10s
+HealthRetries=10
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

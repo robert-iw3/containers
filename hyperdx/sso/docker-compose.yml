@@ -1,0 +1,118 @@
+# HyperDX behind traefik TLS with a tinyauth single sign-on gate.
+#
+# HyperDX keeps its own authentication; tinyauth gates the UI so a user
+# authenticates at the identity provider before HyperDX is reachable. The
+# OTLP ingest ports are published directly and are not behind the gate — a
+# telemetry client authenticates with its HyperDX ingestion key, not an
+# interactive login.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  hyperdx-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  hyperdx-data:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-hyperdx-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`hyperdx`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      hyperdx-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-hyperdx-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: HyperDX SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=hyperdx"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - hyperdx-sso
+
+  hyperdx:
+    <<: *app
+    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one:2.31.0
+    container_name: hyperdx-sso
+    environment:
+      FRONTEND_URL: https://${APP_HOST}:${TLS_PORT}
+    volumes:
+      - hyperdx-data:/data:Z
+    ports:
+      # Telemetry ingress, published directly — deliberately not behind the
+      # SSO gate. Bound to the host's loopback in this file; publish on a
+      # routable address in production and protect with the ingestion key.
+      - "${BIND_ADDR}:4317:4317"   # OTLP gRPC
+      - "${BIND_ADDR}:4318:4318"   # OTLP HTTP
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=hyperdx"
+      - "traefik.http.services.hyperdx.loadbalancer.server.port=8080"
+      - "traefik.http.routers.hyperdx.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.hyperdx.entrypoints=websecure"
+      - "traefik.http.routers.hyperdx.tls=true"
+      - "traefik.http.routers.hyperdx.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+    networks:
+      - hyperdx-sso

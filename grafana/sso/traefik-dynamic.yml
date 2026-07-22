@@ -1,0 +1,51 @@
+# Traefik file provider: TLS material and the middlewares shared by every
+# router in this stack.
+---
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/tls/tls.crt
+        keyFile: /etc/tls/tls.key
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+
+http:
+  middlewares:
+    # Authorization decision for interactive traffic. The response headers
+    # listed here are copied onto the upstream request, replacing whatever
+    # the client sent, which is how the application learns who is calling.
+    tinyauth:
+      forwardAuth:
+        address: http://tinyauth:3000/api/auth/traefik
+        trustForwardHeader: true
+        authResponseHeaders:
+          - Remote-User
+          - Remote-Name
+          - Remote-Email
+          - Remote-Groups
+
+    # Delete any client supplied identity headers. Routers that skip the
+    # forwardAuth gate need this, since the application trusts these header
+    # names and nothing else would remove them.
+    strip-identity:
+      headers:
+        customRequestHeaders:
+          Remote-User: ""
+          Remote-Name: ""
+          Remote-Email: ""
+          Remote-Groups: ""
+
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: strict-origin-when-cross-origin

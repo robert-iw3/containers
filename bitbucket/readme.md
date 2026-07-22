@@ -1,5 +1,27 @@
 # Bitbucket Deployment
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs Bitbucket behind traefik TLS with a tinyauth
+single sign-on gate. tinyauth gates the web UI as a perimeter. Bitbucket's
+own SSO needs a licensed SSO/SAML app, so without a licence the stack boots
+to the setup wizard — the terminal state this deployment reaches; supply a
+licence in the wizard to go further. Git-over-HTTP (`/scm`) and the REST API
+(`/rest`) bypass the interactive gate and authenticate with Bitbucket's own
+credentials.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login -> setup wizard
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 This project provides an automated, secure, and scalable deployment of Bitbucket (version 8.19) with Jira integration, monitoring, chaos engineering, and CI/CD pipelines using Docker, Podman, Kubernetes, and Ansible. The setup includes a custom Prometheus exporter for repository metrics, automated backups with `zstd`, Vault for secrets management, and multi-region support.
 
 ## Features

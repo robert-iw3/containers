@@ -1,0 +1,160 @@
+# JFrog Artifactory OSS behind traefik TLS with a tinyauth single sign-on
+# gate.
+#
+# Artifactory OSS has no HTTP header SSO (that is a licensed feature), so
+# tinyauth gates the web UI as a perimeter while Artifactory keeps its own
+# authentication. Registry and REST API paths bypass the interactive gate —
+# a docker, Maven or CI client cannot complete a login redirect — and
+# authenticate with Artifactory access tokens or basic credentials.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  artifactory-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  artifactory-data:
+  artifactory-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-artifactory-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`artifactory`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      artifactory-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-artifactory-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: Artifactory SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=artifactory"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - artifactory-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-artifactory-sso
+    environment:
+      POSTGRES_USER: artifactory
+      POSTGRES_DB: artifactory
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - artifactory-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artifactory -d artifactory"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - artifactory-sso
+
+  artifactory:
+    <<: *app
+    image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.10
+    container_name: artifactory-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      JF_ROUTER_ENTRYPOINTS_EXTERNALPORT: "8082"
+      JF_SHARED_DATABASE_TYPE: postgresql
+      JF_SHARED_DATABASE_DRIVER: org.postgresql.Driver
+      JF_SHARED_DATABASE_URL: jdbc:postgresql://postgres:5432/artifactory
+      JF_SHARED_DATABASE_USERNAME: artifactory
+      JF_SHARED_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      JF_SHARED_NODE_HAENABLED: "false"
+      EXTRA_JAVA_OPTIONS: -Xms1g -Xmx3g
+    volumes:
+      - artifactory-data:/var/opt/jfrog/artifactory:Z
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/artifactory/api/system/ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 90s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=artifactory"
+      - "traefik.http.services.artifactory.loadbalancer.server.port=8082"
+      # Interactive UI: gated, client identity headers stripped.
+      - "traefik.http.routers.artifactory.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.artifactory.entrypoints=websecure"
+      - "traefik.http.routers.artifactory.tls=true"
+      - "traefik.http.routers.artifactory.priority=10"
+      - "traefik.http.routers.artifactory.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine: registry (/v2, docker), REST API (/artifactory) and access
+      # token endpoints skip the interactive gate. Artifactory authenticates
+      # these callers with its own access tokens; identity headers are
+      # stripped so none can be forged.
+      - "traefik.http.routers.artifactory-machine.rule=Host(`${APP_HOST}`) && (PathPrefix(`/artifactory`) || PathPrefix(`/access`) || PathPrefix(`/v2`) || PathPrefix(`/router`))"
+      - "traefik.http.routers.artifactory-machine.entrypoints=websecure"
+      - "traefik.http.routers.artifactory-machine.tls=true"
+      - "traefik.http.routers.artifactory-machine.priority=100"
+      - "traefik.http.routers.artifactory-machine.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.artifactory-machine.service=artifactory"
+    networks:
+      - artifactory-sso

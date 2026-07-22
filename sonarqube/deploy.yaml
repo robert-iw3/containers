@@ -138,41 +138,27 @@ spec:
       - name: postgres
         image: ${POSTGRESQL_IMAGE}
         env:
-        - name: POSTGRESQL_REPLICATION_MODE
-          value: "master"
-        - name: POSTGRESQL_USERNAME
+        - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: sonarqube-secrets
               key: postgresql-username
-        - name: POSTGRESQL_PASSWORD
+        - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: sonarqube-secrets
               key: postgresql-password
-        - name: POSTGRESQL_DATABASE
+        - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
               name: sonarqube-config
               key: postgresql-database
-        - name: POSTGRESQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: sonarqube-secrets
-              key: postgresql-replication-user
-        - name: POSTGRESQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: sonarqube-secrets
-              key: postgresql-replication-password
         volumeMounts:
         - name: localtime
           mountPath: /etc/localtime
           readOnly: true
         - name: postgresql-data
           mountPath: /var/lib/postgresql/data
-        - name: sonarqube-db
-          mountPath: /bitnami/postgresql
         resources:
           limits:
             memory: "2048Mi"
@@ -357,7 +343,7 @@ spec:
         fsGroup: 1001
       containers:
       - name: traefik
-        image: docker.io/traefik:latest
+        image: docker.io/traefik:v3.7.8
         ports:
         - containerPort: 80
         - containerPort: 443
@@ -561,6 +547,11 @@ spec:
                 secretKeyRef:
                   name: sonarqube-secrets
                   key: postgresql-username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sonarqube-secrets
+                  key: postgresql-password
             - name: POSTGRESQL_DATABASE
               valueFrom:
                 configMapKeyRef:

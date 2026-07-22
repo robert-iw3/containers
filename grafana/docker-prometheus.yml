@@ -8,7 +8,7 @@ networks:
 
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.13.1
     container_name: prometheus
     volumes:
       - prometheus_data:/prometheus
@@ -50,7 +50,7 @@ services:
       start_period: 30s
 
   node-exporter:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter:v1.12.1
     container_name: node-exporter
     volumes:
       - /proc:/host/proc:ro
@@ -84,7 +84,7 @@ services:
       start_period: 30s
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
     container_name: cadvisor
     volumes:
       - /:/rootfs:ro

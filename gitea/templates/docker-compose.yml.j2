@@ -297,7 +297,10 @@ services:
       gitea-net:
         ipv4_address: 172.20.0.9
   backup:
-    image: docker.io/bitnami/postgresql:16
+    build:
+      context: "{{ gitea_compose_dir }}/backup"
+      dockerfile: Dockerfile
+    image: {{ backup_image }}
     <<: *common-vars-apps
     container_name: gitea-backup
     volumes:
@@ -310,7 +313,8 @@ services:
       POSTGRESQL_USERNAME: {{ postgresql_username }}
       POSTGRESQL_DATABASE: {{ postgresql_database }}
       PGPASSWORD: {{ postgresql_password }}
-    command: ["cron", "-f"]
+    # Run backup.sh once a day (the image bundles pg_dump, gpg and aws).
+    command: ["bash", "-c", "while true; do bash /backup/backup.sh || true; sleep 86400; done"]
     networks:
       gitea-net:
         ipv4_address: 172.20.0.10

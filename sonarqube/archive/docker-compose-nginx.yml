@@ -1,10 +1,11 @@
-version: '3'
-
 services:
 
   reverse_proxy:
     container_name: reverse_proxy
-    image: docker.io/bitnami/nginx
+    # Bitnami image retained for its /opt/bitnami layout that the mounted
+    # configs target; migrating to the official nginx image requires
+    # re-pathing those configs to /etc/nginx.
+    image: docker.io/bitnami/nginx:latest
     hostname: nginx.testing.io
     security_opt:
       - no-new-privileges:true
@@ -29,7 +30,7 @@ services:
         /opt/bitnami/ctlscript.sh restart nginx
     restart: on-failure
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://$(echo $NGINX_IPv4) || exit 1" ]
+      test: ["CMD-SHELL", "curl --fail http://localhost/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3

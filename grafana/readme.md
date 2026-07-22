@@ -1,5 +1,24 @@
 # Grafana/Loki Stack Deployment
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs Grafana behind traefik TLS with tinyauth
+single sign-on. tinyauth is the policy enforcement point — local users by
+default, or any OIDC provider via the `GENERIC_*` settings in
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)
+placed in `sso/tinyauth.env`. traefik copies the authenticated identity
+into `Remote-User`, which Grafana's `auth.proxy` uses to sign the user in,
+so one login reaches the dashboards. Callers presenting a bearer token skip
+the interactive gate and are validated by Grafana directly.
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 ## Deploy the Stack
 
 1. **Install Prerequisites**:

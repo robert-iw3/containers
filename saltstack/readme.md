@@ -1,5 +1,28 @@
 # SaltStack
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs a Salt 3008 master + salt-api and a minion
+behind traefik TLS with a tinyauth single sign-on gate. The image is built
+from [`sso/Dockerfile`](sso/Dockerfile) (Salt 3008 from the Salt Project
+package repo); one image serves every role via `SALT_ROLE`. tinyauth gates
+browser access to salt-api, while programmatic callers — the `/login` token
+exchange and any request carrying a salt auth token — bypass the gate and
+authenticate with salt's own `sharedsecret` eauth. The ZeroMQ minion
+transport (`4505`/`4506`) is published directly, entirely outside the gate.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # builds the 3008 image; TLS + SSO + eauth + minion ping
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy (builds the image)
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 ## Setup
 1. Install Python 3.8+, Ansible 2.12+, Jinja2, PyYAML, hvac.
 2. Install Docker, Podman, or Kubernetes (`kubectl`).

@@ -1,0 +1,85 @@
+# {{ ansible_managed }}
+# Traefik file provider for the multi-VM deployment: TLS, the SSO
+# middlewares, and routes to each service by VM address.
+---
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/tls/tls.crt
+        keyFile: /etc/tls/tls.key
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+
+http:
+  middlewares:
+    tinyauth:
+      forwardAuth:
+        address: http://127.0.0.1:3000/api/auth/traefik
+        trustForwardHeader: true
+        authResponseHeaders:
+          - Remote-User
+          - Remote-Name
+          - Remote-Email
+          - Remote-Groups
+    strip-identity:
+      headers:
+        customRequestHeaders:
+          Remote-User: ""
+          Remote-Name: ""
+          Remote-Email: ""
+          Remote-Groups: ""
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: strict-origin-when-cross-origin
+
+  routers:
+    keycloak:
+      rule: "Host(`{{ keycloak_host }}`)"
+      entryPoints: [websecure]
+      service: keycloak
+      middlewares: [secure-headers]
+      tls: {}
+    tinyauth:
+      rule: "Host(`{{ auth_host }}`)"
+      entryPoints: [websecure]
+      service: tinyauth
+      middlewares: [secure-headers]
+      tls: {}
+    sonarqube:
+      rule: "Host(`{{ app_host }}`)"
+      entryPoints: [websecure]
+      service: sonarqube
+      priority: 10
+      middlewares: [strip-identity, tinyauth, secure-headers]
+      tls: {}
+    sonarqube-token:
+      rule: "Host(`{{ app_host }}`) && (PathPrefix(`/api/`) || PathPrefix(`/batch/`)) && HeaderRegexp(`Authorization`, `(?i)^(bearer|basic) `)"
+      entryPoints: [websecure]
+      service: sonarqube
+      priority: 100
+      middlewares: [strip-identity, secure-headers]
+      tls: {}
+
+  services:
+    keycloak:
+      loadBalancer:
+        servers:
+          - url: "http://{{ vms.keycloak }}:8080"
+    tinyauth:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3000"
+    sonarqube:
+      loadBalancer:
+        servers:
+          - url: "http://{{ vms.sonarqube }}:9000"

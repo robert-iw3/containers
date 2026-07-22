@@ -1,0 +1,62 @@
+{
+  "realm": "{{ realm }}",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      { "name": "sonar-admin", "description": "SonarQube administrators" },
+      { "name": "sonar-user", "description": "SonarQube users" }
+    ]
+  },
+  "groups": [
+    { "name": "sonar-admins", "realmRoles": ["sonar-admin"] },
+    { "name": "sonar-users", "realmRoles": ["sonar-user"] }
+  ],
+  "users": [
+{% for u in stack_config.keycloak.users %}
+    {
+      "username": "{{ u.username }}",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "{{ u.email }}",
+      "firstName": "{{ u.first_name | default('') }}",
+      "lastName": "{{ u.last_name | default('') }}",
+      "credentials": [{ "type": "password", "value": "{{ demo_password }}", "temporary": false }],
+      "groups": [{% for g in u.groups | default([]) %}"/{{ g }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+    }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  ],
+  "clients": [
+    {
+      "clientId": "{{ stack_config.keycloak.client_id }}",
+      "name": "SonarQube SSO gateway (tinyauth)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "{{ tinyauth_client_secret }}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://{{ auth_host }}:{{ tls_port }}/api/oauth/callback/generic"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["email", "profile", "roles"],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

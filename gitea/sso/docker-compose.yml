@@ -1,0 +1,174 @@
+# Gitea behind traefik TLS with tinyauth single sign-on.
+#
+# Interactive traffic is gated by tinyauth; traefik copies the authenticated
+# identity into Remote-User, which Gitea's reverse proxy authentication uses
+# to sign the user in. Git-over-HTTP and API paths bypass the interactive
+# gate — a git client or CI token cannot complete a login redirect — and
+# authenticate with Gitea's own credentials.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  gitea-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  gitea-data:
+  gitea-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-gitea-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`gitea`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      gitea-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-gitea-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: Gitea SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=gitea"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - gitea-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-gitea-sso
+    environment:
+      POSTGRES_USER: gitea
+      POSTGRES_DB: gitea
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - gitea-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitea -d gitea"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - gitea-sso
+
+  gitea:
+    <<: *app
+    image: docker.io/gitea/gitea:1.27.0
+    container_name: gitea-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__server__PROTOCOL: http
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__ROOT_URL: https://${APP_HOST}:${TLS_PORT}/
+      GITEA__server__DOMAIN: ${APP_HOST}
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: postgres:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: gitea
+      GITEA__database__PASSWD: ${POSTGRES_PASSWORD}
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__security__SECRET_KEY: ${GITEA_SECRET_KEY}
+      GITEA__security__REVERSE_PROXY_TRUSTED_PROXIES: ${NET_SUBNET}
+      GITEA__security__REVERSE_PROXY_AUTHENTICATION_USER: Remote-User
+      GITEA__security__REVERSE_PROXY_AUTHENTICATION_EMAIL: Remote-Email
+      GITEA__security__REVERSE_PROXY_AUTHENTICATION_FULL_NAME: Remote-Name
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      # Sign the user in from the header traefik set from the SSO decision,
+      # and create the account on first sign-in. API stays off reverse-proxy
+      # auth so token clients on the bypass route cannot be impersonated.
+      GITEA__service__ENABLE_REVERSE_PROXY_AUTHENTICATION: "true"
+      GITEA__service__ENABLE_REVERSE_PROXY_AUTHENTICATION_API: "false"
+      GITEA__service__ENABLE_REVERSE_PROXY_AUTO_REGISTRATION: "true"
+      GITEA__service__ENABLE_REVERSE_PROXY_EMAIL: "true"
+      GITEA__service__ENABLE_REVERSE_PROXY_FULL_NAME: "true"
+      GITEA__openid__ENABLE_OPENID_SIGNIN: "false"
+      GITEA__cron_2e_update_checker__ENABLED: "false"
+    volumes:
+      - gitea-data:/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:3000/api/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=gitea"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+      # Interactive: gated, identity passed through, client headers stripped.
+      - "traefik.http.routers.gitea.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.gitea.entrypoints=websecure"
+      - "traefik.http.routers.gitea.tls=true"
+      - "traefik.http.routers.gitea.priority=10"
+      - "traefik.http.routers.gitea.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Git transport and API: no interactive gate (a git/CI client cannot
+      # log in through a browser), identity headers stripped so nothing can
+      # be forged, Gitea authenticates the caller with its own credentials.
+      - "traefik.http.routers.gitea-machine.rule=Host(`${APP_HOST}`) && (PathPrefix(`/api/`) || PathRegexp(`/(info/refs|git-upload-pack|git-receive-pack|objects/|info/lfs)`))"
+      - "traefik.http.routers.gitea-machine.entrypoints=websecure"
+      - "traefik.http.routers.gitea-machine.tls=true"
+      - "traefik.http.routers.gitea-machine.priority=100"
+      - "traefik.http.routers.gitea-machine.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.gitea-machine.service=gitea"
+    networks:
+      - gitea-sso

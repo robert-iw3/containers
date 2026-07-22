@@ -1,3 +1,24 @@
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs Confluence behind traefik TLS with a tinyauth
+single sign-on gate. tinyauth gates the web UI as a perimeter. Confluence's
+own SSO needs a licensed SSO/SAML app, so without a licence the stack boots
+to the setup wizard — the terminal state this deployment reaches; supply a
+licence in the wizard to go further. The REST API (`/rest`) bypasses the
+interactive gate and authenticates with Confluence's own credentials.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login -> setup wizard
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 ## Confluence, Postgres & backup db, with Traefik.
 
 Confluence - https://www.atlassian.com/software/confluence

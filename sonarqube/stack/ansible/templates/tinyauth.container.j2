@@ -1,0 +1,37 @@
+# {{ ansible_managed }}
+# tinyauth SSO gateway (Keycloak relying party), co-located on the proxy VM.
+# Only traefik on the same host reaches it. It resolves the public Keycloak
+# issuer to this host and trusts the stack CA via SSL_CERT_FILE.
+[Unit]
+Description=tinyauth SSO gateway for the SonarQube stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.tinyauth }}
+ContainerName=tinyauth
+Environment=PORT=3000
+Environment=ADDRESS=0.0.0.0
+Environment=SECRET={{ tinyauth_secret }}
+Environment=APP_URL=https://{{ auth_host }}:{{ tls_port }}
+Environment=COOKIE_SECURE=true
+Environment=APP_TITLE=SonarQube SSO
+Environment=OAUTH_AUTO_REDIRECT=generic
+Environment=GENERIC_NAME=Keycloak
+Environment=GENERIC_CLIENT_ID={{ stack_config.keycloak.client_id }}
+Environment=GENERIC_CLIENT_SECRET={{ tinyauth_client_secret }}
+Environment=GENERIC_SCOPES=openid email profile
+Environment=GENERIC_AUTH_URL=https://{{ keycloak_host }}:{{ tls_port }}/realms/{{ realm }}/protocol/openid-connect/auth
+Environment=GENERIC_TOKEN_URL=https://{{ keycloak_host }}:{{ tls_port }}/realms/{{ realm }}/protocol/openid-connect/token
+Environment=GENERIC_USER_URL=https://{{ keycloak_host }}:{{ tls_port }}/realms/{{ realm }}/protocol/openid-connect/userinfo
+Environment=SSL_CERT_FILE=/certs/ca.crt
+AddHost={{ keycloak_host }}:{{ vms.proxy }}
+Volume={{ tls_dir }}/ca.crt:/certs/ca.crt:ro,Z
+PublishPort=127.0.0.1:3000:3000
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target default.target

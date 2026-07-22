@@ -1,11 +1,13 @@
-version: '3'
+# SonarQube with its own PostgreSQL, fronted by Traefik, plus a pg_dump
+# backup sidecar. Deployer-facing settings come from .env (POSTGRESQL_*,
+# *_IMAGE, *_IPv4, *_CONTAINER_NAME, *_HOSTNAME). For a TLS single-sign-on
+# deployment see sso/.
 
 volumes:
   sonarqube-data:
   sonarqube-extensions:
   sonarqube-logs:
   sonarqube-temp:
-  sonarqube-db:
   postgresql-data:
   sonarqube-postgres-backups:
 
@@ -32,21 +34,15 @@ services:
     image: ${POSTGRESQL_IMAGE}
     container_name: ${POSTGRESQL_CONTAINER_NAME}
     hostname: ${POSTGRESQL_HOSTNAME}
-    ports:
-      - 5432:5432
     environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_DATABASE: ${POSTGRESQL_DATABASE}
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
+      POSTGRES_USER: ${POSTGRESQL_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL_DATABASE}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - sonarqube-db:/bitnami/postgresql:z
       - postgresql-data:/var/lib/postgresql/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h $(echo $POSTGRES_IPv4)"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -70,7 +66,7 @@ services:
     ports:
       - 9000:9000
     environment:
-      SONAR_JDBC_URL: "jdbc:postgresql://$(echo $POSTGRES_IPv4)/$(echo $POSTGRESQL_DATABASE)"
+      SONAR_JDBC_URL: "jdbc:postgresql://${POSTGRES_IPv4}/${POSTGRESQL_DATABASE}"
       SONAR_JDBC_USERNAME: ${POSTGRESQL_USERNAME}
       SONAR_JDBC_PASSWORD: ${POSTGRESQL_PASSWORD}
     volumes:
@@ -80,16 +76,17 @@ services:
       - sonarqube-logs:/opt/sonarqube/logs:Z
       - sonarqube-temp:/opt/sonarqube/temp:Z
     healthcheck:
-      test: ["CMD", "wget", "http://$(echo $SONARQUBE_IPv4):9000/","--spider"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9000/api/system/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 60s
     ulimits:
       nproc: 8192
       nofile:
         soft: 65536
         hard: 131072
+    depends_on:
       postgres:
         condition: service_healthy
       traefik:
@@ -126,42 +123,28 @@ services:
     image: ${POSTGRESQL_IMAGE}
     container_name: ${BACKUP_POSTGRESQL_CONTAINER_NAME}
     hostname: ${BACKUP_POSTGRESQL_HOSTNAME}
+    environment:
+      PGPASSWORD: ${POSTGRESQL_PASSWORD}
     command:
       - sh
       - -c
       - |
         sleep 30m
-        && while true; do
-        pg_dump
-        -h postgres-sonarqube.io
-        -p 5432
-        -d "${POSTGRESQL_DATABASE}"
-        -U "${POSTGRESQL_USERNAME} | gzip > /srv/sonarqube-postgres/backups/sonarqube-postgres-backup-$$(date "+%Y-%m-%d_%H-%M").gz
-        && find /srv/sonarqube-postgres/backups -type f -mtime +7 | xargs rm -f;
-        sleep 24h; done
+        while true; do
+          pg_dump -h ${POSTGRESQL_HOSTNAME} -p 5432 -d "${POSTGRESQL_DATABASE}" -U "${POSTGRESQL_USERNAME}" | gzip > /srv/sonarqube-postgres/backups/sonarqube-postgres-backup-$(date "+%Y-%m-%d_%H-%M").gz || {
+            echo "postgres backup failed at $(date)"; exit 1;
+          }
+          find /srv/sonarqube-postgres/backups -type f -mtime +7 -delete
+          sleep 24h
+        done
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - sonarqube-db:/bitnami/postgresql:z
       - sonarqube-postgres-backups:/srv/sonarqube-postgres/backups:Z
-    environment:
-      POSTGRESQL_REPLICATION_MODE: slave
-      POSTGRESQL_REPLICATION_USER: ${POSTGRESQL_REPLICATION_USER}
-      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRESQL_REPLICATION_PASSWORD}
-      POSTGRESQL_MASTER_HOST: ${POSTGRESQL_HOSTNAME}
-      POSTGRESQL_MASTER_PORT_NUMBER: 5432
-    ports:
-      - 5432:5432
     depends_on:
       postgres:
         condition: service_healthy
       sonarqube:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h $(echo $BACKUP_POSTGRESQL_IPv4)"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
     networks:
       sonarnet:
         ipv4_address: ${BACKUP_POSTGRESQL_IPv4}

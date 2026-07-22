@@ -1,5 +1,28 @@
 # hyperdx
 
+## SSO deployment (`sso/`)
+
+`sso/docker-compose.yml` runs HyperDX behind traefik TLS with a tinyauth
+single sign-on gate. HyperDX keeps its own authentication; tinyauth gates
+the UI so a user clears the identity provider before HyperDX is reachable.
+The OTLP ingest ports (`4317`/`4318`) are published directly and are not
+behind the gate — a telemetry client authenticates with its HyperDX
+ingestion key. The all-in-one's collector opens those receivers once
+HyperDX setup provisions it over OpAMP, so on a fresh instance the ingest
+path is published outside the gate but goes live only after setup.
+
+tinyauth verifies local users by default, or any OIDC provider via
+`sso/tinyauth.env` (see
+[`../ci/sso/tinyauth-oidc.env.example`](../ci/sso/tinyauth-oidc.env.example)).
+
+```sh
+cd uat && ./run-uat.sh          # TLS + SSO smoke test, build -> login
+cd uat && ./run-uat.sh --down   # tear down
+cd ansible && ansible-playbook -i inventory.ini deploy.yml   # deploy
+```
+
+The shared pattern is documented in [`../ci/sso/README.md`](../ci/sso/README.md).
+
 [![hyperdx](https://img.youtube.com/vi/JQd2Mol6kqA/0.jpg)](https://www.youtube.com/watch?v=JQd2Mol6kqA)
 
 ## Quick Start

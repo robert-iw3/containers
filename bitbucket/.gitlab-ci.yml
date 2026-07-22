@@ -55,7 +55,7 @@ deploy_docker:
 
 deploy_kubernetes:
   stage: deploy
-  image: bitnami/kubectl:latest
+  image: bitnamilegacy/kubectl:1.33.4
   script:
     - echo "$KUBE_CONFIG" > kubeconfig.yaml
     - export KUBECONFIG=kubeconfig.yaml
@@ -77,7 +77,7 @@ deploy_kubernetes:
 
 chaos_test:
   stage: chaos
-  image: bitnami/kubectl:latest
+  image: bitnamilegacy/kubectl:1.33.4
   script:
     - echo "$KUBE_CONFIG" > kubeconfig.yaml
     - export KUBECONFIG=kubeconfig.yaml
@@ -96,7 +96,7 @@ chaos_test:
 
 rollback:
   stage: rollback
-  image: bitnami/kubectl:latest
+  image: bitnamilegacy/kubectl:1.33.4
   when: on_failure
   script:
     - echo "Deployment failed, initiating rollback..."

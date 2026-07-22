@@ -1,0 +1,176 @@
+# Grafana behind traefik TLS with tinyauth single sign-on.
+#
+# traefik terminates TLS and calls tinyauth for an Authorization decision on
+# every request. Grafana holds no host port: traefik is the only route to
+# it, which is what makes trusting the Remote-User header safe.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  grafana-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  grafana-data:
+  grafana-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-grafana-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`grafana`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      grafana-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  # Policy enforcement point. Verifies local users by default; point it at
+  # an OIDC provider with the GENERIC_* settings in .env.example.
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-grafana-sso
+    # Identity provider settings only — kept out of .env so the gateway
+    # never receives the database or application credentials.
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: Grafana SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=grafana"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - grafana-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-grafana-sso
+    environment:
+      POSTGRES_USER: grafana
+      POSTGRES_DB: grafana
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - grafana-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grafana -d grafana"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - grafana-sso
+
+  grafana:
+    <<: *app
+    image: docker.io/grafana/grafana:12.4.6
+    container_name: grafana-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GF_SERVER_ROOT_URL: https://${APP_HOST}:${TLS_PORT}/
+      GF_SERVER_DOMAIN: ${APP_HOST}
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: grafana
+      GF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_SECURITY_CONTENT_SECURITY_POLICY: "true"
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      # Sign the user in from the identity traefik copied off the tinyauth
+      # decision. WHITELIST pins that to traefik's address so no other
+      # container on this network can present the header.
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: Remote-User
+      GF_AUTH_PROXY_HEADER_PROPERTY: username
+      GF_AUTH_PROXY_HEADERS: Email:Remote-Email Name:Remote-Name Groups:Remote-Groups
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_PROXY_ENABLE_LOGIN_TOKEN: "true"
+      GF_AUTH_PROXY_SYNC_TTL: "60"
+      GF_AUTH_PROXY_WHITELIST: ${TRAEFIK_IP}
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: ${GRAFANA_DEFAULT_ROLE}
+    volumes:
+      - grafana-data:/var/lib/grafana:Z
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=grafana"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      # Interactive traffic: gated by tinyauth, identity passed through.
+      - "traefik.http.routers.grafana.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine traffic: a caller presenting a service-account token skips
+      # the interactive gate, because a token client cannot complete a login
+      # redirect. Grafana still validates the token, so this widens no
+      # access — it only changes which component rejects an invalid caller.
+      - "traefik.http.routers.grafana-token.rule=Host(`${APP_HOST}`) && PathPrefix(`/api/`) && HeaderRegexp(`Authorization`, `^(?i)bearer `)"
+      - "traefik.http.routers.grafana-token.entrypoints=websecure"
+      - "traefik.http.routers.grafana-token.tls=true"
+      - "traefik.http.routers.grafana-token.priority=100"
+      # strip-identity is what keeps this route from being an impersonation
+      # hole: a caller cannot smuggle Remote-User past the absent gate.
+      - "traefik.http.routers.grafana-token.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.grafana-token.service=grafana"
+    networks:
+      - grafana-sso

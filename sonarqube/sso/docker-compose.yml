@@ -1,0 +1,173 @@
+# SonarQube behind traefik TLS with tinyauth single sign-on.
+#
+# Interactive traffic is gated by tinyauth; traefik copies the authenticated
+# identity into Remote-User, which SonarQube's HTTP header SSO uses to sign
+# the user in. Scanner and CI traffic — anything presenting an Authorization
+# token — bypasses the interactive gate and is authenticated by SonarQube's
+# own token check. The browser's own /api XHR uses a cookie, carries no
+# Authorization header, and so stays on the gated route with the identity
+# header intact.
+#
+# Settings come from .env (see .env.example). The same file is deployed by
+# ansible/deploy.yml and exercised by uat/run-uat.sh.
+---
+networks:
+  sonar-sso:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  sonar-data:
+  sonar-extensions:
+  sonar-logs:
+  sonar-postgres:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-sonar-sso
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`sonar`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      sonar-sso:
+        ipv4_address: ${TRAEFIK_IP}
+    depends_on:
+      - tinyauth
+
+  tinyauth:
+    <<: *app
+    image: ghcr.io/steveiliop56/tinyauth:v3.6.2
+    container_name: tinyauth-sonar-sso
+    env_file:
+      - path: tinyauth.env
+        required: false
+    environment:
+      PORT: 3000
+      ADDRESS: 0.0.0.0
+      SECRET: ${TINYAUTH_SECRET}
+      APP_URL: ${TINYAUTH_APP_URL}
+      USERS: ${TINYAUTH_USERS}
+      COOKIE_SECURE: "true"
+      APP_TITLE: SonarQube SSO
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=sonar"
+      - "traefik.http.routers.tinyauth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.middlewares=secure-headers@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port=3000"
+    networks:
+      - sonar-sso
+
+  postgres:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: postgres-sonar-sso
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_DB: sonar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - sonar-postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - sonar-sso
+
+  sonarqube:
+    <<: *app
+    image: docker.io/sonarqube:26.7.0.124771-community
+    container_name: sonarqube-sso
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+      SONAR_WEB_PORT: "9000"
+      SONAR_CORE_SERVERBASEURL: https://${APP_HOST}:${TLS_PORT}
+      # Sign the user in from the header traefik set from the SSO decision.
+      # SonarQube has no trusted-proxy IP setting for this; the guarantee is
+      # that it publishes no host port and every gated request has its
+      # Remote-* headers replaced by traefik from the forwardAuth response.
+      SONAR_WEB_SSO_ENABLE: "true"
+      SONAR_WEB_SSO_LOGINHEADER: Remote-User
+      SONAR_WEB_SSO_NAMEHEADER: Remote-Name
+      SONAR_WEB_SSO_EMAILHEADER: Remote-Email
+      SONAR_WEB_SSO_GROUPSHEADER: Remote-Groups
+      SONAR_WEB_SSO_REFRESHINTERVALINMINUTES: "5"
+    volumes:
+      - sonar-data:/opt/sonarqube/data:Z
+      - sonar-extensions:/opt/sonarqube/extensions:Z
+      - sonar-logs:/opt/sonarqube/logs:Z
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc: 8192
+    healthcheck:
+      test: ["CMD-SHELL", "grep -Fq 'SonarQube is operational' /opt/sonarqube/logs/sonar.log"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=sonar"
+      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+      # Interactive: gated, identity passed through, client headers stripped.
+      - "traefik.http.routers.sonarqube.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.sonarqube.entrypoints=websecure"
+      - "traefik.http.routers.sonarqube.tls=true"
+      - "traefik.http.routers.sonarqube.priority=10"
+      - "traefik.http.routers.sonarqube.middlewares=strip-identity@file,tinyauth@file,secure-headers@file"
+      # Machine: a scanner/CI call presenting an Authorization token skips
+      # the interactive gate (a token client cannot log in through a
+      # browser). Identity headers are stripped so the token is the only
+      # credential; SonarQube validates it. The browser's cookie-based /api
+      # XHR carries no Authorization header and stays on the gated route.
+      - "traefik.http.routers.sonarqube-token.rule=Host(`${APP_HOST}`) && (PathPrefix(`/api/`) || PathPrefix(`/batch/`)) && HeaderRegexp(`Authorization`, `(?i)^(bearer|basic) `)"
+      - "traefik.http.routers.sonarqube-token.entrypoints=websecure"
+      - "traefik.http.routers.sonarqube-token.tls=true"
+      - "traefik.http.routers.sonarqube-token.priority=100"
+      - "traefik.http.routers.sonarqube-token.middlewares=strip-identity@file,secure-headers@file"
+      - "traefik.http.routers.sonarqube-token.service=sonarqube"
+    networks:
+      - sonar-sso

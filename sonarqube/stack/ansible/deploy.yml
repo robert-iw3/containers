@@ -1,0 +1,193 @@
+---
+# Deploy the SonarQube + Keycloak stack across separate VMs, one service per
+# host, as Podman Quadlet (systemd) units. Reads stack.yaml for images,
+# hosts and topology; secrets are generated once on the controller.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# Runtime: 'podman' (default) deploys Quadlet units. Set container_runtime=
+# docker to skip them and deploy with the compose file on a single host
+# instead (see docker-compose.yml).
+
+- name: Common host preparation
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The multi-VM
+          deployment uses Podman Quadlets; deploy the single-host
+          docker-compose.yml when Docker is the runtime.
+
+    - name: Install podman
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Ensure the Quadlet unit directory exists
+      ansible.builtin.file:
+        path: "{{ quadlet_dir }}"
+        state: directory
+        mode: "0755"
+
+- name: Keycloak database
+  hosts: keycloak_db
+  become: true
+  vars:
+    q_name: postgres
+    q_db_name: keycloak
+    q_db_user: keycloak
+    q_db_password: "{{ keycloak_db_password }}"
+  tasks:
+    - name: Ensure postgres config and data directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0750"
+      loop:
+        - "{{ pg_conf_dir }}"
+        - "{{ pg_data_dir }}"
+
+    - name: Install the tuned postgresql.conf
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../postgres/postgresql.conf"
+        dest: "{{ pg_conf_dir }}/postgresql.conf"
+        mode: "0644"
+
+    - name: Render pg_hba.conf for the stack subnet
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
+        dest: "{{ pg_conf_dir }}/pg_hba.conf"
+        mode: "0644"
+
+    - name: Deploy the postgres Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+
+- name: SonarQube database and backup sidecar
+  hosts: sonar_db
+  become: true
+  vars:
+    q_name: postgres
+    q_db_name: sonar
+    q_db_user: sonar
+    q_db_password: "{{ sonar_db_password }}"
+  tasks:
+    - name: Ensure postgres and backup directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0750"
+      loop:
+        - "{{ pg_conf_dir }}"
+        - "{{ pg_data_dir }}"
+        - "{{ backup_dir }}"
+
+    - name: Install the tuned postgresql.conf
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../postgres/postgresql.conf"
+        dest: "{{ pg_conf_dir }}/postgresql.conf"
+        mode: "0644"
+
+    - name: Render pg_hba.conf for the stack subnet
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
+        dest: "{{ pg_conf_dir }}/pg_hba.conf"
+        mode: "0644"
+
+    - name: Deploy the postgres Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+
+    - name: Deploy the backup sidecar Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: backups
+
+- name: Keycloak identity provider
+  hosts: keycloak
+  become: true
+  vars:
+    q_name: keycloak
+  tasks:
+    - name: Ensure the Keycloak realm import directory exists
+      ansible.builtin.file:
+        path: "{{ keycloak_import_dir }}"
+        state: directory
+        mode: "0750"
+
+    - name: Render the Keycloak realm
+      ansible.builtin.template:
+        src: realm-sonar.json.j2
+        dest: "{{ keycloak_import_dir }}/realm-sonar.json"
+        mode: "0640"
+
+    - name: Deploy the keycloak Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+
+- name: SonarQube application
+  hosts: sonarqube
+  become: true
+  vars:
+    q_name: sonarqube
+  tasks:
+    - name: Ensure the SonarQube data directories exist
+      ansible.builtin.file:
+        path: "{{ sonar_data_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - data
+        - extensions
+        - logs
+
+    - name: Raise vm.max_map_count for Elasticsearch
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: "262144"
+        state: present
+        reload: true
+
+    - name: Deploy the sonarqube Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+
+- name: Reverse proxy and SSO gateway
+  hosts: proxy
+  become: true
+  tasks:
+    - name: Ensure the traefik config and TLS directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0750"
+      loop:
+        - "{{ traefik_conf_dir }}"
+        - "{{ tls_dir }}"
+
+    - name: Install TLS material for the proxy
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ tls_dir }}/{{ item.dest }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "files/tls/tls.crt", dest: "tls.crt", mode: "0644" }
+        - { src: "files/tls/tls.key", dest: "tls.key", mode: "0640" }
+        - { src: "files/tls/ca.crt", dest: "ca.crt", mode: "0644" }
+
+    - name: Render the traefik dynamic configuration
+      ansible.builtin.template:
+        src: traefik-dynamic.yml.j2
+        dest: "{{ traefik_conf_dir }}/dynamic.yml"
+        mode: "0644"
+
+    - name: Deploy the tinyauth Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: tinyauth
+
+    - name: Deploy the traefik Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: traefik

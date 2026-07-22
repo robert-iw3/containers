@@ -1,0 +1,33 @@
+# {{ ansible_managed }}
+# Keycloak identity provider. Fronted by traefik on the proxy VM (TLS); talks
+# HTTP internally and trusts X-Forwarded-* from the proxy.
+[Unit]
+Description=Keycloak for the SonarQube stack
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ images.keycloak }}
+ContainerName=keycloak
+Exec=start --import-realm
+Environment=KC_HOSTNAME=https://{{ keycloak_host }}:{{ tls_port }}
+Environment=KC_HTTP_ENABLED=true
+Environment=KC_HTTP_PORT=8080
+Environment=KC_PROXY_HEADERS=xforwarded
+Environment=KC_DB=postgres
+Environment=KC_DB_URL=jdbc:postgresql://{{ vms.keycloak_db }}:5432/keycloak
+Environment=KC_DB_USERNAME=keycloak
+Environment=KC_DB_PASSWORD={{ keycloak_db_password }}
+Environment=KC_BOOTSTRAP_ADMIN_USERNAME={{ stack_config.keycloak.admin_user }}
+Environment=KC_BOOTSTRAP_ADMIN_PASSWORD={{ keycloak_admin_password }}
+Environment=KC_HEALTH_ENABLED=true
+Volume={{ keycloak_import_dir }}/realm-sonar.json:/opt/keycloak/data/import/realm-sonar.json:ro,Z
+PublishPort={{ hostvars[inventory_hostname]['ansible_host'] }}:8080:8080
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target default.target
