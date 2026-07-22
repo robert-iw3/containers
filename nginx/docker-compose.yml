@@ -1,29 +1,42 @@
+---
+# nginx reverse proxy in front of a demo backend (whoami). This is exactly what
+# uat/run-uat.sh drives and the single-host reference for the Quadlet deployment
+# in ansible/. Replace `whoami` with your backend and edit config/nginx.conf (or
+# stack.yaml routes) to route to it.
 services:
-  proxy:
-    restart: always
-    image: nginx:alpine
+  nginx:
+    image: ${PROXY_IMAGE:-docker.io/library/nginx:1.29-alpine}
+    container_name: nginx-proxy
+    restart: unless-stopped
     ports:
-      - 8082:8082/tcp #frontend port to backend
-      - 443:443/tcp
-    secrets:
-      - source: proxy.ca
-        target: /etc/nginx/certs/sslcert_chain.pem
-      - source: proxy.cert
-        target: /etc/nginx/certs/sslcert.pem
-      - source: proxy.key
-        target: /etc/nginx/certs/sslcert_rsa.key
+      - "${BIND_ADDR:-127.0.0.1}:${TLS_PORT:-8443}:8443"
+      - "${BIND_ADDR:-127.0.0.1}:${HTTP_PORT:-8080}:8080"
     volumes:
-      - ./config/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro:Z
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro,Z
+      - ${TLS_DIR:-./uat/tls}:/etc/nginx/tls:ro,Z
     networks:
-      - app
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - whoami
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  whoami:
+    image: docker.io/traefik/whoami:latest
+    container_name: whoami-demo
+    restart: unless-stopped
+    command: ["--port", "80", "--name", "whoami-demo"]
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
 
 networks:
-  app: {}
-
-secrets:
-  proxy.ca:
-    file: ./secrets/certs/sslcert_chain.pem
-  proxy.key:
-    file: ./secrets/certs/sslcert_rsa.key
-  proxy.cert:
-    file: ./secrets/certs/sslcert.pem
+  proxy:
+    name: ${COMPOSE_NET_NAME:-nginx-proxy-net}

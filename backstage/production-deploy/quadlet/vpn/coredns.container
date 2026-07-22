@@ -1,0 +1,23 @@
+# Secure DNS on the bastion: DoT upstream + the internal portal/Boundary names
+# the broker resolves its targets by. Bastion-only; never exposed to
+# workstations. Config: /etc/backstage-portal/vpn/Corefile
+[Unit]
+Description=Portal VPN secure DNS (CoreDNS)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/coredns/coredns:1.13.1
+ContainerName=portal-vpn-coredns
+Network=portal.network
+User=0:0
+Exec=-conf /etc/coredns/Corefile
+Volume=/etc/backstage-portal/vpn/Corefile:/etc/coredns/Corefile:ro,Z
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

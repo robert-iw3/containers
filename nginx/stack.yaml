@@ -1,0 +1,22 @@
+# Single source of truth for the nginx reverse-proxy stack.
+# The compose file and UAT use the committed config/nginx.conf; the Quadlet
+# deployment (ansible/) renders nginx.conf from the routes below.
+stack:
+  name: nginx
+  tls_port: 8443
+  http_port: 8080
+  bind_addr: 127.0.0.1
+  net_subnet: 172.31.22.0/24
+  tls_dir: /etc/nginx-proxy/tls
+
+image: docker.io/library/nginx:1.29-alpine
+
+# Backends to expose. Each route becomes an upstream + TLS server block. Point
+# `upstream` at any reachable host:port — this is what makes the proxy reusable.
+routes:
+  - host: app.localhost
+    upstream: whoami:80
+    healthcheck: /
+
+hosts:
+  proxy: 127.0.0.1

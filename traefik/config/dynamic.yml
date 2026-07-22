@@ -1,0 +1,47 @@
+# Traefik dynamic configuration — the demo routing table used by the compose
+# stack and the UAT. It terminates TLS with the mounted certificate and routes
+# one host to the bundled `whoami` backend.
+#
+# To put Traefik in front of your own backend: add a router+service pair here
+# (or edit this one) — nothing else changes. The Quadlet deployment renders the
+# equivalent file from `stack.yaml`'s `routes:` list
+# (ansible/templates/dynamic.yml.j2), so this file and that template stay in
+# lock-step: one demo route -> one real backend per route.
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/tls/tls.crt
+        keyFile: /etc/traefik/tls/tls.key
+  certificates:
+    - certFile: /etc/traefik/tls/tls.crt
+      keyFile: /etc/traefik/tls/tls.key
+
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsSeconds: 15552000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+  routers:
+    app:
+      entryPoints: [websecure]
+      rule: "Host(`app.localhost`)"
+      middlewares: [secure-headers]
+      service: app
+      tls: {}
+
+  services:
+    app:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://whoami:80"

@@ -1,143 +1,91 @@
-# Defguard Deployment Guide
+# Defguard VPN (WireGuard management)
 
-This guide provides instructions for deploying Defguard in a production environment using Docker, Podman, or Kubernetes, with Ansible for configuration management. The deployment is optimized for security, scalability, and zero trust principles.
+A self-hosted WireGuard VPN with a real control plane: Defguard **core** (web
+UI, REST API, user/device management) drives a WireGuard **gateway** over an
+authenticated gRPC channel, with postgres behind it. Driven by
+[`stack.yaml`](stack.yaml) and run three ways:
 
-## Prerequisites
+- **compose / rootless podman** for local use ([`docker-compose.yml`](docker-compose.yml))
+- **Podman Quadlet (systemd)** for hosts ([`ansible/`](ansible))
+- validated end-to-end by the **UAT** ([`uat/run-uat.sh`](uat/run-uat.sh))
 
-- **Docker** or **Podman**: Install Docker (`docker.io`) or Podman for containerized deployment.
-- **Kubernetes**: A production-grade Kubernetes cluster (e.g., EKS, GKE, AKS) with `kubectl` configured.
-- **Ansible**: Install Ansible (`pip install ansible`).
-- **Python**: Python 3.8+ for the deployment script.
-- **TLS Certificates**: Valid TLS certificates for mTLS (self-signed or CA-issued).
-- **Monitoring**: Prometheus and Grafana for metrics (optional but recommended).
-- **Storage**: A storage class for Kubernetes PVCs (e.g., `standard`).
+Pinned to the **1.4.0 core+gateway pair** — defguard's production release
+channel, validated here end-to-end (see *Upgrading to 2.x* below before
+bumping).
 
-## Setup
+## Stability by construction
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/DefGuard/defguard.git
-   cd defguard
-   ```
+This stack has crashed a machine once, so the guardrails are explicit:
 
-2. **Configure Environment Variables**:
-   - Copy `.env.example` to `.env`:
-     ```bash
-     cp .env.example .env
-     ```
-   - Edit `.env` with secure values:
-     ```bash
-     nano .env
-     ```
-     - Set strong passwords for `POSTGRES_PASSWORD` and `DEFGUARD_DEFAULT_ADMIN_PASSWORD`.
-     - Generate a secure `DEFGUARD_SECRET_KEY`:
-       ```bash
-       openssl rand -hex 64
-       ```
-     - Generate a JWT token for `DEFGUARD_TOKEN` (consult Defguard documentation).
-     - Specify paths to TLS certificates (`DEFGUARD_TLS_CERT`, `DEFGUARD_TLS_KEY`).
+- **compose**: core and gateway use `restart: on-failure:5` — podman applies
+  **no backoff** between restarts, so an early-exit bug under `unless-stopped`
+  becomes an unthrottled crash loop. Bounded means it stops and waits for a
+  human. Memory is capped per service (`mem_limit`).
+- **Quadlet**: systemd throttling on every unit — `RestartSec` plus
+  `StartLimitIntervalSec=120` / `StartLimitBurst=5`, so a bad config degrades to
+  a stopped service, never a loop.
+- **UAT**: `ensure_stable` gates every stage — a container that exits early or
+  restart-loops is **stopped**, its logs dumped, and the test fails fast.
 
-3. **Generate TLS Certificates** (if not using a CA):
-   ```bash
-   mkdir certs
-   openssl req -x509 -newkey rsa:4096 -nodes -out certs/tls.crt -keyout certs/tls.key -days 365 -subj "/CN=defguard"
-   ```
+## Run locally
 
-## Deployment Options
-
-### Option 1: Docker Deployment
-1. Ensure Docker and Docker Compose are installed.
-2. Run the deployment script:
-   ```bash
-   python3 deploy.py --type docker
-   ```
-3. Verify services:
-   ```bash
-   docker-compose ps
-   ```
-
-### Option 2: Podman Deployment (Rootless)
-1. Ensure Podman and Podman Compose are installed.
-2. Run the deployment script:
-   ```bash
-   python3 deploy.py --type podman
-   ```
-3. Verify services:
-   ```bash
-   podman-compose ps
-   ```
-
-### Option 3: Kubernetes Deployment
-1. Ensure `kubectl` is configured for your cluster.
-2. Run the deployment script:
-   ```bash
-   python3 deploy.py --type kubernetes
-   ```
-3. Verify deployment:
-   ```bash
-   kubectl -n defguard get pods
-   ```
-
-### Ansible Configuration
-The deployment script runs Ansible to configure the environment. To run independently:
 ```bash
-ansible-playbook ansible/deploy.yml -e "deployment_type=<docker|podman|kubernetes>"
+cd uat && ./run-uat.sh        # brings everything up with generated secrets
 ```
 
-## Accessing Defguard
-- **REST API**: `https://<DEFGUARD_COOKIE_DOMAIN>:8000`
-- **gRPC**: `https://<DEFGUARD_COOKIE_DOMAIN>:50055` (mTLS required)
-- **Proxy**: `https://<DEFGUARD_COOKIE_DOMAIN>:8080`
-- **WireGuard**: UDP `<DEFGUARD_COOKIE_DOMAIN>:50051`
-- **Admin Interface**: Access via `DEFGUARD_URL` with the admin password.
+or by hand: `cp .env.example .env`, replace every `CHANGE_ME`, then
+`podman-compose up -d db core`. Once core is healthy, create a network in the
+UI (http://localhost:8000), copy its gateway token into `.env` as
+`DEFGUARD_TOKEN`, and `podman-compose up -d gateway`.
 
-## Security Features
-- **Zero Trust**: mTLS for gRPC, strict network policies, and restricted pod security.
-- **Secrets Management**: Sensitive data stored in Kubernetes secrets or `.env` (chmod 640).
-- **Non-Root Containers**: All containers run as non-root users.
-- **Data Encryption**: PostgreSQL data checksums enabled for integrity.
-- **Distroless Images**: Minimal runtime images reduce attack surface.
-- **Resource Limits**: Prevent resource exhaustion with CPU/memory limits.
-- **Health Checks**: Liveness and readiness probes ensure service reliability.
+## Deploy (Podman Quadlet)
 
-## Scaling and Monitoring
-- **Horizontal Scaling**: Kubernetes HPA scales pods based on CPU usage (70% target).
-- **Monitoring**: Prometheus metrics exposed at `/metrics` on port 8000.
-- **Logging**: Logs stored in `/var/log/defguard` with daily rotation (7 days retention).
-- **Backup**: Configure PostgreSQL backups (e.g., using `pg_dump`) separately.
+```bash
+cd ansible
+ansible-playbook -i inventory.ini deploy.yml
+```
 
-## Troubleshooting
-- Check logs:
-  ```bash
-  docker-compose logs
-  # or
-  kubectl -n defguard logs -l app=defguard
-  ```
-- Verify environment variables in `.env`.
-- Ensure TLS certificates are valid and accessible.
-- Check network policies and firewall rules.
+Installs `defguard.network`, a `defguard-db` volume+container, `defguard-core`
+and `defguard-gateway` as Quadlet units under `/etc/containers/systemd`.
+The playbook waits for core, **provisions the VPN network through the real
+API**, mints the gateway token (persisted once at `/etc/defguard/gateway.env`,
+mode 0600), starts the gateway, and verifies core reports it *connected*.
+Secrets generate once into `ansible/.secrets/` (gitignored). The wireguard
+kernel module is persisted for reboots via `/etc/modules-load.d/wireguard.conf`
+(revert: remove that file).
 
-## Cleanup
-To remove the deployment:
-- **Docker/Podman**:
-  ```bash
-  docker-compose down -v
-  # or
-  podman-compose down -v
-  ```
-- **Kubernetes**:
-  ```bash
-  kubectl delete namespace defguard
-  ```
+Add VPN users/devices in the core UI; peers connect to the gateway's published
+UDP port (`51820`).
 
-## Maintenance
-- Update images regularly:
-  ```bash
-  docker pull ghcr.io/defguard/defguard:current
-  docker pull ghcr.io/defguard/gateway:latest
-  docker pull ghcr.io/defguard/defguard-proxy:current
-  ```
-- Rotate TLS certificates before expiration.
-- Monitor disk usage for PostgreSQL data (`defguard-db` volume).
+## Test
 
-For further details, refer to the [Defguard Documentation](https://docs.defguard.net/).
+```bash
+cd uat && ./run-uat.sh          # ./run-uat.sh --down to tear down
+```
+
+Asserts: db healthy → core healthy → admin authenticates → VPN network
+provisioned via API → gateway token minted → **gateway connects to core over
+gRPC** (core reports `connected: true`) → gateway brings up the kernel
+WireGuard interface (`wg0`).
+
+## Upgrading to 2.x
+
+Defguard 2.0 (July 2026) is a different provisioning architecture: no
+`DEFGUARD_DEFAULT_ADMIN_PASSWORD` — first boot serves an **initial-setup
+wizard**, and gateways join through a new **adopt** flow instead of the
+network-token endpoint. The wizard *is* scriptable against
+`/api/v1/initial_setup/*`, validated in this repo's testing:
+
+1. `POST /admin` `{first_name,last_name,username,email,password}` → 201
+2. `POST /login` `{username,password}` → session cookie
+3. `POST /ca` `{common_name,email,validity_period_years}` → 201 (mandatory —
+   finishing without it leaves core unbootable)
+4. `POST /general_config` `{default_admin_group_name,default_authentication,
+   default_mfa_code_lifetime}` → 201 — `default_authentication` is the session
+   validity in **days**; 0 makes every login expire instantly
+5. `POST /finish` → 200, core restarts into normal mode
+
+The 2.x network schema adds `mtu`, `fwmark`, `allow_all_groups`,
+`location_mfa_mode`/`service_location_mode` (`"disabled"`), and the gateway
+adopt-token flow replaces `GET /network/{id}/token`. Migrate when the 2.x adopt
+flow is documented upstream; bump `core_image` and `gateway_image` **together**.

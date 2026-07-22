@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# systemd-resolved drop-in: send the host's own lookups to CoreDNS and free
+# :53 by disabling the resolved stub listener. Installed only when
+# configure_host_dns is true.
+[Resolve]
+DNS=127.0.0.1
+DNSStubListener=no

@@ -1,0 +1,26 @@
+# The bastion's tailnet node (userspace/netstack — no kernel module). Its
+# tailnet IP is the single address workstations may reach; the broker (sharing
+# this netns) forwards the allowed ports onward. The node key is in
+# /etc/backstage-portal/vpn.env (BASTION_AUTHKEY).
+[Unit]
+Description=Portal VPN bastion node (tailscale)
+After=portal-headscale.service
+Wants=portal-headscale.service
+
+[Container]
+Image=docker.io/tailscale/tailscale:v1.98.9
+ContainerName=portal-bastion-ts
+Network=portal.network
+Environment=TS_USERSPACE=true
+Environment=TS_HOSTNAME=bastion
+Environment=TS_ACCEPT_DNS=false
+Environment=TS_EXTRA_ARGS=--login-server=http://portal-headscale:8080
+EnvironmentFile=/etc/backstage-portal/vpn.env
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target

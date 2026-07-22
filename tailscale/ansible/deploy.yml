@@ -1,0 +1,100 @@
+---
+# Deploy a self-hosted Tailscale control plane as Podman Quadlet (systemd)
+# units: headscale plus a tailscale subnet-router / exit-node that joins it. The
+# router lets containers and hosts route site-to-site and egress through the
+# tunnel. Reads stack.yaml for images, subnet and advertised routes.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# Fully offline — no Tailscale SaaS. The pre-auth key is minted from the freshly
+# deployed headscale and never leaves the host.
+- name: Deploy the self-hosted Tailscale (headscale) control plane
+  hosts: control
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The Quadlet
+          deployment requires Podman; use docker-compose.yml for a Docker
+          single-host runtime.
+
+    - name: Install podman
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Ensure the Quadlet and config directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ conf_dir }}"
+
+    - name: Render the headscale configuration
+      ansible.builtin.template:
+        src: config.yaml.j2
+        dest: "{{ conf_dir }}/config.yaml"
+        mode: "0644"
+
+    - name: Deploy the tailnet network Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: tailscale, q_kind: network }
+
+    - name: Deploy the headscale data volume Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: headscale, q_kind: volume }
+
+    - name: Deploy the headscale container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: headscale, q_kind: container }
+
+    - name: Wait for headscale to answer its CLI
+      ansible.builtin.command: podman exec headscale headscale users list
+      register: hs_ready
+      until: hs_ready.rc == 0
+      retries: 18
+      delay: 5
+      changed_when: false
+
+    - name: Ensure the tailnet user exists
+      ansible.builtin.command: podman exec headscale headscale users create router
+      register: hs_user
+      changed_when: "'created' in (hs_user.stdout | default(''))"
+      failed_when: hs_user.rc != 0 and 'already exists' not in (hs_user.stderr | default(''))
+
+    - name: Resolve the tailnet user id
+      ansible.builtin.command: podman exec headscale headscale users list -o json
+      register: hs_users
+      changed_when: false
+
+    - name: Mint a reusable pre-auth key for the router
+      ansible.builtin.command: >-
+        podman exec headscale headscale preauthkeys create
+        --user {{ (hs_users.stdout | from_json)[0].id }}
+        --reusable --expiration 24h -o json
+      register: hs_key
+      changed_when: false
+
+    - name: Write the router pre-auth key env file
+      ansible.builtin.copy:
+        content: "TS_AUTHKEY={{ (hs_key.stdout | from_json).key }}\n"
+        dest: "{{ conf_dir }}/router.env"
+        mode: "0600"
+
+    - name: Deploy the tailscale router Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: tailscale-router, q_kind: container }
+
+    - name: Wait for the router to obtain a tailnet address
+      ansible.builtin.command: podman exec tailscale-router tailscale ip -4
+      register: router_ip
+      until: router_ip.rc == 0 and router_ip.stdout is match('^100\\.')
+      retries: 18
+      delay: 5
+      changed_when: false

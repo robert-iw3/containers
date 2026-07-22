@@ -1,144 +1,109 @@
 ---
-volumes:
-  defguard-db:
-    name: defguard-db
-  certs:
-    name: certs
-
-# Define isolated network with encryption
-networks:
-  defguard:
-    name: defguard
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-    driver_opts:
-      com.docker.network.bridge.enable_ip_masquerade: "true"
-      com.docker.network.driver.mtu: "1500"
-
-x-common-vars-apps: &common-vars-apps
-  security_opt:
-    - no-new-privileges:true
-  env_file:
-    - .env
-  networks:
-    - defguard
-  restart: unless-stopped
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 5
-    start_period: 20s
-
+# Defguard WireGuard-VPN management stack: postgres + core (control plane) +
+# gateway (tunnel). This is what uat/run-uat.sh drives and the single-host
+# reference for the Quadlet deployment in ansible/.
+#
+# The gateway needs a token minted by core after a VPN network is created. The
+# UAT does this automatically (login -> create network -> fetch token -> start
+# gateway). For a manual run, bring up db+core, create a network in the UI, copy
+# its gateway token into .env as DEFGUARD_TOKEN, then start the gateway.
 services:
-  core:
-    <<: *common-vars-apps
-    image: ghcr.io/defguard/defguard:current
-    environment:
-      DEFGUARD_COOKIE_INSECURE: ${DEFGUARD_COOKIE_INSECURE:-false}
-      DEFGUARD_COOKIE_DOMAIN: ${DEFGUARD_COOKIE_DOMAIN:-localhost}
-      DEFGUARD_LOG_LEVEL: ${DEFGUARD_LOG_LEVEL:-info}
-      DEFGUARD_DB_HOST: ${DEFGUARD_DB_HOST:-db}
-      DEFGUARD_DB_PORT: ${DEFGUARD_DB_PORT:-5432}
-      DEFGUARD_URL: ${DEFGUARD_URL:-https://localhost:8000}
-      RUST_BACKTRACE: ${RUST_BACKTRACE:-0}
-      DEFGUARD_GRPC_TLS: "true"
-    ports:
-      - "8000:8000" # REST API
-      - "50055:50055" # gRPC with mTLS
-    volumes:
-      - certs:/certs:ro
-    depends_on:
-      db:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          memory: 256M
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-
   db:
-    <<: *common-vars-apps
-    image: postgres:18-alpine
+    image: ${POSTGRES_IMAGE:-docker.io/library/postgres:18-alpine}
+    container_name: defguard-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-defguard}
       POSTGRES_USER: ${POSTGRES_USER:-defguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-defguard}
       POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
-      - defguard-db:/var/lib/postgresql/data:Z
-    ports:
-      - "5432:5432"
+      # postgres:18 places data under /var/lib/postgresql/<major>; mount the
+      # parent (mounting .../data trips the "unused mount/volume" guard).
+      - defguard-db:/var/lib/postgresql:Z
+    networks:
+      - defguard
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-defguard}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          memory: 128M
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 999
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
 
-  gateway:
-    <<: *common-vars-apps
-    image: ghcr.io/defguard/gateway:latest
+  core:
+    image: ${CORE_IMAGE:-ghcr.io/defguard/defguard:1.4.0}
+    container_name: defguard-core
     environment:
-      DEFGUARD_GRPC_URL: "https://core:50055"
-      DEFGUARD_STATS_PERIOD: ${DEFGUARD_STATS_PERIOD:-60}
-      DEFGUARD_TOKEN: ${DEFGUARD_TOKEN}
-      RUST_LOG: ${RUST_LOG:-info}
+      DEFGUARD_DB_HOST: db
+      DEFGUARD_DB_PORT: "5432"
+      DEFGUARD_DB_NAME: ${POSTGRES_DB:-defguard}
+      DEFGUARD_DB_USER: ${POSTGRES_USER:-defguard}
+      DEFGUARD_DB_PASSWORD: ${POSTGRES_PASSWORD:-defguard}
+      DEFGUARD_AUTH_SECRET: ${DEFGUARD_AUTH_SECRET:-CHANGE_ME_auth_secret}
+      DEFGUARD_GATEWAY_SECRET: ${DEFGUARD_GATEWAY_SECRET:-CHANGE_ME_gateway_secret}
+      DEFGUARD_YUBIBRIDGE_SECRET: ${DEFGUARD_YUBIBRIDGE_SECRET:-CHANGE_ME_yubi_secret}
+      DEFGUARD_SECRET_KEY: ${DEFGUARD_SECRET_KEY:-CHANGE_ME_secret_key_at_least_64_chars_long_for_defguard_cookies_xx}
+      DEFGUARD_DEFAULT_ADMIN_PASSWORD: ${DEFGUARD_DEFAULT_ADMIN_PASSWORD:-CHANGE_ME_admin}
+      DEFGUARD_URL: ${DEFGUARD_URL:-http://localhost:8000}
+      DEFGUARD_COOKIE_DOMAIN: ${DEFGUARD_COOKIE_DOMAIN:-localhost}
+      DEFGUARD_COOKIE_INSECURE: ${DEFGUARD_COOKIE_INSECURE:-true}
+      DEFGUARD_GRPC_TLS: "false"
+      # Literal (not ${VAR:-default}): podman-compose passes self-referencing
+      # interpolations through unexpanded when the var is unset.
+      DEFGUARD_LOG_LEVEL: info
     ports:
-      - "50051:50051/udp" # WireGuard endpoint
+      - "${BIND_ADDR:-127.0.0.1}:${CORE_HTTP_PORT:-8000}:8000"
+    networks:
+      - defguard
     depends_on:
-      core:
+      db:
         condition: service_healthy
+    healthcheck:
+      # The image ships no curl/wget; bash's /dev/tcp does the HTTP probe.
+      # Explicit `bash -c` nesting: podman-compose runs health tests via
+      # /bin/sh (dash), which has no /dev/tcp.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8000 && printf \"GET /api/v1/health HTTP/1.0\\r\\n\\r\\n\" >&3 && head -1 <&3 | grep -q 200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # Bounded: podman applies no backoff between restarts, so an early-exit bug
+    # under `unless-stopped` becomes a machine-pegging loop. Five tries, then
+    # stay down for a human to look at.
+    restart: on-failure:5
+    mem_limit: 1g
+
+  # WireGuard tunnel gateway, driven by core over gRPC. Needs a token minted by
+  # core (see header). Its wg interface uses the host kernel module.
+  gateway:
+    image: ${GATEWAY_IMAGE:-ghcr.io/defguard/gateway:1.4.0}
+    container_name: defguard-gateway
+    environment:
+      DEFGUARD_GRPC_URL: http://core:50055
+      DEFGUARD_TOKEN: ${DEFGUARD_TOKEN:-}
+      DEFGUARD_STATS_PERIOD: "30"
+      RUST_LOG: info
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${WG_PORT:-51820}:51820/udp"
     cap_add:
       - NET_ADMIN
-    volumes:
-      - certs:/certs:ro
-    deploy:
-      resources:
-        limits:
-          cpus: "0.4"
-          memory: 256M
-        reservations:
-          memory: 128M
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-
-  proxy:
-    <<: *common-vars-apps
-    image: ghcr.io/defguard/defguard-proxy:current
-    ports:
-      - "8080:8080"
-    environment:
-      DEFGUARD_PROXY_UPSTREAM_GRPC_URL: "https://core:50055/"
+    networks:
+      - defguard
     depends_on:
-      core:
-        condition: service_healthy
-    volumes:
-      - certs:/certs:ro
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          memory: 128M
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
+      - core
+    restart: on-failure:5
+    mem_limit: 256m
+
+networks:
+  defguard:
+    name: ${COMPOSE_NET_NAME:-defguard}
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET:-172.32.10.0/24}
+
+volumes:
+  defguard-db:
+    name: ${DB_VOLUME:-defguard-db}

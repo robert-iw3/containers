@@ -1,0 +1,86 @@
+---
+- name: Deploy Defguard Production Infrastructure
+  hosts: all
+  become: true
+  vars:
+    defguard_dir: "/opt/defguard"
+    log_dir: "/var/log/defguard"
+  tasks:
+    - name: Ensure Defguard directory exists
+      file:
+        path: "{{ defguard_dir }}"
+        state: directory
+        mode: '0750'
+        owner: nobody
+        group: nogroup
+
+    - name: Ensure log directory exists
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+        mode: '0750'
+        owner: nobody
+        group: nogroup
+
+    - name: Copy configuration files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ defguard_dir }}/{{ item | basename }}"
+        mode: '0640'
+        owner: nobody
+        group: nogroup
+      loop:
+        - docker-compose.yml
+        - .env
+
+    - name: Ensure Docker is installed
+      package:
+        name: docker.io
+        state: present
+      when: deployment_type == 'docker'
+
+    - name: Ensure Podman is installed
+      package:
+        name: podman
+        state: present
+      when: deployment_type == 'podman'
+
+    - name: Ensure Kubernetes tools are installed
+      package:
+        name: kubectl
+        state: present
+      when: deployment_type == 'kubernetes'
+
+    - name: Setup log rotation
+      copy:
+        content: |
+          {{ log_dir }}/*.log {
+              daily
+              rotate 7
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0640 nobody nogroup
+          }
+        dest: /etc/logrotate.d/defguard
+        mode: '0644'
+
+    - name: Setup systemd service
+      copy:
+        src: defguard.service
+        dest: /etc/systemd/system/defguard.service
+        mode: '0644'
+      notify: reload systemd
+
+    - name: Enable and start systemd service
+      systemd:
+        name: defguard
+        enabled: yes
+        state: started
+      when: deployment_type != 'kubernetes'
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

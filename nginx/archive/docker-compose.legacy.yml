@@ -1,0 +1,29 @@
+services:
+  proxy:
+    restart: always
+    image: nginx:alpine
+    ports:
+      - 8082:8082/tcp #frontend port to backend
+      - 443:443/tcp
+    secrets:
+      - source: proxy.ca
+        target: /etc/nginx/certs/sslcert_chain.pem
+      - source: proxy.cert
+        target: /etc/nginx/certs/sslcert.pem
+      - source: proxy.key
+        target: /etc/nginx/certs/sslcert_rsa.key
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro:Z
+    networks:
+      - app
+
+networks:
+  app: {}
+
+secrets:
+  proxy.ca:
+    file: ./secrets/certs/sslcert_chain.pem
+  proxy.key:
+    file: ./secrets/certs/sslcert_rsa.key
+  proxy.cert:
+    file: ./secrets/certs/sslcert.pem

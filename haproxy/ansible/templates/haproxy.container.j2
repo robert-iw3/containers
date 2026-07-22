@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# HAProxy reverse proxy as a Podman Quadlet unit. The routes-rendered config and
+# the combined TLS PEM are bind-mounted. HAProxy binds high ports inside the
+# container (non-root user); they are published to the host below.
+[Unit]
+Description=HAProxy reverse proxy
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ proxy_image }}
+ContainerName=haproxy-proxy
+# References the haproxy.network Quadlet unit by filename (NetworkName={{ proxy_net }}).
+Network=haproxy.network
+Volume={{ conf_dir }}/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
+Volume={{ tls_dir }}:/etc/haproxy/tls:ro,Z
+PublishPort={{ bind_addr }}:{{ tls_port }}:8443
+PublishPort={{ bind_addr }}:{{ http_port }}:8080
+NoNewPrivileges=true
+HealthCmd=socat -T2 - TCP:127.0.0.1:8443 </dev/null >/dev/null 2>&1
+HealthInterval=10s
+HealthRetries=6
+HealthStartPeriod=5s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

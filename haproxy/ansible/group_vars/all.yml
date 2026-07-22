@@ -1,0 +1,24 @@
+---
+# Shared vars for the HAProxy proxy Quadlet deployment. stack.yaml at the stack
+# root is the single source of truth; routes there drive the rendered config.
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+proxy_image: "{{ stack_config.image }}"
+tls_port: "{{ stack_config.stack.tls_port }}"
+http_port: "{{ stack_config.stack.http_port }}"
+bind_addr: "{{ stack_config.stack.bind_addr }}"
+routes: "{{ stack_config.routes }}"
+
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/haproxy-proxy
+tls_dir: "{{ stack_config.stack.tls_dir }}"
+proxy_net: haproxy-proxy
+
+# TLS material the operator drops into ansible/files/tls (haproxy.pem = cert+key
+# concatenated). See files/tls/README.md.
+tls_files:
+  - { src: haproxy.pem, mode: "0640" }

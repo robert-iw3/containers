@@ -1,0 +1,29 @@
+# {{ ansible_managed }}
+# WireGuard gateway as a Podman Quadlet unit. Terminates the tunnel with the
+# host kernel module (loaded by deploy.yml). Publishes the WireGuard UDP port so
+# remote peers can reach it.
+[Unit]
+Description=WireGuard gateway
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ wg_image }}
+ContainerName=wireguard-gateway
+Exec=sh -c "apk add --no-cache wireguard-tools iproute2 >/dev/null 2>&1; exec sh /usr/local/bin/wg-entrypoint.sh"
+Environment=WG_ADDRESS={{ gateway_addr }}
+{% if site_networks %}
+Environment=WG_ROUTES={{ site_networks }}
+{% endif %}
+Volume={{ conf_dir }}/wg-entrypoint.sh:/usr/local/bin/wg-entrypoint.sh:ro,Z
+Volume={{ conf_dir }}/wg0.conf:/etc/wireguard/wg0.conf:ro,Z
+AddCapability=NET_ADMIN
+PublishPort={{ listen_port }}:{{ listen_port }}/udp
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target default.target

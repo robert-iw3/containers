@@ -20,7 +20,8 @@ else
     IDENTITY="authentik/ansible/deploy.yml keycloak/ansible/deploy.yml hanko/ansible/deploy.yml hanko/ansible/deploy-k8s.yml tinyauth/ansible/deploy.yml zitadel/ansible/deploy.yml freeipa/ansible/deploy.yml freeipa/playbooks/install-cluster.yml"
     DEVOPS="artifactory/ansible/deploy.yml bitbucket/ansible/deploy.yml confluence/ansible/deploy.yml gitea/ansible/deploy.yml grafana/ansible/deploy.yml hyperdx/ansible/deploy.yml saltstack/ansible/deploy.yml sonarqube/ansible/deploy.yml"
     FULLSTACK="sonarqube/stack/ansible/deploy.yml"
-    PLAYBOOKS="$IDENTITY $DEVOPS $FULLSTACK"
+    NETWORKING="traefik/ansible/deploy.yml haproxy/ansible/deploy.yml nginx/ansible/deploy.yml coredns/ansible/deploy.yml tailscale/ansible/deploy.yml wireguard/ansible/deploy.yml defguard/ansible/deploy.yml"
+    PLAYBOOKS="$IDENTITY $DEVOPS $FULLSTACK $NETWORKING"
 fi
 
 # The freeipa cluster playbook references roles from freeipa.ansible_freeipa;

@@ -1,0 +1,98 @@
+---
+# Deploy CoreDNS as a Podman Quadlet (systemd) unit with host networking, so
+# every container and the host itself can use it for DNS. Reads stack.yaml for
+# the image, DoT upstreams, ACL and internal records; renders the Corefile from
+# them.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# For the DoT listener, drop a certificate + key into ansible/files/tls/ first
+# (see files/tls/README.md). To also repoint the host's resolver at CoreDNS,
+# run with -e configure_host_dns=true (disruptive — see group_vars/all.yml).
+- name: Deploy CoreDNS secure resolver
+  hosts: resolver
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The Quadlet
+          deployment requires Podman; use docker-compose.yml for a Docker
+          single-host runtime.
+
+    - name: Install podman
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Ensure the Quadlet, config and TLS directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ conf_dir }}"
+        - "{{ tls_dir }}"
+
+    - name: Render the Corefile from stack.yaml
+      ansible.builtin.template:
+        src: Corefile.j2
+        dest: "{{ conf_dir }}/Corefile"
+        mode: "0644"
+
+    - name: Install TLS material for the DoT listener
+      ansible.builtin.copy:
+        src: "files/tls/{{ item.src }}"
+        dest: "{{ tls_dir }}/{{ item.src }}"
+        mode: "{{ item.mode }}"
+      loop: "{{ tls_files }}"
+      when: dot_listener | bool
+
+    - name: Deploy the CoreDNS container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: coredns
+        q_kind: container
+
+    - name: Wait for CoreDNS to report ready
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8080/health
+        status_code: 200
+      register: dns_health
+      until: dns_health.status == 200
+      retries: 12
+      delay: 5
+
+    # Optional host-config change: point the host's own resolver at CoreDNS and
+    # free :53 for the host-networked container by disabling the resolved stub.
+    # Disruptive and OFF by default (group_vars/all.yml). This is the ONLY task
+    # that mutates the host; the container itself changes nothing outside its
+    # namespace.
+    #
+    # Revert:  rm /etc/systemd/resolved.conf.d/coredns.conf && \
+    #          systemctl restart systemd-resolved
+    # (or run this play with -e configure_host_dns=false, which removes it).
+    - name: Install the systemd-resolved drop-in for CoreDNS
+      ansible.builtin.template:
+        src: resolved-coredns.conf.j2
+        dest: /etc/systemd/resolved.conf.d/coredns.conf
+        mode: "0644"
+      when: configure_host_dns | bool
+      notify: Restart systemd-resolved
+
+    - name: Remove the CoreDNS resolved drop-in when host DNS is not managed
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d/coredns.conf
+        state: absent
+      when: not (configure_host_dns | bool)
+      notify: Restart systemd-resolved
+
+  handlers:
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd_service:
+        name: systemd-resolved
+        state: restarted

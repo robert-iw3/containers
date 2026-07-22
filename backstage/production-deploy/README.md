@@ -14,10 +14,17 @@ data      db.internal        Postgres 18 (TLS-only) + pgbackup + consul agent + 
 scm       git.internal       Gitea 1.27 (TLS) + consul agent + gitea sidecar
 secrets   vault.internal     Vault (raft, TLS, mlock)
 identity  sso.internal       Keycloak 26 (OIDC, public)
-access    boundary.internal  Boundary controller+worker (the only end-user door)
+access    boundary.internal  Boundary controller+worker (brokered resource access)
 portal    portal.internal    backstage-a, backstage-b, nginx router, consul agent,
                              egress sidecar (upstreams: postgres :20001, gitea :20002)
+vpn       vpn.internal       headscale + CoreDNS + tailnet bastion + broker
+                             (remote-developer access — the only door in from the internet)
 ```
+
+Remote developers never touch `portal.network`: they tunnel to the **vpn**
+bastion, which brokers *only* the portal (:27007) and Boundary (:9202). See
+[`quadlet/vpn/README.md`](quadlet/vpn/README.md) for the architecture diagram
+and the workstation onboarding flow (no data-exfiltration path to a laptop).
 
 Mesh traffic (portal→postgres, portal→gitea) rides Connect mTLS between the
 host-networked sidecars; intentions stay deny-by-default. Everything else

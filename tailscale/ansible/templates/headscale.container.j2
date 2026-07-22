@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+# headscale control server as a Podman Quadlet unit. Fixed IP so the router
+# reaches it without container-name DNS.
+[Unit]
+Description=headscale control server
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ headscale_image }}
+ContainerName=headscale
+Network=tailscale.network
+IP={{ hs_ip }}
+Exec=serve
+Volume={{ conf_dir }}/config.yaml:/etc/headscale/config.yaml:ro,Z
+Volume=headscale.volume:/var/lib/headscale
+PublishPort={{ bind_addr }}:{{ hs_port }}:8080
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# WireGuard gateway interface, rendered from stack.yaml peers.
+[Interface]
+PrivateKey = {{ gateway_private_key }}
+ListenPort = {{ listen_port }}
+
+{% for p in peers %}
+[Peer]
+PublicKey = {{ p.public_key }}
+AllowedIPs = {{ p.allowed_ips }}
+{% if p.endpoint is defined %}
+Endpoint = {{ p.endpoint }}
+PersistentKeepalive = {{ p.keepalive | default(25) }}
+{% endif %}
+
+{% endfor %}

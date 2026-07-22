@@ -1,0 +1,22 @@
+# Rendered by deploy.sh. Secure DNS on the bastion: DoT upstream + the internal
+# names the broker forwards to. Bastion-only.
+(resolver) {
+    errors
+    log
+    hosts {
+        # deploy.sh substitutes the portal/access host FQDNs; add A records here
+        # if they are not otherwise resolvable from the bastion.
+        fallthrough
+    }
+    cache 30
+    forward . tls://9.9.9.9 tls://149.112.112.112 {
+        tls_servername dns.quad9.net
+        health_check 5s
+    }
+}
+
+.:53 {
+    import resolver
+    ready
+    health :8080
+}

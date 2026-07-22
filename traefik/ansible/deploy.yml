@@ -1,0 +1,76 @@
+---
+# Deploy the Traefik reverse proxy as a Podman Quadlet (systemd) unit. Reads
+# stack.yaml for the image and routes; renders the file-provider config from
+# routes so the proxy fronts whatever backends stack.yaml declares.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# Drop a server certificate + key into ansible/files/tls/ first
+# (see files/tls/README.md).
+- name: Deploy the Traefik reverse proxy
+  hosts: proxy
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The Quadlet
+          deployment requires Podman; use docker-compose.yml for a Docker
+          single-host runtime.
+
+    - name: Install podman
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Ensure the Quadlet and config directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ conf_dir }}"
+        - "{{ tls_dir }}"
+
+    - name: Install the static Traefik configuration
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../config/traefik.yml"
+        dest: "{{ conf_dir }}/traefik.yml"
+        mode: "0644"
+
+    - name: Render the dynamic routing configuration from stack.yaml routes
+      ansible.builtin.template:
+        src: dynamic.yml.j2
+        dest: "{{ conf_dir }}/dynamic.yml"
+        mode: "0644"
+
+    - name: Install TLS material for the proxy
+      ansible.builtin.copy:
+        src: "files/tls/{{ item.src }}"
+        dest: "{{ tls_dir }}/{{ item.src }}"
+        mode: "{{ item.mode }}"
+      loop: "{{ tls_files }}"
+
+    - name: Deploy the proxy network Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: traefik
+        q_kind: network
+
+    - name: Deploy the proxy container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: traefik
+        q_kind: container
+
+    - name: Wait for the proxy to report healthy
+      ansible.builtin.command: podman healthcheck run traefik-proxy
+      register: proxy_health
+      until: proxy_health.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false

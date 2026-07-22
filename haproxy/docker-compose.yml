@@ -1,0 +1,44 @@
+---
+# HAProxy reverse proxy in front of a demo backend (whoami). This is exactly
+# what uat/run-uat.sh drives and the single-host reference for the Quadlet
+# deployment in ansible/. Replace `whoami` with your backend and edit
+# config/haproxy.cfg (or stack.yaml routes) to route to it.
+#
+# TLS: HAProxy reads a combined cert+key PEM at /etc/haproxy/tls/haproxy.pem.
+services:
+  haproxy:
+    image: ${PROXY_IMAGE:-docker.io/library/haproxy:3.2}
+    container_name: haproxy-proxy
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${TLS_PORT:-8443}:8443"
+      - "${BIND_ADDR:-127.0.0.1}:${HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
+      - ${TLS_DIR:-./uat/tls}:/etc/haproxy/tls:ro,Z
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - whoami
+    healthcheck:
+      test: ["CMD-SHELL", "socat -T2 - TCP:127.0.0.1:8443 </dev/null >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  whoami:
+    image: docker.io/traefik/whoami:latest
+    container_name: whoami-demo
+    restart: unless-stopped
+    command: ["--port", "80", "--name", "whoami-demo"]
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  proxy:
+    name: ${COMPOSE_NET_NAME:-haproxy-proxy-net}

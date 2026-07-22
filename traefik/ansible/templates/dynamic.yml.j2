@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+# Rendered from stack.yaml routes. Mirrors config/dynamic.yml (the demo the UAT
+# drives): one router + service per route, TLS terminated with the mounted cert.
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/tls/tls.crt
+        keyFile: /etc/traefik/tls/tls.key
+  certificates:
+    - certFile: /etc/traefik/tls/tls.crt
+      keyFile: /etc/traefik/tls/tls.key
+
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsSeconds: 15552000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+  routers:
+{% for r in routes %}
+    {{ r.host | replace('.', '-') }}:
+      entryPoints: [websecure]
+      rule: "Host(`{{ r.host }}`)"
+      middlewares: [secure-headers]
+      service: {{ r.host | replace('.', '-') }}
+      tls: {}
+{% endfor %}
+
+  services:
+{% for r in routes %}
+    {{ r.host | replace('.', '-') }}:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "{{ r.upstream }}"
+{% endfor %}

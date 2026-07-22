@@ -1,0 +1,37 @@
+---
+# Shared vars for the Defguard Quadlet deployment. stack.yaml at the stack root
+# is the single source of truth; secrets are generated once on the controller
+# and persisted under ansible/.secrets/ (gitignored).
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+core_image: "{{ stack_config.core_image }}"
+gateway_image: "{{ stack_config.gateway_image }}"
+postgres_image: "{{ stack_config.postgres_image }}"
+net_subnet: "{{ stack_config.stack.net_subnet }}"
+core_http_port: "{{ stack_config.stack.core_http_port }}"
+wg_port: "{{ stack_config.stack.wg_port }}"
+vpn: "{{ stack_config.vpn }}"
+
+# Address the published ports bind to; use the host's routable address (or
+# 0.0.0.0) when VPN clients live off-host.
+bind_addr: 127.0.0.1
+
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/defguard
+
+# Persist the wireguard kernel module for reboots (it auto-loads on first
+# interface creation regardless). Revert: rm /etc/modules-load.d/wireguard.conf.
+manage_wireguard_module: true
+
+# Generated secrets (persisted on the controller for idempotency).
+secret_dir: "{{ playbook_dir }}/.secrets"
+db_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/db_password length=32 chars=ascii_letters,digits') }}"
+auth_secret: "{{ lookup('ansible.builtin.password', secret_dir ~ '/auth_secret length=48 chars=ascii_letters,digits') }}"
+gateway_secret: "{{ lookup('ansible.builtin.password', secret_dir ~ '/gateway_secret length=48 chars=ascii_letters,digits') }}"
+yubi_secret: "{{ lookup('ansible.builtin.password', secret_dir ~ '/yubi_secret length=48 chars=ascii_letters,digits') }}"
+core_secret_key: "{{ lookup('ansible.builtin.password', secret_dir ~ '/secret_key length=80 chars=ascii_letters,digits') }}"
+admin_password: "{{ lookup('ansible.builtin.password', secret_dir ~ '/admin_password length=24 chars=ascii_letters,digits') }}"

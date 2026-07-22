@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# Tailscale subnet router + exit node (userspace/netstack — no tun, no kernel
+# module). Advertises the site-to-site subnet and, optionally, an exit node so
+# tailnet members route their egress through this gateway. The pre-auth key is
+# supplied out-of-band in {{ conf_dir }}/router.env (rendered by deploy.yml).
+[Unit]
+Description=Tailscale subnet router / exit node
+After=headscale.service
+Wants=headscale.service
+
+[Container]
+Image={{ tailscale_image }}
+ContainerName=tailscale-router
+Network=tailscale.network
+Environment=TS_USERSPACE=true
+Environment=TS_HOSTNAME=router
+Environment=TS_ACCEPT_DNS=false
+# Quoted: the value has spaces, which systemd Environment= otherwise splits into
+# separate assignments.
+Environment="TS_EXTRA_ARGS=--login-server=http://{{ hs_ip }}:{{ hs_port }} --advertise-routes={{ advertise_routes }}{{ ' --advertise-exit-node' if advertise_exit_node | bool else '' }}"
+EnvironmentFile={{ conf_dir }}/router.env
+
+[Service]
+Restart=always
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target default.target

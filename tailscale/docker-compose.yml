@@ -1,37 +1,71 @@
 ---
+# Self-hosted Tailscale (headscale control server + tailscale nodes), fully
+# offline. This is what uat/run-uat.sh drives and the single-host reference for
+# the Quadlet deployment in ansible/.
+#
+# The nodes need a headscale pre-auth key in TS_AUTHKEY. The UAT generates one
+# automatically; for a manual `podman-compose up`, bring up headscale first,
+# create a user + preauth key, then set TS_AUTHKEY in .env and start the nodes:
+#   podman-compose up -d headscale
+#   podman exec headscale headscale users create uatuser
+#   podman exec headscale headscale preauthkeys create --user 1 --reusable --expiration 24h
 services:
-  tailscale:
-    image: docker.io/tailscale/tailscale:latest
-    container_name: tailscale
-    hostname: tailscale-exit-node
-    environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
-      - TS_SOCKET=/var/run/tailscale/tailscaled.sock
-      - TS_ROUTES=${SUBNET_CIDR:-192.168.1.0/24}
-      - TS_EXTRA_ARGS=--advertise-exit-node --accept-routes
-      - TS_LOCAL_ADDR_PORT=127.0.0.1:41234
-      - TS_ENABLE_HEALTH_CHECK=true
-      - TS_ENABLE_METRICS=true
+  headscale:
+    image: ${HEADSCALE_IMAGE:-docker.io/headscale/headscale:v0.29.2}
+    container_name: headscale
+    command: serve
     volumes:
-      - tailscale-state:/var/lib/tailscale:Z
-      - /dev/net/tun:/dev/net/tun:Z
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    network_mode: host
+      - ./config/config.yaml:/etc/headscale/config.yaml:ro,Z
+      - headscale-data:/var/lib/headscale
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${HS_PORT:-8080}:8080"
+    networks:
+      tailnet:
+        ipv4_address: ${HS_IP:-172.30.9.2}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:41234/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+
+  # A plain tailnet member (userspace / netstack — no tun, no kernel module).
+  node-a:
+    image: ${TAILSCALE_IMAGE:-docker.io/tailscale/tailscale:v1.98.9}
+    container_name: ts-node-a
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=node-a
+      - TS_ACCEPT_DNS=false
+      - TS_EXTRA_ARGS=--login-server=http://${HS_IP:-172.30.9.2}:8080
+    networks:
+      - tailnet
+    depends_on:
+      - headscale
+    restart: unless-stopped
+
+  # The gateway: advertises a subnet route (site-to-site) and an exit node
+  # (route all egress through the tunnel).
+  node-b:
+    image: ${TAILSCALE_IMAGE:-docker.io/tailscale/tailscale:v1.98.9}
+    container_name: ts-node-b
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=node-b
+      - TS_ACCEPT_DNS=false
+      - TS_EXTRA_ARGS=--login-server=http://${HS_IP:-172.30.9.2}:8080 --advertise-routes=${ADVERTISE_ROUTES:-10.55.0.0/24} --advertise-exit-node
+    networks:
+      - tailnet
+    depends_on:
+      - headscale
+    restart: unless-stopped
+
+networks:
+  tailnet:
+    name: ${COMPOSE_NET_NAME:-tailscale-tailnet}
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET:-172.30.9.0/24}
 
 volumes:
-  tailscale-state:
+  headscale-data:
+    name: ${HS_VOLUME:-tailscale-headscale-data}

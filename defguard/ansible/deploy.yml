@@ -1,86 +1,181 @@
 ---
-- name: Deploy Defguard Production Infrastructure
-  hosts: all
+# Deploy the Defguard VPN management stack as Podman Quadlet (systemd) units:
+# postgres + core (control plane) + gateway (WireGuard tunnel). Reads stack.yaml
+# for images and topology; secrets are generated once and persisted under
+# ansible/.secrets/ (gitignored). After core is healthy the playbook provisions
+# the VPN network through the real API, mints the gateway token, and only then
+# starts the gateway unit.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# Stability: every unit restarts with systemd throttling (RestartSec +
+# StartLimitBurst), so a bad config degrades to a stopped service — never an
+# unthrottled crash loop.
+- name: Deploy the Defguard VPN stack
+  hosts: core
   become: true
+  gather_facts: true
   vars:
-    defguard_dir: "/opt/defguard"
-    log_dir: "/var/log/defguard"
+    api: "http://{{ bind_addr }}:{{ core_http_port }}"
   tasks:
-    - name: Ensure Defguard directory exists
-      file:
-        path: "{{ defguard_dir }}"
-        state: directory
-        mode: '0750'
-        owner: nobody
-        group: nogroup
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The Quadlet
+          deployment requires Podman; use docker-compose.yml for a Docker
+          single-host runtime.
 
-    - name: Ensure log directory exists
-      file:
-        path: "{{ log_dir }}"
-        state: directory
-        mode: '0750'
-        owner: nobody
-        group: nogroup
-
-    - name: Copy configuration files
-      copy:
-        src: "{{ item }}"
-        dest: "{{ defguard_dir }}/{{ item | basename }}"
-        mode: '0640'
-        owner: nobody
-        group: nogroup
-      loop:
-        - docker-compose.yml
-        - .env
-
-    - name: Ensure Docker is installed
-      package:
-        name: docker.io
-        state: present
-      when: deployment_type == 'docker'
-
-    - name: Ensure Podman is installed
-      package:
+    - name: Install podman
+      ansible.builtin.package:
         name: podman
         state: present
-      when: deployment_type == 'podman'
 
-    - name: Ensure Kubernetes tools are installed
-      package:
-        name: kubectl
-        state: present
-      when: deployment_type == 'kubernetes'
+    - name: Persist the wireguard kernel module across reboots
+      ansible.builtin.copy:
+        content: "wireguard\n"
+        dest: /etc/modules-load.d/wireguard.conf
+        mode: "0644"
+      when: manage_wireguard_module | bool
 
-    - name: Setup log rotation
-      copy:
-        content: |
-          {{ log_dir }}/*.log {
-              daily
-              rotate 7
-              compress
-              delaycompress
-              missingok
-              notifempty
-              create 0640 nobody nogroup
-          }
-        dest: /etc/logrotate.d/defguard
-        mode: '0644'
+    - name: Ensure the Quadlet and config directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ conf_dir }}"
 
-    - name: Setup systemd service
-      copy:
-        src: defguard.service
-        dest: /etc/systemd/system/defguard.service
-        mode: '0644'
-      notify: reload systemd
+    - name: Render the database and core environment files
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ conf_dir }}/{{ item }}"
+        mode: "0600"
+      loop:
+        - db.env
+        - core.env
 
-    - name: Enable and start systemd service
-      systemd:
-        name: defguard
-        enabled: yes
-        state: started
-      when: deployment_type != 'kubernetes'
+    - name: Deploy the network Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: defguard, q_kind: network }
 
-  handlers:
-    - name: reload systemd
-      systemd:
-        daemon_reload: yes
+    - name: Deploy the database volume Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: defguard-db, q_kind: volume }
+
+    - name: Deploy the database container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: defguard-db, q_kind: container }
+
+    - name: Wait for the database to accept connections
+      ansible.builtin.command: podman healthcheck run defguard-db
+      register: db_health
+      until: db_health.rc == 0
+      retries: 18
+      delay: 5
+      changed_when: false
+
+    - name: Deploy the core container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: defguard-core, q_kind: container }
+
+    - name: Wait for core to report healthy
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/health"
+        status_code: 200
+      register: core_health
+      until: core_health.status == 200
+      retries: 24
+      delay: 5
+
+    - name: Authenticate against core as the admin
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/auth"
+        method: POST
+        body_format: json
+        body:
+          username: admin
+          password: "{{ admin_password }}"
+        status_code: 200
+      register: dg_login
+
+    - name: List existing VPN networks
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/network"
+        headers:
+          Cookie: "defguard_session={{ dg_login.cookies.defguard_session }}"
+        status_code: 200
+      register: dg_networks
+
+    - name: Provision the VPN network on first run
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/network"
+        method: POST
+        headers:
+          Cookie: "defguard_session={{ dg_login.cookies.defguard_session }}"
+        body_format: json
+        body:
+          name: "{{ vpn.name }}"
+          address: "{{ vpn.address }}"
+          port: "{{ vpn.port | int }}"
+          endpoint: "{{ bind_addr }}"
+          allowed_ips: "{{ vpn.allowed_ips }}"
+          dns: null
+          allowed_groups: []
+          mfa_enabled: false
+          keepalive_interval: 25
+          peer_disconnect_threshold: 180
+          acl_enabled: false
+          acl_default_allow: false
+        status_code: 201
+      when: dg_networks.json | selectattr('name', 'equalto', vpn.name) | list | length == 0
+      changed_when: true
+
+    - name: Resolve the VPN network id
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/network"
+        headers:
+          Cookie: "defguard_session={{ dg_login.cookies.defguard_session }}"
+        status_code: 200
+      register: dg_networks_now
+
+    - name: Check for an existing gateway token env
+      ansible.builtin.stat:
+        path: "{{ conf_dir }}/gateway.env"
+      register: gw_env
+
+    - name: Mint the gateway token and write its env file
+      when: not gw_env.stat.exists
+      block:
+        - name: Fetch the gateway token from core
+          ansible.builtin.uri:
+            url: "{{ api }}/api/v1/network/{{ (dg_networks_now.json | selectattr('name', 'equalto', vpn.name) | list | first).id }}/token"
+            headers:
+              Cookie: "defguard_session={{ dg_login.cookies.defguard_session }}"
+            status_code: 200
+          register: dg_token
+          no_log: true
+
+        - name: Write the gateway env file
+          ansible.builtin.copy:
+            content: "DEFGUARD_TOKEN={{ dg_token.json.token }}\n"
+            dest: "{{ conf_dir }}/gateway.env"
+            mode: "0600"
+          no_log: true
+
+    - name: Deploy the gateway container Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars: { q_name: defguard-gateway, q_kind: container }
+
+    - name: Wait for core to report the gateway connected
+      ansible.builtin.uri:
+        url: "{{ api }}/api/v1/network/{{ (dg_networks_now.json | selectattr('name', 'equalto', vpn.name) | list | first).id }}/gateways"
+        headers:
+          Cookie: "defguard_session={{ dg_login.cookies.defguard_session }}"
+        status_code: 200
+      register: dg_gateways
+      until: dg_gateways.json | selectattr('connected', 'equalto', true) | list | length > 0
+      retries: 18
+      delay: 5

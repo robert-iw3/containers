@@ -1,0 +1,27 @@
+# VPN control plane for remote developers: self-hosted Tailscale (headscale)
+# with an embedded DERP relay. The ONLY public door for workstations — they
+# tunnel here, then the broker forwards them to the portal / Boundary and
+# nothing else. Config: /etc/backstage-portal/vpn/{headscale.yaml,policy.hujson}
+[Unit]
+Description=Portal VPN control plane (headscale)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/headscale/headscale:v0.29.2
+ContainerName=portal-headscale
+Network=portal.network
+Exec=serve
+Volume=/etc/backstage-portal/vpn/headscale.yaml:/etc/headscale/config.yaml:ro,Z
+Volume=/etc/backstage-portal/vpn/policy.hujson:/etc/headscale/policy.hujson:ro,Z
+Volume=headscale-data.volume:/var/lib/headscale
+PublishPort=8080:8080
+PublishPort=3478:3478/udp
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target

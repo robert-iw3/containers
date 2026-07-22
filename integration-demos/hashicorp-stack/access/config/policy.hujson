@@ -1,0 +1,17 @@
+// Headscale ACL policy — DENY BY DEFAULT.
+//
+// The only rule: a workstation ("endpoint" user) may reach the bastion on the
+// brokered ports and nothing else. There are NO subnet routes in this design,
+// so a workstation can never address an internal host directly; its sole path
+// is the bastion's brokered ports below. Reload headscale after edits
+// (systemctl reload headscale, or SIGHUP).
+{
+  "acls": [
+    {
+      // Boundary controller API + worker proxy, brokered by the bastion.
+      "action": "accept",
+      "src": ["endpoint@"],
+      "dst": ["bastion@:9200", "bastion@:9202"]
+    }
+  ]
+}

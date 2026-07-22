@@ -1,0 +1,18 @@
+// Headscale ACL policy for the portal VPN — DENY BY DEFAULT.
+//
+// A workstation ("endpoint" user) may reach the bastion ONLY on the brokered
+// portal + Boundary ports. There are no subnet routes, so a workstation can
+// never address an internal host directly. Keep this in lock-step with
+// BROKER_TARGETS in vpn.env. Reload headscale after edits (SIGHUP).
+{
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["endpoint@"],
+      "dst": [
+        "bastion@:27007",  // Backstage developer portal
+        "bastion@:9202"    // Boundary brokered-access proxy
+      ]
+    }
+  ]
+}

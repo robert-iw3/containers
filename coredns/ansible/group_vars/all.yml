@@ -1,0 +1,29 @@
+---
+# Shared vars for the CoreDNS Quadlet deployment. stack.yaml at the stack root
+# is the single source of truth; the Corefile is rendered from it.
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+dns_image: "{{ stack_config.image }}"
+upstreams: "{{ stack_config.upstreams }}"
+tls_servername: "{{ stack_config.tls_servername }}"
+acl_allow: "{{ stack_config.acl_allow }}"
+local_records: "{{ stack_config.local_records }}"
+dot_listener: "{{ stack_config.dot_listener | default(true) }}"
+
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/coredns
+tls_dir: /etc/coredns/tls
+
+# Point the host's own resolver at CoreDNS (systemd-resolved). Off by default —
+# this is disruptive (it changes host DNS and frees :53 by disabling the resolved
+# stub). Enable per host once CoreDNS is proven healthy.
+configure_host_dns: false
+
+# TLS material for the DoT listener. See files/tls/README.md.
+tls_files:
+  - { src: tls.crt, mode: "0644" }
+  - { src: tls.key, mode: "0640" }

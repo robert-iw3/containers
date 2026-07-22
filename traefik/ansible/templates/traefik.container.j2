@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+# Traefik reverse proxy as a Podman Quadlet unit. Static config and the
+# routes-rendered dynamic config are bind-mounted; TLS material comes from
+# {{ tls_dir }}. No Docker socket is mounted — routing is file-provider only.
+[Unit]
+Description=Traefik reverse proxy
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ proxy_image }}
+ContainerName=traefik-proxy
+# References the traefik.network Quadlet unit by filename (NetworkName={{ proxy_net }}).
+Network=traefik.network
+Volume={{ conf_dir }}/traefik.yml:/etc/traefik/traefik.yml:ro,Z
+Volume={{ conf_dir }}/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro,Z
+Volume={{ tls_dir }}:/etc/traefik/tls:ro,Z
+PublishPort={{ bind_addr }}:{{ tls_port }}:443
+PublishPort={{ bind_addr }}:80:80
+NoNewPrivileges=true
+HealthCmd=traefik healthcheck
+HealthInterval=10s
+HealthRetries=6
+HealthStartPeriod=10s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

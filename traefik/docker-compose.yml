@@ -1,0 +1,48 @@
+---
+# Traefik reverse proxy in front of a demo backend (whoami). This is exactly
+# what uat/run-uat.sh drives and the single-host reference for the Quadlet
+# deployment in ansible/. Replace `whoami` with your own backend and edit
+# config/dynamic.yml to route to it.
+#
+#   podman-compose up -d          # proxy + demo backend
+#   curl --cacert uat/tls/ca.crt --resolve app.localhost:8443:127.0.0.1 \
+#        https://app.localhost:8443/
+services:
+  traefik:
+    image: ${PROXY_IMAGE:-docker.io/traefik:v3.7}
+    container_name: traefik-proxy
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${TLS_PORT:-8443}:443"
+      - "${BIND_ADDR:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./config/traefik.yml:/etc/traefik/traefik.yml:ro,Z
+      - ./config/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro,Z
+      - ${TLS_DIR:-./uat/tls}:/etc/traefik/tls:ro,Z
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - whoami
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # Demo backend — stand-in for "any backend application stack".
+  whoami:
+    image: docker.io/traefik/whoami:latest
+    container_name: whoami-demo
+    restart: unless-stopped
+    command: ["--port", "80", "--name", "whoami-demo"]
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  proxy:
+    name: ${COMPOSE_NET_NAME:-traefik-proxy-net}

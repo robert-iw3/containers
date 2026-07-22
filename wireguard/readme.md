@@ -1,103 +1,69 @@
-### Docker WireGuard Tunnel
----
+# WireGuard gateway (site-to-site / egress)
 
-Connect two or more Docker servers together sharing container ports between them via a [WireGuard](https://www.wireguard.com/) tunnel.
+A WireGuard tunnel gateway you deploy on a host so containers and remote sites
+route to each other over an encrypted link, and clients can egress through it.
+Driven by [`stack.yaml`](stack.yaml) and run three ways:
 
-For example a Docker server without a public IP address behind a NAT can expose container ports to another Docker server that has a public IP address to allow incoming connections.
+- **compose / rootless podman** for a local two-gateway demo ([`docker-compose.yml`](docker-compose.yml))
+- **Podman Quadlet (systemd)** for a real gateway host ([`ansible/`](ansible))
+- validated end-to-end by the **UAT** ([`uat/run-uat.sh`](uat/run-uat.sh))
 
-![Example Topology](docker-wireguard-tunnel.png)
+> **Kernel module.** WireGuard is a kernel feature. Creating a `type wireguard`
+> interface **auto-loads** the host `wireguard` module (no `modprobe`/sudo), so
+> the UAT runs unprivileged; on `--down` it best-effort unloads the module if
+> passwordless sudo is available. The Quadlet deploy loads it **persistently** on
+> the target host (for reboots) and records how to revert.
 
-## Usage Example
+## Configure
 
-This assumes that you have already setup a subdomain DNS entry for your domain, for example:
-`wireguard-tunnel.example.com`
+Edit [`stack.yaml`](stack.yaml):
 
-### Server
-
-Will accept connections on behalf of a peer and tunnel them to the designated peer.
-
-`server-docker-compose.yml`
-
-```yml
-services:
-  wireguard-tunnel-server:
-    build: .
-    container_name: wireguard-tunnel-server
-    environment:
-      # Update to your domain
-      - DOMAIN=wireguard-tunnel.example.com
-      # Number of peers to auto generate config for
-      - PEERS=1
-      # Services to expose format (comma-separated)
-      # SERVICES=peer-id:peer-container-name:peer-container-port:expose-port-as
-      - SERVICES=peer1:nginx:80:8080,peer1:nginx-demo:80:8081
-    cap_add:
-      - NET_ADMIN
-    volumes:
-      - ./config:/etc/wireguard
-    restart: unless-stopped
-    ports:
-      - '51820:51820/udp'
-      - 8080:8080
-      - 8081:8081
+```yaml
+tunnel:
+  site_b_addr: 10.9.0.2/24      # this gateway's tunnel address
+  site_b_networks: 10.55.0.0/24 # LAN subnets reachable across the tunnel
+peers:
+  - public_key: "<client wg public key>"
+    allowed_ips: "10.9.0.10/32"
 ```
+
+Peer keys are generated at test/deploy time and never committed. The gateway's
+own key is generated once by the deploy into `ansible/.secrets/` (gitignored).
+
+## Run locally (two-gateway demo)
 
 ```bash
-podman-compose -f server-docker-compose.yml up -d
-podman-compose logs -f
+cd uat && ./run-uat.sh          # generates keys, loads the module, brings up both ends
 ```
 
-Once started, a `peer1.conf` file will be automatically generated in the `config` directory.
-
-### Peer
-
-Will connect to the server via WireGuard and setup a tunnel to expose the listed ports.
-
-Move the `config/peer1.conf` file from the server that was automatically generated and rename it to `config/wg0.conf` on the peer.
-
-`peer-docker-compose.yml`
-
-```yml
-services:
-  wireguard-tunnel-peer:
-    build: .
-    container_name: wireguard-tunnel-peer
-    environment:
-      # Note that DOMAIN & PEERS are not required for the peer
-      # Services to expose format (comma-separated)
-      # SERVICES=peer-id:peer-container-name:peer-container-port:expose-port-as
-      - SERVICES=peer1:nginx:80:8080,peer1:nginx-demo:80:8081
-    cap_add:
-      - NET_ADMIN
-    volumes:
-      - ./config:/etc/wireguard
-    restart: unless-stopped
-    init: true
-    healthcheck:
-      test: ping 10.0.0.254 -c 1 || bash -c 'kill -s 15 -1 && (sleep 10; kill -s 9 -1)'
-      interval: 60s
-      timeout: 30s
-      retries: 3
-      start_period: 20s
-    links:
-      - nginx:nginx
-      - nginx-demo:nginx-demo
-
-  nginx:
-    image: nginx
-    restart: unless-stopped
-
-  nginx-demo:
-    image: nginxdemos/hello
-    restart: unless-stopped
-```
+## Deploy (Podman Quadlet)
 
 ```bash
-podman-compose -f peer-docker-compose.yml up -d
-podman-compose logs -f
+cd ansible
+ansible-playbook -i inventory.ini deploy.yml
 ```
 
-Note: if you have a firewall in front of your server you will need to allow connections on port `51820/udp` for the WireGuard server, and connections on ports `8080` and `8081` for the 2 demo nginx servers.
+Installs a `wireguard-gateway` Quadlet unit under `/etc/containers/systemd`,
+renders `wg0.conf` from `stack.yaml`, publishes the WireGuard UDP port, and
+manages the two host settings WireGuard needs:
 
-Once started you should be able to access both nginx servers via their exposed ports on the WireGuard server, for example:
-`wireguard-tunnel.example.com:8080` and `wireguard-tunnel.example.com:8081`
+- loads the `wireguard` module and persists it via
+  `/etc/modules-load.d/wireguard.conf`
+  (revert: remove that file and `modprobe -r wireguard`);
+- enables `net.ipv4.ip_forward` via `/etc/sysctl.d/99-wireguard-gateway.conf`
+  when the gateway routes onto a LAN (revert: remove that drop-in).
+
+Set `manage_wireguard_module: false` / `manage_host_forwarding: false` in
+`ansible/group_vars/all.yml` to skip either.
+
+## Test
+
+```bash
+cd uat && ./run-uat.sh          # ./run-uat.sh --down to tear down and unload the module
+```
+
+The UAT generates both peer keypairs, loads the module, brings up two gateways,
+and asserts: both create the kernel `wg0` interface, the handshake completes,
+site-a reaches site-b across the tunnel (ping), encrypted bytes traverse it
+(transfer counters), and a service on the far gateway is reachable over the
+tunnel.

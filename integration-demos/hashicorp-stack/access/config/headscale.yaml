@@ -1,0 +1,52 @@
+# headscale control server for the bastion. The embedded DERP relays the
+# workstation<->bastion tunnel, so no public Tailscale infrastructure is used.
+#
+# server_url MUST be an address every workstation can reach — the bastion's
+# public name/IP. The UAT uses the wan-side IP from stack.yaml; change it for a
+# real deployment (and front it with TLS).
+server_url: http://172.30.78.2:8080
+listen_addr: 0.0.0.0:8080
+metrics_listen_addr: 0.0.0.0:9090
+grpc_listen_addr: 0.0.0.0:50443
+grpc_allow_insecure: false
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+derp:
+  server:
+    enabled: true
+    region_id: 999
+    region_code: bastion
+    region_name: Bastion Embedded DERP
+    stun_listen_addr: 0.0.0.0:3478
+    private_key_path: /var/lib/headscale/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+  urls: []
+  paths: []
+  auto_update_enabled: false
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+# Deny-by-default access policy (see policy.hujson).
+policy:
+  mode: file
+  path: /etc/headscale/policy.hujson
+
+dns:
+  magic_dns: false
+  override_local_dns: false
+  base_domain: bastion.internal
+  nameservers:
+    global: []
+
+log:
+  level: warn

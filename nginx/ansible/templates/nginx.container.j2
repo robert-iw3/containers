@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# nginx reverse proxy as a Podman Quadlet unit. The routes-rendered config and
+# the TLS cert/key are bind-mounted. nginx binds high ports inside the container;
+# they are published to the host below.
+[Unit]
+Description=nginx reverse proxy
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ proxy_image }}
+ContainerName=nginx-proxy
+# References the nginx.network Quadlet unit by filename (NetworkName={{ proxy_net }}).
+Network=nginx.network
+Volume={{ conf_dir }}/nginx.conf:/etc/nginx/nginx.conf:ro,Z
+Volume={{ tls_dir }}:/etc/nginx/tls:ro,Z
+PublishPort={{ bind_addr }}:{{ tls_port }}:8443
+PublishPort={{ bind_addr }}:{{ http_port }}:8080
+NoNewPrivileges=true
+HealthCmd=wget -q -O - http://127.0.0.1:8081/healthz
+HealthInterval=10s
+HealthRetries=6
+HealthStartPeriod=5s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

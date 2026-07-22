@@ -1,0 +1,23 @@
+---
+# Install one Podman Quadlet unit and (re)start it. The caller sets q_name and
+# q_kind (container/network) and has already templated any config it needs.
+# daemon-reload runs the Quadlet generator, turning the unit file into a managed
+# <q_name>.service.
+- name: "Install Quadlet unit {{ q_name ~ '.' ~ (q_kind | default('container')) }}"
+  ansible.builtin.template:
+    src: "{{ q_name }}.{{ q_kind | default('container') }}.j2"
+    dest: "{{ quadlet_dir }}/{{ q_name }}.{{ q_kind | default('container') }}"
+    mode: "0644"
+  become: true
+
+- name: "Reload systemd so the Quadlet generator picks up {{ q_name }}"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  become: true
+
+- name: "Start Quadlet service {{ q_name }}"
+  ansible.builtin.systemd_service:
+    name: "{{ q_name }}.service"
+    state: started
+  become: true
+  when: (q_kind | default('container')) == 'container'

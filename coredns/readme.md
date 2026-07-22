@@ -1,34 +1,65 @@
-# CoreDNS Deployment Automation
+# CoreDNS secure resolver
 
-This script deploys a scalable CoreDNS DNS server using Docker, Podman, Kubernetes, or Ansible. Focus: functionality, scalability, error handling, config validation, security.
+A hardened DNS resolver any container host can point at. It forwards recursive
+queries over **DNS-over-TLS** (so lookups leaving the host are encrypted),
+restricts who may query with an **ACL**, serves **authoritative internal names**,
+and can offer **DoT to its own clients** on `:853`. Everything is driven by
+[`stack.yaml`](stack.yaml). The same config runs three ways:
 
-## Prerequisites
-- Python 3.x with `pyyaml` (`pip install pyyaml`).
-- For Kubernetes: `kubernetes` Python lib (`pip install kubernetes`) and `kubectl` with kubeconfig.
-- Tools: Docker, Podman, kubectl, or ansible-playbook installed based on method.
-- Files: `Corefile` (config), `zones/` dir (with .zone files like example).
-- Privileges: Run with sudo if binding port 53.
+- **compose / rootless podman** for local use ([`docker-compose.yml`](docker-compose.yml))
+- **Podman Quadlet (systemd)** with host networking ([`ansible/`](ansible))
+- and is validated end-to-end by the **UAT** ([`uat/run-uat.sh`](uat/run-uat.sh))
 
-## Usage
+## Configure
+
+Edit [`stack.yaml`](stack.yaml):
+
+```yaml
+upstreams:   [ tls://9.9.9.9, tls://149.112.112.112 ]  # DoT upstreams (Quad9)
+tls_servername: dns.quad9.net
+acl_allow:   [ 172.28.10.0/24, 10.0.0.0/8 ]            # who may query
+local_records:
+  - { name: backend.svc.internal, ip: 10.0.50.20 }     # authoritative names
+dot_listener: true                                      # serve DoT on :853
 ```
-python deploy.py <method> [--config PATH_TO_COREFILE] [--zones PATH_TO_ZONES] [--scale N] [--namespace NS] [--inventory INV]
+
+The compose path uses the concrete demo in [`config/Corefile`](config/Corefile);
+the Quadlet deployment renders the equivalent from `stack.yaml` via
+[`ansible/templates/Corefile.j2`](ansible/templates/Corefile.j2).
+
+## Run locally
+
+```bash
+cp .env.example .env   # optional; the UAT generates its own
+podman-compose up -d coredns
+dig @127.0.0.1 -p 1053 backend.svc.internal
 ```
-- **method**: docker, podman, kubernetes, ansible.
-- **--scale**: Instances/replicas (default 1).
-- **--namespace**: K8S namespace (default 'default').
-- **--inventory**: Ansible inventory file.
 
-## Examples
-- Docker (local, multi-port): `python deploy.py docker --scale 3`
-- Podman: `python deploy.py podman`
-- Kubernetes: `python deploy.py kubernetes --scale 5 --namespace dns`
-- Ansible: `python deploy.py ansible --inventory hosts.ini`
+## Deploy (Podman Quadlet)
 
-## Post-Deployment
-- Test: `dig @127.0.0.1 example1.com` (adjust port/IP as needed).
-- Configure host DNS: For systemd, `sudo cp resolved.conf /etc/systemd/resolved.conf && sudo systemctl restart systemd-resolved` to use local DNS.
-- Scaling: Local uses multi-ports; production: Use LB, Swarm (Docker), or K8S.
-- Security: Config restricts queries (ACL); add DNSSEC to Corefile if needed.
-- Cleanup: Stop/remove containers manually (e.g., `docker rm -f dns-*`).
+```bash
+cd ansible
+# drop tls.crt / tls.key into files/tls (see files/tls/README.md) for DoT
+ansible-playbook -i inventory.ini deploy.yml
+```
 
-For issues, check logs (e.g., `docker logs dns-0`).
+Installs a `coredns.container` Quadlet unit with **host networking** under
+`/etc/containers/systemd`, so containers and the host resolve through it on
+`:53`. To also repoint the host's own resolver at CoreDNS (disruptive — disables
+the systemd-resolved stub and frees `:53`):
+
+```bash
+ansible-playbook -i inventory.ini deploy.yml -e configure_host_dns=true
+```
+
+## Test
+
+```bash
+cd uat && ./run-uat.sh          # bring up + assert; ./run-uat.sh --down to clean up
+```
+
+The UAT brings up CoreDNS plus two client containers on different subnets and
+asserts: an internal name resolves to its record, an external name resolves
+through the DoT upstream, a query from **outside** the ACL is `REFUSED` while an
+allowed one is served, and the `:853` DoT listener answers over a certificate
+the client verifies. (Needs outbound `853/tcp` to Quad9.)

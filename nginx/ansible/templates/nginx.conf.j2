@@ -1,0 +1,78 @@
+# {{ ansible_managed }}
+# Rendered from stack.yaml routes. Mirrors config/nginx.conf (the demo the UAT
+# drives): one upstream + TLS server per route, unknown Host -> 404.
+worker_processes auto;
+error_log /dev/stderr warn;
+pid /tmp/nginx.pid;
+events { worker_connections 1024; }
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    sendfile      on;
+    server_tokens off;
+    access_log    /dev/stdout;
+
+    client_body_temp_path /tmp/client_body;
+    proxy_temp_path       /tmp/proxy;
+    fastcgi_temp_path     /tmp/fastcgi;
+    uwsgi_temp_path       /tmp/uwsgi;
+    scgi_temp_path        /tmp/scgi;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+{% for r in routes %}
+    upstream backend_{{ loop.index }} {
+        server {{ r.upstream }};
+    }
+{% endfor %}
+
+    # HTTP -> HTTPS redirect.
+    server {
+        listen 8080;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+
+    # Plain-HTTP health endpoint (internal, used by the container health check).
+    server {
+        listen 8081;
+        server_name _;
+        location = /healthz { return 200 "ok\n"; }
+    }
+
+    # Default TLS server: unknown Host gets no route (404).
+    server {
+        listen 8443 ssl default_server;
+        http2 on;
+        server_name _;
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        return 404;
+    }
+
+{% for r in routes %}
+    server {
+        listen 8443 ssl;
+        http2 on;
+        server_name {{ r.host }};
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+
+        location / {
+            proxy_pass http://backend_{{ loop.index }};
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+    }
+{% endfor %}
+}

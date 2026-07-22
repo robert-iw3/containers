@@ -1,0 +1,73 @@
+---
+# BASTION side of the remote-access layer — runs on the jump host (dual-homed:
+# public interface for workstations, internal interface to reach Boundary).
+# Deploy this on the bastion; deploy access/endpoint/ on each workstation.
+#
+#   1. cp .env.example .env   and set BASTION_PUBLIC_IP to this host's public IP
+#   2. edit ../config/headscale.yaml server_url to http://<public-ip>:8080
+#      (front with TLS for real use)
+#   3. podman-compose up -d headscale
+#   4. podman exec bastion-headscale headscale users create bastion
+#      podman exec bastion-headscale headscale users create endpoint
+#      BKEY=$(podman exec bastion-headscale headscale preauthkeys create --user 1 --reusable --expiration 720h -o json | jq -r .key)
+#      put BKEY in .env as BASTION_AUTHKEY
+#   5. podman-compose up -d
+#   6. mint an endpoint key for each developer (user 2) and hand it out
+#
+# The broker forwards ONLY the ports in BROKER_TARGETS; the headscale policy
+# (../config/policy.hujson) allows the workstation to reach ONLY those ports.
+services:
+  headscale:
+    image: docker.io/headscale/headscale:v0.29.2
+    container_name: bastion-headscale
+    command: serve
+    volumes:
+      - ../config/headscale.yaml:/etc/headscale/config.yaml:ro,Z
+      - ../config/policy.hujson:/etc/headscale/policy.hujson:ro,Z
+      - headscale-data:/var/lib/headscale
+    ports:
+      - "${BASTION_PUBLIC_IP:-0.0.0.0}:8080:8080"       # control plane
+      - "${BASTION_PUBLIC_IP:-0.0.0.0}:3478:3478/udp"   # embedded DERP STUN
+    restart: on-failure:5
+    mem_limit: 256m
+
+  coredns:
+    image: docker.io/coredns/coredns:1.13.1
+    container_name: bastion-coredns
+    command: ["-conf", "/etc/coredns/Corefile"]
+    user: "0:0"
+    volumes:
+      - ../config/Corefile:/etc/coredns/Corefile:ro,Z
+    restart: on-failure:5
+    mem_limit: 128m
+
+  bastion-ts:
+    image: docker.io/tailscale/tailscale:v1.98.9
+    container_name: bastion-ts
+    environment:
+      - TS_AUTHKEY=${BASTION_AUTHKEY:-}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=bastion
+      - TS_ACCEPT_DNS=false
+      - TS_EXTRA_ARGS=--login-server=http://headscale:8080
+    depends_on: [headscale]
+    restart: on-failure:5
+    mem_limit: 128m
+
+  broker:
+    image: docker.io/library/alpine:3.24
+    container_name: bastion-broker
+    network_mode: "service:bastion-ts"
+    environment:
+      # listen_port=upstream_host:port, comma-separated. THIS is the allow-list.
+      - BROKER_TARGETS=${BROKER_TARGETS:-9200=boundary:9200,9202=boundary:9202}
+    volumes:
+      - ../config/broker.sh:/broker.sh:ro,Z
+    command: ["sh", "/broker.sh"]
+    depends_on: [bastion-ts]
+    restart: on-failure:5
+    mem_limit: 64m
+
+volumes:
+  headscale-data:
+    name: bastion-headscale-data

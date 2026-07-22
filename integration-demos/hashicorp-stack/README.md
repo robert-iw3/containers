@@ -90,6 +90,16 @@ Ports are offset (18xxx/19xxx) so the standalone product stacks in
 | `scripts/smoke-test.sh` | full-chain UAT |
 | `demo-api/` | app fetching per-request Vault creds, DB via mesh upstream |
 
+## Remote access (developers on the internet)
+
+The stack above is the *internal* control/data plane. To let a remote developer
+reach **Boundary** without ever placing their workstation on the internal
+network, deploy the [`access/`](access) layer: a self-hosted Tailscale/headscale
+tunnel from the workstation to a **bastion** that brokers *only* Boundary's
+ports — no subnet routes, deny-by-default policy, so there is no data-exfil path.
+See [`access/README.md`](access/README.md) for the architecture diagram, the
+bastion/workstation deploy steps, and its offline UAT.
+
 ## Taking it to a real environment
 
 Everything environment-specific is a substitution point, not a rewrite:

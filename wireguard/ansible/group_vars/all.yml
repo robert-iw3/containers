@@ -1,0 +1,25 @@
+---
+# Shared vars for the WireGuard gateway Quadlet deployment. stack.yaml at the
+# stack root is the single source of truth.
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+wg_image: "{{ stack_config.image }}"
+listen_port: "{{ stack_config.stack.listen_port }}"
+gateway_addr: "{{ stack_config.tunnel.site_b_addr }}"
+site_networks: "{{ stack_config.tunnel.site_b_networks | default('') }}"
+peers: "{{ stack_config.peers | default([]) }}"
+
+# Host-config toggles (see deploy.yml). The gateway needs the wireguard module;
+# forwarding is only needed if it routes peer traffic onto a LAN.
+manage_wireguard_module: true
+manage_host_forwarding: true
+
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/wireguard-gateway
+# The gateway private key is generated once by deploy.yml and persisted here
+# (gitignored); wg0.conf is rendered from it.
+secret_dir: "{{ playbook_dir }}/.secrets"

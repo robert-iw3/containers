@@ -1,0 +1,60 @@
+---
+# WireGuard site-to-site tunnel between two gateways. site-a is the client end;
+# site-b is the gateway fronting a service (served on its tunnel address). This
+# is what uat/run-uat.sh drives and the single-host reference for the Quadlet
+# deployment in ansible/.
+#
+# Requires the host `wireguard` kernel module (the UAT loads it; the deploy
+# loads it persistently) and CAP_NET_ADMIN. Peer configs are generated into
+# ${WG_DIR} (uat/wg) by the UAT — not committed.
+services:
+  wg-a:
+    image: ${WG_IMAGE:-docker.io/library/alpine:3.24}
+    container_name: wg-a
+    command:
+      - sh
+      - -c
+      - apk add --no-cache wireguard-tools iproute2 >/dev/null 2>&1; exec sh /usr/local/bin/wg-entrypoint.sh
+    environment:
+      - WG_ADDRESS=${SITE_A_ADDR:-10.9.0.1/24}
+      - WG_ROUTES=${SITE_B_NETWORKS:-10.55.0.0/24}
+    volumes:
+      - ./config/wg-entrypoint.sh:/usr/local/bin/wg-entrypoint.sh:ro,Z
+      - ${WG_DIR:-./uat/wg}/wg-a.conf:/etc/wireguard/wg0.conf:ro,Z
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - transit
+    depends_on:
+      - wg-b
+    restart: unless-stopped
+
+  # The gateway end: brings up the tunnel and serves a marker on its tunnel
+  # address so the client can prove it reached a service across the tunnel.
+  wg-b:
+    image: ${WG_IMAGE:-docker.io/library/alpine:3.24}
+    container_name: wg-b
+    command:
+      - sh
+      - -c
+      - apk add --no-cache wireguard-tools iproute2 busybox-extras >/dev/null 2>&1;
+        mkdir -p /www; echo reached-over-wg-tunnel > /www/marker;
+        exec sh /usr/local/bin/wg-entrypoint.sh
+    environment:
+      - WG_ADDRESS=${SITE_B_ADDR:-10.9.0.2/24}
+      - SERVE_DIR=/www
+    volumes:
+      - ./config/wg-entrypoint.sh:/usr/local/bin/wg-entrypoint.sh:ro,Z
+      - ${WG_DIR:-./uat/wg}/wg-b.conf:/etc/wireguard/wg0.conf:ro,Z
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - transit
+    restart: unless-stopped
+
+networks:
+  transit:
+    name: ${COMPOSE_NET_NAME:-wireguard-transit}
+    ipam:
+      config:
+        - subnet: ${TRANSIT_SUBNET:-172.31.30.0/24}

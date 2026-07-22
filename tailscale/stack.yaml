@@ -1,0 +1,21 @@
+# Single source of truth for the Tailscale (self-hosted, headscale) VPN stack.
+# A fully offline tailnet: headscale is the control server, tailscale nodes join
+# it, one acts as a subnet router + exit node so containers/hosts route through
+# the tunnel (egress) and reach remote subnets (site-to-site).
+stack:
+  name: tailscale
+  net_subnet: 172.30.9.0/24
+  hs_ip: 172.30.9.2        # static IP nodes use for --login-server / server_url
+  hs_port: 8080
+
+# Latest stable images.
+headscale_image: docker.io/headscale/headscale:v0.29.2
+tailscale_image: docker.io/tailscale/tailscale:v1.98.9
+
+# The tailnet subnet the "router" node advertises for site-to-site reach, plus
+# whether it advertises itself as an exit node (route all egress through it).
+advertise_routes: 10.55.0.0/24
+advertise_exit_node: true
+
+hosts:
+  control: 127.0.0.1

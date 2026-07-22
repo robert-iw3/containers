@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+# Postgres for the defguard control plane. postgres:18 keeps data under
+# /var/lib/postgresql/<major>, so the volume mounts the parent directory.
+[Unit]
+Description=Defguard database (postgres)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Container]
+Image={{ postgres_image }}
+ContainerName=defguard-db
+Network=defguard.network
+EnvironmentFile={{ conf_dir }}/db.env
+Environment=POSTGRES_INITDB_ARGS=--data-checksums
+Volume=defguard-db.volume:/var/lib/postgresql
+PodmanArgs=--memory=512m
+NoNewPrivileges=true
+HealthCmd=pg_isready -U defguard
+HealthInterval=10s
+HealthRetries=6
+HealthStartPeriod=20s
+Notify=healthy
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

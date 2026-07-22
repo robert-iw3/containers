@@ -1,0 +1,43 @@
+# Remote-access layer for the HashiCorp stack — single source of truth.
+#
+# Model: a developer workstation on the internet tunnels (headscale/Tailscale)
+# to a BASTION, and the bastion brokers ONLY the Boundary controller's ports to
+# it. The workstation is never placed on the internal network, so it has no path
+# to exfiltrate data from internal services — its reach stops at Boundary, which
+# then does its own zero-trust brokering to the database. "The VPN site is from
+# endpoint to bastion and stops at the controller (Boundary)."
+#
+#     workstation ──tailnet──► bastion (broker) ──► Boundary :9200/:9202
+#                                    │ (nothing else is brokered)
+#     internal DB / Vault / Consul ──┘  unreachable from the workstation
+stack:
+  name: hashi-access
+  wan_subnet: 172.30.78.0/24     # "internet" segment (bastion public side, workstations)
+  lan_subnet: 172.30.77.0/24     # internal segment (Boundary + internal services)
+  bastion_wan_ip: 172.30.78.2
+  headscale_lan_ip: 172.30.77.2
+
+# Images (latest stable, matching the tailscale/coredns stacks).
+headscale_image: docker.io/headscale/headscale:v0.29.2
+tailscale_image: docker.io/tailscale/tailscale:v1.98.9
+coredns_image:   docker.io/coredns/coredns:1.13.1
+broker_image:    docker.io/library/alpine:3.24
+
+# Ports the bastion brokers to internal targets. THIS LIST IS THE ALLOW-LIST:
+# a target reachable from the workstation must appear here AND be permitted by
+# the headscale policy. Everything else on the internal network is unreachable.
+# For the HashiCorp stack the only brokered target is Boundary (API + proxy).
+broker_targets:
+  - listen_port: 9200            # Boundary controller API
+    upstream: boundary:9200
+  - listen_port: 9202            # Boundary worker proxy (brokered sessions)
+    upstream: boundary:9202
+
+# Secure DNS for the bastion (CoreDNS): DoT upstream + internal names so the
+# broker resolves targets by name. Only the bastion uses it — internal hosts are
+# never exposed to the workstation.
+dns:
+  upstreams: [ "tls://9.9.9.9", "tls://149.112.112.112" ]
+  tls_servername: dns.quad9.net
+  internal_records:
+    - { name: boundary.hashi.internal, ip: 172.30.77.10 }

@@ -1,0 +1,25 @@
+# Single source of truth for the Traefik reverse-proxy stack.
+# The compose file and UAT use the committed config/ files; the Quadlet
+# deployment (ansible/) renders the proxy config from the values below.
+stack:
+  name: traefik
+  # Host port the proxy publishes TLS on (compose/UAT bind it to 127.0.0.1).
+  tls_port: 8443
+  bind_addr: 127.0.0.1
+  net_subnet: 172.31.20.0/24
+  tls_dir: /etc/traefik-proxy/tls
+
+image: docker.io/traefik:v3.7
+
+# Backends to expose. Each route becomes a router + service pair. Point
+# `upstream` at any reachable address (container name, VM:port, VIP) — this is
+# what makes the proxy reusable in front of any stack.
+routes:
+  - host: app.localhost
+    upstream: http://whoami:80
+    # Optional HTTP path used by the container healthcheck / smoke test.
+    healthcheck: /
+
+# Quadlet deployment topology: one proxy host.
+hosts:
+  proxy: 127.0.0.1

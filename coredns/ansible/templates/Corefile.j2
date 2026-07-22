@@ -1,0 +1,38 @@
+# {{ ansible_managed }}
+# Rendered from stack.yaml. Mirrors config/Corefile (the demo the UAT drives):
+# DoT upstreams, ACL, authoritative internal names, and an optional DoT listener.
+
+# Shared resolver behaviour imported by each server block below.
+(resolver) {
+    errors
+    log
+    acl {
+        allow net {{ acl_allow | join(' ') }}
+        block
+    }
+    hosts {
+{% for r in local_records %}
+        {{ r.ip }} {{ r.name }}
+{% endfor %}
+        fallthrough
+    }
+    cache 30
+    forward . {{ upstreams | join(' ') }} {
+        tls_servername {{ tls_servername }}
+        health_check 5s
+    }
+}
+
+.:53 {
+    import resolver
+    prometheus :9153
+    ready
+    health :8080
+}
+{% if dot_listener %}
+
+tls://.:853 {
+    import resolver
+    tls /certs/tls.crt /certs/tls.key
+}
+{% endif %}

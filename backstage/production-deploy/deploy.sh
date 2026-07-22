@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy one role to one host over SSH (root or passwordless-sudo user):
 #
-#   ./deploy.sh <mesh|data|scm|secrets|identity|access|portal> <ssh-host> [--prep]
+#   ./deploy.sh <mesh|data|scm|secrets|identity|access|portal|vpn> <ssh-host> [--prep]
 #
 # Renders the role's templates against hosts.env, installs quadlet units to
 # /etc/containers/systemd, config to /etc/backstage-portal, reloads systemd,
@@ -31,7 +31,7 @@ $IDENTITY_HOST $ACCESS_HOST $BOUNDARY_PUBLIC_ADDR $KEYCLOAK_PUBLIC_URL
 $PORTAL_PUBLIC_URL $PG_SUPER_PASSWORD $BOOTSTRAP_DB_PASSWORD
 $BOUNDARY_PG_PASSWORD $KC_DB_PASSWORD $KC_ADMIN_PASSWORD $PORTAL_KMS_ROOT_KEY
 $PORTAL_KMS_WORKER_KEY $PORTAL_KMS_RECOVERY_KEY $BACKSTAGE_API_TOKEN
-$AUTH_SESSION_SECRET'
+$AUTH_SESSION_SECRET $VPN_HOST $VPN_PUBLIC_URL $VPN_BASTION_AUTHKEY'
 
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT

@@ -1,0 +1,104 @@
+---
+# Deploy a WireGuard gateway as a Podman Quadlet (systemd) unit. Reads stack.yaml
+# for the tunnel address and peers; renders wg0.conf and brings the gateway up.
+#
+#   ansible-playbook -i inventory.ini deploy.yml
+#
+# HOST CONFIGURATION this playbook manages (WireGuard cannot be fully
+# container-scoped): it loads the `wireguard` kernel module (persisted across
+# reboots) and, when the gateway routes peer traffic onto a LAN, enables IPv4
+# forwarding. Both are reversible — see the comments on each task.
+- name: Deploy the WireGuard gateway
+  hosts: gateway
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Require the podman runtime for the Quadlet deployment
+      ansible.builtin.assert:
+        that:
+          - container_runtime == 'podman'
+        fail_msg: >-
+          container_runtime is '{{ container_runtime }}'. The Quadlet
+          deployment requires Podman; use docker-compose.yml for a Docker
+          single-host runtime.
+
+    - name: Install podman and wireguard-tools
+      ansible.builtin.package:
+        name:
+          - podman
+          - wireguard-tools
+        state: present
+
+    # --- host config: wireguard kernel module -------------------------------
+    # Revert: rm /etc/modules-load.d/wireguard.conf && modprobe -r wireguard
+    - name: Load the wireguard kernel module now
+      community.general.modprobe:
+        name: wireguard
+        state: present
+      when: manage_wireguard_module | bool
+
+    - name: Persist the wireguard module across reboots
+      ansible.builtin.copy:
+        content: "wireguard\n"
+        dest: /etc/modules-load.d/wireguard.conf
+        mode: "0644"
+      when: manage_wireguard_module | bool
+
+    # --- host config: IPv4 forwarding (only if routing onto a LAN) ----------
+    # Revert: set value back to 0, or remove the sysctl drop-in.
+    - name: Enable IPv4 forwarding for site-to-site routing
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        sysctl_file: /etc/sysctl.d/99-wireguard-gateway.conf
+        reload: true
+      when: manage_host_forwarding | bool
+
+    - name: Ensure the Quadlet and config directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ conf_dir }}"
+        - "{{ secret_dir }}"
+
+    - name: Generate the gateway private key once
+      ansible.builtin.shell:
+        cmd: "wg genkey > {{ secret_dir }}/gateway.key && chmod 600 {{ secret_dir }}/gateway.key"
+        creates: "{{ secret_dir }}/gateway.key"
+
+    - name: Read the gateway private key
+      ansible.builtin.slurp:
+        src: "{{ secret_dir }}/gateway.key"
+      register: gw_key
+
+    - name: Render wg0.conf from stack.yaml
+      ansible.builtin.template:
+        src: wg0.conf.j2
+        dest: "{{ conf_dir }}/wg0.conf"
+        mode: "0600"
+      vars:
+        gateway_private_key: "{{ gw_key.content | b64decode | trim }}"
+
+    - name: Install the wg bring-up entrypoint
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../config/wg-entrypoint.sh"
+        dest: "{{ conf_dir }}/wg-entrypoint.sh"
+        mode: "0755"
+
+    - name: Deploy the WireGuard gateway Quadlet unit
+      ansible.builtin.include_tasks: tasks/deploy_quadlet.yml
+      vars:
+        q_name: wireguard
+        q_kind: container
+
+    - name: Wait for the gateway wg interface to come up
+      ansible.builtin.command: podman exec wireguard-gateway wg show wg0
+      register: wg_up
+      until: wg_up.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false

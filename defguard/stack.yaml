@@ -1,0 +1,30 @@
+# Single source of truth for the Defguard WireGuard-VPN management stack.
+# Defguard's core is the control plane (web UI + gRPC); the gateway terminates
+# the WireGuard tunnel and is driven by the core over an authenticated gRPC
+# channel. The gateway's wg interface uses the host kernel module (auto-loaded
+# on interface creation — no sudo).
+stack:
+  name: defguard
+  net_subnet: 172.32.10.0/24
+  core_http_port: 8000      # web UI + REST API
+  core_grpc_port: 50055     # gateway-facing gRPC
+  wg_port: 51820            # WireGuard UDP
+
+# Pinned to the 1.4.0 pair — defguard's production release channel (`:current`),
+# validated end-to-end here (token mint -> gateway gRPC join -> wg0 up). The
+# 2.0.x line (July 2026) replaced non-interactive bootstrap with a setup wizard
+# and a new gateway "adopt" flow; see readme.md "Upgrading to 2.x" before
+# bumping these together.
+core_image: ghcr.io/defguard/defguard:1.4.0
+gateway_image: ghcr.io/defguard/gateway:1.4.0
+postgres_image: docker.io/library/postgres:18-alpine
+
+# The VPN network the deploy/UAT provisions on first run.
+vpn:
+  name: main-vpn
+  address: 10.0.50.1/24
+  allowed_ips: 10.0.50.0/24
+  port: 51820
+
+hosts:
+  core: 127.0.0.1

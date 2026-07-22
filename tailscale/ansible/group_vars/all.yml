@@ -1,0 +1,24 @@
+---
+# Shared vars for the self-hosted Tailscale Quadlet deployment. stack.yaml at
+# the stack root is the single source of truth.
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+headscale_image: "{{ stack_config.headscale_image }}"
+tailscale_image: "{{ stack_config.tailscale_image }}"
+hs_ip: "{{ stack_config.stack.hs_ip }}"
+hs_port: "{{ stack_config.stack.hs_port }}"
+net_subnet: "{{ stack_config.stack.net_subnet }}"
+advertise_routes: "{{ stack_config.advertise_routes }}"
+advertise_exit_node: "{{ stack_config.advertise_exit_node | default(true) }}"
+
+# Address the published headscale port binds to. Use the host's routable address
+# (or 0.0.0.0) when tailnet members live on other hosts; the co-located router
+# reaches headscale directly at hs_ip regardless.
+bind_addr: 127.0.0.1
+
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/headscale

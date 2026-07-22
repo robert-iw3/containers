@@ -1,0 +1,25 @@
+# The bastion broker: one socat forwarder per authorized target, sharing the
+# bastion node's netns so it binds the tailnet interface. THIS is the allow-list
+# — a target not in BROKER_TARGETS (and not permitted by policy.hujson) is
+# unreachable from every workstation. Default targets: the Backstage portal and
+# Boundary's brokered-access proxy.
+[Unit]
+Description=Portal VPN broker (authorized targets only)
+After=portal-bastion-ts.service
+Requires=portal-bastion-ts.service
+
+[Container]
+Image=docker.io/library/alpine:3.24
+ContainerName=portal-vpn-broker
+Network=container:portal-bastion-ts
+EnvironmentFile=/etc/backstage-portal/vpn.env
+Volume=/etc/backstage-portal/vpn/broker.sh:/broker.sh:ro,Z
+Exec=sh /broker.sh
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

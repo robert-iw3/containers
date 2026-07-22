@@ -1,0 +1,52 @@
+# headscale configuration used by the compose stack and the UAT — a self-hosted
+# Tailscale control server so the tailnet runs fully offline (no Tailscale SaaS,
+# no TS_AUTHKEY against the public coordinator). The Quadlet deployment renders
+# the equivalent from stack.yaml (ansible/templates/config.yaml.j2); the only
+# value that must change per environment is server_url.
+#
+# server_url must be an address the nodes can reach directly. Container-name DNS
+# is unreliable once tailscaled starts, so the stack pins headscale to a static
+# IP and uses it here and in each node's --login-server.
+server_url: http://172.30.9.2:8080
+listen_addr: 0.0.0.0:8080
+metrics_listen_addr: 0.0.0.0:9090
+grpc_listen_addr: 0.0.0.0:50443
+grpc_allow_insecure: false
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+# Embedded DERP relay so nodes can coordinate/relay without any public DERP.
+# Nodes on the same network connect directly; DERP is the fallback path.
+derp:
+  server:
+    enabled: true
+    region_id: 999
+    region_code: headscale
+    region_name: Headscale Embedded DERP
+    stun_listen_addr: 0.0.0.0:3478
+    private_key_path: /var/lib/headscale/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+  urls: []
+  paths: []
+  auto_update_enabled: false
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+dns:
+  magic_dns: false
+  override_local_dns: false
+  base_domain: tailnet.local
+  nameservers:
+    global: []
+
+log:
+  level: warn

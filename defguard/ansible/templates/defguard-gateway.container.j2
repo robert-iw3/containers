@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# Defguard WireGuard gateway, driven by core over gRPC. Its token env file is
+# rendered by deploy.yml after core mints it. The wg interface uses the host
+# kernel module (persisted by the playbook for reboots).
+[Unit]
+Description=Defguard gateway (WireGuard tunnel)
+After=defguard-core.service
+Wants=defguard-core.service
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Container]
+Image={{ gateway_image }}
+ContainerName=defguard-gateway
+Network=defguard.network
+EnvironmentFile={{ conf_dir }}/gateway.env
+Environment=DEFGUARD_GRPC_URL=http://defguard-core:50055
+Environment=DEFGUARD_STATS_PERIOD=30
+Environment=RUST_LOG=info
+PublishPort={{ bind_addr }}:{{ wg_port }}:51820/udp
+AddCapability=NET_ADMIN
+PodmanArgs=--memory=256m
+NoNewPrivileges=true
+
+[Service]
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

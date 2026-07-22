@@ -1,0 +1,49 @@
+---
+# WORKSTATION side of the remote-access layer — runs on each developer's
+# machine (Linux / macOS / Windows, all via these containers). Joins the
+# bastion's tailnet and exposes the brokered Boundary ports on localhost.
+#
+#   1. cp .env.example .env
+#   2. set HEADSCALE_URL to the bastion's public control-plane URL
+#      set ENDPOINT_AUTHKEY to the pre-auth key the bastion admin gave you
+#      set BASTION_HOST to the bastion's tailnet IP (ask the admin; typically
+#        the first node, 100.64.0.1)
+#   3. podman-compose up -d            (Docker Desktop works the same on mac/win)
+#   4. point your tools at localhost:  boundary authenticate -addr http://127.0.0.1:9200
+#
+# You never get a route to the internal network — only the bastion's brokered
+# ports appear on localhost.
+services:
+  endpoint-ts:
+    image: docker.io/tailscale/tailscale:v1.98.9
+    container_name: endpoint-ts
+    environment:
+      - TS_AUTHKEY=${ENDPOINT_AUTHKEY:?set ENDPOINT_AUTHKEY}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=${WORKSTATION_NAME:-dev-workstation}
+      - TS_ACCEPT_DNS=false
+      - TS_SOCKS5_SERVER=:1055
+      - TS_EXTRA_ARGS=--login-server=${HEADSCALE_URL:?set HEADSCALE_URL}
+    # Published on the netns owner (the forwarder shares this netns): the
+    # brokered ports appear on the workstation's own localhost.
+    ports:
+      - "127.0.0.1:${BOUNDARY_API_PORT:-9200}:9200"
+      - "127.0.0.1:${BOUNDARY_PROXY_PORT:-9202}:9202"
+    restart: on-failure:5
+    mem_limit: 128m
+
+  forward:
+    image: docker.io/library/alpine:3.24
+    container_name: endpoint-forward
+    network_mode: "service:endpoint-ts"
+    environment:
+      - BASTION_HOST=${BASTION_HOST:?set BASTION_HOST to the bastion tailnet IP}
+      - FORWARD_PORTS=${FORWARD_PORTS:-9200 9202}
+      - SOCKS_HOST=127.0.0.1
+      - SOCKS_PORT=1055
+    volumes:
+      - ../config/endpoint-forward.sh:/forward.sh:ro,Z
+    command: ["sh", "/forward.sh"]
+    depends_on: [endpoint-ts]
+    restart: on-failure:5
+    mem_limit: 64m

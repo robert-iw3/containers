@@ -1,0 +1,47 @@
+# CoreDNS demo configuration used by the compose stack and the UAT. A secure
+# resolver: DoT upstreams, an ACL restricting who may query, authoritative
+# internal names, and a DNS-over-TLS listener for clients. The Quadlet
+# deployment renders the equivalent from stack.yaml (ansible/templates/
+# Corefile.j2), so this file and that template stay in lock-step.
+
+# Shared resolver behaviour imported by each server block below.
+(resolver) {
+    errors
+    log
+
+    # Only allowed client subnets may query; everything else is REFUSED.
+    acl {
+        allow net 172.28.10.0/24 10.0.0.0/8
+        block
+    }
+
+    # Authoritative internal names; unknown names fall through to the upstreams.
+    hosts {
+        10.0.50.20 backend.svc.internal
+        10.0.50.1 gateway.svc.internal
+        fallthrough
+    }
+
+    cache 30
+
+    # Encrypted upstream (DNS-over-TLS to Quad9). If DoT fails, resolution fails
+    # — plaintext :53 upstream is never used.
+    forward . tls://9.9.9.9 tls://149.112.112.112 {
+        tls_servername dns.quad9.net
+        health_check 5s
+    }
+}
+
+# Classic Do53 (UDP/TCP :53).
+.:53 {
+    import resolver
+    prometheus :9153
+    ready
+    health :8080
+}
+
+# DNS-over-TLS for clients (:853), served with the mounted certificate.
+tls://.:853 {
+    import resolver
+    tls /certs/tls.crt /certs/tls.key
+}

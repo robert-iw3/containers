@@ -1,0 +1,52 @@
+# {{ ansible_managed }}
+# Rendered from stack.yaml routes. Mirrors config/haproxy.cfg (the demo the UAT
+# drives): TLS terminated with the combined PEM, one host ACL + backend per
+# route, unknown Host -> 404.
+global
+    log stdout format raw local0 info
+    maxconn 10000
+    tune.ssl.default-dh-param 2048
+    ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+defaults
+    mode http
+    log global
+    option httplog
+    option forwardfor
+    option http-server-close
+    timeout connect 5s
+    timeout client 30s
+    timeout server 30s
+    retries 3
+
+frontend http_in
+    bind :8080
+    http-request redirect scheme https code 301 unless { ssl_fc }
+
+frontend https_in
+    bind :8443 ssl crt /etc/haproxy/tls/haproxy.pem
+    http-request set-header X-Forwarded-Proto https
+    http-response set-header X-Frame-Options SAMEORIGIN
+    http-response set-header X-Content-Type-Options nosniff
+    http-response set-header Strict-Transport-Security "max-age=15552000; includeSubDomains"
+
+    http-request set-var(txn.host) hdr(host),field(1,:),lower
+{% for r in routes %}
+    acl host_{{ loop.index }} var(txn.host) -m str -i {{ r.host }}
+    use_backend be_{{ loop.index }} if host_{{ loop.index }}
+{% endfor %}
+    default_backend be_noroute
+
+{% for r in routes %}
+backend be_{{ loop.index }}
+    server s1 {{ r.upstream }} check
+{% endfor %}
+
+backend be_noroute
+    http-request deny deny_status 404
+
+listen stats
+    bind :8404
+    stats enable
+    stats uri /stats
+    monitor-uri /health

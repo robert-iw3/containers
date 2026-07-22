@@ -1,12 +1,62 @@
 ---
+# CoreDNS secure resolver. This is exactly what uat/run-uat.sh drives and the
+# single-host reference for the Quadlet deployment in ansible/.
+#
+# The two `dig-*` helpers are UAT-only clients sitting on different subnets so
+# the ACL can be exercised from an allowed and a denied source address. Remove
+# them for real use; point your hosts/containers at this resolver instead.
 services:
-  dns:
-    image: docker.io/coredns/coredns:latest
-    container_name: dns
-    restart: always
-    command: -conf /root/coredns/Corefile
+  coredns:
+    image: ${DNS_IMAGE:-docker.io/coredns/coredns:1.13.1}
+    container_name: coredns
+    restart: unless-stopped
+    command: ["-conf", "/etc/coredns/Corefile"]
     volumes:
-      - ./zones/:/root/coredns/zones/:ro
-      - ./Corefile:/root/coredns/Corefile:ro
+      - ./config/Corefile:/etc/coredns/Corefile:ro,Z
+      - ${TLS_DIR:-./uat/tls}:/certs:ro,Z
     ports:
-      - 53:53/udp
+      - "${BIND_ADDR:-127.0.0.1}:${DNS_PORT:-1053}:53/udp"
+      - "${BIND_ADDR:-127.0.0.1}:${DNS_PORT:-1053}:53/tcp"
+      - "${BIND_ADDR:-127.0.0.1}:${DOT_PORT:-1853}:853/tcp"
+    networks:
+      - allowed
+      - denied
+    security_opt:
+      - no-new-privileges:true
+    # CoreDNS runs as a non-root user; let it bind the privileged DNS ports.
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=53
+
+  # UAT-only: an allowed client (in the ACL subnet) with dig + kdig (DoT).
+  dig-allowed:
+    image: docker.io/library/alpine:3.24
+    container_name: dig-allowed
+    command: ["sh", "-c", "apk add --no-cache bind-tools knot-utils && sleep infinity"]
+    volumes:
+      - ${TLS_DIR:-./uat/tls}:/tls:ro,Z
+    networks:
+      - allowed
+    depends_on:
+      - coredns
+
+  # UAT-only: a denied client (outside the ACL subnet).
+  dig-denied:
+    image: docker.io/library/alpine:3.24
+    container_name: dig-denied
+    command: ["sh", "-c", "apk add --no-cache bind-tools && sleep infinity"]
+    networks:
+      - denied
+    depends_on:
+      - coredns
+
+networks:
+  allowed:
+    name: ${NET_ALLOWED:-coredns-allowed}
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+  denied:
+    name: ${NET_DENIED:-coredns-denied}
+    ipam:
+      config:
+        - subnet: 172.28.99.0/24

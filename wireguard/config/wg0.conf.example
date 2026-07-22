@@ -1,0 +1,21 @@
+# Example WireGuard peer config (the shape the UAT generates and the Quadlet
+# deployment renders). Private keys are generated per peer at test/deploy time
+# and never committed.
+#
+# Gateway (site B) end:
+[Interface]
+PrivateKey = <generated>
+ListenPort = 51820
+
+[Peer]
+PublicKey = <client public key>
+# Client tunnel address only.
+AllowedIPs = 10.9.0.1/32
+
+# Client (site A) end would instead list the gateway as its peer, with the
+# gateway's tunnel address plus any site-to-site subnets it fronts:
+#   [Peer]
+#   PublicKey = <gateway public key>
+#   AllowedIPs = 10.9.0.2/32, 10.55.0.0/24
+#   Endpoint = <gateway host>:51820
+#   PersistentKeepalive = 15

@@ -1,0 +1,131 @@
+---
+# Full local simulation of the remote-access layer, driven by run-uat.sh.
+#
+#   wan  = "the internet"   (workstation + bastion public side)
+#   lan  = internal segment (Boundary + internal services); `internal: true` so
+#          the host cannot bridge wan->lan — the tunnel is the ONLY path in.
+#
+# Mocks: `boundary` is the authorized target (brokered); `internaldb` is an
+# internal service that must stay unreachable from the workstation.
+services:
+  # --- control plane (bastion public side) ---
+  headscale:
+    image: ${HEADSCALE_IMAGE:-docker.io/headscale/headscale:v0.29.2}
+    container_name: acc-headscale
+    command: serve
+    volumes:
+      - ../config/headscale.yaml:/etc/headscale/config.yaml:ro,Z
+      - ../config/policy.hujson:/etc/headscale/policy.hujson:ro,Z
+      - headscale-data:/var/lib/headscale
+    networks:
+      wan: { ipv4_address: 172.30.78.2 }
+      lan: { ipv4_address: 172.30.77.2 }
+    restart: on-failure:3
+    mem_limit: 256m
+
+  # --- internal segment (unreachable from workstations except via the broker) ---
+  boundary:
+    image: docker.io/traefik/whoami:latest
+    container_name: acc-boundary
+    command: ["--port", "9200", "--name", "boundary-controller"]
+    networks:
+      lan: { ipv4_address: 172.30.77.10 }
+    restart: on-failure:3
+
+  internaldb:
+    image: docker.io/traefik/whoami:latest
+    container_name: acc-internaldb
+    command: ["--port", "5432", "--name", "internal-database"]
+    networks:
+      lan: { ipv4_address: 172.30.77.20 }
+    restart: on-failure:3
+
+  # --- secure DNS on the bastion (resolves internal target names) ---
+  coredns:
+    image: ${COREDNS_IMAGE:-docker.io/coredns/coredns:1.13.1}
+    container_name: acc-coredns
+    command: ["-conf", "/etc/coredns/Corefile"]
+    user: "0:0"
+    volumes:
+      - ../config/Corefile:/etc/coredns/Corefile:ro,Z
+    networks:
+      lan: { ipv4_address: 172.30.77.5 }
+    restart: on-failure:3
+    mem_limit: 128m
+
+  # --- bastion tailnet node (dual-homed) ---
+  bastion-ts:
+    image: ${TAILSCALE_IMAGE:-docker.io/tailscale/tailscale:v1.98.9}
+    container_name: acc-bastion-ts
+    environment:
+      - TS_AUTHKEY=${BASTION_AUTHKEY:-}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=bastion
+      - TS_ACCEPT_DNS=false
+      - TS_EXTRA_ARGS=--login-server=http://172.30.77.2:8080
+    networks:
+      lan: {}
+      wan: {}
+    depends_on: [headscale]
+    restart: on-failure:3
+    mem_limit: 128m
+
+  # --- bastion broker: forwards ONLY authorized target ports (shares ts netns) ---
+  broker:
+    image: ${BROKER_IMAGE:-docker.io/library/alpine:3.24}
+    container_name: acc-broker
+    network_mode: "service:bastion-ts"
+    environment:
+      # 9200 is policy-allowed; 2222 is a broker listener the policy does NOT
+      # allow — the UAT proves the ACL blocks it even though it is listening.
+      - BROKER_TARGETS=9200=boundary:9200,2222=boundary:9200
+    volumes:
+      - ../config/broker.sh:/broker.sh:ro,Z
+    command: ["sh", "/broker.sh"]
+    depends_on: [bastion-ts, boundary]
+    restart: on-failure:3
+    mem_limit: 64m
+
+  # --- workstation tailnet node (internet side, SOCKS5) ---
+  endpoint-ts:
+    image: ${TAILSCALE_IMAGE:-docker.io/tailscale/tailscale:v1.98.9}
+    container_name: acc-endpoint-ts
+    environment:
+      - TS_AUTHKEY=${ENDPOINT_AUTHKEY:-}
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=dev-workstation
+      - TS_ACCEPT_DNS=false
+      - TS_SOCKS5_SERVER=:1055
+      - TS_EXTRA_ARGS=--login-server=http://172.30.78.2:8080
+    networks:
+      - wan
+    depends_on: [headscale]
+    restart: on-failure:3
+    mem_limit: 128m
+
+  # Developer tools on the workstation (shares the endpoint node's netns, so it
+  # dials the tailnet through the SOCKS5 proxy). UAT-only helper; on a real
+  # workstation this is the dev's own shell + config/endpoint-forward.sh.
+  workstation:
+    image: docker.io/library/alpine:3.24
+    container_name: acc-workstation
+    network_mode: "service:endpoint-ts"
+    command: ["sh", "-c", "apk add --no-cache curl socat bind-tools >/dev/null 2>&1; sleep infinity"]
+    depends_on: [endpoint-ts]
+    restart: on-failure:3
+    mem_limit: 64m
+
+networks:
+  wan:
+    name: ${WAN_NET:-acc-uat-wan}
+    ipam:
+      config: [{ subnet: 172.30.78.0/24 }]
+  lan:
+    name: ${LAN_NET:-acc-uat-lan}
+    internal: true
+    ipam:
+      config: [{ subnet: 172.30.77.0/24 }]
+
+volumes:
+  headscale-data:
+    name: ${HS_VOLUME:-acc-uat-hsdata}

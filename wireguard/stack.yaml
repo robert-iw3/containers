@@ -1,0 +1,34 @@
+# Single source of truth for the WireGuard site-to-site / egress-gateway stack.
+#
+# NOTE: WireGuard uses the host kernel `wireguard` module, which auto-loads when
+# the tunnel interface is created (no sudo needed for the UAT). The Quadlet
+# deployment loads it persistently on the target host for reboots (see
+# ansible/deploy.yml). Peer keys are generated at test/deploy time — never
+# committed.
+stack:
+  name: wireguard
+  transit_subnet: 172.31.30.0/24   # where the two gateways exchange UDP
+  listen_port: 51820
+
+image: docker.io/library/alpine:3.24
+
+# The two ends of the tunnel. site-a is the client side; site-b is the gateway
+# that fronts a service (and, in a real deployment, a LAN subnet).
+tunnel:
+  site_a_addr: 10.9.0.1/24
+  site_b_addr: 10.9.0.2/24
+  # Extra subnets reachable across the tunnel (site-to-site). The gateway (site
+  # B) exposes these; the client (site A) routes them via wg0.
+  site_b_networks: 10.55.0.0/24
+
+# Peers the deployed gateway accepts (the Quadlet deployment renders these into
+# wg0.conf). Add each client's public key and the tunnel/LAN addresses it may
+# use. Empty by default — the gateway comes up and waits for peers.
+peers: []
+# Example:
+# peers:
+#   - public_key: "<client wg public key>"
+#     allowed_ips: "10.9.0.10/32"
+
+hosts:
+  gateway: 127.0.0.1

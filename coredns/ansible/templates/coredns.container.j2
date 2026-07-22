@@ -1,0 +1,27 @@
+# {{ ansible_managed }}
+# CoreDNS secure resolver as a Podman Quadlet unit. Host networking so it serves
+# every container and the host itself on :53 (and :853 for DoT). Runs as root to
+# bind the privileged DNS ports (this is a system resolver, like resolved).
+[Unit]
+Description=CoreDNS secure resolver
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ dns_image }}
+ContainerName=coredns
+User=0:0
+Exec=-conf /etc/coredns/Corefile
+Volume={{ conf_dir }}/Corefile:/etc/coredns/Corefile:ro,Z
+{% if dot_listener %}
+Volume={{ tls_dir }}:/certs:ro,Z
+{% endif %}
+Network=host
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target default.target

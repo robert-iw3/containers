@@ -1,0 +1,27 @@
+---
+# Shared vars for the Traefik proxy Quadlet deployment. stack.yaml at the stack
+# root is the single source of truth; routes there drive the rendered proxy
+# config.
+stack_config: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../stack.yaml') | from_yaml }}"
+
+# 'podman' deploys systemd Quadlet units. 'docker' is unsupported here — use the
+# compose file for a single-host Docker runtime instead.
+container_runtime: podman
+
+# Convenience handles.
+proxy_image: "{{ stack_config.image }}"
+tls_port: "{{ stack_config.stack.tls_port }}"
+bind_addr: "{{ stack_config.stack.bind_addr }}"
+routes: "{{ stack_config.routes }}"
+
+# Where Quadlet unit files live (rootful podman) and per-service state.
+quadlet_dir: /etc/containers/systemd
+conf_dir: /etc/traefik-proxy
+tls_dir: "{{ stack_config.stack.tls_dir }}"
+proxy_net: traefik-proxy
+
+# TLS material the operator drops into ansible/files/tls before deploying
+# (self-signed for a lab, real chain for production). See files/tls/README.md.
+tls_files:
+  - { src: tls.crt, mode: "0644" }
+  - { src: tls.key, mode: "0640" }

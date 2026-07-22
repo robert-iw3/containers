@@ -1,0 +1,33 @@
+# Single source of truth for the CoreDNS secure-resolver stack.
+# The compose file and UAT use the committed config/Corefile; the Quadlet
+# deployment (ansible/) renders the Corefile from the values below.
+stack:
+  name: coredns
+  net_subnet: 172.28.10.0/24        # subnet the resolver + allowed clients sit on
+
+image: docker.io/coredns/coredns:1.13.1
+
+# Upstream resolvers. DoT (DNS-over-TLS) so queries leaving the host are
+# encrypted — this is the "secure DNS" part. Defaults to Quad9.
+upstreams:
+  - tls://9.9.9.9
+  - tls://149.112.112.112
+tls_servername: dns.quad9.net
+
+# Only these client subnets may query the resolver; everything else is REFUSED
+# (acl plugin). Restrict to the networks your container hosts live on.
+acl_allow:
+  - 172.28.10.0/24
+  - 10.0.0.0/8
+
+# Internal names served authoritatively (hosts plugin). Names not listed here
+# fall through to the DoT upstreams.
+local_records:
+  - { name: backend.svc.internal, ip: 10.0.50.20 }
+  - { name: gateway.svc.internal, ip: 10.0.50.1 }
+
+# Serve DNS-over-TLS to clients on :853 with the mounted certificate.
+dot_listener: true
+
+hosts:
+  resolver: 127.0.0.1

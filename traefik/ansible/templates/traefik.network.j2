@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# Per-host bridge for the proxy. Backends on the same host resolve by container
+# name; remote backends are reached by the address given in stack.yaml routes.
+[Network]
+NetworkName={{ proxy_net }}
+Subnet={{ stack_config.stack.net_subnet }}

@@ -1,130 +1,66 @@
-## tailscale client container
+# Tailscale (self-hosted, offline)
 
-Sign up:
+A fully self-hosted Tailscale mesh VPN: [headscale](https://headscale.net) is the
+control server and `tailscale` nodes join it — **no Tailscale SaaS, no public
+coordinator, no auth key from the internet**. One node acts as a **subnet router
++ exit node** so containers and hosts route site-to-site and send their egress
+through the tunnel. Everything is driven by [`stack.yaml`](stack.yaml) and runs
+three ways:
 
-https://login.tailscale.com/start
+- **compose / rootless podman** for local use ([`docker-compose.yml`](docker-compose.yml))
+- **Podman Quadlet (systemd)** for hosts ([`ansible/`](ansible))
+- validated end-to-end by the **UAT** ([`uat/run-uat.sh`](uat/run-uat.sh))
 
-Set up auth key:
+Nodes run in **userspace / netstack mode** — no `/dev/net/tun`, no kernel
+WireGuard module, no host changes.
 
-[auth-key](img/tailscale-auth-key.png)
+## Configure
 
-### Python Usage Instructions
----
-
-1. Prepare Environment:
-
-Ensure `TS_AUTHKEY` is set in the environment or added to `.env` manually (obtain from Tailscale admin console).
-
-Install required tools based on the orchestrator:
-
-Docker: `docker`, `docker-compose`
-
-Podman: `podman`, `podman-compose`
-
-Kubernetes: `kubectl`
-
-Ansible: `ansible-playbook`
-
-```bash
-python3 deploy_tailscale.py --orchestrator <docker|podman|kubernetes|ansible> --subnet <subnet_cidr> --namespace <namespace> --compose-file <compose_file>
-```
-
-2. Examples:
-
-Docker: `python3 deploy_tailscale.py --orchestrator docker --subnet 192.168.1.0/24`
-
-Kubernetes: `python3 deploy_tailscale.py --orchestrator kubernetes --subnet 192.168.1.0/24 --namespace tailscale`
-
-Ansible: `python3 deploy_tailscale.py --orchestrator ansible --subnet 192.168.1.0/24`
-
-3. Verify Deployment:
-
-Docker/Podman: Check container status with `docker ps` or `podman ps`.
-
-Kubernetes: Verify pod status with `kubectl get pods -n <namespace>`.
-
-Ansible: Check logs for playbook execution status.
-
-In the Tailscale admin console, locate the tailscale-exit-node device, enable the exit node, and approve subnet routes.
-
-4. Integrate with Other Services:
-
-For Docker/Podman, use the provided docker-compose-authentik.yml with network_mode: service:tailscale-server to route traffic through Tailscale.
-
-For Kubernetes, deploy other pods in the same namespace and configure them to route traffic via the Tailscale pod’s IP or use a sidecar pattern.
-
-For Ansible, modify the inventory to deploy on remote hosts or integrate with existing playbooks for other services.
-
-5. Test Connectivity:
-
-Enable the exit node on another Tailscale client and verify internet traffic routes through the container’s external IP.
-
-### Manual Setup:
----
+Edit [`stack.yaml`](stack.yaml):
 
 ```yaml
-# update "docker-compose.yml"
-environment:
-    - TS_AUTHKEY=tskey-auth-INSERT_YOUR_KEY_HERE
-```
-##
-
-```sh
-# switch dns (optional)
-sudo mv /etc/resolv.conf /etc/resolv.conf.bak
-sudo touch /etc/resolv.conf
-echo -ne 'nameserver 9.9.9.9\nnameserver 149.112.112.112' | sudo tee -a /etc/resolv.conf
-
-# setup forwarding
-echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
-echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
-sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
-
-# enable tun
-sudo modprobe tun
-
-# new zone, enable masquerade, default to drop
-sudo firewall-cmd --permanent --new-zone=tailscale
-sudo firewall-cmd --reload
-sudo firewall-cmd --zone=tailscale --permanent --add-masquerade
-sudo firewall-cmd --zone=tailscale --permanent --set-target=DROP
-
-# add tun interface to active zone with the interface going to the internet
-sudo firewall-cmd --zone=tailscale --add-interface=tailscale0 --permanent
-
-# add required ports
-sudo firewall-cmd --zone=tailscale --add-port=443/tcp --permanent
-sudo firewall-cmd --zone=tailscale --add-port=41641/udp --permanent
-sudo firewall-cmd --zone=tailscale --add-port=3478/udp --permanent
-sudo firewall-cmd --reload
-```
-##
-
-```sh
-sudo podman-compose up -d
+advertise_routes: 10.55.0.0/24   # subnet the router exposes (site-to-site)
+advertise_exit_node: true        # also offer egress-through-the-tunnel
+stack:
+  hs_ip: 172.30.9.2              # static IP nodes use for the control server
 ```
 
-You should now see your system connected as a client.
+Headscale settings live in [`config/config.yaml`](config/config.yaml) (compose)
+and [`ansible/templates/config.yaml.j2`](ansible/templates/config.yaml.j2)
+(Quadlet). The one value to change per environment is `server_url`.
 
-Setup routes, configure as exit node, and now services can utilize this client to get out to the internet.
+## Run locally
 
-## acl builder
-
-https://tailscale.com/kb/1192/acl-samples
-
-```sh
-cd tailscale-acl-builder/
-# as user, not root
-podman build -t tailscale-acl-builder .
-podman run -p 8080:8080 --name tailscale-acl-builder -d tailscale-acl-builder
+```bash
+podman-compose up -d headscale
+podman exec headscale headscale users create uatuser
+podman exec headscale headscale preauthkeys create --user 1 --reusable --expiration 24h
+# put the key in .env as TS_AUTHKEY, then:
+podman-compose up -d node-a node-b
+podman exec headscale headscale nodes list
 ```
-localhost:8080
 
-[example](img/acl_builder_example.png)
+## Deploy (Podman Quadlet)
 
-> [!NOTE]
->
-> Tailscale now secures access to resources using grants, a next-generation access control policy syntax.
-> Grants provide all original ACL functionality plus additional capabilities.
+```bash
+cd ansible
+ansible-playbook -i inventory.ini deploy.yml
+```
 
-https://tailscale.com/kb/1542/grants-migration
+Installs `tailscale.network`, a `headscale.volume`, the `headscale` control
+server and a `tailscale-router` node as Quadlet units under
+`/etc/containers/systemd`. The playbook mints the router's pre-auth key from the
+freshly deployed headscale (written to `/etc/headscale/router.env`, mode 0600).
+Point other members at the control server with
+`--login-server=http://<host>:8080`.
+
+## Test
+
+```bash
+cd uat && ./run-uat.sh          # bring up + assert; ./run-uat.sh --down to clean up
+```
+
+The UAT stands up headscale, mints a pre-auth key, joins two nodes, and asserts
+both get `100.64.x` tailnet addresses, node-a reaches node-b over the tailnet
+(`tailscale ping` → pong), headscale shows both registered, and the gateway
+advertises the site-to-site subnet route and an exit node.

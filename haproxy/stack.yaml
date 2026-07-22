@@ -1,0 +1,22 @@
+# Single source of truth for the HAProxy reverse-proxy stack.
+# The compose file and UAT use the committed config/haproxy.cfg; the Quadlet
+# deployment (ansible/) renders haproxy.cfg from the routes below.
+stack:
+  name: haproxy
+  tls_port: 8443
+  http_port: 8080
+  bind_addr: 127.0.0.1
+  net_subnet: 172.31.21.0/24
+  tls_dir: /etc/haproxy-proxy/tls
+
+image: docker.io/library/haproxy:3.2
+
+# Backends to expose. Each route becomes a host ACL + backend. Point `upstream`
+# at any reachable host:port — this is what makes the proxy reusable.
+routes:
+  - host: app.localhost
+    upstream: whoami:80
+    healthcheck: /
+
+hosts:
+  proxy: 127.0.0.1
