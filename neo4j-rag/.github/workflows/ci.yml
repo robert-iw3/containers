@@ -1,0 +1,40 @@
+name: neo4j-rag CI
+on:
+  push:
+    paths: ["neo4j-rag/**"]
+  pull_request:
+    paths: ["neo4j-rag/**"]
+
+defaults:
+  run:
+    working-directory: neo4j-rag/stack
+
+jobs:
+  graphrag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Byte-compile the service
+        run: python -m compileall -q graphrag
+      - name: Build the GraphRAG image
+        run: docker build -t neo4j-graphrag:ci ./graphrag
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: |
+          cp .env.example .env
+          docker compose --env-file .env -f docker-compose.yml config >/dev/null
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: shellcheck scripts/render.sh uat/run-uat.sh ollama/pull-model.sh

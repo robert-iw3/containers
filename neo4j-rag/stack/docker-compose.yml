@@ -1,0 +1,395 @@
+# Production Neo4j GraphRAG stack with Keycloak single sign-on for OpenWebUI.
+#
+#   browser ─TLS→ traefik ─┬──→ open-webui   (native OIDC RP → keycloak)
+#                          └──→ keycloak     (login UI + token endpoint)
+#
+#   open-webui ──OpenAI API──→ graphrag ──→ neo4j    (graph + vector store)
+#                                       └──→ ollama  (local LLM + embeddings)
+#
+# OpenWebUI authenticates users directly against Keycloak (OpenID Connect) and
+# consumes the Neo4j GraphRAG service as an OpenAI-compatible model provider.
+#
+# Issuer host consistency: Keycloak is published on one host:port
+# (${BIND_ADDR}:${TLS_PORT} → traefik :8443, TLS_PORT == 8443) so the issuer
+# URL is identical for the browser and for OpenWebUI's back-channel token
+# exchange. OpenWebUI resolves that host to traefik via extra_hosts and trusts
+# the stack CA (appended to certifi at start-up) rather than disabling
+# verification. Databases and Neo4j/Ollama are never published to the host.
+#
+# Settings come from .env (see .env.example / scripts/render.sh). Neo4j and
+# Ollama carry no host ports by design; reach them through `podman exec` or a
+# temporary port-forward for administration.
+---
+networks:
+  neo4j-stack:
+    name: ${COMPOSE_NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_SUBNET}
+
+volumes:
+  keycloak-db-data:
+  openwebui-db-data:
+  openwebui-data:
+  neo4j-data:
+  neo4j-logs:
+  ollama-data:
+  embedding-model:
+  backups:
+
+x-app: &app
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-postgres: &postgres
+  <<: *app
+  image: docker.io/postgres:17.10-alpine
+  command:
+    - postgres
+    - -c
+    - config_file=/etc/postgresql/postgresql.conf
+    - -c
+    - hba_file=/etc/postgresql/pg_hba.conf
+
+services:
+  # --- Reverse proxy -----------------------------------------------------
+  traefik:
+    <<: *app
+    image: docker.io/traefik:v3.7.8
+    container_name: traefik-neo4j-stack
+    command:
+      - --api.insecure=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - "--providers.docker.constraints=Label(`sso.stack`,`neo4j-stack`)"
+      - --providers.docker.network=${COMPOSE_NET_NAME}
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.http.tls=true
+    ports:
+      - "${BIND_ADDR}:${TLS_PORT}:8443"
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${TLS_DIR}:/etc/tls:ro,z
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro,z
+    networks:
+      neo4j-stack:
+        ipv4_address: ${TRAEFIK_IP}
+    # No depends_on: traefik discovers backends dynamically from container
+    # labels, and listing them here makes podman-compose eagerly create those
+    # containers when traefik is brought up alone (name-collision cascade).
+
+  # --- Identity provider -------------------------------------------------
+  keycloak-db:
+    <<: *postgres
+    container_name: keycloak-db-neo4j-stack
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data:Z
+      - ./postgres:/etc/postgresql:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - neo4j-stack
+
+  keycloak:
+    <<: *app
+    image: quay.io/keycloak/keycloak:26.7.0
+    container_name: keycloak-neo4j-stack
+    command: ["start", "--import-realm"]
+    environment:
+      KC_HOSTNAME: https://${KEYCLOAK_HOST}:${TLS_PORT}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      KC_PROXY_HEADERS: xforwarded
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/realm-neo4j.json:/opt/keycloak/data/import/realm-neo4j.json:ro,z
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=neo4j-stack"
+      - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_HOST}`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.middlewares=secure-headers@file"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+    networks:
+      - neo4j-stack
+
+  # --- Application: OpenWebUI (Keycloak OIDC relying party) ---------------
+  openwebui-db:
+    <<: *postgres
+    container_name: openwebui-db-neo4j-stack
+    environment:
+      POSTGRES_USER: openwebui
+      POSTGRES_DB: openwebui
+      POSTGRES_PASSWORD: ${OPENWEBUI_DB_PASSWORD}
+    volumes:
+      - openwebui-db-data:/var/lib/postgresql/data:Z
+      - ./postgres:/etc/postgresql:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwebui -d openwebui"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - neo4j-stack
+
+  open-webui:
+    <<: *app
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui-neo4j-stack
+    # Trust the stack CA for the server-side OIDC token exchange before start
+    # (see openwebui/entrypoint.sh).
+    entrypoint: ["/bin/bash", "/openwebui-entrypoint.sh"]
+    environment:
+      # Public base URL — OIDC redirect is ${WEBUI_URL}/oauth/oidc/callback.
+      WEBUI_URL: https://${APP_HOST}:${TLS_PORT}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      WEBUI_AUTH: "true"
+      WEBUI_SESSION_COOKIE_SECURE: "true"
+      WEBUI_SESSION_COOKIE_SAME_SITE: lax
+      ENABLE_SIGNUP: "false"
+      # SSO only — hide the local login form; identities come from Keycloak.
+      ENABLE_LOGIN_FORM: "false"
+      ENABLE_OAUTH_SIGNUP: "true"
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
+      # OpenID Connect via Keycloak.
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET}
+      OPENID_PROVIDER_URL: https://${KEYCLOAK_HOST}:${TLS_PORT}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
+      OAUTH_PROVIDER_NAME: Keycloak
+      # The groups + realm-roles claims are delivered by client-level protocol
+      # mappers (always applied), so they need not — and must not — be requested
+      # as OAuth scopes (Keycloak would reject 'groups' as an unknown scope).
+      OAUTH_SCOPES: "openid email profile"
+      # Map Keycloak realm roles → OpenWebUI roles (realm role 'admin' → admin).
+      ENABLE_OAUTH_ROLE_MANAGEMENT: "true"
+      OAUTH_ROLES_CLAIM: roles
+      OAUTH_ALLOWED_ROLES: "user,admin"
+      OAUTH_ADMIN_ROLES: "admin"
+      # Persistence in PostgreSQL rather than the default bundled SQLite.
+      DATABASE_URL: postgresql://openwebui:${OPENWEBUI_DB_PASSWORD}@openwebui-db:5432/openwebui
+      # Belt-and-suspenders CA trust for requests/stdlib clients.
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+      SSL_CERT_FILE: /certs/ca.crt
+      # Model providers: local Ollama + the Neo4j GraphRAG OpenAI-compatible API.
+      ENABLE_OLLAMA_API: "true"
+      OLLAMA_BASE_URL: http://ollama:11434
+      ENABLE_OPENAI_API: "true"
+      OPENAI_API_BASE_URLS: http://graphrag:8504/v1
+      OPENAI_API_KEYS: ${GRAPHRAG_API_KEY}
+    extra_hosts:
+      - "${KEYCLOAK_HOST}:${TRAEFIK_IP}"
+    volumes:
+      - openwebui-data:/app/backend/data
+      - ${TLS_DIR}:/certs:ro,z
+      - ./openwebui/entrypoint.sh:/openwebui-entrypoint.sh:ro,z
+    depends_on:
+      openwebui-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "sso.stack=neo4j-stack"
+      - "traefik.http.routers.openwebui.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.openwebui.entrypoints=websecure"
+      - "traefik.http.routers.openwebui.tls=true"
+      - "traefik.http.routers.openwebui.middlewares=secure-headers@file"
+      - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
+    networks:
+      - neo4j-stack
+
+  # --- GraphRAG model provider (OpenAI-compatible) -----------------------
+  graphrag:
+    <<: *app
+    build:
+      context: ./graphrag
+    image: localhost/neo4j-graphrag:2.0
+    container_name: graphrag-neo4j-stack
+    environment:
+      NEO4J_URI: neo4j://neo4j:7687
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_DATABASE: neo4j
+      OLLAMA_BASE_URL: http://ollama:11434
+      LLM: ${LLM}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      GRAPHRAG_API_KEY: ${GRAPHRAG_API_KEY}
+      RAG_SEARCH_TYPE: ${RAG_SEARCH_TYPE}
+      RAG_USE_COMPRESSION: ${RAG_USE_COMPRESSION}
+    volumes:
+      - embedding-model:/embedding_model:Z
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8504/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - neo4j-stack
+
+  # --- Data stores -------------------------------------------------------
+  neo4j:
+    <<: *app
+    image: docker.io/neo4j:5.26
+    container_name: neo4j-neo4j-stack
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_db_tx__log_rotation_retention__policy: "false"
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - neo4j-data:/data:Z
+      - neo4j-logs:/logs:Z
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    networks:
+      - neo4j-stack
+
+  ollama:
+    <<: *app
+    image: docker.io/ollama/ollama:latest
+    container_name: ollama-neo4j-stack
+    tty: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_NICE
+    volumes:
+      - ollama-data:/root/.ollama:Z
+    healthcheck:
+      test: ["CMD-SHELL", "ollama --version >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - neo4j-stack
+    # Uncomment to schedule an NVIDIA GPU (needs the container GPU toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  pull-model:
+    image: docker.io/alpine:3.21
+    container_name: pull-model-neo4j-stack
+    restart: "no"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      LLM: ${LLM}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+    command: ["sh", "-c", "apk add --no-cache curl >/dev/null && sh /pull-model.sh"]
+    volumes:
+      - ./ollama/pull-model.sh:/pull-model.sh:ro,z
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - neo4j-stack
+
+  # --- Data loader (one-shot; `--profile load`) --------------------------
+  loader:
+    <<: *app
+    image: localhost/neo4j-graphrag:2.0
+    build:
+      context: ./graphrag
+    container_name: loader-neo4j-stack
+    profiles: ["load"]
+    restart: "no"
+    environment:
+      NEO4J_URI: neo4j://neo4j:7687
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      OLLAMA_BASE_URL: http://ollama:11434
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+    entrypoint: ["python", "loader.py"]
+    command: ["--tag", "neo4j", "--pages", "1"]
+    volumes:
+      - embedding-model:/embedding_model:Z
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4j-stack
+
+  # --- Backups (PostgreSQL dumps of Keycloak + OpenWebUI) ----------------
+  backups:
+    <<: *app
+    image: docker.io/postgres:17.10-alpine
+    container_name: backups-neo4j-stack
+    environment:
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      OPENWEBUI_DB_PASSWORD: ${OPENWEBUI_DB_PASSWORD}
+    command:
+      - sh
+      - -c
+      - |
+        sleep 15m
+        while true; do
+          ts=$(date "+%Y-%m-%d_%H-%M")
+          PGPASSWORD="$KEYCLOAK_DB_PASSWORD" pg_dump -h keycloak-db -U keycloak -d keycloak \
+            | gzip > /backups/keycloak-$ts.sql.gz || echo "keycloak backup failed"
+          PGPASSWORD="$OPENWEBUI_DB_PASSWORD" pg_dump -h openwebui-db -U openwebui -d openwebui \
+            | gzip > /backups/openwebui-$ts.sql.gz || echo "openwebui backup failed"
+          find /backups -type f -mtime +7 -delete
+          sleep 24h
+        done
+    volumes:
+      - backups:/backups:Z
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+      openwebui-db:
+        condition: service_healthy
+    networks:
+      - neo4j-stack

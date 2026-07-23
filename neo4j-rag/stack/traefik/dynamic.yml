@@ -1,0 +1,28 @@
+# Traefik file provider: TLS material and the security headers shared by every
+# router in this stack. OpenWebUI is a native OIDC relying party, so there is
+# no forwardAuth gateway here — Keycloak enforces authentication.
+---
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/tls/tls.crt
+        keyFile: /etc/tls/tls.key
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: strict-origin-when-cross-origin

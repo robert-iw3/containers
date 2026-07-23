@@ -1,0 +1,22 @@
+---
+# Deployment settings for the Neo4j GraphRAG stack. Override per-environment
+# (or in an Ansible Vault) — never commit real secrets here.
+
+# Where the stack is installed on the target host.
+install_dir: /opt/neo4j-rag
+
+# TLS material to install into stack.tls_dir on the target. Point these at your
+# real certificate/key/CA (a private CA's ca.crt, or omit for public CAs).
+tls_src_dir: "{{ playbook_dir }}/files/tls"
+
+# Passed through to scripts/render.sh via stack.yaml. Leave blank to let the
+# renderer generate and persist them into the target's .env on first deploy.
+# For repeatable deploys, set them here from Vault instead.
+keycloak_admin_password: ""
+keycloak_db_password: ""
+openwebui_db_password: ""
+webui_secret_key: ""
+oauth_client_secret: ""
+neo4j_password: ""
+graphrag_api_key: ""
+demo_password: ""

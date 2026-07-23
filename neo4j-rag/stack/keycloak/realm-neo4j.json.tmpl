@@ -1,0 +1,76 @@
+{
+  "realm": "@REALM@",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "OpenWebUI administrators" },
+      { "name": "user", "description": "OpenWebUI users" }
+    ]
+  },
+  "groups": [
+    { "name": "openwebui-admins", "realmRoles": ["admin"] },
+    { "name": "openwebui-users", "realmRoles": ["user"] }
+  ],
+  "users": [
+    {
+      "username": "@DEMO_USER@",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "@DEMO_EMAIL@",
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [
+        { "type": "password", "value": "@DEMO_PASSWORD@", "temporary": false }
+      ],
+      "groups": ["/openwebui-admins"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "@CLIENT_ID@",
+      "name": "OpenWebUI",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "@CLIENT_SECRET@",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["@REDIRECT_URI@"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["email", "profile", "roles"],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

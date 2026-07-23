@@ -1,0 +1,58 @@
+# stack.yaml — single source of truth for the Neo4j GraphRAG + Keycloak stack.
+# Consumed by scripts/render.sh (compose artifacts: .env, Keycloak realm) and by
+# the Ansible playbook (ansible/ reads this file as vars). Replace example
+# values before use.
+
+stack:
+  bind_addr: "127.0.0.1"           # 0.0.0.0 to expose beyond the host
+  # tls_port MUST equal traefik's internal entrypoint (8443) so the Keycloak
+  # issuer URL is identical for the browser and OpenWebUI's back-channel.
+  tls_port: 8443
+  net_subnet: "172.31.30.0/24"     # keep in sync with postgres/pg_hba.conf
+  traefik_ip: "172.31.30.10"
+  tls_dir: "/etc/ssl/neo4j-stack"  # holds tls.crt, tls.key, ca.crt
+  docker_socket: "/var/run/docker.sock"
+
+# Public hostnames (browser-facing, terminated by traefik).
+hosts:
+  app: "chat.neo4j.example.com"        # OpenWebUI
+  keycloak: "keycloak.neo4j.example.com"
+
+# Pinned images. open-webui/ollama track fast; pin them to a digest/tag for a
+# frozen production deploy.
+images:
+  traefik: "docker.io/traefik:v3.7.8"
+  keycloak: "quay.io/keycloak/keycloak:26.7.0"
+  postgres: "docker.io/postgres:17.10-alpine"
+  neo4j: "docker.io/neo4j:5.26"
+  ollama: "docker.io/ollama/ollama:latest"
+  openwebui: "ghcr.io/open-webui/open-webui:main"
+
+keycloak:
+  realm: "neo4j"
+  admin_user: "admin"
+  client_id: "openwebui"
+  users:
+    - username: "demo"
+      email: "demo@example.com"
+      first_name: "Demo"
+      last_name: "User"
+      groups: ["openwebui-admins"]
+
+models:
+  llm: "llama3.2:3b"               # Ollama chat model, or an OpenAI/Bedrock id
+  embedding_model: "sentence_transformer"
+  rag_search_type: "vector"        # or 'hybrid'
+  rag_use_compression: "false"
+
+# Secrets — leave blank to auto-generate on first render. Generated values are
+# written to .env (gitignored), not back here.
+secrets:
+  keycloak_admin_password: ""
+  keycloak_db_password: ""
+  openwebui_db_password: ""
+  webui_secret_key: ""
+  oauth_client_secret: ""
+  neo4j_password: ""
+  graphrag_api_key: ""
+  demo_password: ""
