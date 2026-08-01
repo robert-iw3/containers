@@ -1,0 +1,36 @@
+# Filtered DNS for the secure travel browser broker.
+# DoH/DNSCrypt to pinned no-log resolvers; the hotel resolver is never consulted
+# (ignore_system_dns + bootstrap by IP). Blocked names answer REFUSED so the
+# entrypoint's blocklist probe can tell blocked from resolved.
+server_names = ['quad9-doh-ip4-port443-filter-pri', 'quad9-dnscrypt-ip4-filter-pri', 'cloudflare-security']
+listen_addresses = ['127.0.0.1:53']
+max_clients = 250
+ipv4_servers = true
+ipv6_servers = false
+dnscrypt_servers = true
+doh_servers = true
+require_dnssec = false
+require_nolog = true
+require_nofilter = false
+force_tcp = false
+timeout = 5000
+keepalive = 30
+cert_refresh_delay = 240
+bootstrap_resolvers = ['9.9.9.9:53', '149.112.112.112:53']
+ignore_system_dns = true
+netprobe_timeout = 60
+netprobe_address = '9.9.9.9:53'
+block_ipv6 = true
+cache = true
+cache_size = 4096
+blocked_query_response = 'refused'
+
+[blocked_names]
+blocked_names_file = '/etc/dnscrypt-proxy/blocked-names.txt'
+
+[sources.public-resolvers]
+urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md', 'https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md']
+cache_file = '/var/cache/dnscrypt-proxy/public-resolvers.md'
+minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+refresh_delay = 72
+prefix = ''

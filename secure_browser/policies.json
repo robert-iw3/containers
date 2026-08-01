@@ -1,0 +1,199 @@
+{
+  "_comment": [
+    "DISA Mozilla Firefox STIG-aligned enterprise policy for the secure travel browser.",
+    "policies.json is the STIG's prescribed enforcement mechanism (machine-wide, not",
+    "user-overridable). Baseline controls: no add-on installation, no telemetry/data",
+    "submission, no password manager or form autofill, no sync/accounts, TLS 1.2 floor,",
+    "pop-ups blocked, developer tools off, search suggestions off, downloads always",
+    "prompting, sanitize on shutdown.",
+    "",
+    "Deliberate deviations from the analyst-kiosk profile, because the threat model here",
+    "is a HOSTILE LAN (hotel wifi), not a contained enterprise enclave:",
+    "  * No WebsiteFilter kiosk allow-list — this browser is for general browsing.",
+    "  * DNS-over-HTTPS is ENABLED and pinned to Quad9 (the kiosk disables DoH). On an",
+    "    untrusted network the local DNS resolver is the adversary; DoH takes name",
+    "    resolution away from it. Fallback stays on so captive-portal login still works.",
+    "  * HTTPS-Only mode is on — plaintext HTTP on a hostile LAN is readable and",
+    "    injectable by anyone on the segment. The per-site 'Continue' button remains",
+    "    available for captive portals.",
+    "  * Clipboard events stay enabled — pasting a URL or a password from the host is",
+    "    normal use here; there is no case data on screen to exfiltrate."
+  ],
+  "policies": {
+    "BlockAboutConfig": true,
+    "BlockAboutProfiles": true,
+    "BlockAboutSupport": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisableFeedbackCommands": true,
+    "DisablePocket": true,
+    "DisableFirefoxAccounts": true,
+    "DisableFirefoxScreenshots": true,
+    "DisableProfileImport": true,
+    "DisableProfileRefresh": true,
+    "DisableSetDesktopBackground": true,
+    "DisableMasterPasswordCreation": true,
+    "DisableDeveloperTools": true,
+    "DisablePasswordReveal": true,
+    "OfferToSaveLogins": false,
+    "PasswordManagerEnabled": false,
+    "DisableFormHistory": true,
+    "AutofillAddressEnabled": false,
+    "AutofillCreditCardEnabled": false,
+    "DisableSafeMode": true,
+    "DisableSystemAddonUpdate": true,
+    "DisableAppUpdate": true,
+    "ExtensionUpdate": false,
+    "DontCheckDefaultBrowser": true,
+    "NoDefaultBookmarks": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "InstallAddonsPermission": {
+      "Default": false,
+      "Allow": []
+    },
+    "PopupBlocking": {
+      "Default": true,
+      "Locked": true
+    },
+    "Cookies": {
+      "AcceptThirdParty": "never",
+      "Locked": true
+    },
+    "DNSOverHTTPS": {
+      "_comment": "Pinned to Quad9. Fallback true = if the DoH endpoint is unreachable (captive portal not yet accepted) Firefox falls back to the container's resolver long enough to reach the portal.",
+      "Enabled": true,
+      "ProviderURL": "https://dns.quad9.net/dns-query",
+      "Fallback": true,
+      "Locked": true
+    },
+    "EncryptedMediaExtensions": {
+      "Enabled": false,
+      "Locked": true
+    },
+    "NetworkPrediction": false,
+    "SearchSuggestEnabled": false,
+    "UserMessaging": {
+      "WhatsNew": false,
+      "ExtensionRecommendations": false,
+      "FeatureRecommendations": false,
+      "MoreFromMozilla": false
+    },
+    "SanitizeOnShutdown": {
+      "Cache": true,
+      "Cookies": true,
+      "History": true,
+      "Sessions": true,
+      "SiteSettings": true,
+      "OfflineApps": true,
+      "Locked": true
+    },
+    "Homepage": {
+      "URL": "about:blank",
+      "Locked": true,
+      "StartPage": "homepage-locked"
+    },
+    "Permissions": {
+      "Camera": {
+        "BlockNewRequests": true,
+        "Locked": true
+      },
+      "Microphone": {
+        "BlockNewRequests": true,
+        "Locked": true
+      },
+      "Location": {
+        "BlockNewRequests": true,
+        "Locked": true
+      },
+      "Notifications": {
+        "BlockNewRequests": true,
+        "Locked": true
+      },
+      "Autoplay": {
+        "Default": "block-audio-video",
+        "Locked": true
+      }
+    },
+    "Preferences": {
+      "_comment_hostile_lan": "media.peerconnection: WebRTC's STUN/ICE discloses the machine's local and public addresses to any page that asks and can open peer-to-peer flows that bypass the browser's normal request path — on a public LAN that is a discovery and exfil channel, so it is off. browser.cache.disk: cache is RAM-only; with the profile on container tmpfs nothing browser-derived is ever written to a persistent disk. Referer trimming limits what one site learns about browsing on another.",
+      "media.peerconnection.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.cache.disk.enable": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "network.http.referer.XOriginTrimmingPolicy": {
+        "Value": 2,
+        "Status": "locked"
+      },
+      "security.tls.version.min": {
+        "Value": 3,
+        "Status": "locked"
+      },
+      "security.ssl.require_safe_negotiation": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "dom.security.https_only_mode": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "_comment_downloads": "Downloads are permitted but contained: every download prompts (no silent writes) and files land in a fixed directory on the container's tmpfs — which is destroyed when the browser exits. Nothing the browser writes can reach the host filesystem; there are no writable host mounts.",
+      "browser.download.useDownloadDir": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.download.always_ask_before_handling_new_types": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "browser.download.folderList": {
+        "Value": 2,
+        "Status": "locked"
+      },
+      "browser.download.dir": {
+        "Value": "/home/browser/Downloads",
+        "Status": "locked"
+      },
+      "pdfjs.enableScripting": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "network.protocol-handler.external.shell": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.contentblocking.category": {
+        "Value": "strict",
+        "Status": "locked"
+      },
+      "privacy.trackingprotection.enabled": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "extensions.htmlaboutaddons.recommendations.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.newtabpage.activity-stream.feeds.telemetry": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "network.dns.disablePrefetch": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "network.predictor.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "print.always_print_silent": {
+        "Value": false,
+        "Status": "locked"
+      }
+    }
+  }
+}
