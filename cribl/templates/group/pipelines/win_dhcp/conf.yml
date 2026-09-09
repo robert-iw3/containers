@@ -1,0 +1,23 @@
+# Windows DHCP server audit log.
+#
+# Not reduced. It is the only record in most environments that ties an address
+# to a machine name and a MAC at a point in time, which is what a component
+# inventory control asks for and what every investigation needs weeks later. It
+# is also tiny. Dropping it in a volume exercise is a false economy.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /^(?<dhcp_id>\d+),/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_WINDOWS__'"
+        - name: cribl_pipeline
+          value: "'win_dhcp'"

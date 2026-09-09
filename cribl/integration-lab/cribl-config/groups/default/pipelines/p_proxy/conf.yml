@@ -1,0 +1,39 @@
+# Web proxy access log.
+#
+# Nothing is dropped and nothing is sampled. The previous rules dropped cache
+# hits outright and sampled successful misses 1:3.
+#
+# A cache hit still means a host requested that URL. Dropping it removes the
+# host from any later indicator sweep for that domain, and the sweep returns
+# clean - which is worse than returning nothing, because it is believed.
+#
+# The reduction is the user-agent string, which is long, highly repetitive
+# across a fleet, and is the field least often used to answer a proxy question.
+# Where user-agent anomaly detection is in use, remove this function: it is the
+# one rule here that costs a detection technique rather than only bytes.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /\s(?<proxy_code>TCP_[A-Z_]+)\/(?<proxy_status>\d{3})\s/
+      iterations: 1
+
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /"Mozilla\/[^"]{20,}"/g
+          replaceExpr: "'\"-\"'"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_proxy'"

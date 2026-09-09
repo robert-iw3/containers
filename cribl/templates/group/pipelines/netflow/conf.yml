@@ -1,0 +1,24 @@
+# NetFlow / IPFIX.
+#
+# Telemetry with no message and no verdict. Sampling is the blunt answer and
+# the one this template ships. The better answer in production is a second
+# Destination: route the full stream to object storage or convert it to metrics
+# and keep a sample in the index. That is a routing decision, so it belongs in
+# route.yml at your site rather than in this pipeline.
+asyncFuncTimeout: 1000
+functions:
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "true"
+          rate: __RATE_NETFLOW__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_NETWORK__'"
+        - name: cribl_pipeline
+          value: "'netflow'"

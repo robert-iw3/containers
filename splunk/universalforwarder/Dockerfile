@@ -1,8 +1,8 @@
 FROM docker.io/debian:trixie
 
 ENV SPLUNK_PRODUCT universalforwarder
-ENV SPLUNK_VERSION 10.0.0
-ENV SPLUNK_BUILD c486717c322b
+ENV SPLUNK_VERSION 10.4.2
+ENV SPLUNK_BUILD 33c3bf42cd73
 ENV SPLUNK_FILENAME splunkforwarder-${SPLUNK_VERSION}-${SPLUNK_BUILD}-linux-amd64.tgz
 
 ENV SPLUNK_HOME /opt/splunk
@@ -44,11 +44,21 @@ RUN \
     rm -rf /var/lib/apt/lists/*
 
 COPY --chmod=755 entrypoint.sh /sbin/entrypoint.sh
-COPY splunkuf-ca.openssl.conf .
-COPY splunkuf_openssl.conf .
-COPY --chmod=755 key-gen.sh .
-
-RUN bash -c "key-gen.sh"
+# key-gen.sh ships as an operator tool; it is NOT run at build time.
+#
+# A certificate generated during the build is baked into the image, so every
+# container started from it presents the same key - which defeats the point of
+# requireClientCert on the receiver, since one stolen image authenticates as
+# every forwarder. Generate per-host certificates outside the image and mount
+# them at /opt/splunk/etc/auth/certs-staged; the entrypoint copies them into
+# place owned by splunk before splunkd starts.
+# Outside $SPLUNK_HOME. Splunk reverts ownership at start with a recursive
+# chown of $SPLUNK_HOME running as the splunk user, and a root-owned directory
+# in there makes that fail with "Operation not permitted" - after which Splunk
+# aborts with "Error calling execve()", naming nothing that leads back here.
+COPY splunkuf-ca_openssl.conf /usr/local/share/splunk-cert-tools/
+COPY splunkuf_openssl.conf /usr/local/share/splunk-cert-tools/
+COPY --chmod=755 key-gen.sh /usr/local/share/splunk-cert-tools/
 
 # Ports Splunk Daemon, Network Input, HTTP Event Collector
 EXPOSE 8089/tcp 1514/tcp 8088/tcp

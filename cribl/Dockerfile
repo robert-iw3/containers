@@ -3,8 +3,8 @@
 # Cribl ships glibc-linked binaries, so the base must be glibc (not alpine).
 ARG repo="docker.io" \
     base_image="debian:trixie-slim" \
-    cribl_version="4.18.2" \
-    cribl_build="fd1f0d2f"
+    cribl_version="4.19.2" \
+    cribl_build="89cac507"
 
 FROM ${repo}/${base_image}
 

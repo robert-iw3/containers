@@ -1,0 +1,68 @@
+# The proven ePO contract, written in the connectors' own schema format.
+#
+# This file is part of the test, not just input to it. If the contract cannot
+# be expressed here, that is a finding about the schema format rather than a
+# problem with the fixture - so nothing below bends the contract to fit.
+#
+# Two things the format forces, both worth seeing:
+#
+#   schema_key/schema_value is a single equality test, so discriminating the
+#   feed needs one entry per value of `module` and there is no way to say
+#   "any other value" - an unmatched row simply finds no schema.
+#
+#   `time` names a column, and this contract's time columns are ISO 8601
+#   (2026-09-01T14:20:11.001Z). HEC requires epoch seconds. The format has
+#   nowhere to declare that a conversion is needed.
+
+schemas:
+  - name: epo_endpoint
+    schema_key: module
+    schema_value: endpoint
+    mappings:
+      cim:
+        time: detected
+        event_id: event_id
+        dest: dest
+        dest_ip: dest_ip
+        dest_port: dest_port
+        user: user
+        file_name: file_name
+        process: dest_process
+        src: src
+        src_ip: src_ip
+        src_user: src_user
+        url: src_url
+        signature: signature
+        category: threat_category
+        severity_id: severity_id
+        action: action
+        vendor_product: product
+        product_version: product_version
+        detection_method: detection_method
+        threat_type: threat_type
+        agent_guid: agent_guid
+        sourcetype: trellix:epo:events
+
+  - name: epo_dlp
+    schema_key: module
+    schema_value: dlp
+    mappings:
+      cim:
+        time: detected
+        event_id: event_id
+        dest: dest
+        dest_ip: dest_ip
+        user: user
+        file_name: file_name
+        signature: signature
+        # The DLP channel is detection_method (Removable Media, Web Post,
+        # Email, Cloud Sync, Network Share). threat_category carries the
+        # dotted classification, dlp.classification.pii. Charting one where
+        # the other belongs renders a plausible, wrong panel.
+        detection_method: detection_method
+        category: threat_category
+        severity_id: severity_id
+        action: action
+        vendor_product: product
+        agent_guid: agent_guid
+        sourcetype: trellix:epo:events

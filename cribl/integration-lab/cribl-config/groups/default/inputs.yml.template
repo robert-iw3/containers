@@ -1,0 +1,33 @@
+# Sources for the `default` worker group.
+#
+# This is a TEMPLATE. run-lab.sh renders it to inputs.yml, which is gitignored.
+# The rendered file is what the leader bind-mounts, and any change made through
+# the Cribl UI or API writes back through that mount — which is how this Source
+# once came to reference a certificate that was never generated, failing ENOENT
+# and binding no listener.
+#
+# The production transport is Splunk-to-Splunk; see s2s-wip/. This lab uses
+# tcpjson because the emitter is not a universal forwarder. The distinction
+# affects the transport only: the routes match on sourcetype, which arrives the
+# same way over either.
+
+inputs:
+  in_win_tcpjson:
+    type: tcpjson
+    disabled: false
+    host: 0.0.0.0
+    port: 10060
+    enableProxyHeader: false
+    # Mutual TLS. Keys are from TlsSettingsServerSideType in the image's own
+    # OpenAPI. A key outside that schema invalidates the whole file, and a path
+    # that does not exist fails ENOENT and binds no listener — which presents
+    # as "the Source is not in the group config".
+    tls:
+      disabled: false
+      certPath: /opt/cribl/certs/cribl-worker.crt
+      privKeyPath: /opt/cribl/certs/cribl-worker.key
+      caPath: /opt/cribl/certs/ca.crt
+      requestCert: true
+      rejectUnauthorized: true
+      commonNameRegex: '/^endpoint$/'
+      minVersion: TLSv1.2

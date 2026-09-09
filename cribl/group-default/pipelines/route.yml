@@ -1,0 +1,33 @@
+# Routes for the `default` worker group.
+#
+# A group with Sources and Destinations but no routes is not a working
+# configuration. Without a route nothing consumes the Source, and the worker
+# starts, registers, reports healthy and binds no listener - which reads
+# exactly like a network problem.
+#
+# Order matters and the catch-all must be last: a `true` filter placed above
+# a real route sends everything to devnull, and Cribl's own metrics look
+# perfect because devnull is a legitimate Destination that consumes
+# everything.
+
+id: default
+groups: {}
+comments: []
+routes:
+  - id: syslog_to_fs
+    name: syslog_to_fs
+    final: true
+    disabled: false
+    pipeline: passthru
+    output: out_fs
+    filter: "__inputId && __inputId.includes('in_syslog')"
+    description: the seeded syslog Source to the filesystem Destination
+
+  - id: default
+    name: default
+    final: true
+    disabled: false
+    pipeline: devnull
+    output: devnull
+    filter: "true"
+    description: everything else

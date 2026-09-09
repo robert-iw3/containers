@@ -1,4 +1,11 @@
 ---
+# Splunk Enterprise on its own, without the forwarder or the reverse proxy.
+# The full stack is ../docker-compose.yml.
+#
+#   SPLUNK_PASSWORD=... podman compose up -d
+#
+# Web SSL is set through ../conf/web.conf. A command: override replaces the
+# image's CMD of start-service, so splunkd never runs.
 
 volumes:
   opt-splunk-etc:
@@ -14,25 +21,26 @@ services:
     hostname: splunkenterprise
     environment:
       SPLUNK_START_ARGS: --accept-license
+      # The entrypoint refuses to start without it: every first-start
+      # configuration command authenticates with it.
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD}
       SPLUNK_ENABLE_LISTEN: 9997
       SPLUNK_ADD: "tcp 1514"
-      #SPLUNK_LICENSE_URI:
-      #SPLUNK_ROLE: {splunk_standalone, splunk_indexer, splunk_deployer, splunk_search_head}
-      #SPLUNK_STANDALONE_URL:
-      #SPLUNK_SEARCH_HEAD_URL:
-      #SPLUNK_INDEXER_URL:
-      #SPLUNK_DEPLOYER_URL:
-      #SPLUNK_CLUSTER_MASTER_URL:
-      #SPLUNK_SEARCH_HEAD_CAPTAIN_URL:
-    command: >
-      bash -c '
-      sed -i 's/enableSplunkWebSSL = false/enableSplunkWebSSL = true/g' /opt/splunk/etc/system/local/web.conf;
-      /opt/splunk/bin/splunk restart splunkd;
-      '
     volumes:
       - opt-splunk-etc:/opt/splunk/etc:Z
       - opt-splunk-var:/opt/splunk/var:Z
       - ./apps:/opt/splunk/etc/apps:Z
+      # The hardened configuration, rendered by conf/render.sh, and the
+      # certificates it references. STAGED paths: the entrypoint copies both
+      # into place owned by splunk before splunkd starts. Mounting either at
+      # its final path breaks it - over etc/system/local it hides the seeded
+      # passwords.conf, and over etc/auth/mycerts the keys arrive root-owned
+      # and 0600, so splunkd cannot read them.
+      #
+      #   ./conf/render.sh conf-rendered --server-name <host> \
+      #       --allowed-domains example.com
+      - ../conf-rendered:/staged/conf:ro,Z
+      - ../certs:/staged/certs:ro,Z
     ports:
       - "8000:8000"
       - "9997:9997"
@@ -42,3 +50,24 @@ services:
     networks: ['splunk']
     security_opt: ['no-new-privileges:true']
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 16000
+        hard: 16000
+    # An indexer claims memory until the operating system pushes back.
+    deploy:
+      resources:
+        limits:
+          cpus: "${SPLUNK_CPUS:-2}"
+          memory: ${SPLUNK_MEMORY:-4g}
+    healthcheck:
+      # curl is not in the Splunk image, and /services/server/info needs
+      # auth. `splunk status` needs neither.
+      test: ["CMD", "/opt/splunk/bin/splunk", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s

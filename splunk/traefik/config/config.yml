@@ -14,8 +14,17 @@ http:
   services:
     splunk:
       loadBalancer:
+        serversTransport: splunk-backend
         servers:
           - url: "https://splunkenterprise:8000"
+
+  # Splunk Web speaks TLS once conf/ is rendered and mounted, with a
+  # per-deployment certificate Traefik has no reason to trust. Replace
+  # insecureSkipVerify with `rootCAs: ["/secrets/ca.crt"]` once that CA is on
+  # the Traefik container; the hop is internal-network only either way.
+  serversTransports:
+    splunk-backend:
+      insecureSkipVerify: true
 
   middlewares:
     plugin-log4shell:

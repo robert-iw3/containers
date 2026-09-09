@@ -17,24 +17,24 @@ This guide provides instructions to deploy a Rust-based CSV connector for Splunk
 ```
 csv-connector/
 ├── src/
-│   ├── main.rs                    # Main entry point
-│   ├── handler.rs                # File event handling logic
-│   ├── schema.rs                 # Schema parsing logic
-│   ├── sender.rs                 # Splunk/Elasticsearch sender logic
-├── Cargo.toml                    # Rust dependencies and build settings
-├── deploy_csv_connectors.rs      # Unified deployment script
-├── deploy_config.yaml            # Configuration file
-├── schemas.yaml                  # Schema mappings
-├── Dockerfile                    # Dockerfile for connector
-├── docker-compose.yml            # Docker/Podman orchestration
-├── csv-splunk-deployment.yaml    # Kubernetes manifest for Splunk
+│   ├── main.rs                       # Main entry point
+│   ├── handler.rs                    # File event handling logic
+│   ├── schema.rs                     # Schema parsing logic
+│   ├── sender.rs                     # Splunk/Elasticsearch sender logic
+├── Cargo.toml                        # Rust dependencies and build settings
+├── deploy_csv_connectors.rs          # Unified deployment script
+├── deploy_config.yaml                # Configuration file
+├── schemas.yaml                      # Schema mappings
+├── Dockerfile                        # Dockerfile for connector
+├── docker-compose.yml                # Docker/Podman orchestration
+├── csv-splunk-deployment.yaml        # Kubernetes manifest for Splunk
 ├── csv-elasticsearch-deployment.yaml # Kubernetes manifest for Elasticsearch
-├── csv-pvc.yaml                 # Kubernetes PVC for logs
-├── deploy_csv_connectors.yml     # Ansible playbook
-├── README.md                    # This file
-├── csv_examples.md              # Example CSV inputs
-├── backup/                      # Backup directory
-│   └── <timestamp>/             # Timestamped backups
+├── csv-pvc.yaml                      # Kubernetes PVC for logs
+├── deploy_csv_connectors.yml         # Ansible playbook
+├── README.md                         # This file
+├── csv_examples.md                   # Example CSV inputs
+├── backup/                           # Backup directory
+│   └── <timestamp>/                  # Timestamped backups
 ```
 
 ## Deployment Steps

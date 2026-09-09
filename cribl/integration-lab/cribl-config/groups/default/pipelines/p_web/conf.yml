@@ -1,0 +1,37 @@
+# Web tier access logs.
+#
+# 4xx and 5xx are kept whole: they are the attack surface and the application
+# edge evidence.
+#
+# The previous rule dropped any successful request whose path ended in a static
+# asset extension. That is how a webshell is missed. A webshell is routinely
+# reached at a path that looks static - shell.php.jpg, a .png that accepts a
+# POST - and dropping on extension alone discards exactly the request that
+# proves it was used.
+#
+# Two narrower conditions instead:
+#   - the method must be GET. A POST to a static asset is anomalous by
+#     definition and is always kept.
+#   - the response must be a 2xx or 3xx cache-friendly asset served from a
+#     static path prefix, not merely a matching file extension.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"(?<http_method>[A-Z]+)\s(?<http_path>\S+)\sHTTP\/[\d.]+"\s(?<status>\d{3})/
+      iterations: 1
+
+  - id: drop
+    filter: "http_method == 'GET' && status && Number(status) < 400 && /^\\/(static|assets)\\//.test(http_path) && /\\.(js|css|svg|png|jpe?g|gif|ico|woff2?|map)(\\?|$)/.test(http_path)"
+    conf: {}
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_web'"

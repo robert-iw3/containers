@@ -57,14 +57,25 @@ spec:
     requests:
       storage: 10Gi
 ---
-# Secret for Splunk Password
+# Splunk admin password.
+#
+# Create it out of band rather than committing it here. A password in a
+# manifest is deployed by anyone who applies the file, and a placeholder that
+# happens to be valid gets deployed unchanged:
+#
+#   kubectl create secret generic splunk-secrets \
+#       --from-literal=splunk_password="$(openssl rand -base64 24)"
+#
+# This manifest declares the Secret so the Deployment's secretKeyRef resolves,
+# and leaves it empty so an unset password fails at deploy rather than
+# silently standing up a known-credential instance.
 apiVersion: v1
 kind: Secret
 metadata:
   name: splunk-secrets
 type: Opaque
-data:
-  splunk_password: c3BsdW5rMTIzIQ==  # Base64 encoded 'splunk123!' REPLACE WITH YOUR OWN
+stringData:
+  splunk_password: ""
 ---
 # Deployment for Splunk Enterprise
 apiVersion: apps/v1

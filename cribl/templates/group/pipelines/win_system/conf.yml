@@ -1,0 +1,24 @@
+# Windows System, Defender, AppLocker, Code Integrity, Terminal Services and
+# Windows Update.
+#
+# Not reduced. These channels are small and are the only evidence for a dozen
+# controls the Security channel does not touch - malicious code protection,
+# application control, nonlocal maintenance, patch installation, unexpected
+# shutdown. The only work here is extracting the EventID.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_WINDOWS__'"
+        - name: cribl_pipeline
+          value: "'win_system'"

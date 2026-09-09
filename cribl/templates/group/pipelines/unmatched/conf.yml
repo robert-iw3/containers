@@ -1,0 +1,15 @@
+# Anything no route claimed.
+#
+# Deliberately does no work. Its Destination is a file, not devnull: devnull is
+# a legitimate Destination that consumes everything, so a route filter that
+# never matches sends the whole stream there and Cribl's own metrics read
+# perfect - events in, events out, no errors - while nothing reaches Splunk.
+# A file that fills up is a visible bug.
+asyncFuncTimeout: 1000
+functions:
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: cribl_pipeline
+          value: "'unmatched'"

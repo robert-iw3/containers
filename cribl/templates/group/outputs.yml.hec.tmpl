@@ -1,0 +1,38 @@
+# Destinations, HEC shape.
+#
+# Key traps, all of which produce "URL must start with http or https" or a
+# silently disabled output:
+#   - `url` is SINGULAR. `urls` is read only when loadBalanced is true, so a
+#     Destination carrying `urls` with the default false has no URL at all.
+#   - `token` and `authType`, not `authToken`. `authToken` is a splunk_lb key.
+#   - `rejectUnauthorized` is TOP-LEVEL here and inside `tls` on splunk_lb.
+#     The two Destination types do not share a key set.
+#   - There is no `format` key.
+#   - https, always: Splunk ships HEC with enableSSL=1.
+#
+# ONE invalid output disables EVERY output in this file.
+outputs:
+  out_splunk:
+    type: splunk_hec
+    url: __CRIBL_HEC_URL__
+    authType: manual
+    token: __CRIBL_HEC_TOKEN__
+    rejectUnauthorized: __CRIBL_TLS_VERIFY__
+    # block, not drop: back-pressure has to reach the sender. Dropping here is
+    # silent data loss that looks like a quiet network.
+    onBackpressure: block
+    compress: true
+
+  # The unmatched capture. A file, never devnull - see pipelines/unmatched.
+  out_unmatched:
+    type: filesystem
+    destPath: /opt/cribl/state/unmatched
+    format: json
+    compress: none
+    maxFileSizeMB: 32
+    maxFileOpenTimeSec: 30
+    maxFileIdleTimeSec: 30
+    partitionExpr: "`${sourcetype}`"
+    # filesystem Destinations accept only block or drop for onBackpressure;
+    # `queue` is a splunk_lb and splunk_hec key only.
+    onBackpressure: drop

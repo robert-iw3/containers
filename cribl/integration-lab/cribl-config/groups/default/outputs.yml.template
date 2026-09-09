@@ -1,0 +1,58 @@
+# Destinations for the `default` worker group.
+#
+# This is a TEMPLATE. run-lab.sh copies it to outputs.yml, which is gitignored
+# because the leader mounts it and writes back through the mount.
+#
+# splunk_lb, not splunk_hec. Splunk-to-Splunk sends cooked, parsed data, so the
+# indexer skips line breaking, timestamp extraction and sourcetype assignment.
+# It also authenticates with a client certificate rather than a token, which is
+# one fewer secret to render, rotate and keep out of a tracked file, and it uses
+# the [splunktcp-ssl://9997] receiver with requireClientCert that the hardened
+# Splunk configuration already deploys.
+#
+# The cost of cooked data: index-time transforms on the indexer do not run on
+# it. A transforms.conf rule setting _MetaData:Index does nothing, silently,
+# which is why every pipeline sets the index itself.
+#
+# Key shapes differ from splunk_hec and are not interchangeable: `hosts` not
+# `url`, `authToken` not `token`, `rejectUnauthorized` inside `tls` rather than
+# top level, and `compress` is an enum of disabled|auto|always, not a boolean.
+# One invalid key or value disables every Destination in this file.
+outputs:
+  out_splunk:
+    type: splunk_lb
+    hosts:
+      # weight is not optional in practice. The schema marks only host and port
+      # required, but a host with no weight is given zero weight by the load
+      # balancer and logged as "skipping connect ... will not receive traffic" -
+      # at info level, so the Destination looks healthy while it sends nothing
+      # and back-pressure stops the senders.
+      - host: splunk
+        port: 9997
+        weight: 1
+    nestedFields: none
+    maxS2Sversion: v4
+    compress: auto
+    onBackpressure: block
+    tls:
+      disabled: false
+      certPath: /opt/cribl/certs/cribl-worker.crt
+      privKeyPath: /opt/cribl/certs/cribl-worker.key
+      caPath: /opt/cribl/certs/ca.crt
+      rejectUnauthorized: true
+      servername: splunk
+      minVersion: TLSv1.2
+
+  # The unmatched capture writes to a file, not devnull. devnull is a legitimate
+  # Destination that consumes everything, so a route filter that never matches
+  # sends the whole stream there and Cribl's metrics read normally - events in,
+  # events out, no errors - while nothing reaches Splunk.
+  out_unmatched:
+    type: filesystem
+    destPath: /opt/cribl/state/unmatched
+    format: json
+    compress: none
+    maxFileSizeMB: 32
+    maxFileOpenTimeSec: 5
+    maxFileIdleTimeSec: 3
+    partitionExpr: "`${sourcetype}`"

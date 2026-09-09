@@ -1,37 +1,69 @@
 ---
+# Parquet connector, to Splunk HEC and to Elasticsearch.
+#
+#   cd ../..            # the connectors root: the image needs core/
+#   podman compose -f parquet/python/docker-compose.yml up -d parquet-splunk
+#
+# STATE_PATH is a file inside /var/lib/connector. The volume mounts the
+# DIRECTORY: mounting it at the file path creates a directory where the
+# connector expects to write a file, and the cursor is then never persisted.
+
 services:
+
   parquet-splunk:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The connectors root, because the image copies core/ as well.
+      context: ../..
+      dockerfile: parquet/python/Dockerfile
     environment:
-      - SCHEMAS_FILE=/app/schemas.yaml
-      - STATE_PATH=/app/state.db
-      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
-      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
-      - BATCH_SIZE=${BATCH_SIZE:-100}
-      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
-      - WORKER_COUNT=${WORKER_COUNT:-4}
-      - POLL_INTERVAL=${POLL_INTERVAL:-60}
-      - DATA_DIR=${DATA_DIR:-/app/data}
-      - INCREMENTAL_ENABLED=${INCREMENTAL_ENABLED:-false}
-      - MAX_FILES_CONCURRENT=${MAX_FILES_CONCURRENT:-5}
-      - MAX_MEMORY_MB=${MAX_MEMORY_MB:-1024}
-      - METRICS_PORT=${METRICS_PORT:-9000}
-      - SQLCIPHER_KEY=${SQLCIPHER_KEY:-}
-      - ENABLE_SPLUNK=true
-      - PYTHON_LOGGING_LEVEL=INFO
-    ports:
-      - "${METRICS_PORT:-9000}:${METRICS_PORT:-9000}"
+      PARQUET_LOG_DIR: /var/log/parquet_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "true"
+      SPLUNK_HEC_URL: ${CONNECTOR_HEC_URL:?set CONNECTOR_HEC_URL}
+      SPLUNK_TOKEN: ${CONNECTOR_HEC_TOKEN:?set CONNECTOR_HEC_TOKEN}
+      SPLUNK_INDEX: ${CONNECTOR_INDEX:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-30}
     volumes:
-      - sql-state:/app/state.db:Z
-      - data:/app/data
+      - parquet-data:/var/log/parquet_data:Z
+      - parquet-state:/var/lib/connector:Z
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: '${MAX_MEMORY_MB:-1024}M'
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
     restart: unless-stopped
+
+  parquet-elasticsearch:
+    build:
+      context: ../..
+      dockerfile: parquet/python/Dockerfile
+    environment:
+      PARQUET_LOG_DIR: /var/log/parquet_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "false"
+      ES_HOST: ${CONNECTOR_ES_HOST:?set CONNECTOR_ES_HOST}
+      ES_INDEX: ${CONNECTOR_ES_INDEX:-parquet-logs}
+      ES_USER: ${CONNECTOR_ES_USER:-}
+      ES_PASSWORD: ${CONNECTOR_ES_PASSWORD:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-30}
+    volumes:
+      - parquet-data:/var/log/parquet_data:Z
+      # A separate cursor store: the two sinks track their own progress.
+      - parquet-es-state:/var/lib/connector:Z
+    deploy:
+      resources:
+        limits:
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
+    restart: unless-stopped
+
 volumes:
-  sql-state:
-  data:
+  parquet-data:
+  parquet-state:
+  parquet-es-state:

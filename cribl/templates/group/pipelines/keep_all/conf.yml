@@ -1,0 +1,17 @@
+# Sources that are not reduced.
+#
+# Linux authentication, cloud identity sign-ins and anything else that is
+# almost entirely control evidence and small. This pipeline exists to make the
+# point explicit rather than to do work: the correct reduction for some feeds is
+# none. A pipeline that trims every source equally is tuned for a percentage
+# rather than for what the data is worth.
+asyncFuncTimeout: 1000
+functions:
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_IDENTITY__'"
+        - name: cribl_pipeline
+          value: "'keep_all'"

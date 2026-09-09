@@ -1,0 +1,23 @@
+# Destinations for the `default` worker group.
+#
+# Shape copied from demo/config/outputs.yml, which is the one in this
+# repository proven to load. Adding a `default:` entry here makes the group's
+# config helper refuse to start, and every Sources and Destinations API call
+# then answers "the settings are invalid" while the leader still reports
+# healthy - set the default destination in the UI instead.
+#
+# A Splunk destination is a `splunk` (S2S) or `splunk_hec` type with a host
+# and token, added here or in the UI. There is no environment variable for
+# it: the CRIBL_SPLUNK / CRIBL_ELASTIC / CRIBL_HEC variables this stack used
+# to set appear nowhere in Cribl's documentation and configured nothing.
+
+outputs:
+  out_fs:
+    type: filesystem
+    destPath: /opt/cribl/state/output
+    format: json
+    compress: none
+    maxFileSizeMB: 32
+    maxFileOpenTimeSec: 10
+    maxFileIdleTimeSec: 5
+    partitionExpr: "`${host}`"

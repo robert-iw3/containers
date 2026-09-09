@@ -1,0 +1,31 @@
+# Cisco ASA, including AnyConnect VPN.
+#
+# One syslog line per event with a %ASA-level-id header; the ids are Cisco's
+# and do not vary by site. VPN session events (113019, 113039, 722051) and
+# denies (106023) are kept whole - remote access monitoring rests on them.
+# 302013/302014 connection build and teardown are the bulk and duplicate what
+# the firewall and netflow already record.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /%ASA-\d-(?<asa_id>\d{6}):/
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "asa_id == '302013' || asa_id == '302014' || asa_id == '302015' || asa_id == '302016'"
+          rate: __RATE_ASA_SESSIONS__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_NETWORK__'"
+        - name: cribl_pipeline
+          value: "'cisco_asa'"

@@ -1,0 +1,53 @@
+# Windows DNS Server Analytical channel, from the domain controllers.
+#
+# Microsoft-Windows-DNS-Server/Analytical is ETW and renders as Windows XML, so
+# a record is around a kilobyte rather than the ~135 bytes of the legacy debug
+# log. That size times every name every machine resolves makes DNS one of the
+# two largest feeds in most environments and the best reduction target, because
+# the detections that read DNS read the names nobody else resolved.
+#
+# An ALLOWLIST, not a threshold. A volume-based sampler removes exactly the
+# rare name a hunt is looking for. DNS_ALLOWLIST_REGEX in site.env is the one
+# thing here that is genuinely site-specific.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /Name='QNAME'>(?<qname>[^<]+)</
+      iterations: 1
+
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /Name='EventName'>(?<dns_event>[^<]+)</
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: 'qname && /__DNS_ALLOWLIST_REGEX__/.test(qname)'
+          rate: __RATE_DNS_COMMON_NAMES__
+
+  # PacketData is the raw wire bytes as hex. Nothing searches it and it is the
+  # largest single field in the record.
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /(<Data Name='PacketData'>)0x[0-9A-F]+(<\/Data>)/g
+          replaceExpr: "`${g1}${g2}`"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_WINDOWS__'"
+        - name: cribl_pipeline
+          value: "'win_dns'"

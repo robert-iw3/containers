@@ -1,0 +1,149 @@
+# Routes, one per source family, matched on the sourcetype the sender claims.
+#
+# Every route is final: an event takes the first route that claims it. Order is
+# specific sourcetypes first, never-reduce sources next, catch-all last.
+#
+# If you send over Splunk S2S rather than tcpjson, the forwarder's sourcetype
+# arrives as `sourcetype` here exactly as inputs.conf set it, so these filters
+# work unchanged - which is why a Windows estate needs no new agent.
+id: default
+groups: {}
+comments: []
+routes:
+  - id: r_win_security
+    name: r_win_security
+    final: true
+    disabled: false
+    pipeline: win_security
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('WinEventLog:Security') >= 0"
+    description: Windows Security channel
+
+  - id: r_win_system
+    name: r_win_system
+    final: true
+    disabled: false
+    pipeline: win_system
+    output: out_splunk
+    filter: "sourcetype && (sourcetype.indexOf('WinEventLog:System') >= 0 || sourcetype.indexOf('Defender') >= 0 || sourcetype.indexOf('AppLocker') >= 0 || sourcetype.indexOf('CodeIntegrity') >= 0 || sourcetype.indexOf('TerminalServices') >= 0)"
+    description: Windows System, Defender, AppLocker, Code Integrity, Terminal Services
+
+  - id: r_sysmon
+    name: r_sysmon
+    final: true
+    disabled: false
+    pipeline: sysmon
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('Sysmon') >= 0"
+    description: Sysmon operational channel
+
+  - id: r_win_dns
+    name: r_win_dns
+    final: true
+    disabled: false
+    pipeline: win_dns
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('DNS-Server') >= 0"
+    description: Windows DNS analytical channel from the domain controllers
+
+  - id: r_win_dhcp
+    name: r_win_dhcp
+    final: true
+    disabled: false
+    pipeline: win_dhcp
+    output: out_splunk
+    filter: "sourcetype == 'DhcpSrvLog'"
+    description: Windows DHCP server audit log
+
+  - id: r_pan_firewall
+    name: r_pan_firewall
+    final: true
+    disabled: false
+    pipeline: pan_firewall
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('pan:') === 0"
+    description: Palo Alto traffic and threat
+
+  - id: r_cisco_asa
+    name: r_cisco_asa
+    final: true
+    disabled: false
+    pipeline: cisco_asa
+    output: out_splunk
+    filter: "sourcetype == 'cisco:asa'"
+    description: Cisco ASA and AnyConnect VPN
+
+  - id: r_cisco_ise
+    name: r_cisco_ise
+    final: true
+    disabled: false
+    pipeline: cisco_ise
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('cisco:ise') === 0"
+    description: Cisco ISE authentication
+
+  - id: r_suricata
+    name: r_suricata
+    final: true
+    disabled: false
+    pipeline: suricata
+    output: out_splunk
+    filter: "sourcetype == 'suricata'"
+    description: Suricata EVE
+
+  - id: r_netflow
+    name: r_netflow
+    final: true
+    disabled: false
+    pipeline: netflow
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('netflow') >= 0"
+    description: NetFlow and IPFIX
+
+  - id: r_proxy
+    name: r_proxy
+    final: true
+    disabled: false
+    pipeline: proxy
+    output: out_splunk
+    filter: "sourcetype && (sourcetype.indexOf('squid') === 0 || sourcetype.indexOf('proxy') >= 0)"
+    description: web proxy
+
+  - id: r_web_access
+    name: r_web_access
+    final: true
+    disabled: false
+    pipeline: web_access
+    output: out_splunk
+    filter: "sourcetype == 'access_combined' || sourcetype == 'ms:iis:auto'"
+    description: web tier access logs
+
+  - id: r_kube
+    name: r_kube
+    final: true
+    disabled: false
+    pipeline: kube_stdout
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('kube:') === 0"
+    description: container stdout
+
+  # Not reduced, deliberately. Add your own identity and audit sourcetypes here
+  # rather than letting them fall through to the catch-all.
+  - id: r_keep_all
+    name: r_keep_all
+    final: true
+    disabled: false
+    pipeline: keep_all
+    output: out_splunk
+    filter: "sourcetype == 'linux_secure' || sourcetype == 'azure:aad:signin' || sourcetype == 'o365:management:activity'"
+    description: sources that are control evidence throughout
+
+  # A full file here is a bug, not a fallback. See pipelines/unmatched.
+  - id: unmatched
+    name: unmatched
+    final: true
+    disabled: false
+    pipeline: unmatched
+    output: out_unmatched
+    filter: "true"
+    description: anything no route above claimed

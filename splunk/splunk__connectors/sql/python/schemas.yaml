@@ -1,13 +1,26 @@
+# SQL schemas. A schema is selected by the table it names, so one table gets
+# one schema and every row in it is mapped the same way.
+#
+# Only tables named here are polled. Discovering every table in the database
+# and forwarding it is not the same thing: it ships whatever happens to be
+# there, unmapped, including tables that are not events at all.
+#
+# id_field is the watermark: the poll asks for rows greater than the last one
+# delivered. Prefer a monotonic id over a timestamp - two rows sharing a
+# timestamp make a timestamp watermark either skip one or resend both. A
+# schema naming a table without either is refused at startup, because the
+# alternative is re-sending the whole table every cycle.
+
 schemas:
   - name: network_events
     table_name: network_events_table
-    timestamp_field: timestamp
     id_field: id
+    timestamp_field: timestamp
     mappings:
       cim:
         time: timestamp
         event_id: id
-        source: source_ip
+        src: source_ip
         src_port: source_port
         dest: dest_ip
         dest_port: dest_port
@@ -15,15 +28,18 @@ schemas:
         bytes_in: bytes_received
         bytes_out: bytes_sent
         action: action
-        sourcetype: sql_network
+        sourcetype: sql:network
+
   - name: authentication_events
     table_name: auth_events
+    id_field: id
     timestamp_field: login_time
     mappings:
       cim:
         time: login_time
+        event_id: id
         user: username
         action: outcome
         src: source_ip
         dest: dest_host
-        sourcetype: sql_auth
+        sourcetype: sql:auth

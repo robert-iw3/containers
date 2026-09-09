@@ -1,0 +1,29 @@
+# Sysmon operational channel. Nothing is sampled.
+#
+# EventID 3 is the largest part of this channel and it was previously sampled
+# 1:5. That is withdrawn. Event 3 is the only full-rate record that ties a
+# network connection to the process and user that made it, and the Security
+# channel's 5156 - which carries the same association - is dropped downstream.
+# Sampling both leaves no host-level process-to-network attribution at all,
+# which breaks C2 beaconing attribution and lateral movement reconstruction.
+#
+# Sampling is not degradation here. Beaconing detection reads intervals between
+# connections, so a 1-in-5 sample does not give a coarser answer, it gives a
+# wrong one.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_sysmon'"

@@ -1,16 +1,36 @@
 # syntax=docker/dockerfile:1
-FROM docker.io/rust:1.80-alpine AS builder
-WORKDIR /usr/src/csv-connector
-COPY . .
-RUN apk add --no-cache musl-dev
+# CSV connector, Rust build.
+#
+# Two stages so the runtime image carries the binary and not the compiler.
+#
+# NOTE: this crate does not currently compile. See ../../README.md for the
+# error; the image cannot be built until the source is fixed.
+
+FROM docker.io/library/rust:1.90-alpine AS builder
+
+WORKDIR /src
+# reqwest pulls openssl-sys, whose build script needs the headers and
+# pkgconfig; musl-dev alone fails at the build script.
+RUN apk add --no-cache musl-dev openssl-dev pkgconfig
+COPY Cargo.toml ./
+COPY src/ ./src/
 RUN cargo build --release
 
-FROM docker.io/alpine:3.23
+FROM docker.io/library/alpine:3.23
+
 LABEL org.opencontainers.image.name='CSV-Connector' \
-      org.opencontainers.image.description='Connector for forwarding CSV logs to Splunk and Elasticsearch' \
+      org.opencontainers.image.description='Forwards CSV logs to Splunk and Elasticsearch' \
       org.opencontainers.image.maintainer='RW'
-RUN apk add --no-cache libgcc
-COPY --from=builder /usr/src/csv-connector/target/release/csv-connector /app/csv-connector
-COPY schemas.yaml /app/schemas.yaml
+
+# ca-certificates is not optional: a TLS client with no trust store cannot
+# verify any certificate, and the failure reads as a connection error.
+RUN apk add --no-cache libgcc ca-certificates
+
 WORKDIR /app
+COPY --from=builder /src/target/release/csv-connector /app/csv-connector
+COPY schemas.yaml /app/schemas.yaml
+
+RUN adduser -D -H -u 10001 connector
+USER connector
+
 ENTRYPOINT ["/app/csv-connector"]

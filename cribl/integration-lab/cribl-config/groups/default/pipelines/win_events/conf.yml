@@ -1,0 +1,88 @@
+# Windows Event Log pipeline.
+#
+# Order matters: each function sees the previous one's output. Fields are
+# pulled off the raw XML before anything filters on them, noise is dropped
+# before the expensive functions run, and redaction happens before the event
+# can reach a Destination.
+asyncFuncTimeout: 1000
+functions:
+  # 1. Pull the fields every later step keys off. regex_extract rather than an
+  #    XML parser: it costs less per event and the three fields below are all
+  #    the routing and dropping needs.
+  - id: regex_extract
+    disabled: false
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: regex_extract
+    disabled: false
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<Computer>(?<Computer>[^<]+)<\/Computer>/
+      iterations: 1
+
+  - id: regex_extract
+    disabled: false
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<Channel>(?<Channel>[^<]+)<\/Channel>/
+      iterations: 1
+
+  - id: regex_extract
+    disabled: false
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventRecordID>(?<EventRecordID>\d+)<\/EventRecordID>/
+      iterations: 1
+
+  # 2. Drop the Filtering Platform connection events. On a real Security
+  #    channel 5156 and 5158 are the majority of volume and almost never the
+  #    reason anyone searches. Dropping them first means every function below
+  #    runs on a third of the traffic.
+  #
+  #    1102 (audit log cleared) is explicitly NOT droppable: it is rare, so
+  #    any volume-based sampling loses it, and it is the first thing an
+  #    attacker generates.
+  - id: drop
+    disabled: false
+    filter: "EventID == '5156' || EventID == '5158'"
+    conf: {}
+
+  # 3. Encoded PowerShell is ROUTED, not redacted.
+  #
+  #    The previous rule masked the base64 payload in place. That destroys the
+  #    one artifact an analyst decodes first when this alert fires, and it saved
+  #    7 bytes per event - it was never a volume control.
+  #
+  #    Instead the event is tagged here and sent whole to a restricted index by
+  #    route.yml. The exposure control is index access and retention, not
+  #    deletion: the payload can contain credentials and connection strings
+  #    because legitimate automation uses -EncodedCommand too, and that is an
+  #    argument for restricting who can read it, not for throwing it away.
+  - id: eval
+    disabled: false
+    filter: "/-Enc(odedCommand)?\\s+[A-Za-z0-9+\\/=]{16,}/.test(_raw)"
+    conf:
+      add:
+        - name: encoded_command
+          value: "true"
+
+  - id: eval
+    disabled: false
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "encoded_command ? 'enterprise_restricted' : 'enterprise'"
+        - name: sourcetype
+          value: "sourcetype"
+        - name: cribl_pipeline
+          value: "'win_events'"
+        - name: EventID
+          value: "EventID ? Number(EventID) : undefined"

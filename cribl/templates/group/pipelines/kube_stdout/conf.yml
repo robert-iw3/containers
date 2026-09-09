@@ -1,0 +1,30 @@
+# Container stdout.
+#
+# WARN and ERROR are kept whole. INFO and DEBUG are application telemetry that
+# reached the SIEM because forwarding everything was easier than deciding.
+#
+# Dropping them is the honest default for a security index, but read this
+# first: if an application team depends on those lines, route them to a log
+# store that is not licensed per gigabyte rather than deleting them. The drop
+# here assumes you have had that conversation.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"(?:level|severity|log\.level)":\s*"(?<level>[A-Za-z]+)"/
+      iterations: 1
+
+  - id: drop
+    filter: "level && /^(INFO|DEBUG|TRACE)$/i.test(level)"
+    conf: {}
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_APP__'"
+        - name: cribl_pipeline
+          value: "'kube_stdout'"

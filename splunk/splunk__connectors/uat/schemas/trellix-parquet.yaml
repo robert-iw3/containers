@@ -1,0 +1,32 @@
+# The ePO contract as a Parquet file.
+#
+# A Parquet schema is selected by the file it names. Reading advances a row
+# group at a time, so a file larger than memory is still readable and the
+# cursor is the next group to read.
+#
+# No watermark column: the cursor is positional. A file rewritten in place is
+# detected by mtime and size together, which catches a rewrite that keeps the
+# same row-group count.
+
+schemas:
+  - name: epo_events
+    file_name: epo_events.parquet
+    timestamp_field: detected
+    mappings:
+      cim:
+        time: detected
+        event_id: event_id
+        dest: dest
+        dest_ip: dest_ip
+        dest_port: dest_port
+        user: user
+        file_name: file_name
+        signature: signature
+        category: threat_category
+        detection_method: detection_method
+        threat_type: threat_type
+        severity_id: severity_id
+        action: action
+        vendor_product: product
+        agent_guid: agent_guid
+        sourcetype: trellix:epo:events

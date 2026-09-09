@@ -1,3 +1,11 @@
+# Parquet schemas. A schema is selected by the file it names.
+#
+# Reading advances one row group at a time, so a file larger than memory is
+# still readable and the cursor is the next group to read. There is no
+# watermark column: the cursor is positional, and a file rewritten in place is
+# detected by mtime and size together, which catches a rewrite that keeps the
+# same row-group count.
+
 schemas:
   - name: network_events
     file_name: network_events.parquet
@@ -6,7 +14,7 @@ schemas:
       cim:
         time: timestamp
         event_id: id
-        source: source_ip
+        src: source_ip
         src_port: source_port
         dest: dest_ip
         dest_port: dest_port
@@ -14,15 +22,17 @@ schemas:
         bytes_in: bytes_received
         bytes_out: bytes_sent
         action: action
-        sourcetype: parquet_network
+        sourcetype: parquet:network
+
   - name: authentication_events
     file_name: auth_events.parquet
     timestamp_field: login_time
     mappings:
       cim:
         time: login_time
+        event_id: id
         user: username
         action: outcome
         src: source_ip
         dest: dest_host
-        sourcetype: parquet_auth
+        sourcetype: parquet:auth

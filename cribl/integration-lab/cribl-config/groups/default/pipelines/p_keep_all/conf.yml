@@ -1,0 +1,16 @@
+# Sources that are not reduced.
+#
+# Linux authentication and Entra sign-ins are almost entirely control evidence
+# and are small. They are here to make the point that the correct reduction for
+# some feeds is none: a pipeline that trims every source equally is tuned for a
+# percentage rather than for what the data is worth.
+asyncFuncTimeout: 1000
+functions:
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_keep_all'"

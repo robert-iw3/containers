@@ -77,10 +77,18 @@ def generate_ca_cert(ca_key):
             x509.BasicConstraints(ca=True, path_length=None), critical=True
         )
         .add_extension(
+            # KeyUsage defaults nothing: all nine flags are required, and a
+            # partial call raises TypeError rather than assuming False.
             x509.KeyUsage(
                 digital_signature=True,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
                 key_cert_sign=True,
                 crl_sign=True,
+                encipher_only=False,
+                decipher_only=False,
             ),
             critical=True,
         )
@@ -133,8 +141,14 @@ def generate_server_cert(csr, ca_key, ca_cert):
         .add_extension(
             x509.KeyUsage(
                 digital_signature=True,
+                content_commitment=False,
                 key_encipherment=True,
                 data_encipherment=True,
+                key_agreement=False,
+                key_cert_sign=False,
+                crl_sign=False,
+                encipher_only=False,
+                decipher_only=False,
             ),
             critical=True,
         )

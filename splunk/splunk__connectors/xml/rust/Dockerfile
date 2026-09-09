@@ -1,20 +1,37 @@
 # syntax=docker/dockerfile:1
-# xml-connector: Sends XML logs to Splunk and/or Elasticsearch
+# XML connector, Rust build.
+#
+# Two stages so the runtime image carries the binary and not the compiler.
+#
+# NOTE: this crate is unbuilt and untested. Its sibling csv/rust fails to
+# compile on a json! macro misuse; expect the same class here until proved
+# otherwise with cargo build --release.
 
-ARG repo="docker.io"
-ARG base_image="rust:1.80-alpine"
-ARG image_hash="f1a87fd82b7f2a2b9a7e6a07a5b3e99a1d0b8b6c7e4a0c4f7e8b2c1d9f3a5b6"
+FROM docker.io/library/rust:1.90-alpine AS builder
 
-FROM ${repo}/${base_image}
+WORKDIR /src
+# reqwest pulls openssl-sys, whose build script needs the headers and
+# pkgconfig; musl-dev alone fails at the build script.
+RUN apk add --no-cache musl-dev openssl-dev pkgconfig
+COPY Cargo.toml ./
+COPY src/ ./src/
+RUN cargo build --release
+
+FROM docker.io/library/alpine:3.23
 
 LABEL org.opencontainers.image.name='XML-Connector' \
-    org.opencontainers.image.description='Connector for forwarding XML logs to Splunk and Elasticsearch' \
-    org.opencontainers.image.maintainer='RW'
+      org.opencontainers.image.description='Forwards XML logs to Splunk and Elasticsearch' \
+      org.opencontainers.image.maintainer='RW'
 
-RUN apk add --no-cache musl-dev
-COPY . /app
+# ca-certificates is not optional: a TLS client with no trust store cannot
+# verify any certificate, and the failure reads as a connection error.
+RUN apk add --no-cache libgcc ca-certificates
+
 WORKDIR /app
-RUN cargo build --release
+COPY --from=builder /src/target/release/xml-connector /app/xml-connector
 COPY schemas.yaml /app/schemas.yaml
 
-ENTRYPOINT ["/app/target/release/xml-connector"]
+RUN adduser -D -H -u 10001 connector
+USER connector
+
+ENTRYPOINT ["/app/xml-connector"]

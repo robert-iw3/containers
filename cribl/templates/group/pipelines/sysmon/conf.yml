@@ -1,0 +1,30 @@
+# Sysmon operational channel.
+#
+# EventID 3 (network connection) is more than half the channel and overlaps
+# what the firewall already records, so it is sampled. Process creation (1),
+# file creation (11) and DNS query (22) are kept whole - they are what Sysmon
+# is deployed for and what detections are written against.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "EventID == '3'"
+          rate: __RATE_SYSMON_NETCONN__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_WINDOWS__'"
+        - name: cribl_pipeline
+          value: "'sysmon'"

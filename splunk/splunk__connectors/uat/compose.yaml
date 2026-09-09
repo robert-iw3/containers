@@ -1,0 +1,100 @@
+# Test rig for the Splunk connectors.
+#
+#   ./run-uat.sh          the entry point - builds, brings these up, asserts
+#
+# Every service carries a CPU and memory limit. A connector under test spawns
+# worker processes off os.cpu_count(), so an unlimited container here spawns
+# one per host core and a runaway loop takes the workstation with it.
+# deploy.resources is Swarm syntax that some compose providers drop in silence,
+# so run-uat.sh reads the limit back off the created container and fails when
+# it is zero. A limit that did not land is worse than no limit written at all.
+#
+# mock-hec is the oracle: it enforces the rules a real HEC enforces and is
+# itself proved by selftest_hec.py before any connector result is believed.
+#
+# Every ${...} default is spelled UAT_* rather than reusing the name of the
+# variable it sets. podman-compose mis-resolves KEY: ${KEY:-default} - the
+# container ends up with an empty value instead of the default.
+#
+# No depends_on: the podman-compose dependency engine recreates services and
+# rewrites their environment as a side effect. run-uat.sh starts these in
+# order and waits on readiness itself.
+
+services:
+
+  mock-hec:
+    image: ${UAT_IMAGE:-localhost/connector-uat:1}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connector-uat-hec
+    hostname: mock-hec
+    command: ["-c", "python3 /uat/mock_hec.py"]
+    environment:
+      HEC_TOKEN: ${UAT_HEC_TOKEN:-uat-token}
+      HEC_PORT: "8088"
+      HEC_EVENTS: /work/hec-events.jsonl
+    volumes:
+      - ./:/uat:ro,z
+      # The source tree, so the core unit tests run in this container rather
+      # than needing the connector service up.
+      - ../:/src:ro,z
+      - ./work:/work:z
+    networks: [connector-uat]
+    deploy:
+      resources:
+        limits:
+          cpus: "${UAT_HEC_CPUS:-0.5}"
+          memory: ${UAT_HEC_MEMORY:-256m}
+    restart: "no"
+
+  # The connector under test. run-uat.sh sets UAT_CONNECTOR and the schema file
+  # per case and recreates this service; it holds no per-format configuration.
+  connector:
+    image: ${UAT_IMAGE:-localhost/connector-uat:1}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connector-uat-subject
+    hostname: connector
+    command: ["-c", "python3 ${UAT_CONNECTOR:-/src/csv/python/csv_splunk_connector.py}"]
+    environment:
+      # Watched directories, one per format, all pointing at the same staging
+      # area so a single fixture drop reaches whichever connector is running.
+      CSV_LOG_DIR: /work/drop
+      JSON_LOG_DIR: /work/drop
+      XML_LOG_DIR: /work/drop
+      SCHEMAS_FILE: ${UAT_SCHEMAS_FILE:-/src/csv/python/schemas.yaml}
+      # Polled sources. The SQLite fixture is a file under /uat/fixtures, so
+      # neither the SQL nor the Parquet case needs a server.
+      DB_TYPE: ${UAT_DB_TYPE:-sqlite}
+      DB_CONN_STR: ${UAT_DB_CONN_STR:-}
+      PARQUET_LOG_DIR: ${UAT_PARQUET_DIR:-/work/drop}
+      # Offsets under /work so a case can inspect them and restart the
+      # connector to prove that a resumed read does not re-send or skip.
+      STATE_PATH: /work/state/offsets.json
+      SPLUNK_HEC_URL: http://mock-hec:8088/services/collector/event
+      SPLUNK_TOKEN: ${UAT_HEC_TOKEN:-uat-token}
+      SCAN_INTERVAL: "1"
+      STATUS_INTERVAL: "5"
+      BATCH_SIZE: ${UAT_BATCH_SIZE:-100}
+      BUFFER_TIMEOUT: ${UAT_BUFFER_TIMEOUT:-2.0}
+      WORKER_COUNT: ${UAT_WORKER_COUNT:-2}
+      CSV_DELIMITER: ${UAT_CSV_DELIMITER:-,}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      # The connector sources, read-only: the rig tests what is committed.
+      - ../:/src:ro,z
+      - ./:/uat:ro,z
+      - ./work:/work:z
+    networks: [connector-uat]
+    deploy:
+      resources:
+        limits:
+          cpus: "${UAT_CONNECTOR_CPUS:-1}"
+          memory: ${UAT_CONNECTOR_MEMORY:-512m}
+    restart: "no"
+
+networks:
+  connector-uat:
+    name: connector-uat

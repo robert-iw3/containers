@@ -83,7 +83,7 @@ chmod 600 "$SPLUNK_SYSTEM/web.conf"
 cd "../"
 tar xzf "100_splunkcloud.tar.gz" -C "$SPLUNK_APPS"
 
-# optional: customise login background
+# optional: customize login background
 # see splunk/web.conf
 APPSERVER="$SPLUNK_APPS/search/appserver/static"
 mkdir "$APPSERVER/customfavicon"

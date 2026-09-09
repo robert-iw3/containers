@@ -14,11 +14,11 @@ LABEL \
     org.opencontainers.image.url='https://www.splunk.com/' \
     org.opencontainers.image.licenses='https://www.splunk.com/en_us/about-splunk/contact-us.html' \
     org.opencontainers.image.vendor='splunk> | Cisco Systems' \
-    org.opencontainers.image.schema-version='10.0.1'
+    org.opencontainers.image.schema-version='10.4.2'
 
 ENV SPLUNK_PRODUCT splunk
-ENV SPLUNK_VERSION 10.0.1
-ENV SPLUNK_BUILD c486717c322b
+ENV SPLUNK_VERSION 10.4.2
+ENV SPLUNK_BUILD 33c3bf42cd73
 ENV SPLUNK_FILENAME splunk-${SPLUNK_VERSION}-${SPLUNK_BUILD}-linux-amd64.tgz
 
 ENV SPLUNK_HOME /opt/splunk

@@ -1,48 +1,72 @@
 ---
+# CSV connector, to Splunk HEC and to Elasticsearch.
+#
+#   cd ../..            # the connectors root: the image needs core/
+#   podman compose -f csv/python/docker-compose.yml up -d csv-splunk
+#
+# Both services run the same image and differ only in ENABLE_SPLUNK. Neither
+# has a default token or host: a connector pointed at a placeholder reports
+# send failures forever rather than saying it is unconfigured.
+
 services:
+
   csv-splunk:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The connectors root, because the image copies core/ as well.
+      context: ../..
+      dockerfile: csv/python/Dockerfile
     environment:
-      - CSV_LOG_DIR=/var/log/csv_data
-      - SCHEMAS_FILE=/app/schemas.yaml
-      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://your-splunk-host:8088/services/collector/event}
-      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-your-splunk-hec-token}
-      - BATCH_SIZE=${BATCH_SIZE:-100}
-      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
-      - WORKER_COUNT=${WORKER_COUNT:-4}
-      - ENABLE_SPLUNK=true
-      - CSV_DELIMITER=${CSV_DELIMITER:-,}
+      CSV_LOG_DIR: /var/log/csv_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "true"
+      SPLUNK_HEC_URL: ${CONNECTOR_HEC_URL:?set CONNECTOR_HEC_URL}
+      SPLUNK_TOKEN: ${CONNECTOR_HEC_TOKEN:?set CONNECTOR_HEC_TOKEN}
+      SPLUNK_INDEX: ${CONNECTOR_INDEX:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-5}
+      CSV_DELIMITER: ${CONNECTOR_CSV_DELIMITER:-,}
     volumes:
       - csv-logs:/var/log/csv_data:Z
+      # Offsets survive a restart. Without this volume every file is re-sent.
+      - csv-state:/var/lib/connector:Z
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: '1G'
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
     restart: unless-stopped
+
   csv-elasticsearch:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: csv/python/Dockerfile
     environment:
-      - CSV_LOG_DIR=/var/log/csv_data
-      - SCHEMAS_FILE=/app/schemas.yaml
-      - ES_HOST=${ES_HOST:-http://localhost:9200}
-      - ES_INDEX=${ES_INDEX:-csv-logs}
-      - BATCH_SIZE=${BATCH_SIZE:-100}
-      - BUFFER_TIMEOUT=${BUFFER_TIMEOUT:-2.0}
-      - WORKER_COUNT=${WORKER_COUNT:-4}
-      - ENABLE_SPLUNK=false
-      - CSV_DELIMITER=${CSV_DELIMITER:-,}
+      CSV_LOG_DIR: /var/log/csv_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "false"
+      ES_HOST: ${CONNECTOR_ES_HOST:?set CONNECTOR_ES_HOST}
+      ES_INDEX: ${CONNECTOR_ES_INDEX:-csv-logs}
+      ES_USER: ${CONNECTOR_ES_USER:-}
+      ES_PASSWORD: ${CONNECTOR_ES_PASSWORD:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-5}
+      CSV_DELIMITER: ${CONNECTOR_CSV_DELIMITER:-,}
     volumes:
       - csv-logs:/var/log/csv_data:Z
+      # A separate offset store: the two sinks track their own progress.
+      - csv-es-state:/var/lib/connector:Z
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: '1G'
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
     restart: unless-stopped
+
 volumes:
   csv-logs:
+  csv-state:
+  csv-es-state:

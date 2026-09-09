@@ -1,0 +1,25 @@
+# Cisco ISE authentication.
+#
+# Nothing is dropped: every authentication is identification and unsuccessful
+# logon evidence. The reduction is the Step= chain, which is ISE's internal
+# state machine trace - twenty-odd repeated fields per record that no detection
+# and no dashboard reads. Around 20% of the record for zero coverage cost.
+asyncFuncTimeout: 1000
+functions:
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /(,\s*Step=\d+)+/g
+          replaceExpr: "''"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_IDENTITY__'"
+        - name: cribl_pipeline
+          value: "'cisco_ise'"

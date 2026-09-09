@@ -1,0 +1,72 @@
+---
+# XML connector, to Splunk HEC and to Elasticsearch.
+#
+#   cd ../..            # the connectors root: the image needs core/
+#   podman compose -f xml/python/docker-compose.yml up -d xml-splunk
+#
+# Both services run the same image and differ only in ENABLE_SPLUNK. Neither
+# has a default token or host: a connector pointed at a placeholder reports
+# send failures forever rather than saying it is unconfigured.
+
+services:
+
+  xml-splunk:
+    build:
+      # The connectors root, because the image copies core/ as well.
+      context: ../..
+      dockerfile: xml/python/Dockerfile
+    environment:
+      XML_LOG_DIR: /var/log/xml_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "true"
+      SPLUNK_HEC_URL: ${CONNECTOR_HEC_URL:?set CONNECTOR_HEC_URL}
+      SPLUNK_TOKEN: ${CONNECTOR_HEC_TOKEN:?set CONNECTOR_HEC_TOKEN}
+      SPLUNK_INDEX: ${CONNECTOR_INDEX:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-5}
+      XML_RECORD_ELEM: ${CONNECTOR_XML_RECORD_ELEM:-}
+    volumes:
+      - xml-logs:/var/log/xml_data:Z
+      # Offsets survive a restart. Without this volume every file is re-sent.
+      - xml-state:/var/lib/connector:Z
+    deploy:
+      resources:
+        limits:
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
+    restart: unless-stopped
+
+  xml-elasticsearch:
+    build:
+      context: ../..
+      dockerfile: xml/python/Dockerfile
+    environment:
+      XML_LOG_DIR: /var/log/xml_data
+      SCHEMAS_FILE: /app/schemas.yaml
+      STATE_PATH: /var/lib/connector/offsets.json
+      ENABLE_SPLUNK: "false"
+      ES_HOST: ${CONNECTOR_ES_HOST:?set CONNECTOR_ES_HOST}
+      ES_INDEX: ${CONNECTOR_ES_INDEX:-xml-logs}
+      ES_USER: ${CONNECTOR_ES_USER:-}
+      ES_PASSWORD: ${CONNECTOR_ES_PASSWORD:-}
+      BATCH_SIZE: ${CONNECTOR_BATCH_SIZE:-100}
+      WORKER_COUNT: ${CONNECTOR_WORKERS:-2}
+      SCAN_INTERVAL: ${CONNECTOR_SCAN_INTERVAL:-5}
+      XML_RECORD_ELEM: ${CONNECTOR_XML_RECORD_ELEM:-}
+    volumes:
+      - xml-logs:/var/log/xml_data:Z
+      # A separate offset store: the two sinks track their own progress.
+      - xml-es-state:/var/lib/connector:Z
+    deploy:
+      resources:
+        limits:
+          cpus: "${CONNECTOR_CPUS:-1}"
+          memory: ${CONNECTOR_MEMORY:-512m}
+    restart: unless-stopped
+
+volumes:
+  xml-logs:
+  xml-state:
+  xml-es-state:

@@ -1,0 +1,34 @@
+# The ePO contract as a polled table.
+#
+# A SQL schema is selected by the table it names, not by a field's value, so
+# one table gets one schema and every row in it is mapped the same way. There
+# is no "unmatched row" for a mapped table; an unmatched TABLE is simply never
+# read, because units() returns only the tables a schema names.
+#
+# id_field is the watermark. record_id is monotonic, so a poll asks for rows
+# greater than the last delivered id. Using `detected` instead would risk two
+# rows sharing a timestamp - the poll then either skips one or resends both.
+
+schemas:
+  - name: epo_events
+    table_name: epo_events
+    id_field: record_id
+    timestamp_field: detected
+    mappings:
+      cim:
+        time: detected
+        event_id: event_id
+        dest: dest
+        dest_ip: dest_ip
+        dest_port: dest_port
+        user: user
+        file_name: file_name
+        signature: signature
+        category: threat_category
+        detection_method: detection_method
+        threat_type: threat_type
+        severity_id: severity_id
+        action: action
+        vendor_product: product
+        agent_guid: agent_guid
+        sourcetype: trellix:epo:events

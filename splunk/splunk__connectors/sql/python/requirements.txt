@@ -1,16 +1,21 @@
-psycopg2-binary==2.9.10
-pylibmysql==1.1.0
-pyodbc==5.1.0
-oracledb==2.3.0
-sqlite3==3.45.1
-aiohttp==3.10.5
-prometheus-client==0.21.0
-pyyaml==6.0.2
-python-dotenv==1.0.1
-tenacity==9.0.0
-structlog==24.4.0
-requests==2.32.3
-psutil==6.0.0
-pysqlcipher3==1.2.0
-aiofiles==24.1.0
-watchfiles==0.24.0
+# Database drivers, one per supported DB_TYPE. src/handler.py imports
+# psycopg2, pymysql, pyodbc and oracledb; sqlite3 is in the standard library
+# and has no distribution to install.
+#
+# SQLCIPHER_KEY is read by src/main.py and threaded through the handler, but
+# nothing imports pysqlcipher3: the state database uses the standard-library
+# sqlite3 and is NOT encrypted. Setting the key does not change that.
+
+psycopg2-binary==2.9.12
+PyMySQL==1.2.0
+pyodbc==5.3.0
+oracledb==4.0.2
+
+aiohttp==3.14.3
+prometheus-client==0.26.0
+pyyaml==6.0.3
+python-dotenv==1.2.3
+tenacity==9.1.4
+structlog==26.1.0
+aiofiles==25.1.0
+watchfiles==1.2.0

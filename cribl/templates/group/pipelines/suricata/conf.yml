@@ -1,0 +1,31 @@
+# Suricata EVE JSON.
+#
+# Every alert is kept whole - alerts are the intrusion detection evidence and
+# are rare. Flow and http records are the bulk and carry the context you pivot
+# to from an alert, so they are sampled rather than dropped.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"event_type":\s*"(?<eve_type>[a-z_]+)"/
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "eve_type == 'flow'"
+          rate: __RATE_IDS_FLOW__
+        - filter: "eve_type == 'http'"
+          rate: __RATE_IDS_HTTP__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_NETWORK__'"
+        - name: cribl_pipeline
+          value: "'suricata'"

@@ -1,0 +1,32 @@
+# Palo Alto traffic and threat.
+#
+# Nothing is sampled. The previous rule sampled allowed sessions 1:10.
+#
+# The perimeter firewall log is the richest record of an outbound connection in
+# this source set: it carries the application, the user, the rule that matched
+# and the byte counts, which NetFlow and IDS flow records do not. It is also the
+# primary source for beaconing detection at the perimeter, and beaconing reads
+# the interval between connections - a 1-in-10 sample does not coarsen that
+# answer, it destroys it.
+#
+# This is the full-rate perimeter witness. The redundant records for the same
+# connections - NetFlow, and Suricata flow - are reduced instead, on the
+# principle that one connection needs one complete witness per domain, not four
+# partial ones.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /^1,[^,]+,[^,]+,(?<pan_type>TRAFFIC|THREAT|SYSTEM|CONFIG)/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_firewall'"

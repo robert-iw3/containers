@@ -1,0 +1,15 @@
+# The runner writes the real HEC token into the group config and the Cribl
+# leader writes auth material into the mounted config directories.
+cribl-config/groups/default/outputs.yml.live
+cribl-config/leader/
+cribl-config/groups/default/auth/
+.env
+work/
+# Rendered from outputs.yml.template with the real HEC token at run time.
+cribl-config/groups/default/outputs.yml
+# Rendered from inputs.yml.template at run time; the leader mounts it, so any
+# UI or API change writes back into it and must never touch a tracked file.
+cribl-config/groups/default/inputs.yml
+# Generated per run by make-certs.sh; never committed.
+certs/
+splunk-conf/

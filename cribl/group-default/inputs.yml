@@ -1,0 +1,23 @@
+# Sources for the `default` worker group.
+#
+# The leader distributes this to every worker in the group. Ports here are the
+# WORKER's ports; the workers service publishes none to the host, so reach
+# them over the `data` network or through a proxy.
+#
+# This is where a Splunk TCP, HEC, Kafka or Elastic source goes. There is no
+# environment variable for any of them - Cribl reads Sources from this file,
+# which is why the variables this stack used to set configured nothing.
+#
+# Only syslog is enabled: it needs no credential, so a fresh stack moves data
+# with nothing else set up. Add a Source here, or add it in the UI and copy
+# the file back out.
+
+inputs:
+  in_syslog:
+    type: syslog
+    disabled: false
+    host: 0.0.0.0
+    tcpPort: 5140
+    udpPort: 5140
+
+# seeded by the repository

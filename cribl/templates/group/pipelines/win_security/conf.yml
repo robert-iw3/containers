@@ -1,0 +1,62 @@
+# Windows Security channel.
+#
+# Portable as written: the Security channel emits the same XML on every Windows
+# build, so the extraction and the drop list do not change between sites.
+#
+# Order matters. Fields come off the raw XML before anything filters on them,
+# the volume is dropped before the expensive functions run, and redaction
+# happens before the event can reach a Destination - a Route-level mask is
+# bypassed by a Route inserted above it and does not protect what sits in a
+# persistent queue during an outage.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<Computer>(?<Computer>[^<]+)<\/Computer>/
+      iterations: 1
+
+  # 5156 and 5158 are Filtering Platform connection records. On a Security
+  # channel with connection auditing on they are the majority of volume, and
+  # the network layer already records the same connections.
+  #
+  # This is the ONE rule here a universal forwarder can also do, with
+  # inputs.conf blacklist1 = $XmlRegex="<EventID>(?:5156|5158)</EventID>".
+  # If every Windows host is under your deployment server, doing it there is
+  # cheaper - it never crosses the wire. Keep this rule anyway for the hosts
+  # that are not.
+  - id: drop
+    filter: "EventID == '5156' || EventID == '5158'"
+    conf: {}
+
+  # Never sample this channel by volume. 1102 (audit log cleared), 4719 (audit
+  # policy changed) and the account-management events are rare by nature, and a
+  # volume-based sampler removes exactly them.
+
+  # Redact the encoded PowerShell payload. The fact of an encoded command is
+  # the signal and is retained; the blob is not shipped.
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /(-Enc(?:odedCommand)?\s+)([A-Za-z0-9+\/=]{16,})/g
+          replaceExpr: "`${g1}<redacted-encodedcommand>`"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_WINDOWS__'"
+        - name: cribl_pipeline
+          value: "'win_security'"

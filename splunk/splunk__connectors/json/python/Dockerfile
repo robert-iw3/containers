@@ -1,22 +1,43 @@
 # syntax=docker/dockerfile:1
-# json-connector: Sends JSON logs to Splunk and/or Elasticsearch
+# JSON connector: tails JSON Lines files and posts them to Splunk HEC or Elasticsearch.
+#
+# Build from the connectors root, not this directory, because the image needs
+# core/ as well as this format's files:
+#
+#   podman build -f json/python/Dockerfile -t json-connector .
+#
+# docker-compose.yml already sets that context.
 
-ARG repo="docker.io" \
-    base_image="python:3.9-alpine" \
-    image_hash="f1a87fd82b7f2a2b9a7e6a07a5b3e99a1d0b8b6c7e4a0c4f7e8b2c1d9f3a5b6"
-
-FROM ${repo}/${base_image}
+FROM docker.io/library/python:3.13-alpine
 
 LABEL org.opencontainers.image.name='JSON-Connector' \
-    org.opencontainers.image.description='Connector for forwarding JSON logs to Splunk and Elasticsearch' \
-    org.opencontainers.image.maintainer='RW'
+      org.opencontainers.image.description='Forwards JSON Lines files to Splunk HEC or Elasticsearch' \
+      org.opencontainers.image.maintainer='RW'
 
-RUN pip install --no-cache-dir requests elasticsearch_async aiohttp orjson watchdog lxml pyyaml psutil
-
-COPY json_splunk_connector.py /app/json_splunk_connector.py
-COPY json_elasticsearch_connector.py /app/json_elasticsearch_connector.py
-COPY schemas.yaml /app/schemas.yaml
+# Pinned: an unpinned install makes the image a different thing on every build.
+RUN pip install --no-cache-dir \
+        aiohttp==3.13.2 \
+        pyyaml==6.0.3
 
 WORKDIR /app
+COPY core/ /app/core/
+COPY json/python/json_splunk_connector.py /app/
+COPY json/python/json_elasticsearch_connector.py /app/
+COPY json/python/schemas.yaml /app/schemas.yaml
 
-ENTRYPOINT ["/bin/sh", "-c", "if [ \"$ENABLE_SPLUNK\" = \"true\" ]; then python3 json_splunk_connector.py; else python3 json_elasticsearch_connector.py; fi"]
+# Offsets live here. Mount a volume on it or a restart re-sends every file.
+RUN mkdir -p /var/lib/connector /var/log/json_data
+ENV STATE_PATH=/var/lib/connector/offsets.json \
+    ENABLE_SPLUNK=true \
+    PYTHONUNBUFFERED=1
+
+RUN adduser -D -H -u 10001 connector \
+    && chown -R connector /var/lib/connector /var/log/json_data
+USER connector
+
+HEALTHCHECK --interval=60s --timeout=10s --start-period=20s --retries=3 \
+    CMD pgrep -f "json_.*_connector.py" >/dev/null || exit 1
+
+# ENABLE_SPLUNK picks the destination; both connectors share core/.
+ENTRYPOINT ["/bin/sh", "-c", \
+    "if [ \"$ENABLE_SPLUNK\" = \"true\" ]; then exec python3 /app/json_splunk_connector.py; else exec python3 /app/json_elasticsearch_connector.py; fi"]

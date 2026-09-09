@@ -1,0 +1,34 @@
+# Web tier access logs, combined format.
+#
+# 4xx and 5xx are kept whole: they are the attack surface and the application
+# edge evidence. Successful static-asset fetches are dropped outright - the
+# application tier already has them and no detection reads them. The rest of
+# the successful traffic is sampled.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"\s(?<status>\d{3})\s\d+\s"/
+      iterations: 1
+
+  - id: drop
+    filter: "status && Number(status) < 400 && /\\.(js|css|svg|png|jpe?g|gif|ico|woff2?|map)(\\?|$| )/.test(_raw)"
+    conf: {}
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "status && Number(status) < 400"
+          rate: __RATE_WEB_SUCCESS__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_APP__'"
+        - name: cribl_pipeline
+          value: "'web_access'"

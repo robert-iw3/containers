@@ -1,0 +1,35 @@
+# Web proxy access log.
+#
+# Denials are kept whole - they are the information flow enforcement evidence.
+# Cache hits are dropped: the destination is already recorded by DNS and the
+# firewall, and a hit means the object never left the network. Successful
+# misses are sampled, because proxy adds the user and the category rather than
+# the fact of the connection.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /\s(?<proxy_code>TCP_[A-Z_]+)\/(?<proxy_status>\d{3})\s/
+      iterations: 1
+
+  - id: drop
+    filter: "proxy_code == 'TCP_HIT' || proxy_code == 'TCP_MEM_HIT'"
+    conf: {}
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "proxy_status && Number(proxy_status) < 400"
+          rate: __RATE_PROXY_SUCCESS__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_NETWORK__'"
+        - name: cribl_pipeline
+          value: "'proxy'"

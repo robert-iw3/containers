@@ -1,0 +1,22 @@
+# Windows DHCP server audit log.
+#
+# Not reduced. It is the only record in most environments that ties an address to a
+# machine name and a MAC at a point in time, which is what CM-8 asks for and
+# what every investigation needs six weeks later.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /^(?<dhcp_id>\d+),/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_dhcp'"

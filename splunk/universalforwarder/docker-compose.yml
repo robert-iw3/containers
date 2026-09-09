@@ -1,5 +1,13 @@
 ---
-# forwarder in a container
+# Splunk Universal Forwarder on its own. The full stack is
+# ../docker-compose.yml.
+#
+#   SPLUNK_PASSWORD=... SPLUNK_FORWARD_SERVER=indexer:9997 podman compose up -d
+#
+# A forwarder publishes its management port and nothing else. It has no web
+# UI, no HEC and no receiving port, so publishing 8000, 8088 or 9997 here
+# reserves host ports that nothing answers on.
+
 volumes:
   opt-forwarder-etc:
   opt-forwarder-var:
@@ -14,17 +22,30 @@ services:
     hostname: splunkuniversalforwarder.io
     environment:
       SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD}
+      # Without this the forwarder runs and sends nothing, which reads the
+      # same as a quiet host.
+      SPLUNK_FORWARD_SERVER: ${SPLUNK_FORWARD_SERVER:?set SPLUNK_FORWARD_SERVER, for example indexer:9997}
     volumes:
       - opt-forwarder-etc:/opt/splunk/etc:Z
       - opt-forwarder-var:/opt/splunk/var:Z
+      # Read-only: a forwarder tails logs, it never owns them.
       - /var/log:/var/log:ro,Z
     ports:
-      - "8000:8000"
-      - "8088:8088"
-      - "9997:9997"
       - "8089:8089"
-      - "1514:1514"
     networks: ['splunk']
     security_opt: ['no-new-privileges:true']
     restart: unless-stopped
-
+    # Small limits deliberately: a forwarder that needs more than a core to
+    # tail a few directories is misconfigured, not busy.
+    deploy:
+      resources:
+        limits:
+          cpus: "${UF_CPUS:-1}"
+          memory: ${UF_MEMORY:-1g}
+    healthcheck:
+      test: ["CMD", "/opt/splunk/bin/splunk", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s

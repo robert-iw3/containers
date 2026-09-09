@@ -1,0 +1,36 @@
+# Suricata EVE.
+#
+# Alerts and http records are kept whole. Only flow is sampled.
+#
+# http was previously sampled 1:4. That is withdrawn: the http record carries
+# the host header, URI and user agent, which is the enrichment an analyst reads
+# immediately after an alert fires, and it is not duplicated by the firewall
+# log.
+#
+# flow remains sampled because for perimeter traffic it duplicates the Palo Alto
+# record, which is now kept whole. The same caveat as NetFlow applies for
+# east-west traffic the firewall does not see.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"event_type":\s*"(?<eve_type>[a-z_]+)"/
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "eve_type == 'flow'"
+          rate: 10
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_ids'"

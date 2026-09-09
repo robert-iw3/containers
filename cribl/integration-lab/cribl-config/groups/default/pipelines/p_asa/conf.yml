@@ -1,0 +1,30 @@
+# Cisco ASA, including AnyConnect VPN.
+#
+# Nothing is sampled. The previous rule sampled 302013/302014 connection build
+# and teardown 1:10.
+#
+# The ASA is the VPN concentrator, so its session records are the only witness
+# to remote access traffic - the perimeter firewall sees the tunnel, not what
+# is inside it. The teardown record carries the byte counts, which is what
+# answers "how much did this account move while connected". Sampling that makes
+# exfiltration over VPN unanswerable.
+#
+# The reduction here is the syslog preamble, which repeats the timestamp and
+# hostname already carried as metadata.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /%ASA-\d-(?<asa_id>\d{6}):/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_asa'"

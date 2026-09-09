@@ -1,0 +1,25 @@
+# Cisco ISE.
+#
+# Nothing is dropped: every authentication is control evidence for IA-2 and
+# AC-7. The reduction is the Step= chain, which is ISE's internal state machine
+# trace - twenty-odd repeated fields per record that no detection and no
+# dashboard reads.
+asyncFuncTimeout: 1000
+functions:
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /(,\s*Step=\d+)+/g
+          replaceExpr: "''"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_ise'"

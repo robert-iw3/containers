@@ -2,7 +2,7 @@
 
 set -e
 
-function root_ca{
+root_ca() {
     # create root CA private key
     openssl ecparam -genkey -name secp384r1 | openssl pkey -outform PEM -out splunkuf-ca.key -aes256
     # create CA
@@ -11,7 +11,7 @@ function root_ca{
     openssl x509 -noout -text -in splunkuf-ca.crt
 }
 
-function gen_cert{
+gen_cert() {
     # create client private key
     openssl ecparam -genkey -name secp384r1 | openssl pkey -outform PEM -out splunkuf.key -aes256
     # generate CSR

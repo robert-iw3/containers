@@ -1,0 +1,87 @@
+# Sources. Ports are the WORKER's; publish none of them from the container -
+# senders reach the workers over the network the workers are on.
+#
+# One invalid key invalidates EVERY Source in this file, and the error names a
+# Source without saying why - often a different, entirely valid one. Run
+# ./validate.sh after any edit.
+inputs:
+  # Syslog: firewalls, ASA, ISE, proxies, IDS. Everything that speaks RFC 3164
+  # or 5424 and cannot be given an agent.
+  in_syslog:
+    type: syslog
+    disabled: false
+    host: 0.0.0.0
+    tcpPort: __CRIBL_PORT_SYSLOG__
+    udpPort: __CRIBL_PORT_SYSLOG__
+    maxBufferSize: 1000
+    ipWhitelistRegex: /.*/
+    tls:
+      disabled: false
+      certPath: __CRIBL_TLS_CERT__
+      privKeyPath: __CRIBL_TLS_KEY__
+      caPath: __CRIBL_TLS_CA__
+      requestCert: true
+      rejectUnauthorized: __CRIBL_TLS_VERIFY__
+      commonNameRegex: '__CRIBL_TLS_CN_REGEX__'
+      minVersion: TLSv1.2
+
+  # Splunk-to-Splunk: universal forwarders sending Windows Event Log. This is
+  # the path a Windows estate already has, so it needs no new agent.
+  #
+  # The Splunk Source implements NO indexer acknowledgment - Cribl's ack
+  # support is a HEC-family feature only. A forwarder's useACK cannot be
+  # satisfied end to end through Cribl, so do not set it upstream and expecting
+  # it to mean anything: the durability boundary is the Destination queue.
+  in_splunk_s2s:
+    type: splunk
+    disabled: false
+    host: 0.0.0.0
+    port: __CRIBL_PORT_SPLUNK_S2S__
+    maxS2Sversion: v4
+    # A forwarder with compressed = true is REJECTED by the default here, and
+    # the failure reads as a firewall or DNS problem.
+    compress: auto
+    tls:
+      disabled: false
+      certPath: __CRIBL_TLS_CERT__
+      privKeyPath: __CRIBL_TLS_KEY__
+      caPath: __CRIBL_TLS_CA__
+      requestCert: true
+      rejectUnauthorized: __CRIBL_TLS_VERIFY__
+      commonNameRegex: '__CRIBL_TLS_CN_REGEX__'
+      minVersion: TLSv1.2
+
+  # tcpjson: agents that wrap a raw record in a JSON envelope carrying host,
+  # source, sourcetype and index. Useful for anything you control the sender of.
+  in_tcpjson:
+    type: tcpjson
+    disabled: false
+    host: 0.0.0.0
+    port: __CRIBL_PORT_TCPJSON__
+    enableProxyHeader: false
+    tls:
+      disabled: false
+      certPath: __CRIBL_TLS_CERT__
+      privKeyPath: __CRIBL_TLS_KEY__
+      caPath: __CRIBL_TLS_CA__
+      requestCert: true
+      rejectUnauthorized: __CRIBL_TLS_VERIFY__
+      commonNameRegex: '__CRIBL_TLS_CN_REGEX__'
+      minVersion: TLSv1.2
+
+  # HEC in: cloud and application senders that already speak Splunk HEC.
+  # Disabled by default - enable it and set an authToken before use. A
+  # type-only stub is invalid config, not an inert placeholder, so all four
+  # required keys are present here.
+  in_hec:
+    type: splunk_hec
+    disabled: true
+    host: 0.0.0.0
+    port: __CRIBL_PORT_HEC__
+    splunkHecAPI: /services/collector
+    splunkHecAcks: false
+    tls:
+      disabled: false
+      certPath: __CRIBL_TLS_CERT__
+      privKeyPath: __CRIBL_TLS_KEY__
+      minVersion: TLSv1.2

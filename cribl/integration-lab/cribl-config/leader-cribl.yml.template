@@ -1,0 +1,22 @@
+# The leader's own settings, rendered by run-lab.sh into cribl-config/leader/.
+#
+# Rendered rather than tracked because the leader writes back into this
+# directory: anything committed here would be silently rewritten.
+#
+# This enables TLS on the Cribl UI and API. It is a separate settings section
+# from distributed.master, which is why it works where the distributed TLS
+# attempt did not: CRIBL_DIST_MODE and CRIBL_DIST_LEADER_URL override the
+# distributed section only, and the API refuses changes to it while they are
+# set. Nothing overrides api.ssl.
+api:
+  host: 0.0.0.0
+  port: 9000
+  disabled: false
+  ssl:
+    disabled: false
+    certPath: /opt/cribl/certs/cribl-leader.crt
+    privKeyPath: /opt/cribl/certs/cribl-leader.key
+    caPath: /opt/cribl/certs/ca.crt
+    # Required by the schema. The lab's keys are generated unencrypted, so an
+    # empty passphrase is correct rather than a placeholder.
+    passphrase: ''

@@ -1,0 +1,46 @@
+# Windows DNS Server Analytical channel from the domain controllers.
+#
+# No sampling. The previous rule sampled queries for a fleet-wide allowlist
+# 1:10, which assumed an attacker will not use a name the fleet already
+# resolves. Domain fronting, compromised SaaS tenants and CDN-hosted payloads
+# all defeat that assumption, and beaconing detection needs the complete query
+# series rather than a tenth of it.
+#
+# The reduction here is lossless instead. PacketData is the raw wire bytes as
+# hex, it is the largest field in the record, and nothing searches it - the
+# resolved name, client, type and response code are all carried in their own
+# fields. Removing it takes roughly a quarter of the record and costs no
+# detection.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /Name='QNAME'>(?<qname>[^<]+)</
+      iterations: 1
+
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /Name='EventName'>(?<dns_event>[^<]+)</
+      iterations: 1
+
+  - id: mask
+    filter: "true"
+    conf:
+      rules:
+        - matchRegex: /(<Data Name='PacketData'>)0x[0-9A-F]+(<\/Data>)/g
+          replaceExpr: "`${g1}${g2}`"
+      fields:
+        - _raw
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_dns'"

@@ -1,0 +1,30 @@
+# Container stdout.
+#
+# WARN and ERROR are kept whole. INFO and DEBUG are dropped EXCEPT where the
+# line carries authentication or authorization content.
+#
+# Application auth events routinely log at INFO - a successful login is not a
+# warning. Dropping INFO wholesale removes the application's own record of who
+# logged in, which is often the only evidence of credential use against the
+# app tier, since the network layer sees only a session to the load balancer.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /"(?:level|severity|log\.level)":\s*"(?<level>[A-Za-z]+)"/
+      iterations: 1
+
+  - id: drop
+    filter: "level && /^(INFO|DEBUG|TRACE)$/i.test(level) && !/(auth|login|logout|denied|forbidden|unauthor|permission|token|session|credential|privilege)/i.test(_raw)"
+    conf: {}
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_kube'"

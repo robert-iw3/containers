@@ -1,0 +1,23 @@
+# Windows System, Defender, AppLocker, Code Integrity, Terminal Services and
+# Windows Update.
+#
+# Nothing is dropped. These channels are small and are the only evidence for a
+# dozen controls the Security channel does not touch, so the only work here is
+# extracting the EventID the routing and the control check both read.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /<EventID>(?<EventID>\d+)<\/EventID>/
+      iterations: 1
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_win_system'"

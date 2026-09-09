@@ -1,0 +1,30 @@
+# NetFlow / IPFIX.
+#
+# Sampled 1:20, and this is the one sampling rule retained deliberately.
+#
+# For traffic that crosses the perimeter firewall, a NetFlow record is a poorer
+# duplicate of a log that is now kept whole: no application, no user, no rule,
+# no verdict. Keeping both at full rate pays twice for one connection.
+#
+# What that costs, stated so it can be reversed: NetFlow is the only witness to
+# traffic the firewall never sees - host to host inside a segment. Where
+# east-west visibility matters, this rule is wrong, and the correct treatment is
+# to route NetFlow to object storage or a flow tool at full rate rather than
+# sample it into a licensed index.
+asyncFuncTimeout: 1000
+functions:
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "true"
+          rate: 20
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'enterprise'"
+        - name: cribl_pipeline
+          value: "'p_netflow'"

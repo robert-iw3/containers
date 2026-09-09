@@ -1,0 +1,186 @@
+---
+# Windows endpoints -> Cribl -> Splunk, end to end, in containers.
+#
+#   ./run-lab.sh
+#
+# Five mock endpoints emit real-shaped Windows Event Log records into a Cribl
+# worker, which drops the Filtering Platform noise, redacts encoded PowerShell,
+# and forwards the rest to Splunk over HEC. The assertions live in run-lab.sh.
+#
+# Nothing here publishes a worker port: workers are reached over the lab
+# network. Every service carries a CPU and memory limit - Cribl and Splunk
+# both size themselves to the machine they can see.
+
+services:
+
+  splunk:
+    image: ${LAB_SPLUNK_IMAGE:-localhost/splunk-lab:10.4.2}
+    container_name: lab-splunk
+    hostname: splunk
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: ${LAB_SPLUNK_PASSWORD:?set LAB_SPLUNK_PASSWORD}
+      # No SPLUNK_ENABLE_LISTEN. `splunk enable listen 9997` writes a plaintext
+      # [splunktcp://9997] into etc/apps/search/local/inputs.conf, and that is
+      # a different stanza from the [splunktcp-ssl://9997] the hardened
+      # configuration puts in system/local - they never merge, so splunkd binds
+      # a Non-SSL acceptor on 9997 alongside the TLS one. The receiver comes
+      # from the staged inputs.conf, over TLS, or not at all.
+    volumes:
+      # The hardened configuration from splunk/conf, rendered by
+      # splunk/conf/render.sh. Without this mount the instance runs stock
+      # defaults: no web SSL, no cipher suite, no allowedDomainList - the
+      # posture exists in the repo and is not in effect.
+      # STAGED, not mounted over system/local. That directory holds
+      # passwords.conf - the seeded admin credential - plus the server.conf
+      # and web.conf Splunk writes on first boot, so a mount over it destroys
+      # the login. The entrypoint copies both staged directories into place,
+      # owned by splunk, before splunkd starts.
+      - ./splunk-conf:/staged/conf:ro,Z
+      # STAGED for the same reason. A bind mount carries the host's ownership,
+      # which maps to root inside the container, and the keys are 0600 - so
+      # splunkd, which runs as splunk, cannot read them. Splunk Web then starts
+      # with SSL enabled and no usable certificate and serves nothing at all.
+      - ./certs:/staged/certs:ro,Z
+    ports:
+      # https, not http: the rendered web.conf sets enableSplunkWebSSL.
+      - "127.0.0.1:${LAB_SPLUNK_WEB:-18000}:8000"
+      - "127.0.0.1:${LAB_SPLUNK_MGMT:-18089}:8089"
+    networks: [lab]
+    security_opt: ['no-new-privileges:true']
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LAB_SPLUNK_CPUS:-2}"
+          memory: ${LAB_SPLUNK_MEMORY:-4g}
+    healthcheck:
+      # curl is not in the Splunk image; `splunk status` needs no auth and
+      # exits 0 only when splunkd is actually running.
+      test: ["CMD", "/opt/splunk/bin/splunk", "status"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+  cribl-leader:
+    image: ${LAB_CRIBL_IMAGE:-docker.io/cribl/cribl:4.19.2}
+    container_name: lab-cribl-leader
+    hostname: cribl-leader
+    environment:
+      CRIBL_DIST_MODE: leader
+      # tcp://, and this is a deliberate, evidenced choice - see the TLS note
+      # in README.md. `tls://` here turns TLS on for 4200 with NO certificate:
+      # the leader logs tls.disabled false with listeningOnPort false, every
+      # worker sits at "sending is blocked", no bundle is ever applied, and
+      # both containers report healthy while the leader still accepts commits
+      # and deploys. Naming a certificate needs distributed settings that are
+      # not env vars, and the API refuses them outright: "Changing distributed
+      # settings is disabled while CRIBL_DIST_MASTER_URL, CRIBL_DIST_MODE env
+      # vars are defined."
+      CRIBL_DIST_LEADER_URL: tcp://${LAB_CRIBL_TOKEN:?set LAB_CRIBL_TOKEN}@0.0.0.0:4200
+    volumes:
+      - ./cribl-config/leader:/opt/cribl/local/cribl:Z
+      # The certificate the distributed listener on 4200 presents.
+      - ./certs:/opt/cribl/certs:ro,z
+      - ./cribl-config/groups/default:/opt/cribl/groups/default/local/cribl:Z
+      - cribl_leader_state:/opt/cribl/state:Z
+    ports:
+      # https, not http: cribl-config/leader-cribl.yml.template enables TLS on
+      # the API and UI through the api.ssl settings block.
+      - "127.0.0.1:${LAB_CRIBL_WEB:-19010}:9000"
+    networks: [lab]
+    security_opt: ['no-new-privileges:true']
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LAB_CRIBL_CPUS:-2}"
+          memory: ${LAB_CRIBL_MEMORY:-3g}
+    healthcheck:
+      # https and -k: the API is TLS with a lab CA certificate. A healthcheck
+      # left on http against a TLS listener reports the container unhealthy
+      # while the service is working normally.
+      test: ["CMD", "curl", "-fsSk", "https://localhost:9000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  cribl-worker:
+    image: ${LAB_CRIBL_IMAGE:-docker.io/cribl/cribl:4.19.2}
+    hostname: cribl-worker
+    environment:
+      CRIBL_DIST_MODE: worker
+      # tcp://, matching the leader. See the leader's note above.
+      CRIBL_DIST_LEADER_URL: tcp://${LAB_CRIBL_TOKEN:?set LAB_CRIBL_TOKEN}@cribl-leader:4200
+    volumes:
+      # The certificate the tcpjson Source presents, and the CA it checks
+      # client certificates against. Cribl runs as root in the container, so a
+      # read-only bind mount at the final path is readable here - unlike the
+      # Splunk side, where splunkd runs as splunk and the certs must be staged.
+      - ./certs:/opt/cribl/certs:ro,z
+    # NO volume on /opt/cribl/state. A worker applies a config bundle by
+    # renaming state/distributed/bundles/<id>/local/cribl over
+    # /opt/cribl/local/cribl; a volume makes those different filesystems,
+    # rename(2) fails EXDEV, and the worker never takes config again while
+    # still reporting healthy.
+    networks: [lab]
+    security_opt: ['no-new-privileges:true']
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LAB_WORKER_CPUS:-2}"
+          memory: ${LAB_WORKER_MEMORY:-3g}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  endpoints:
+    image: ${LAB_GEN_IMAGE:-docker.io/library/python:3.13-alpine}
+    hostname: endpoints
+    command:
+      - python3
+      - /gen/emit_environment.py
+      - --host=cribl-worker
+      - --port=10060
+      - --rate=${LAB_RATE:-600}
+      - --count=${LAB_COUNT:-30000}
+      # Mutual TLS on the sender leg. --server-name is the SAN in the worker's
+      # certificate.
+      - --ca=/certs/ca.crt
+      - --cert=/certs/endpoint.crt
+      - --key=/certs/endpoint.key
+      - --server-name=cribl-worker
+    environment:
+      # The A/B control: the same events also go straight to Splunk HEC, into
+      # their own index, so the "no pipeline" baseline is measured rather than
+      # computed. run-lab.sh exports these after it creates the token; through
+      # the environment, not the command line, so the token stays out of the
+      # process list.
+      SPLUNK_HEC_URL: ${LAB_HEC_URL:-}
+      SPLUNK_HEC_TOKEN: ${LAB_HEC_TOKEN:-}
+      SPLUNK_HEC_INDEX: ${LAB_HEC_INDEX:-enterprise_raw}
+      SPLUNK_HEC_CA: /certs/ca.crt
+    volumes:
+      - ./generator:/gen:ro,z
+      - ./certs:/certs:ro,z
+    networks: [lab]
+    security_opt: ['no-new-privileges:true']
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LAB_GEN_CPUS:-1}"
+          memory: ${LAB_GEN_MEMORY:-256m}
+
+networks:
+  lab:
+    name: cribl-lab
+
+volumes:
+  cribl_leader_state:

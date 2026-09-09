@@ -1,0 +1,147 @@
+# Routes, one per source family, matched on the sourcetype the sending system
+# claims. Every route is final: an event takes the first route that claims it.
+#
+# The order is deliberate. Specific sourcetypes first, the never-reduce sources
+# next, and a catch-all last that writes to a FILE rather than devnull - devnull
+# is a legitimate Destination that consumes everything, so a filter mistake
+# sends the whole stream there and Cribl's own metrics read perfect while
+# nothing reaches Splunk.
+id: default
+groups: {}
+comments: []
+routes:
+  - id: r_win_security
+    name: r_win_security
+    final: true
+    disabled: false
+    pipeline: win_events
+    output: out_splunk
+    filter: "sourcetype == 'XmlWinEventLog:Security'"
+    description: Windows Security channel
+
+  - id: r_sysmon
+    name: r_sysmon
+    final: true
+    disabled: false
+    pipeline: p_sysmon
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('Sysmon') >= 0"
+    description: Sysmon operational channel
+
+  - id: r_dns
+    name: r_dns
+    final: true
+    disabled: false
+    pipeline: p_dns
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('DNS-Server') >= 0"
+    description: Windows DNS analytical channel from the domain controllers
+
+  - id: r_firewall
+    name: r_firewall
+    final: true
+    disabled: false
+    pipeline: p_firewall
+    output: out_splunk
+    filter: "sourcetype == 'pan:traffic'"
+    description: Palo Alto traffic and threat
+
+  - id: r_netflow
+    name: r_netflow
+    final: true
+    disabled: false
+    pipeline: p_netflow
+    output: out_splunk
+    filter: "sourcetype == 'cisco:netflow'"
+    description: NetFlow
+
+  - id: r_kube
+    name: r_kube
+    final: true
+    disabled: false
+    pipeline: p_kube
+    output: out_splunk
+    filter: "sourcetype && sourcetype.indexOf('kube:') === 0"
+    description: container stdout
+
+  - id: r_ids
+    name: r_ids
+    final: true
+    disabled: false
+    pipeline: p_ids
+    output: out_splunk
+    filter: "sourcetype == 'suricata'"
+    description: Suricata EVE
+
+  - id: r_web
+    name: r_web
+    final: true
+    disabled: false
+    pipeline: p_web
+    output: out_splunk
+    filter: "sourcetype == 'access_combined'"
+    description: web tier access logs
+
+  - id: r_proxy
+    name: r_proxy
+    final: true
+    disabled: false
+    pipeline: p_proxy
+    output: out_splunk
+    filter: "sourcetype == 'squid:access'"
+    description: web proxy
+
+  - id: r_ise
+    name: r_ise
+    final: true
+    disabled: false
+    pipeline: p_ise
+    output: out_splunk
+    filter: "sourcetype == 'cisco:ise:syslog'"
+    description: Cisco ISE authentication
+
+  - id: r_asa
+    name: r_asa
+    final: true
+    disabled: false
+    pipeline: p_asa
+    output: out_splunk
+    filter: "sourcetype == 'cisco:asa'"
+    description: Cisco ASA and AnyConnect VPN
+
+  - id: r_win_system
+    name: r_win_system
+    final: true
+    disabled: false
+    pipeline: p_win_system
+    output: out_splunk
+    filter: "sourcetype == 'XmlWinEventLog:System'"
+    description: Windows System, Defender, AppLocker, Code Integrity, Terminal Services
+
+  - id: r_dhcp
+    name: r_dhcp
+    final: true
+    disabled: false
+    pipeline: p_dhcp
+    output: out_splunk
+    filter: "sourcetype == 'DhcpSrvLog'"
+    description: Windows DHCP server audit log from the domain controllers
+
+  # Not reduced, deliberately. See p_keep_all.
+  - id: r_keep_all
+    name: r_keep_all
+    final: true
+    disabled: false
+    pipeline: p_keep_all
+    output: out_splunk
+    filter: "sourcetype == 'linux_secure' || sourcetype == 'azure:aad:signin'"
+    description: sources that are control evidence end to end
+
+  - id: unmatched
+    name: unmatched
+    final: true
+    disabled: false
+    pipeline: passthru
+    output: out_unmatched
+    filter: "true"
+    description: anything no route above claimed - a full file here is a bug

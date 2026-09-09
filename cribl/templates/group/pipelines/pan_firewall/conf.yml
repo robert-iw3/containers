@@ -1,0 +1,40 @@
+# Palo Alto PAN-OS TRAFFIC and THREAT.
+#
+# Comma-separated syslog in PAN-OS field order, which is fixed by the platform
+# version rather than by your site. Firewall traffic is normally the largest
+# single feed in a SIEM and is almost entirely allowed-session records that no
+# detection reads.
+#
+# Every THREAT record and every deny is kept whole - they are the boundary
+# protection and monitoring evidence. Allowed sessions are sampled.
+asyncFuncTimeout: 1000
+functions:
+  - id: regex_extract
+    filter: "true"
+    conf:
+      source: _raw
+      regex: /^1,[^,]+,[^,]+,(?<pan_type>TRAFFIC|THREAT|SYSTEM|CONFIG)/
+      iterations: 1
+
+  - id: regex_extract
+    filter: "pan_type == 'TRAFFIC'"
+    conf:
+      source: _raw
+      regex: /,0x[0-9a-f]+,(?:tcp|udp|icmp),(?<pan_action>allow|deny|drop|reset-both|reset-client|reset-server),/
+      iterations: 1
+
+  - id: sampling
+    filter: "true"
+    conf:
+      rules:
+        - filter: "pan_type == 'TRAFFIC' && pan_action == 'allow'"
+          rate: __RATE_FW_ALLOWED_SESSIONS__
+
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - name: index
+          value: "'__SPLUNK_INDEX_NETWORK__'"
+        - name: cribl_pipeline
+          value: "'pan_firewall'"

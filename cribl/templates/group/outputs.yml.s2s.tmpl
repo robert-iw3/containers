@@ -1,0 +1,46 @@
+# Destinations, Splunk-to-Splunk shape.
+#
+# splunk_lb sends cooked, parsed data: the indexer skips line-breaking,
+# timestamp extraction and sourcetype assignment, which is the CPU saving this
+# architecture is built on.
+#
+# The cost, stated plainly: INDEX-TIME TRANSFORMS ON THE INDEXER DO NOT RUN ON
+# COOKED DATA. Any control you were planning to implement with transforms.conf
+# and DEST_KEY = _MetaData:Index will silently do nothing. The index has to be
+# correct when it leaves Cribl, which is why every pipeline here sets it.
+#
+# Note the key differences from splunk_hec: `hosts` not `url`, `authToken` not
+# `token`, and `rejectUnauthorized` INSIDE the tls block.
+outputs:
+  out_splunk:
+    type: splunk_lb
+    hosts: __CRIBL_S2S_HOSTS_YAML__
+    # Cooked data carries the index from the event, so nestedFields must not
+    # turn pipeline fields into index-time fields - that is index bloat plus
+    # collisions with the add-on's search-time extractions.
+    nestedFields: none
+    onBackpressure: queue
+    pqMaxFileSize: 1 MB
+    pqMaxSize: 5GB
+    pqPath: /opt/cribl/pq/out_splunk
+    pqCompress: gzip
+    pqOnBackpressure: block
+    pqStrictOrdering: true
+    tls:
+      disabled: false
+      rejectUnauthorized: __CRIBL_TLS_VERIFY__
+      caPath: __CRIBL_TLS_CA__
+      certPath: __CRIBL_TLS_CERT__
+      privKeyPath: __CRIBL_TLS_KEY__
+      minVersion: TLSv1.2
+
+  out_unmatched:
+    type: filesystem
+    destPath: /opt/cribl/state/unmatched
+    format: json
+    compress: none
+    maxFileSizeMB: 32
+    maxFileOpenTimeSec: 30
+    maxFileIdleTimeSec: 30
+    partitionExpr: "`${sourcetype}`"
+    onBackpressure: drop

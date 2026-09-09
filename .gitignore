@@ -107,3 +107,66 @@ defguard/uat/certs/
 
 # secure_browser: packed image tarballs (rebuild with secure_browser/pack.sh)
 secure_browser/images/
+
+# splunk: ansible vault password and connector test artefacts
+splunk/quick_deploy/ansible/vault_pass.txt
+splunk/splunk__connectors/uat/work/
+splunk/splunk__connectors/uat/fixtures/
+splunk/splunk__connectors/*/rust/target/
+splunk/splunk__connectors/*/rust/build.log
+
+# cribl: runtime state Cribl writes into the mounted config directories.
+# auth/ holds cribl.secret and the admin password hash.
+cribl/leader-config/auth/
+cribl/leader-config/cribl.inited
+cribl/leader-config/groups.yml
+cribl/leader-config/messages.yml
+cribl/demo/output/*.json
+cribl/demo/output/**/*.json
+
+# Generated secrets and key material. These are produced by running a stack,
+# never authored, so they must not be committed. A committed private key stays
+# in git history after deletion, so anything matched here that was previously
+# tracked must also be rotated.
+**/auth/cribl.secret
+**/auth/users.json
+**/auth/*.dat
+**/auth/certs/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+id_rsa
+id_ed25519
+*.htpasswd
+# Certificates are public, but these directories only ever hold generated
+# material and the key sits beside the cert.
+cribl/certs/*
+!cribl/certs/.gitignore
+splunk/secrets/
+# Deployable output of splunk/conf/render.sh, plus the certificates it points
+# at. Both are per-deployment and one of them is private keys.
+splunk/conf-rendered/
+splunk/certs/
+
+# Exceptions to the key-material rules above. These are PUBLIC trust stores
+# shipped inside vendored applications, not generated secrets: ignoring them
+# silently breaks TLS verification in those apps the next time one is updated.
+!**/certifi/cacert.pem
+!opensearch/data-prepper/config/default-keystore.p12
+
+# cribl pipelines: the docs tell operators to put the Cribl admin password,
+# the database password and the HEC token in config.ini. Only the example is
+# tracked, so editing the real one cannot commit a credential.
+cribl/custom-pipelines/*/config/config.ini
+cribl/integration-lab/work/
+cribl/integration-lab/cribl-config/leader/
+cribl/integration-lab/cribl-config/groups/*/auth/
+
+# Planning and exploration, not deliverables. Work in here is unfinished by
+# definition and is kept out of the tree so the docs that ship are only the
+# ones that describe something that works.
+cribl/docs/planning/
