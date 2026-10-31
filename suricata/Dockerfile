@@ -3,18 +3,18 @@
 
 ARG repo="quay.io/almalinuxorg" \
     base_image="9-minimal" \
-    image_hash="6d23899d5dc580aa5cebcbf751928f502fa7452360afe396ec657de99f006669"
+    image_hash="113f4008c804f871eeb813cb2872c708b32c790987f6d5682e5eb2399cc4c6d2"
 
 FROM ${repo}/${base_image}@sha256:${image_hash} AS base
 
 LABEL \
     org.opencontainers.image.name='Suricata' \
     org.opencontainers.image.description='Suricata is a high performance, open source network analysis and threat detection software.' \
-    org.opencontainers.image.usage='https://suricata.readthedocs.io/en/suricata-8.0.6/' \
+    org.opencontainers.image.usage='https://suricata.readthedocs.io/en/suricata-8.0.7/' \
     org.opencontainers.image.url='https://suricata.io/' \
     org.opencontainers.image.licenses='GNU General Public License v2.0' \
     org.opencontainers.image.vendor='The Open Information Security Foundation (OISF)' \
-    org.opencontainers.image.schema-version='8.0.6'
+    org.opencontainers.image.schema-version='8.0.7'
 
 # base dependencies for runtime
 RUN \
@@ -23,50 +23,50 @@ RUN \
     /usr/bin/crb enable; \
     microdnf update -y; \
     microdnf install -y \
-	bzip2 \
-	wget \
-	cronie \
-	elfutils-libelf \
-	ethtool \
-	file \
-	findutils \
-	hiredis \
-	hyperscan \
-	iproute \
-	iptables-nft \
-	jansson \
-	lua-libs \
-	libbpf \
-	libyaml \
-	libnfnetlink \
-	libnetfilter_queue \
-	libnet \
-	libcap-ng \
-	libevent \
-	libmaxminddb \
-	libpcap \
-	libprelude \
-	logrotate \
-	lz4 \
-	net-tools \
-	nss \
-	nss-softokn \
-	pcre \
-	procps-ng \
-	python3 \
-	python3-yaml \
-	python3-pip \
-	tcpdump \
-	which \
-	zlib \
-	clamav \
-	openscap \
-	scap-security-guide \
-	clamav-update
+		bzip2 \
+		wget \
+		cronie \
+		elfutils-libelf \
+		ethtool \
+		file \
+		findutils \
+		hiredis \
+		hyperscan \
+		iproute \
+		iptables-nft \
+		jansson \
+		lua-libs \
+		libbpf \
+		libyaml \
+		libnfnetlink \
+		libnetfilter_queue \
+		libnet \
+		libcap-ng \
+		libevent \
+		libmaxminddb \
+		libpcap \
+		libprelude \
+		logrotate \
+		lz4 \
+		net-tools \
+		nss \
+		nss-softokn \
+		pcre \
+		procps-ng \
+		python3 \
+		python3-yaml \
+		python3-pip \
+		tcpdump \
+		which \
+		zlib \
+		clamav \
+		openscap \
+		scap-security-guide \
+		clamav-update
 
 FROM base AS build-env
 
-ARG VERSION=8.0.6
+ARG VERSION=8.0.7
 
 RUN \
     microdnf install -y yum-utils epel-release; \
@@ -74,50 +74,50 @@ RUN \
     /usr/bin/crb enable; \
     microdnf update -y; \
     microdnf install -y \
-	autoconf \
-	automake \
-	bash \
-	cargo \
-	cbindgen \
-	diffutils \
-	elfutils-libelf-devel \
-	file \
-	file-devel \
-	gcc \
-	gcc-c++ \
-	git \
-	hiredis-devel \
-	jansson-devel \
-	jq \
-	lua-devel \
-	libbpf-devel \
-	libtool \
-	libyaml-devel \
-	libnfnetlink-devel \
-	libnetfilter_queue-devel \
-	libnet-devel \
-	libcap-ng-devel \
-	libevent-devel \
-	libmaxminddb-devel \
-	libpcap-devel \
-	libprelude-devel \
-	libtool \
-	lz4-devel \
-	make \
-	nspr-devel \
-	nss-devel \
-	nss-softokn-devel \
-	pcre2-devel \
-	pcre-devel \
-	pkgconfig \
-	python3-devel \
-	python3-yaml \
-	rust \
-	which \
-	zlib-devel \
-	hyperscan-devel \
-	npm \
-	gnupg
+		autoconf \
+		automake \
+		bash \
+		cargo \
+		cbindgen \
+		diffutils \
+		elfutils-libelf-devel \
+		file \
+		file-devel \
+		gcc \
+		gcc-c++ \
+		git \
+		hiredis-devel \
+		jansson-devel \
+		jq \
+		lua-devel \
+		libbpf-devel \
+		libtool \
+		libyaml-devel \
+		libnfnetlink-devel \
+		libnetfilter_queue-devel \
+		libnet-devel \
+		libcap-ng-devel \
+		libevent-devel \
+		libmaxminddb-devel \
+		libpcap-devel \
+		libprelude-devel \
+		libtool \
+		lz4-devel \
+		make \
+		nspr-devel \
+		nss-devel \
+		nss-softokn-devel \
+		pcre2-devel \
+		pcre-devel \
+		pkgconfig \
+		python3-devel \
+		python3-yaml \
+		rust \
+		which \
+		zlib-devel \
+		hyperscan-devel \
+		npm \
+		gnupg
 
 WORKDIR /src/
 
@@ -136,14 +136,14 @@ WORKDIR /src/suricata-${VERSION}
 
 RUN \
     ./configure \
-    --prefix=/usr \
-    --disable-shared \
-    --disable-gccmarch-native \
-    --enable-lua \
-    --enable-nfqueue \
-    --enable-hiredis \
-    --enable-geoip \
-    --enable-ebpf; \
+		--prefix=/usr \
+		--disable-shared \
+		--disable-gccmarch-native \
+		--enable-lua \
+		--enable-nfqueue \
+		--enable-hiredis \
+		--enable-geoip \
+		--enable-ebpf; \
     make -j 2; \
     make install install-conf DESTDIR=/fakeroot; \
     rm -rf /fakeroot/var /root/.gnupg

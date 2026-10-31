@@ -38,9 +38,10 @@ die() { echo "[entrypoint] ERROR: $*" >&2; exit 1; }
 : "${AF_THREADS:=auto}"
 : "${AF_CLUSTER_ID_A:=98}"
 : "${AF_CLUSTER_ID_B:=97}"
-: "${AF_DEFRAG:=no}"
+: "${AF_DEFRAG:=}"                         # empty = yes for ids, no for the ips bridge
 : "${AF_RING_SIZE:=65536}"
 : "${AF_BUFFER_SIZE:=65535}"
+: "${AF_MMAP_LOCKED:=no}"                  # yes needs a memlock limit above the ring size; the 8 MB default fails
 
 : "${NFQUEUE_NUM:=0}"
 : "${NFQUEUE_COUNT:=4}"
@@ -80,6 +81,27 @@ else
     AF_COPY_MODE="ids"
 fi
 
+# Kernel defrag keeps a fragmented flow on one cluster_flow worker; the inline bridge must forward fragments untouched.
+if [ -z "$AF_DEFRAG" ]; then
+    if [ "$AF_COPY_MODE" = "ips" ]; then AF_DEFRAG="no"; else AF_DEFRAG="yes"; fi
+fi
+
+# Capture options on the command line replace the ones derived from IPS_MODE, and an
+# interface named there takes the tuned af-packet entry instead of CAPTURE_INTERFACE.
+USER_CAPTURE="no"
+if [ "$#" -gt 0 ] && [ "${1#-}" != "$1" ]; then
+    iface_next="no"
+    for arg in "$@"; do
+        if [ "$iface_next" = "yes" ]; then CAPTURE_INTERFACE="$arg"; iface_next="no"; continue; fi
+        case "$arg" in
+            -i) USER_CAPTURE="yes"; iface_next="yes" ;;
+            --af-packet=*) USER_CAPTURE="yes"; CAPTURE_INTERFACE="${arg#--af-packet=}" ;;
+            -r|-q|-T|--af-packet|--pcap|--pcap=*|--af-xdp|--af-xdp=*|--netmap|--netmap=*|--pfring|--pfring=*|--dpdk|--erf-in|--unix-socket|--unix-socket=*)
+                USER_CAPTURE="yes" ;;
+        esac
+    done
+fi
+
 # ------------------------------------------------------------------------------
 # 1. Seed /etc/suricata from the baked-in dist copy on first run (volume mounts
 #    may start empty). Preserves the original behaviour.
@@ -95,6 +117,11 @@ mkdir -p /etc/suricata/data /var/lib/suricata/rules /var/log/suricata /var/run/s
 # Ensure dataset files exist (empty is valid; rules using them just won't match).
 for ds in bad_ips.lst bad_domains.lst bad_sni.lst bad_ja3.lst bad_file_md5.lst; do
     [ -f "/etc/suricata/data/$ds" ] || : > "/etc/suricata/data/$ds"
+done
+
+# Every file in the template's rule-files list must exist or suricata -T fails; empty is valid.
+for rf in allowlist.rules block-known-bad.rules suspicious.rules policy.rules; do
+    [ -f "/var/lib/suricata/rules/$rf" ] || : > "/var/lib/suricata/rules/$rf"
 done
 
 # ------------------------------------------------------------------------------
@@ -117,7 +144,7 @@ render_config() {
     cp "$TEMPLATE" "$tmp"
     local vars="HOME_NET K8S_API DOCKER_HOSTS CAPTURE_INTERFACE BRIDGE_IFACE_B \
         AF_THREADS AF_CLUSTER_ID_A AF_CLUSTER_ID_B AF_DEFRAG AF_RING_SIZE \
-        AF_BUFFER_SIZE AF_COPY_MODE NFQ_MODE NFQ_BATCHCOUNT NFQ_FAIL_OPEN \
+        AF_BUFFER_SIZE AF_MMAP_LOCKED AF_COPY_MODE NFQ_MODE NFQ_BATCHCOUNT NFQ_FAIL_OPEN \
         EXCEPTION_POLICY STREAM_INLINE FILESTORE_ENABLED JA3_ENABLED \
         EVE_ALERT_PAYLOAD EVE_ALERT_PACKET LOG_LEVEL DETECT_PROFILE MPM_ALGO \
         SPM_ALGO CPU_AFFINITY WORKER_CPUS FLOW_MEMCAP STREAM_MEMCAP \
@@ -132,6 +159,8 @@ render_config() {
         warn "Unrendered tokens remain:"; grep -oE '@@[A-Z_]+@@' "$tmp" | sort -u >&2
         die "Template rendering incomplete."
     fi
+    # Suricata accepts copy-mode only as ips or tap, so passive capture carries no copy peer.
+    [ "$AF_COPY_MODE" = "ips" ] || sed -i '/^[[:space:]]*copy-\(mode\|iface\):/d' "$tmp"
     install -m 0640 "$tmp" "$out"; rm -f "$tmp"
     log "Config rendered."
 }
@@ -142,6 +171,12 @@ elif [ -f /etc/suricata/suricata.yaml ]; then
     warn "No template found; using existing /etc/suricata/suricata.yaml as-is."
 else
     die "No template and no suricata.yaml present."
+fi
+
+# A first argument that is not a flag is a command to run in the rendered container, before
+# any rule refresh, validation or host data-plane change.
+if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    exec "$@"
 fi
 
 # ------------------------------------------------------------------------------
@@ -216,7 +251,7 @@ teardown_nfqueue_iptables() {
 SURI_ARGS=""
 case "$IPS_MODE" in
     ids)
-        log "Mode: IDS (passive) on $CAPTURE_INTERFACE"
+        log "Mode: IDS (passive)"
         SURI_ARGS="--af-packet=$CAPTURE_INTERFACE"
         ;;
     ips)
@@ -249,6 +284,8 @@ case "$IPS_MODE" in
         ;;
     *) die "Unknown IPS_MODE '$IPS_MODE' (ids|ips)." ;;
 esac
+# Suricata would open both the derived and the supplied capture, and fail on whichever does not exist.
+[ "$USER_CAPTURE" = "no" ] || SURI_ARGS=""
 
 # ------------------------------------------------------------------------------
 # 5. Update rules and validate config.
@@ -260,10 +297,11 @@ fi
 
 if [ "$SURICATA_TEST_CONFIG" = "yes" ]; then
     log "Validating configuration (suricata -T)…"
-    if [ "$IPS_MODE" = "ips" ] && [ "$INLINE_METHOD" = "afpacket_bridge" ]; then
-        suricata -T -c /etc/suricata/suricata.yaml --af-packet 2>&1 | tail -5 || die "Config validation failed."
-    else
-        suricata -T -c /etc/suricata/suricata.yaml 2>&1 | tail -5 || die "Config validation failed."
+    test_args=""
+    if [ "$IPS_MODE" = "ips" ] && [ "$INLINE_METHOD" = "afpacket_bridge" ]; then test_args="--af-packet"; fi
+    if ! test_out="$(suricata -T -c /etc/suricata/suricata.yaml $test_args 2>&1)"; then
+        printf '%s\n' "$test_out" | tail -20 >&2
+        die "Config validation failed."
     fi
     log "Configuration valid."
 fi
@@ -297,10 +335,6 @@ fi
 # ------------------------------------------------------------------------------
 # 7. Exec Suricata.
 # ------------------------------------------------------------------------------
-if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
-    exec "$@"
-fi
-
 log "Launching: suricata -c /etc/suricata/suricata.yaml --runmode $RUNMODE $SURI_ARGS $USER_ARGS $*"
 exec /usr/bin/suricata \
     -c /etc/suricata/suricata.yaml \

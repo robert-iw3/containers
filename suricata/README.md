@@ -64,7 +64,7 @@ This guide provides instructions to deploy Suricata using a Python deployment sc
    Edit `deploy_config.yaml`:
    ```yaml
    suricata:
-     version: '8.0.6'
+     version: '8.0.7'
      interface: 'eth0'
      log_dir: '/var/log/suricata'
      rules_dir: '/var/lib/suricata/rules'
@@ -204,6 +204,32 @@ ansible-playbook deploy_suricata.yml -e "config_file=deploy_config.yaml cleanup=
 - **Rules**: Update `/var/lib/suricata/rules`.
 - **Log Rotation**: Modify `/etc/logrotate.d/suricata`.
 - **Event Types**: Extend `suricata_connector.py` for `dns`, `tls`, etc.
+
+## Standalone sensor
+
+Sniffing a host interface needs rootful podman. Rootless `--cap-add=net_raw`
+applies only inside the container's user namespace, so the capture socket on a
+host interface fails with `Operation not permitted`.
+
+```bash
+sudo podman build -t suricata .
+sudo podman run --rm -d --name suricata --net=host \
+  --cap-add=net_admin --cap-add=net_raw --cap-add=sys_nice \
+  -v /var/log/suricata:/var/log/suricata:Z \
+  suricata -i wlo1
+```
+
+- `-i IF` or `--af-packet=IF` after the image name replaces the entrypoint's
+  default `--af-packet=$CAPTURE_INTERFACE`, and that interface gets the tuned
+  af-packet settings.
+- The entrypoint runs `suricata -T` on the rendered config and exits if it
+  fails. Suricata's startup errors land in `/var/log/suricata/suricata.log`,
+  which outlives `--rm`.
+- Each capture thread maps a ring of `AF_RING_SIZE` packets, about 106 MB at a
+  1500 MTU, and `threads: auto` starts one thread per CPU; `-e AF_THREADS=2`
+  caps that.
+- The log directory is chowned to the container's `suricata` user (uid 1001);
+  `-e PUID=… -e PGID=…` maps it to a host account.
 
 ## IDS / IPS mode toggling
 

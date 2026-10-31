@@ -45,6 +45,7 @@ vars:
     SQL_SERVERS: "$HOME_NET"
     DNS_SERVERS: "$HOME_NET"
     SMTP_SERVERS: "$HOME_NET"
+    TELNET_SERVERS: "$HOME_NET"
     DC_SERVERS: "$HOME_NET"
     K8S_API: "@@K8S_API@@"
     DOCKER_HOSTS: "@@DOCKER_HOSTS@@"
@@ -53,6 +54,8 @@ vars:
     HTTP_PORTS: "80"
     SHELLCODE_PORTS: "!80"
     SSH_PORTS: "22"
+    FTP_PORTS: "21"
+    ORACLE_PORTS: "1521"
     DNP3_PORTS: "20000"
     MODBUS_PORTS: "502"
     FILE_DATA_PORTS: "[$HTTP_PORTS,110,143]"
@@ -150,6 +153,11 @@ app-layer:
         enabled: yes
         detection-ports:
           dp: 53
+    # suricata-update disables rules only for protocols set to no here; left unset they stay off but their rules fail to load.
+    modbus:
+      enabled: no
+    dnp3:
+      enabled: no
 
 stats:
   enabled: yes
@@ -209,7 +217,7 @@ logging:
 # ==============================================================================
 # CAPTURE / RUN MODE -- the entrypoint selects ONE path via the command line it
 # builds and by rewriting copy-mode before start.
-#   IDS:                 suricata --af-packet      (copy-mode ids, passive)
+#   IDS:                 suricata --af-packet=IF   (or -i IF; copy-mode lines removed, passive)
 #   IPS afpacket bridge: suricata --af-packet      (copy-mode ips forwards/blocks)
 #   IPS nfqueue:         suricata -q 0 -q 1 ...
 #
@@ -224,11 +232,13 @@ af-packet:
     cluster-type: cluster_flow
     defrag: @@AF_DEFRAG@@
     use-mmap: yes
-    mmap-locked: yes
+    mmap-locked: @@AF_MMAP_LOCKED@@
     tpacket-v3: yes
     ring-size: @@AF_RING_SIZE@@
     buffer-size: @@AF_BUFFER_SIZE@@
-    checksum-checks: auto
+    # The host's own packets are captured before TX offload fills their checksums; kernel mode skips
+    # validation on those per packet, while auto rejects them until its sample completes.
+    checksum-checks: kernel
     copy-mode: @@AF_COPY_MODE@@
     copy-iface: @@BRIDGE_IFACE_B@@
 
@@ -238,11 +248,11 @@ af-packet:
     cluster-type: cluster_flow
     defrag: @@AF_DEFRAG@@
     use-mmap: yes
-    mmap-locked: yes
+    mmap-locked: @@AF_MMAP_LOCKED@@
     tpacket-v3: yes
     ring-size: @@AF_RING_SIZE@@
     buffer-size: @@AF_BUFFER_SIZE@@
-    checksum-checks: auto
+    checksum-checks: kernel
     copy-mode: @@AF_COPY_MODE@@
     copy-iface: @@CAPTURE_INTERFACE@@
 
