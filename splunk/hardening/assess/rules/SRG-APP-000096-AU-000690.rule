@@ -1,0 +1,44 @@
+# SRG-APP-000096-AU-000690  -  CAT III
+# The Central Log Server must produce audit records containing information
+# to establish when (date and time) the events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000096-AU-000690
+group:           V-221909
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000131
+control_rev5:    AU-3
+
+contribution:    Splunk assigns _time to every indexed record, and DATETIME_CONFIG selects
+                 whether that time is extracted from the record's own text or replaced by
+                 the server's processing time.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [] DATETIME_CONFIG not_in NONE|CURRENT
+
+external:        The accuracy of the recorded time rests on host clock synchronization,
+                 performed by the operating system's time service and assessed under
+                 SRG-APP-000086-AU-000030.
+
+citation:        DIRECTION. Removed props.conf MAX_TIMESTAMP_LOOKAHEAD min 1.
+                 props.conf.spec states "If set to 0 or -1, the length constraint for
+                 timestamp recognition is effectively disabled" - 0 and -1 remove the
+                 character limit so the extractor scans the whole event, which recognizes
+                 timestamps at least as well as the default of 128, not worse. The
+                 condition reads those values as if they switched timestamping off, so it
+                 fails exactly the configurations it should pass. The setting bounds a
+                 search window for performance and appears in neither the check nor the fix
+                 text.
+finding:         Timestamp extraction is disabled for the sourcetypes in scope
+                 (DATETIME_CONFIG set to NONE or CURRENT), so the time on a stored record
+                 is when Splunk processed it rather than when the event occurred.

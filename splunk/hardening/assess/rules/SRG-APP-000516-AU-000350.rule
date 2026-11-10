@@ -1,0 +1,57 @@
+# SRG-APP-000516-AU-000350  -  CAT II
+# The Central Log Server must be configured to notify the System
+# Administrator (SA) and Information System Security Officer (ISSO), at a
+# minimum, when an attack is detected on multiple devices and hosts within
+# its scope of coverage.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000350
+group:           V-206514
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can run a detection search on a schedule and send its result to
+                 named recipients by email, so the notification path and the people on it
+                 are expressed in the application's own configuration.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [] enableSched equals 1
+check:           savedsearches.conf [] cron_schedule non_empty
+check:           savedsearches.conf [] action.email in 1|true
+check:           savedsearches.conf [] action.email.to non_empty
+check:           alert_actions.conf [email] mailserver not_equals localhost
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] mailserver non_empty -> alert_actions.conf [email] mailserver not_equals localhost
+vendor:          alert_actions.conf [email] mailserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        Who the SA and ISSO are and what detection logic constitutes an attack
+                 across multiple devices, both organization-defined; the product STIG
+                 verifies this part by interviewing the SA and confirming receipt with the
+                 ISSO rather than by reading configuration (SPLK-CL-000280 check text).
+external:        Delivery of the message, carried by the mail transfer agent and the
+                 network.
+external:        Where analysis is performed by another device, the benchmark marks the
+                 requirement not applicable, which is a deployment-design determination.
+
+citation:        Central Log Server SRG SRG-APP-000516-AU-000350 check text; SPLK-CL-000280
+                 check and fix text; savedsearches.conf.spec:73 (enableSched = [0 | 1],
+                 default 0), savedsearches.conf.spec:79 (cron_schedule),
+                 savedsearches.conf.spec:300 (action.email, default false),
+                 savedsearches.conf.spec:304 (action.email.to, REQUIRED),
+                 alert_actions.conf.spec:276 (mailserver)
+finding:         No scheduled search carries an enabled email action with a recipient list
+                 and a reachable mail server, so the application cannot notify anyone when
+                 a detection fires across multiple hosts.

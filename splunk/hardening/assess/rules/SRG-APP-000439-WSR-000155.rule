@@ -1,0 +1,61 @@
+# SRG-APP-000439-WSR-000155  -  CAT II
+# Cookies exchanged between the web server and the client, such as session
+# cookies, must have cookie properties set to force the encryption of
+# cookies.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000155
+group:           V-206438
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can force the Secure attribute on its session cookie in every
+                 deployment topology and can set a restrictive SameSite attribute, which
+                 are the cookie properties the product exposes for protecting cookies in
+                 transit.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.forceSecure in 1|true
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] cookieSameSite https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.forceSecure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.secure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.secure in 1|true
+                 reason: "Whether or not the browser must transmit session cookies over an
+                         HTTPS connection when Splunk Web is configured to serve requests
+                         using HTTPS (the 'enableSplunkWebSSL' setting is 'true'.) If set to
+                         'true' and 'enableSplunkWebSSL' is also 'true', then the browser
+                         must transmit the session cookie over HTTPS connections. This
+                         improves session security. Default: true"
+retired_check:   web.conf [settings] cookieSameSite in lax|strict
+                 reason: 10.4.2 spec: "cookieSameSite = [ not_specified | lax | strict |
+                         none ]... A value of 'lax' means the Splunk web server sets the
+                         'SameSite=Lax' attribute. A value of 'strict' means...
+                         'SameSite=Strict'. A value of 'none' means... to let browsers send
+                         the cookies in all contexts... The 'SameSite=None' attribute in a
+                         cookie requires that you set the 'Secure' attribute... Default:
+                         lax". The 10.0.0 spec states "Default: not_specified".
+# --- end vendor verification
+
+external:        Browser enforcement of the Secure and SameSite attributes
+external:        Any reverse proxy that rewrites or re-issues cookies before they reach the
+                 client
+external:        Any embedding requirement for dashboards in a third-party iframe, which
+                 web.conf.spec:676-682 states requires cookieSameSite = none and is an
+                 organizational decision
+
+citation:        SRG-APP-000439-WSR-000155 check text; web.conf.spec:664-682, 951-969
+finding:         Splunk does not force protected cookie properties: tools.sessions.secure
+                 or tools.sessions.forceSecure is false, or cookieSameSite is none or
+                 not_specified, so a cookie can be sent outside an encrypted, same-site
+                 context.

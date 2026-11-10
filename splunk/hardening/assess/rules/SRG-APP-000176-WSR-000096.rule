@@ -1,0 +1,54 @@
+# SRG-APP-000176-WSR-000096  -  CAT II
+# Only authenticated system administrators or the designated PKI Sponsor for
+# the web server must have access to the web servers private key.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000176-WSR-000096
+group:           V-206389
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000186
+control_rev5:    IA-5
+
+contribution:    Splunk's encrypt_fields list determines which configuration settings,
+                 including the certificate key passwords, are stored encrypted under
+                 splunk.secret rather than as readable text, which is the product's control
+                 over who can obtain the web server private key's password from the
+                 configuration layer.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [general] encrypt_fields matches sslPassword
+
+external:        File system ownership and permissions on the private key, on the conf
+                 files that hold its password, and on splunk.secret, which are operating
+                 system controls and carry most of this objective
+external:        Role-to-capability assignments that permit reading stored secrets through
+                 the REST layer (for example list_storage_passwords and admin_all_objects)
+                 are enabled per role in authorize.conf and verified against the role and
+                 user assignments, not from a single setting; the capability names listed
+                 against server.conf [general] in the key inventory are authorize.conf role
+                 capabilities
+external:        Designation of the PKI Sponsor, which is procedural
+external:        Not Applicable where the web server has no private key
+
+citation:        SRG-APP-000176-WSR-000096 check text (Not Applicable where the web server
+                 has no private key); server.conf.spec:547-560 (encrypt_fields,
+                 comma-separated <conf-file>:<stanza-prefix>:<setting> entries, default
+                 list includes "server: :sslKeysfilePassword" and "server: :sslPassword"),
+                 web.conf.spec:93-99 (web.conf sslPassword), web.conf.spec:75-80
+                 (privKeyPath); authorize.conf.spec:67-78 (capabilities such as
+                 list_storage_passwords and admin_all_objects are enabled per role stanza
+                 in authorize.conf, not in server.conf)
+finding:         server.conf [general] encrypt_fields has been overridden without an
+                 sslPassword entry, so the web server private key's password is stored
+                 unencrypted in the configuration where any reader of the conf layer can
+                 obtain it.

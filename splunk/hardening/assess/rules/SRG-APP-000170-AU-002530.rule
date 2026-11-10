@@ -1,0 +1,51 @@
+# SRG-APP-000170-AU-002530  -  CAT III
+# The Central Log Server must be configured to require the change of at
+# least eight of the total number of characters when passwords are changed.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000170-AU-002530
+group:           V-206473
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    The product's nearest capability is password history
+                 (enablePasswordHistory with passwordHistoryCount), which blocks reuse of a
+                 stored previous password in full but does not measure how many characters
+                 changed, so the application cannot enforce the eight-character difference
+                 itself.
+
+external:        An external authentication provider selected through authentication.conf
+                 authType (LDAP, SAML or Scripted), whose own password policy engine can
+                 enforce a minimum number of changed characters
+external:        The organization's password management procedure for the native emergency
+                 account of last resort
+external:        Operating system password policy for host accounts
+
+manual_reason:   Splunk Enterprise 10.4.2 exposes no setting that measures how many
+                 characters of a new password differ from the previous one. The native
+                 password controls in authentication.conf.spec:437-568 are minimum length,
+                 the four character-class minimums, expiry and alerting, lockout, and
+                 password history with a stored count; none of them expresses a
+                 per-character change threshold, so no configuration value can decide this
+                 requirement and writing a condition over a substitute setting would report
+                 a finding for something the product has no control over.
+
+citation:        SRG-APP-000170-AU-002530 check text; authentication.conf.spec:437-568 (the
+                 complete set of [splunk_auth] password controls: minPasswordLength,
+                 minPasswordUppercase, minPasswordLowercase, minPasswordDigit,
+                 minPasswordSpecial, expirePasswordDays, expireAlertDays,
+                 expireUserAccounts, forceWeakPasswordChange, lockout settings,
+                 enablePasswordHistory at 554-560 and passwordHistoryCount at 561-568)
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 provides
+                 no setting that requires a minimum number of characters to change when a
+                 password is changed, and the requirement is carried by the external
+                 authentication provider or by organizational password procedure.

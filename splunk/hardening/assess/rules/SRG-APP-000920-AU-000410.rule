@@ -1,0 +1,48 @@
+# SRG-APP-000920-AU-000410  -  CAT II
+# The Central Log Server must synchronize system clocks within and between
+# systems or system components.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000920-AU-000410
+group:           V-263584
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-004922
+control_rev5:    SC-45
+
+contribution:    Splunk has no NTP client, so its share is to bound and act on clock
+                 divergence between its own components, refusing to register a search peer
+                 beyond addpeer_skew_limit and warning beyond max_tolerable_skew, and to
+                 remove time zone ambiguity from event timestamps with props.conf TZ and
+                 TZ_ALIAS.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+
+check:           limits.conf [search] addpeer_skew_limit present
+check:           limits.conf [search] max_tolerable_skew present
+
+external:        The host operating system's time service (NTP or chrony), which is where
+                 the Central Log Server SRG itself places time synchronization when the log
+                 server application has no NTP client (SRG-APP-000086-AU-000030 check text)
+external:        The authoritative time source shared with the host and with the devices in
+                 scope of coverage
+external:        Forwarder and sending device clocks, which set the event timestamps Splunk
+                 records; props.conf TZ is left unset where the time zone of the host
+                 running splunkd or the forwarder-supplied zone is the intended source
+                 (props.conf.spec:580-590)
+external:        Operating system and network device STIGs, which carry the synchronization
+                 requirement for those components
+
+citation:        SRG-APP-000920-AU-000410 check text; SRG-APP-000086-AU-000030 check text;
+                 limits.conf.spec:493-502, 529-536; props.conf.spec:580-612
+finding:         Splunk expresses no clock skew bound between its own components
+                 (limits.conf [search] addpeer_skew_limit or max_tolerable_skew is not
+                 available in the assessed configuration), so divergence between the search
+                 head and its peers is neither refused nor reported.

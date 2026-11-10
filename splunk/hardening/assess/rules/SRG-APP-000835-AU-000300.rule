@@ -1,0 +1,44 @@
+# SRG-APP-000835-AU-000300  -  CAT II
+# The Central Log Server must for password-based authentication, update the
+# list of passwords on an organization-defined frequency.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000835-AU-000300
+group:           V-263575
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004059
+control_rev5:    IA-5
+
+contribution:    None: with no password deny list in the product there is nothing for the
+                 application to update, and Splunk Enterprise 10.4.2 has no setting
+                 expressing an update frequency for such a list. The only scheduled
+                 credential behavior the product can be configured with is password
+                 expiration (authentication.conf [splunk_auth] expirePasswordDays,
+                 expireUserAccounts), which is a different control and is assessed under
+                 SRG-APP-000870.
+
+external:        Updating the list on the organization-defined frequency - carried by
+                 organizational policy and the process that maintains the list.
+external:        Distribution of the updated list to the screening component - carried by
+                 the directory service or identity provider where authType is LDAP, SAML,
+                 or ProxySSO.
+
+manual_reason:   The requirement is to update a list the product does not hold; no conf key
+                 expresses the list or the frequency of its update, so no observed
+                 configuration value can decide it. The frequency is organization-defined.
+
+citation:        splunk-spec-files/authentication.conf.spec:437-600 ([splunk_auth];
+                 expirePasswordDays at :487 governs password expiration, not a deny list)
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 holds no
+                 password deny list and has no setting for its update frequency, so this
+                 requirement is carried by organizational policy and by the identity
+                 provider that holds the list; this determination is from the perspective
+                 of the application layer alone.

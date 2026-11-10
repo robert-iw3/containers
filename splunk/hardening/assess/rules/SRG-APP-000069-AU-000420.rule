@@ -1,0 +1,57 @@
+# SRG-APP-000069-AU-000420  -  CAT III
+# The Central Log Server must retain the Standard Mandatory DoW Notice and
+# Consent Banner on the screen until users acknowledge the usage conditions
+# and take explicit actions to log on for further access.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000069-AU-000420
+group:           V-221906
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000050
+control_rev5:    AC-8
+
+contribution:    Content set in web.conf login_content stays on the Splunk Web login page
+                 for as long as the page is displayed and is cleared only when the user
+                 takes the explicit action of submitting credentials, so the application
+                 can hold the notice on screen until the user acts to log on; Splunk Web
+                 offers no separate acknowledgment control or consent checkbox that must be
+                 cleared before the credential fields become usable.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] login_content non_empty
+check:           web.conf [settings] login_content matches You are accessing a U\.S\. Government \(USG\) Information System \(IS\)
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] login_content https://help.splunk.com/en/splunk-enterprise/developing-views-and-apps-for-splunk-web/9.0/customize-splunk-web/customize-the-login-page
+# --- end vendor verification
+
+external:        An explicit acknowledgment step - a dialog the user must dismiss, or a
+                 checkbox that must be selected before logon proceeds - is not a Splunk
+                 Enterprise setting. Where the organization requires a click-through
+                 acknowledgment, it is carried by a single sign-on portal or reverse proxy
+                 placed ahead of Splunk Web, or by the script-based dialog in the product
+                 STIG fix text, which this release's HTML sanitization of login_content may
+                 remove.
+external:        As with the banner display requirement, the product STIG scopes this to
+                 the instance used as a search head, and access paths that bypass the
+                 Splunk Web login page are covered by their own banners.
+
+citation:        splunk-spec-files/web.conf.spec:233-237 (login_content = <string>, no
+                 default, HTML sanitized by removing potentially dangerous tags and
+                 attributes); SRG-APP-000069-AU-000420 check and fix text; product STIG
+                 SPLK-CL-000080 fix text for the banner wording.
+finding:         Splunk Web does not retain the Standard Mandatory Notice and Consent
+                 Banner until the user acts to log on, because web.conf [settings]
+                 login_content carries no banner text for the login page to hold; this is
+                 assessed at the application layer alone, and an explicit acknowledgment
+                 control, for which Splunk Enterprise has no setting, is recorded as an
+                 external dependency carried by a single sign-on portal or reverse proxy
+                 ahead of Splunk Web.

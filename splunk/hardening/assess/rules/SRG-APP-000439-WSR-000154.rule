@@ -1,0 +1,41 @@
+# SRG-APP-000439-WSR-000154  -  CAT II
+# Cookies exchanged between the web server and the client, such as session
+# cookies, must have cookie properties set to prohibit client-side scripts
+# from reading the cookie data.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000154
+group:           V-206437
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can mark both the Splunk Web session cookie and the splunkd
+                 authentication cookie HttpOnly so that running JavaScript cannot read
+                 their values.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.httponly in 1|true
+check:           server.conf [httpServer] cookieAuthHttpOnly in 1|true
+
+external:        Browser enforcement of the HttpOnly attribute
+external:        Any installed app or dashboard JavaScript that creates its own cookies,
+                 which is outside these platform settings
+
+citation:        SRG-APP-000439-WSR-000154 check text; web.conf.spec:943-950;
+                 server.conf.spec:1520-1531
+finding:         Splunk returns session or authentication cookies without the HttpOnly
+                 attribute (web.conf tools.sessions.httponly or server.conf
+                 cookieAuthHttpOnly is false), so client side scripts can read the cookie
+                 value.

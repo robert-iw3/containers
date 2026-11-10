@@ -1,0 +1,49 @@
+# SRG-APP-000099-AU-000720  -  CAT III
+# The Central Log Server must produce audit records that contain information
+# to establish the outcome of the events.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000099-AU-000720
+group:           V-221912
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000134
+control_rev5:    AU-3
+
+contribution:    Splunk's own audit records carry the outcome of each audited operation and
+                 reach a searchable index when the audit trail is queued to the index.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+
+check:           audit.conf [auditTrail] queueing not_equals false
+
+external:        The sending hosts and devices must state the outcome in the records they
+                 transmit; Splunk extracts and classifies what it receives and cannot infer
+                 an outcome the sender omitted.
+external:        Where queueing is deliberately set to false, the audit log is still
+                 written to disk and the records reach an index only through a separate
+                 monitor input, which the assessor confirms in inputs.conf.
+
+citation:        OVER-REACH and INVENTION, as at SRG-APP-000095-AU-000680. Removed
+                 eventtypes.conf [<eventtype>] search non_empty: the shipped
+                 eventtypes.conf declares "search =" empty in its default stanza and ships
+                 no event types, so the condition fails a stock instance; event types are
+                 an optional search-time feature that neither the check nor the fix text
+                 requires. Also removed props.conf [<spec>] <spec> present, which named the
+                 spec-file placeholder as both stanza and key - props.conf has no such
+                 setting, so it could never match - and whose determined form is a
+                 whole-file presence test every installation passes. Outcome is carried in
+                 the record text and read by field extraction, which no single props.conf
+                 key decides.
+finding:         The audit trail is not queued to an index (queueing = false) with no
+                 compensating input, so the outcome recorded on each audited operation is
+                 not searchable in the repository.

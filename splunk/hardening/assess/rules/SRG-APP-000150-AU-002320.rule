@@ -1,0 +1,53 @@
+# SRG-APP-000150-AU-002320  -  CAT II
+# The Central Log Server must use multifactor authentication for network
+# access to non-privileged user accounts.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000150-AU-002320
+group:           V-206462
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000766
+control_rev5:    IA-2
+
+contribution:    Splunk Web can require a client certificate, use it as the user
+                 credential, and set the method by which the user identity is extracted
+                 from that certificate, which is the product's share of multifactor network
+                 logon for ordinary users; the Duo or RSA integration in
+                 authentication.conf is the product's equivalent alternative route.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] requireClientCert equals true
+check:           web.conf [settings] enableCertBasedUserAuth equals true
+check:           web.conf [settings] certBasedUserAuthMethod non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] enableCertBasedUserAuth https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        Issuance and possession of the PKI credential for each non-privileged
+                 user, plus client-side reader and middleware
+external:        Where Duo or RSA is used in place of PKI, vendor enrollment and policy
+                 decide whether the second factor is demanded of each account
+external:        The directory service that holds the account the extracted certificate
+                 identity resolves to
+
+citation:        SRG-APP-000150-AU-002320 check and fix text; web.conf.spec:120-132
+                 (enableCertBasedUserAuth, default false), web.conf.spec:133-143
+                 (certBasedUserAuthMethod values CommonName, EDIPI, PIV, no default),
+                 web.conf.spec:151-167 (requireClientCert, default false);
+                 authentication.conf.spec:87-99
+finding:         Splunk requires no second authentication factor for network logon by
+                 non-privileged accounts: neither the certificate path (web.conf
+                 requireClientCert, enableCertBasedUserAuth and certBasedUserAuthMethod)
+                 nor the vendor path (authentication.conf externalTwoFactorAuthVendor with
+                 externalTwoFactorAuthSettings) is configured.

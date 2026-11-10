@@ -1,0 +1,90 @@
+# SRG-APP-000163-AU-002470  -  CAT II
+# The Central Log Server must disable accounts (individuals, groups, roles,
+# and devices) after 35 days of inactivity.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000163-AU-002470
+group:           V-206466
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-003627
+control_rev5:    AC-2
+
+contribution:    Splunk Enterprise has no inactivity timer of its own over the native
+                 account store, but it does hold the inbound provisioning path by which an
+                 identity provider that detects 35 days of inactivity applies the
+                 deactivation to the account this instance holds: splunkd launches the
+                 supervisor process that handles SCIM authorization tokens, and Splunk Web
+                 exposes the automated user management controls that configure it. Keeping
+                 that path available is the application's share.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web-features.conf - Which features of the web interface are available.
+
+check:           server.conf [teleport_supervisor] disabled in 0|false
+check:           web-features.conf [feature:identity_sidecar_scim] enabled in 1|true
+
+external:        The 35-day inactivity determination is made by the organization's
+                 directory service or SAML identity provider, which must then apply the
+                 deactivation to this instance over SCIM; that component is assessed under
+                 its own baseline.
+external:        The native account store exposes no inactivity timer.
+                 authentication.conf.spec:487 expirePasswordDays and :504
+                 expireUserAccounts govern password expiry, not account inactivity, and the
+                 lockout settings act on consecutive failed logons, not on inactivity, so
+                 where a site relies on native local accounts the requirement is carried by
+                 an organizational account-review procedure. No Splunk setting tracks the
+                 last successful logon per account, so the 35-day determination itself
+                 cannot be read from Splunk configuration.
+external:        The account of last resort that the fix text exempts is identified by the
+                 organization; its role-scoped counterparts are authorize.conf.spec:867
+                 [capability::never_lockout] and :870 [capability::never_expire].
+
+citation:        ADDED, not corrected: this requirement is present in
+                 inventory/groups/AC-1.json as the seventeenth member of the group and
+                 carries an APPLICABLE determination in inventory/sca-determinations.json,
+                 but no criterion was derived for it, so the row would stay not_reviewed
+                 with nothing recorded about what the application can and cannot do. The
+                 criterion follows the two settings the determination names and that
+                 inventory/checks.tsv already carries as declared keys. Both are
+                 deliberately written against their vendor defaults, which are the
+                 permissive state: server.conf.spec:6591 gives disabled a default of false
+                 and web-features.conf.spec:409 gives enabled a default of true, so the
+                 criterion passes an instance that has left the provisioning path intact
+                 and fails only one that has explicitly turned it off. Written the other
+                 way round, as a demand that an organization adopt SCIM provisioning, it
+                 would be over-reach, since a site using only native local accounts has no
+                 Splunk setting that disables an account for inactivity and would be failed
+                 for a lever the product does not provide. The third key in the inventory
+                 row, authentication.conf scimSupportedDomains, is excluded on two grounds:
+                 checks.tsv marks it undeclared, and it is absent from the specification
+                 set provided here, so no vocabulary or default can be cited for it.
+                 Caution on citations generally, from the same determination: the provided
+                 specification snapshot is shorter than the set 10.4.2 ships and the line
+                 numbers diverge, [teleport_supervisor] sitting at snapshot line 6584
+                 against shipped line 6998 and [splunk_auth] at snapshot 437 against
+                 shipped 458. Every file:line in this review resolves against the snapshot
+                 supplied as the input, and any criterion republished against a shipped
+                 instance must have its citations re-resolved.
+                 This requirement is decidable: machine, so it carries no manual_reason:
+                 that field is read only for a manual requirement. What the application
+                 controls is the inbound provisioning path, which the two conditions decide
+                 and which an administrator can turn off. What it does not control, the
+                 35-day inactivity determination and the absence of any native
+                 last-logon or inactivity setting, is named in the external dependencies
+                 above and is not counted against the application.
+finding:         Splunk Enterprise has disabled the SCIM provisioning path through which an
+                 identity provider applies an inactivity-triggered deactivation, so the
+                 application has foreclosed the only mechanism by which it can contribute
+                 to disabling accounts after 35 days of inactivity; the inactivity
+                 determination itself rests with the identity provider and, for native
+                 local accounts, with an organizational account-review procedure.

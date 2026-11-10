@@ -1,0 +1,69 @@
+# SRG-APP-000795-WSR-000130  -  CAT II
+# The web server must alert organization-defined personnel or roles upon
+# detection of unauthorized access, modification, or deletion of audit
+# information.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000795-WSR-000130
+group:           V-264340
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003831
+control_rev5:    AU-9
+
+contribution:    Splunk Web is a component of the application rather than a separate web
+                 server, and the alerting surface serving this objective is the same saved
+                 search and email action; the application names the Splunk Web access log
+                 that supplies the detection source and holds the alert and its recipient
+                 list.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           savedsearches.conf [<stanza name>] alert_condition non_empty
+check:           savedsearches.conf [<stanza name>] action.email in 1|true
+check:           savedsearches.conf [<stanza name>] action.email.to non_empty
+check:           alert_actions.conf [email] present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] alert_condition https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] startwebserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] startwebserver equals 1
+                 reason: "startwebserver = [0 | 1]. Set whether or not to start Splunk Web.
+                         0 disables Splunk Web, 1 enables it. Default: 1"
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The personnel or roles to notify are an organization-defined parameter the
+                 application can hold but not determine.
+external:        Delivery of the notification rests on the mail transfer agent and the
+                 network.
+external:        The Splunk Web access record must be monitored into an index for an alert
+                 to evaluate it; where that input is configured on another instance, that
+                 instance's configuration carries the remainder.
+external:        Product STIG SPLK-CL-000140 carries the related personnel element - admin
+                 role membership matching the ISSM's list - through the directory service
+                 group mapped to the admin role and an ISSM-maintained roster, neither of
+                 which is an application setting.
+
+citation:        web.conf.spec:16 [settings], :23 startwebserver = [0 | 1] default 1, :871
+                 log.access_file default web_access.log; savedsearches.conf.spec:270
+                 alert_condition, :300 action.email, :304 action.email.to;
+                 alert_actions.conf.spec:157 [email]. Product STIG SPLK-CL-000140.
+finding:         Assessed at the application layer alone: Splunk Web names no access log,
+                 or no saved search carries a trigger condition over unauthorized access,
+                 modification or deletion of that audit information with a notification
+                 action and a recipient list.

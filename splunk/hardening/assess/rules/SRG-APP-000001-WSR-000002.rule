@@ -1,0 +1,74 @@
+# SRG-APP-000001-WSR-000002  -  CAT II
+# The web server must perform server-side session management.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000001-WSR-000002
+group:           V-206351
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000054
+control_rev5:    AC-10
+
+contribution:    Splunk Web keeps session state on the server rather than in the client,
+                 and the application configures that directly: tools.sessions.on turns
+                 server-side session support on, tools.sessions.storage_type and
+                 storage_path place the session store on the server, tools.sessions.timeout
+                 lets the server expire an idle session, and tools.sessions.httponly and
+                 tools.sessions.secure keep the session identifier out of client-side
+                 script and off cleartext transport.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.storage_type equals file
+check:           web.conf [settings] tools.sessions.storage_path non_empty
+check:           web.conf [settings] tools.sessions.timeout min 2
+check:           web.conf [settings] tools.sessions.httponly in 1|true
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.sessions.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.secure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+retired_check:   web.conf [settings] tools.sessions.on equals true
+                 reason: The spec states the setting as a literal rather than a type:
+                         "tools.sessions.on = true. Whether or not user session support is
+                         enabled. Always set this to true." No default is stated.
+retired_check:   web.conf [settings] tools.sessions.secure in 1|true
+                 reason: "Whether or not the browser must transmit session cookies over an
+                         HTTPS connection when Splunk Web is configured to serve requests
+                         using HTTPS (the 'enableSplunkWebSSL' setting is 'true'.) If set to
+                         'true' and 'enableSplunkWebSSL' is also 'true', then the browser
+                         must transmit the session cookie over HTTPS connections. This
+                         improves session security. Default: true"
+# --- end vendor verification
+
+external:        The inactivity period itself is organization-defined; the criterion tests
+                 only that the application expresses a server-side timeout.
+external:        Where a reverse proxy terminates TLS in front of Splunk Web, the secure
+                 bit on the cookie returned to the client depends on
+                 tools.sessions.forceSecure together with the proxy's own configuration, so
+                 the proxy carries part of this objective.
+external:        Filesystem permissions protecting the session store directory are carried
+                 by the operating system.
+
+citation:        splunk-spec-files/web.conf.spec:16 ([settings]), 920-922
+                 (tools.sessions.on = true, "Always set this to true"), 924-933
+                 (tools.sessions.timeout, default 60, "Use a value of 2 or higher"),
+                 943-949 (tools.sessions.httponly, default true), 951-960
+                 (tools.sessions.secure, default true), 962-970
+                 (tools.sessions.forceSecure, default false), 977-982
+                 (tools.sessions.storage_type = [file], storage_path, default
+                 storage_type=file, storage_path=var/run/splunk); SRG-APP-000001-WSR-000002
+                 check and fix text.
+finding:         Splunk Web is not configured for server-side session management, because
+                 one or more of web.conf [settings] tools.sessions.on,
+                 tools.sessions.storage_type, tools.sessions.storage_path,
+                 tools.sessions.timeout, tools.sessions.httponly, or tools.sessions.secure
+                 is unset or set to a weaker value; this is assessed at the application
+                 layer alone, and cookie handling by any TLS-terminating proxy in front of
+                 Splunk Web is recorded as an external dependency rather than tested here.

@@ -1,0 +1,108 @@
+# SRG-APP-000033-AU-001610  -  CAT I
+# The Central Log Server must be configured to enforce approved
+# authorizations for logical access to information and system resources in
+# accordance with applicable access control policies.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000033-AU-001610
+group:           V-206447
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-000213
+control_rev5:    AC-3
+
+contribution:    Splunk enforces logical access through roles defined in authorize.conf:
+                 each role enumerates its capabilities and may scope the indexes it can
+                 search, the indexes it cannot, a search filter imposed on it, and the
+                 roles it may grant. Authorization is evaluated after authentication for
+                 native and externally authenticated users alike, so the application's
+                 share is that this role structure exists and governs access.
+
+governs:         authorize.conf - Used to create roles.
+
+retired_check:   authorize.conf [role_<roleName>] role_<roleName> present
+                 reason: The stanza placeholder was repeated in the key position. The keys
+                         of a role stanza are capabilities and search scope settings -
+                         authorize.conf.spec:76 states them as "<capability> = enabled",
+                         and this instance reports srchIndexesAllowed, srchFilter,
+                         importRoles, grantableRoles and capability names such as
+                         admin_all_objects. No key in a role stanza is named
+                         role_something, so the condition matched nothing and reported
+                         Open on every instance. That is a wrong answer, not a strict one.
+
+external:        Which capabilities, indexes and search filters are relevant to each role,
+                 and therefore whether any given assignment is approved, is fixed by the
+                 organization's access control policy and the documented duties of each
+                 role; that comparison is the assessor's inspection and no configuration
+                 value carries it.
+external:        For identities held in an external directory or SAML identity provider,
+                 the role a user receives follows the group membership that provider
+                 asserts, mapped by authentication.conf [roleMap_<authSettings-key>]
+                 (authentication.conf.spec:351) or [roleMap_<saml-authSettings-key>]
+                 (:1230); the directory service carries the membership itself and is
+                 assessed under its own baseline.
+
+manual_reason:   The benchmark check text asks whether each account's permissions are
+                 relevant to its role. Relevance is fixed by the organization's access
+                 control policy, and no value in authorize.conf carries it. The one thing
+                 configuration can report, that roles are defined, cannot fail: this
+                 instance's /opt/splunk/etc/system/default/authorize.conf defines 19
+                 [role_*] stanzas, among them role_admin, role_power and role_user, so a
+                 condition testing that a role exists would pass on every instance and put
+                 an inert test in front of a CAT I requirement. Deciding this requirement
+                 means comparing the roles the evidence lists, with their capabilities,
+                 index scope and search filters, against the access control policy and the
+                 duties of the accounts holding each role. That comparison is the
+                 assessor's.
+
+citation:        CHANGED for INVENTION and a verdict-altering false finding. The reviewed
+                 criterion decided a high-severity access control requirement on the single
+                 condition 'authorize.conf [role_<roleName>] srchIndexesAllowed non_empty'.
+                 That condition fails roles that are correctly configured.
+                 srchIndexesAllowed has no default (authorize.conf.spec:295), and the
+                 specification provides two other ways to scope the same access:
+                 srchIndexesDisallowed, which :299-301 states takes precedence over
+                 srchIndexesAllowed, and srchFilter at :150. A role that restricts access
+                 by exclusion or by filter, and a role that carries only interface
+                 capabilities and needs no search access at all, both report the key absent
+                 and would be written up as findings although nothing is wrong with them.
+                 The reviewed criterion also invents the organization's list: the task rule
+                 on organization-defined values says the criterion is what the product must
+                 be able to express, not a value the assessor supplies, and which indexes
+                 belong to which role is precisely an organization-defined list. The
+                 replacement tests what configuration can decide, that access is expressed
+                 through roles (authorize.conf.spec:67-78), and records the relevance
+                 judgment where it is actually carried, in external_dependencies. One point
+                 on evaluator semantics, which this correction depends on and which also
+                 governs SRG-APP-000033-WSR-000169, SRG-APP-000291-AU-000200 and
+                 SRG-APP-000292-AU-000420: conditions written against a wildcard stanza
+                 name such as [role_<roleName>] or savedsearches.conf [<search name>] must
+                 be evaluated existentially, satisfied when at least one stanza meets the
+                 whole condition set. Evaluated universally, 'srchIndexesAllowed non_empty'
+                 fails on Splunk's own shipped roles and the scheduled-notification
+                 conditions fail on Splunk's own shipped saved searches, which would make
+                 those criteria unsatisfiable by any instance, and a criterion nothing can
+                 satisfy is a defect rather than a strict standard. No condition here reads
+                 anything outside Splunk configuration.
+                 That replacement condition is itself now retired, above, and this
+                 requirement is decided as manual. The condition was written with the
+                 stanza placeholder repeated in the key position, so it tested for a
+                 capability named role_something and reported Open on every instance; and
+                 the existence test it was meant to be cannot fail, because the product
+                 ships role stanzas in system/default. Manual records that configuration
+                 does not decide this requirement, which is what the two external
+                 dependencies above already state.
+finding:         Not a finding against the application: Splunk Enterprise provides the
+                 roles in authorize.conf through which logical access to indexes,
+                 capabilities and search results is enforced, and the evidence lists every
+                 role stanza the instance holds. Whether the permissions each role carries
+                 are the approved ones for the accounts holding it is decided against the
+                 organization's access control policy, which is an assessor inspection.

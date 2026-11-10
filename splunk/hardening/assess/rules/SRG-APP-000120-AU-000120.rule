@@ -1,0 +1,54 @@
+# SRG-APP-000120-AU-000120  -  CAT II
+# The Central Log Server must protect audit information from unauthorized
+# deletion.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000120-AU-000120
+group:           V-221916
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000164
+control_rev5:    AU-9
+
+contribution:    Splunk keeps audit records from being removed through the product by
+                 withholding the delete capability from the general-purpose roles and by
+                 keeping the internal indexes out of every role's delete scope.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] delete_by_keyword absent
+check:           authorize.conf [role_power] delete_by_keyword absent
+check:           authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] deleteIndexesAllowed matches tls1\.2 -> authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+vendor:          authorize.conf [role_<roleName>] deleteIndexesAllowed https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+# --- end vendor verification
+
+external:        Delete permissions on the index bucket files on disk - SPLK-CL-000190
+                 implements this with splunk-user ownership and mode 700 at the operating
+                 system layer
+external:        Which roles the organization authorizes to run the delete command
+
+citation:        Three corrections. deleteIndexesAllowed not_in *|_* carries the wildcard
+                 inversion corrected on SRG-APP-000119-AU-000110. frozenTimePeriodInSecs
+                 present cannot fail - indexes.conf.spec:691 gives a default of 188697600,
+                 so btool reports the key on every index. coldToFrozenDir non_empty fails a
+                 stock install (indexes.conf.spec:792-802 makes the archive destination an
+                 alternative to a script, and neither the check text nor SPLK-CL-000190
+                 asks for one) and tests the wrong thing: rolling to frozen is authorized
+                 retention behavior, not unauthorized deletion. Retention belongs to
+                 SRG-APP-000125-AU-000310 and SRG-APP-000365-AU-000210, where it is
+                 assessed. source_of_value moves from organization_defined to spec_default
+                 because the conditions now rest on the shipped role model, not on an
+                 organization's number.
+finding:         A general-purpose role holds delete_by_keyword, or a role's
+                 deleteIndexesAllowed list reaches the internal indexes, so audit records
+                 can be removed from search results by an unprivileged account.

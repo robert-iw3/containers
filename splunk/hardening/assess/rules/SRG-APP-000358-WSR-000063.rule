@@ -1,0 +1,49 @@
+# SRG-APP-000358-WSR-000063  -  CAT II
+# The web server must not impede the ability to write specified log record
+# content to an audit log server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000358-WSR-000063
+group:           V-206422
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+revised:         yes
+cci:             CCI-001851
+control_rev5:    AU-4
+
+contribution:    The application's contribution is that its path to an audit log server is
+                 configured and unobstructed: a target group names the receiving systems it
+                 writes to.
+
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout:<target_group>] server non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<target_group>] server https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+# --- end vendor verification
+
+external:        The audit log server itself, its receiving port and its storage -
+                 SPLK-CL-000150 places the matching inputs.conf on a separate instance
+external:        The test the check text describes, in which a user generates events and
+                 the data is observed arriving on the separate server, which is an operator
+                 procedure rather than a configuration read
+external:        Where a target group uses indexerDiscovery instead of a static server
+                 list, the cluster manager that supplies the receivers
+
+citation:        defaultGroup non_empty is removed for the reason given on
+                 SRG-APP-000358-AU-000100: outputs.conf.spec:63-70 makes it optional,
+                 overridable by _TCP_ROUTING, and "no longer required" since 4.2, so the
+                 condition failed deployments that forward correctly through per-input
+                 routing. The indexerDiscovery alternative to a static server list
+                 (outputs.conf.spec:128) is recorded as an external dependency because the
+                 vocabulary cannot express an either-or condition.
+finding:         No forwarding target group names a receiving system, so the application
+                 cannot write or transfer its log records to a separate audit log server.

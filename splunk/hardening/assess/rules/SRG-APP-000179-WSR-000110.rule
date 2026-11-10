@@ -1,0 +1,61 @@
+# SRG-APP-000179-WSR-000110  -  CAT I
+# The web server must use cryptographic modules that meet the requirements
+# of applicable federal laws, Executive Orders, directives, policies,
+# regulations, standards, and guidance when encrypting stored data.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000179-WSR-000110
+group:           V-206390
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000803
+control_rev5:    IA-7
+
+contribution:    For data the application stores, Splunk can run in FIPS mode so stored
+                 secrets are protected by the validated module, select the hash used for
+                 stored passwords, and require server-side encryption on remote storage
+                 volumes it writes to.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           server.conf [search_artifact_remote_storage] remote.s3.encryption not_equals none - and only where that stanza configures a remote store. For index data at rest the setting is an indexes.conf volume setting and does not belong in a server.conf condition at all.
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+corrected:       server.conf [] remote.s3.encryption not_equals none -> server.conf [search_artifact_remote_storage] remote.s3.encryption not_equals none - and only where that stanza configures a remote store. For index data at rest the setting is an indexes.conf volume setting and does not belong in a server.conf condition at all.
+vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          server.conf [] remote.s3.encryption https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        Encryption of local index storage has no Splunk setting; it is provided by
+                 the host's file system or block-device encryption
+external:        The FIPS 140-2 validated cryptographic module and the host kernel FIPS
+                 state determine which modules are actually in use
+external:        For remote storage, the cloud provider's key management service holds and
+                 validates the keys for the selected scheme
+external:        File system protection of splunk.secret, which protects stored
+                 credentials, is an operating system control
+
+citation:        SPLK-CL-000390 check and fix text (FIPS mode) and SPLK-CL-000430 note that
+                 the instance must operate in FIPS mode; splunk-launch.conf.spec:110-130
+                 (SPLUNK_FIPS [0|1]); authentication.conf.spec:58-80 (passwordHashAlgorithm
+                 vocabulary, default SHA512-crypt); server.conf.spec:6330-6340
+                 (remote.s3.encryption values sse-s3, sse-kms, sse-c, none, default none,
+                 where none stores data unencrypted on remote storage)
+finding:         splunk-launch.conf does not set SPLUNK_FIPS = 1, passwordHashAlgorithm is
+                 outside the SHA families, or a configured remote storage volume has
+                 remote.s3.encryption = none, so data the application stores is not
+                 protected by validated cryptography to the extent the product allows.

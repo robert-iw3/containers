@@ -1,0 +1,71 @@
+# SRG-APP-000294-AU-000440  -  CAT III
+# For devices and hosts within its scope of coverage, the Central Log Server
+# must notify the System Administrator (SA) and Information System Security
+# Officer (ISSO) when events indicating account removal actions are
+# received.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000294-AU-000440
+group:           V-206486
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000015
+control_rev5:    AC-2
+
+contribution:    Splunk detects and sends the notification itself: a scheduled saved search
+                 that mails the SA and ISSO when account-removal events are received, with
+                 the relay and sender for the email action held in alert_actions.conf.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<search_name>] enableSched equals 1
+check:           savedsearches.conf [<search_name>] cron_schedule non_empty
+check:           savedsearches.conf [<search_name>] action.email matches ^(1|true)$
+check:           savedsearches.conf [<search_name>] action.email.to non_empty
+check:           alert_actions.conf [email] mailserver not_equals localhost
+check:           alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] mailserver non_empty -> alert_actions.conf [email] mailserver not_equals localhost
+corrected:       alert_actions.conf [email] from non_empty -> alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+vendor:          alert_actions.conf [email] from https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          alert_actions.conf [email] mailserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The SMTP relay or mail gateway must accept and deliver the notification;
+                 the specification states it is not included with the Splunk instance.
+external:        The SA and ISSO mailbox addresses are organization-defined.
+external:        Whether received events represent account-removal actions depends on the
+                 sending hosts' audit configuration and on the source types parsing them.
+external:        The SRG's own NA clause applies where notifications are performed by
+                 another device.
+
+citation:        The alert_condition condition is removed for the same reason as in
+                 SRG-APP-000293-AU-000430: alert_condition defaults to an empty string and
+                 is only one trigger form, counttype defaulting to "always" with relation
+                 and quantity being the other (savedsearches.conf.spec:270-274, 249-253),
+                 so requiring it non_empty reports a finding against a working alert and
+                 against the plain scheduled report that the product STIG check for
+                 SPLK-CL-000020 accepts ("verify that a report exists to notify the SA and
+                 ISSO"). The remaining conditions are the send path the fix text names and
+                 each tests a default that would otherwise not deliver: action.email
+                 defaults to false (savedsearches.conf.spec:300-302), action.email.to is
+                 REQUIRED and not defaulted (savedsearches.conf.spec:304-306), enableSched
+                 defaults to 0 (savedsearches.conf.spec:73-77), mailserver defaults to
+                 localhost against an SMTP server the product does not ship
+                 (alert_actions.conf.spec:276-285), and from defaults to the bare word
+                 "splunk" (alert_actions.conf.spec:163-165). This SRG also carries its own
+                 NA clause.
+finding:         Splunk Enterprise has no scheduled saved search that mails the SA and ISSO
+                 when account-removal events are received: the search is not scheduled, the
+                 email action or its recipient list is unset, or alert_actions.conf [email]
+                 names no SMTP relay and no sender.

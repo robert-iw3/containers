@@ -1,0 +1,62 @@
+# SRG-APP-000705-WSR-000110  -  CAT II
+# The web server must disable accounts when the accounts are no longer
+# associated to a user.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000705-WSR-000110
+group:           V-264338
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-003628
+control_rev5:    AC-2
+
+contribution:    Splunk cannot itself determine that an account no longer belongs to a
+                 user, so its contribution is to honor the disable or delete issued by
+                 whatever authority holds the account lifecycle at the next authentication.
+
+external:        The enterprise directory service or identity provider determines when an
+                 account is no longer associated to a user and must push the disable or
+                 delete.
+external:        Where accounts are provisioned through SCIM, the provisioning authority
+                 issues the deprovisioning call; the product carries the receiving path
+                 only.
+external:        The organization's offboarding and periodic account review procedures are
+                 outside the application.
+external:        An assessor confirms the lifecycle authority and its disassociation
+                 handling, because the application exposes no value to read.
+
+manual_reason:   The product exposes no value that determines whether an account is still
+                 associated to a user or disables it on that basis; the account lifecycle
+                 authority is confirmed by the assessor.
+
+citation:        The three conditions repeat the defects corrected in
+                 SRG-APP-000700-WSR-000100 and SRG-APP-000705-AU-000110. authType
+                 not_equals Splunk forces delegated authentication the check text does not
+                 ask for and fails an instance whose account lifecycle is managed
+                 procedurally, which is over-reach against the documented default of Splunk
+                 (authentication.conf.spec:30-33). server.conf [teleport_supervisor]
+                 disabled already defaults to false, launched, and governs SCIM
+                 authorization token handling rather than account state
+                 (server.conf.spec:6584-6591). web-features.conf
+                 [feature:identity_sidecar_scim] enabled defaults to true and only decides
+                 whether Splunk Web shows Automated User Management controls in the SAML
+                 configuration dialog (web-features.conf.spec:400-410); a dialog toggle
+                 cannot disable an account. This SRG carries no product STIG rule, so
+                 neither value has any source text behind it. The inventory for this
+                 requirement is also unusable: the keys it lists under server.conf
+                 [teleport_supervisor] - Splunk, Web, scimSupportedDomains and
+                 scsSyncUserDeletes - are not settings of that stanza, which defines only
+                 disabled, and none of the last two appear in any .conf.spec in the 10.4.2
+                 set, so no criterion can be written over them.
+finding:         No application-layer finding is available: Splunk has no setting that
+                 detects an account with no associated user or disables it, so the assessor
+                 records the identity authority that performs the disable; raise a finding
+                 only where no authority outside the application does so.

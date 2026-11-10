@@ -1,0 +1,43 @@
+# SRG-APP-000097-WSR-000058  -  CAT II
+# The web server must produce log records containing sufficient information
+# to establish where within the web server the events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000097-WSR-000058
+group:           V-206361
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000132
+control_rev5:    AU-3
+
+contribution:    splunkd_access.log names the REST endpoint that handled each request and
+                 web_service.log identifies the Splunk Web process that raised each event;
+                 the application configures that no endpoint is omitted from the access
+                 log.
+
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+
+check:           restmap.conf [] includeInAccessLog not_equals false
+
+external:        The endpoint and process identifiers are written by the product in a fixed
+                 record format with no configuration surface, so their content is confirmed
+                 by inspecting a written record rather than by reading configuration.
+
+citation:        INVENTION. Removed web.conf [settings] log.error_maxfiles min 1.
+                 web.conf.spec defines it as "The maximum number of backup files to keep
+                 after the web_service.log file has reached its maximum size" - how many
+                 rotated copies are retained, not whether the process identity is recorded.
+                 The type is <integer>, so 0 is permitted, and web_service.log is still
+                 written at 0; the condition would fail an instance that satisfies the
+                 objective. Neither the check nor the fix text concerns log rotation.
+finding:         A REST endpoint is configured with includeInAccessLog = false, so requests
+                 it handles leave no record in splunkd_access.log and the location within
+                 the web server where those events occurred cannot be established.

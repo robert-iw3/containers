@@ -1,0 +1,52 @@
+# SRG-APP-000745-AU-000120  -  CAT II
+# The Central Log Server must implement the capability to centrally review
+# and analyze audit records from multiple components within the system.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000745-AU-000120
+group:           V-263558
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003821
+control_rev5:    AU-6
+
+contribution:    Splunk aggregates records from multiple components by receiving them on
+                 its own inputs and makes them centrally reviewable by granting the
+                 reviewing role search access to the indexes that hold them; where the
+                 indexers are separate instances, distributed search extends the same
+                 review across them.
+
+governs:         authorize.conf - Used to create roles.
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [splunktcp] present
+check:           authorize.conf [role_<roleName>] srchIndexesAllowed non_empty
+
+external:        The scope of coverage - which devices and hosts must be aggregated - is
+                 organization-defined and recorded in the site security plan, as the
+                 product STIG SPLK-CL-000100 fix text states.
+external:        Each sending component must itself be configured to forward and must be
+                 permitted by the network to reach the receiving port; that configuration
+                 lives on those components and on the network.
+external:        Where the indexers are separate instances, distsearch.conf
+                 [distributedSearch] servers must name them; in a single-instance
+                 deployment there are no search peers and its absence is not a finding
+                 against this instance.
+
+citation:        inputs.conf.spec:626 [splunktcp], :770 [splunktcp://[<remote
+                 server>]:<port>], :876 [splunktcp-ssl:<port>]; authorize.conf.spec:67
+                 [role_<roleName>], :292 srchIndexesAllowed = <semicolon-separated list>;
+                 distsearch.conf.spec:29 [distributedSearch], :81 servers =
+                 <comma-separated list>. Product STIG SPLK-CL-000100 fix and check text.
+finding:         Assessed at the application layer alone: Splunk has no receiving input for
+                 records from other components, or the role that performs audit review is
+                 not allowed to search the indexes holding them, so records from multiple
+                 components cannot be centrally reviewed and analyzed in the application.

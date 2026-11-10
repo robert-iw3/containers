@@ -1,0 +1,68 @@
+# SRG-APP-000211-WSR-000129  -  CAT II
+# The web server must separate the hosted applications from hosted web
+# server management functionality.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000211-WSR-000129
+group:           V-206395
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001082
+control_rev5:    SC-2
+
+contribution:    Splunk Enterprise separates the management surface from the application
+                 surface in two ways the product itself controls: splunkd's management and
+                 REST interface listens on its own port with its own source address list
+                 and is reached by Splunk Web over the loopback address, and the
+                 capabilities that constitute management (admin_all_objects, edit_server,
+                 edit_web_settings, indexes_edit, install_apps) are withheld from the
+                 built-in non-administrative roles. Because a capability can only be
+                 granted - "enabled" is the only accepted value - withholding one is
+                 checked by its absence from a role stanza.
+
+governs:         authorize.conf - Used to create roles.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [httpServer] acceptFrom non_empty
+check:           server.conf [httpServer] acceptFrom not_equals *
+check:           web.conf [settings] mgmtHostPort matches ^(localhost|127\.0\.0\.1|\[::1\]):[0-9]+$
+check:           authorize.conf [role_user] admin_all_objects absent
+check:           authorize.conf [role_power] admin_all_objects absent
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [httpServer] acceptFrom https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] mgmtHostPort https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Network segmentation or firewall rules that keep the management port off
+                 the user network - network component configuration
+external:        Review of locally defined roles beyond the built-in user and power roles,
+                 to confirm management capabilities are held only by administrative roles -
+                 organizational role design, which configuration alone cannot classify as
+                 administrative or not
+external:        Separation of management and application functions in any custom app's own
+                 endpoints - application development
+
+citation:        server.conf.spec:1291 ([httpServer]) with :1345-1360 (acceptFrom, default
+                 "*" accept from anywhere); web.conf.spec:35-41 (mgmtHostPort, the IP
+                 address and port where Splunk Web looks for splunkd);
+                 authorize.conf.spec:67-72 ([role_<roleName>], <capability> = <enabled>,
+                 "'enabled' is the only accepted value here, as capabilities are disabled
+                 by default"); authorize.conf.spec:447-452
+                 ([capability::admin_all_objects], lets a user bypass any Access Control
+                 List restriction); authorize.conf.spec:665 ([capability::edit_server]),
+                 :733 ([capability::edit_web_settings]), :753 ([capability::indexes_edit]),
+                 :760 ([capability::install_apps])
+finding:         The application does not separate management from hosted application
+                 functionality to the extent the product allows: the splunkd management
+                 listener accepts connections from any source, Splunk Web reaches splunkd
+                 over a non-loopback address, or a built-in non-administrative role has
+                 been granted a management capability.

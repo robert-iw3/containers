@@ -1,0 +1,48 @@
+# SRG-APP-000219-WSR-000191  -  CAT II
+# The web server must restrict a consistent inbound source IP for the entire
+# user session.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000219-WSR-000191
+group:           V-264361
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001184
+control_rev5:    SC-23
+
+contribution:    Splunk Web has no setting that pins a user session to the source IP
+                 address it began from. The product's reachable share is the source address
+                 list on the Splunk Web listener, which restricts the addresses from which
+                 user sessions may be established at all.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] acceptFrom non_empty
+check:           web.conf [settings] acceptFrom not_equals *
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] acceptFrom https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Holding a user session to a consistent inbound source IP for its duration
+                 - Splunk Web exposes no per-session source address binding; this is
+                 carried by a reverse proxy or load balancer terminating the user session
+external:        The permitted user source networks themselves - organization-defined
+                 network allowlist
+external:        Client address rewriting by an intermediate proxy, which determines what
+                 source address Splunk Web observes - network component configuration
+
+citation:        web.conf.spec:1080-1096 (acceptFrom = <network_acl>, "Lists a set of
+                 networks or addresses from which to accept connections", rule form 4 is
+                 "*", which matches anything; default "*" accept from anywhere);
+                 web.conf.spec:924-930 (tools.sessions.timeout); web.conf.spec:797-804
+                 (trustedIP, applicable only to SSO)
+finding:         Splunk Web accepts connections from any source address, so the application
+                 does not restrict the inbound source of a user session to the extent the
+                 product allows.

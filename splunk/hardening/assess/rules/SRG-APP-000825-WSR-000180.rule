@@ -1,0 +1,62 @@
+# SRG-APP-000825-WSR-000180  -  CAT II
+# The web server must implement multifactor authentication for local;
+# network; and/or remote access to privileged accounts; and/or nonprivileged
+# accounts such that the device meets organization-defined strength of
+# mechanism requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000825-WSR-000180
+group:           V-264344
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004047
+control_rev5:    IA-2
+
+contribution:    For the web tier, Splunk expresses the multifactor mechanism the benchmark
+                 authority names for this product (SPLK-CL-000490, a CAC or other PKI
+                 credential) through web.conf [settings]: enableCertBasedUserAuth turns the
+                 mechanism on, requireClientCert makes Splunk Web demand the token's
+                 certificate, and certBasedUserAuthMethod binds it to an account. The
+                 device's strength is organization-defined, so the criterion tests only
+                 that the mechanism is configured.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableCertBasedUserAuth in true|True|TRUE|t|1|yes
+check:           web.conf [settings] requireClientCert in true|True|TRUE|t|1|yes
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] enableCertBasedUserAuth https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        The strength-of-mechanism requirement itself - organization-defined; no
+                 product setting measures a device's assurance level.
+external:        The CAC/PIV token, its reader and middleware - carried by the DoD PKI and
+                 the client operating system.
+external:        certBasedUserAuthPivOidList is observed but not asserted: the spec
+                 supplies a default OID list, so an unset value is not a shortfall even
+                 when certBasedUserAuthMethod is PIV.
+external:        Where the native Duo or RSA integration (authentication.conf
+                 externalTwoFactorAuthVendor) or an approved PKI-terminating SSO proxy is
+                 the configured path instead, the mechanism is carried there and these
+                 web.conf settings may legitimately be absent.
+
+citation:        splunk-spec-files/web.conf.spec:120, :133, :144
+                 (certBasedUserAuthPivOidList default list), :151; SPLK-CL-000490 check and
+                 fix text
+finding:         Splunk Web does not require a multifactor device at login -
+                 certificate-based user authentication is not enabled in web.conf
+                 [settings] (enableCertBasedUserAuth, requireClientCert,
+                 certBasedUserAuthMethod) and no vendor multifactor or approved SSO proxy
+                 path was presented in its place; this determination is from the
+                 perspective of the application layer alone, the device's strength being
+                 organization-defined.

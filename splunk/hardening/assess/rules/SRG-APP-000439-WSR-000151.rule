@@ -1,0 +1,69 @@
+# SRG-APP-000439-WSR-000151  -  CAT I
+# The web server must employ cryptographic mechanisms (TLS/DTLS/SSL)
+# preventing the unauthorized disclosure of information during transmission.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000151
+group:           V-206434
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can serve its web interface, management port and HTTP Event
+                 Collector only over TLS, using an organization-issued certificate and key
+                 in place of the auto-generated pair, on a pinned version with an approved
+                 cipher list.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL in 1|true
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
+check:           web.conf [settings] privKeyPath not_equals $SPLUNK_HOME/etc/auth/splunkweb/privkey.pem
+check:           web.conf [settings] sslVersions equals tls1.2
+check:           web.conf [settings] cipherSuite matches ^(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384))(:(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384)))*$
+check:           server.conf [sslConfig] enableSplunkdSSL in 1|true
+# --- vendor verification: generated, do not edit by hand
+vendor:          inputs.conf [http] enableSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          web.conf [settings] cipherSuite https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+retired_check:   inputs.conf [http] enableSSL in 1|true
+                 reason: inputs.conf.spec 10.4.2 lines 1690-1694 ([http]): "enableSSL =
+                         <boolean> * Whether or not the HTTP Event Collector uses TLS. * HEC
+                         shares TLS settings with the Splunk management server and cannot
+                         have TLS turned on when the Splunk management server has TLS turned
+                         off. * Default: true". The same stanza documents "disabled =
+                         <boolean> * Whether or not the event collector input is active... *
+                         Default: 1 (disabled)" at lines 1657-1660.
+# --- end vendor verification
+
+external:        Certificate authority issuing the server certificate and private key, per
+                 SPLK-CL-000450
+external:        Operating system permissions on the certificate and key files
+external:        FIPS validated cryptographic module supplied by the host operating system
+external:        Any TLS terminating reverse proxy in front of Splunk Web, whose own TLS
+                 configuration is outside the application
+
+citation:        SRG-APP-000439-WSR-000151 check text; SPLK-CL-000330 check and fix text;
+                 SPLK-CL-000430 fix text; web.conf.spec:70-92, 239-263;
+                 server.conf.spec:724-734; inputs.conf.spec:1665-1670
+finding:         Splunk transmits to external devices without the cryptographic protection
+                 the product can apply: enableSplunkWebSSL, enableSplunkdSSL or the HTTP
+                 Event Collector enableSSL is not enabled, the certificate and key are
+                 still the auto-generated defaults, sslVersions is not pinned to tls1.2, or
+                 the cipher list is not an explicit approved AES with SHA-2 list.

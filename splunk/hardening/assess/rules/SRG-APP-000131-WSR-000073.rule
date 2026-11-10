@@ -1,0 +1,47 @@
+# SRG-APP-000131-WSR-000073  -  CAT II
+# Expansion modules must be fully reviewed, tested, and signed before they
+# can exist on a production web server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000131-WSR-000073
+group:           V-206373
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-003992
+control_rev5:    CM-14
+
+contribution:    Splunk Enterprise 10.4.2 exposes no configuration setting that requires a
+                 digital signature, a review record, or a test record on an app or
+                 expansion module before it is loaded, so the application cannot decide
+                 this requirement; the nearest controls it does hold - confining who may
+                 install apps and keeping the instance from reaching the remote app
+                 repository - are assessed under SRG-APP-000810-AU-000250.
+
+external:        Signing of app and module packages and verification of that signature
+                 before installation, carried by the package producer and by the
+                 organization's app review and approval procedure.
+external:        Separation of development and test work from the production instance,
+                 carried by the deployment design rather than by any setting on the
+                 instance.
+external:        Ownership and modes on the app directories, which keep an unreviewed
+                 module from being placed there, carried by the operating system.
+
+manual_reason:   No .conf setting in the 10.4.2 specification set governs the review, test,
+                 or signature state of an app or expansion module, and the check inventory
+                 attaches no conf/stanza/key to this requirement. There is nothing in the
+                 application's configuration for a condition to read.
+
+citation:        Web Server SRG SRG-APP-000131-WSR-000073 check and fix text; absence of
+                 any governing setting across the 10.4.2 specification set (app.conf.spec,
+                 authorize.conf.spec, limits.conf.spec)
+finding:         Not a finding against the application: Splunk exposes no setting bearing
+                 on module review, testing, or signing. Record the organization's app
+                 review and package signing procedure as the responsible control, and note
+                 that the application cannot enforce it.

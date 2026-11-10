@@ -1,0 +1,79 @@
+# SRG-APP-000427-WSR-000186  -  CAT II
+# The web server must only accept client certificates (user and machine)
+# issued by DOD PKI or DOD-approved PKI Certificate Authorities (CAs).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000427-WSR-000186
+group:           V-206430
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002470
+control_rev5:    SC-23
+
+contribution:    Splunk Web can perform PKI-based user authentication itself: it can
+                 require a client certificate, validate it against a nominated root
+                 certificate authority store, and extract the user identity from a named
+                 field of the certificate. On the splunkd side, client certificates can be
+                 required of the machines that connect. The identity of the certificate's
+                 issuer is not visible to configuration.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableCertBasedUserAuth equals true
+check:           web.conf [settings] requireClientCert equals true
+check:           web.conf [settings] sslRootCAPath non_empty
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+check:           server.conf [sslConfig] requireClientCert equals true
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] requireClientCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] enableCertBasedUserAuth https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] sslRootCAPath https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        Whether the accepted client certificates were issued by an approved
+                 certificate authority - established by inspecting the trust anchor with
+                 openssl on the host operating system per the SPLK-CL-000450 check text;
+                 configuration names the store, not its issuers
+external:        Certificate revocation checking, including the CRL files the instance
+                 reads from its auth/crl directory - the issuing PKI and its revocation
+                 service (see server.conf.spec:1125-1143, certificateStatusValidationMethod
+                 = crl)
+external:        Issuance and distribution of user and machine certificates - the approved
+                 public key infrastructure
+external:        Where PKI user authentication is performed by a fronting proxy or a SAML
+                 identity provider rather than by Splunk Web, certificate validation is
+                 that component's and the SRG's own not-applicable clause governs -
+                 identity provider or reverse proxy configuration
+external:        Mapping of the extracted certificate identity to a user and roles in the
+                 directory service - directory service configuration
+
+citation:        web.conf.spec:120-131 (enableCertBasedUserAuth = <boolean>, default false;
+                 "When this setting has a value of 'true', 'requireClientCert' must *also*
+                 have a value of 'true'"); web.conf.spec:133-142 (certBasedUserAuthMethod,
+                 values CommonName, EDIPI and PIV, no default); web.conf.spec:144-149
+                 (certBasedUserAuthPivOidList); web.conf.spec:151-167 (requireClientCert,
+                 default false; a client can connect only if it presents a certificate
+                 signed by the same CA, and when certificate-based user authentication is
+                 on the root CA in web.conf's sslRootCAPath is used); web.conf.spec:108-114
+                 (sslRootCAPath, used when both requireClientCert and
+                 enableCertBasedUserAuth are true); server.conf.spec:858-874 ([sslConfig]
+                 requireClientCert, default false; deployment clients must present
+                 certificates before they can poll for configurations or applications);
+                 product STIG SPLK-CL-000450 fix and check text for the certificate files
+                 and issuer verification
+finding:         Splunk is not configured to validate client certificates to the extent the
+                 product allows: certificate-based user authentication is not enabled,
+                 client certificates are not required on the Splunk Web or splunkd
+                 listener, the root certificate authority store is unset, or no documented
+                 identity extraction method is configured.

@@ -1,0 +1,61 @@
+# SRG-APP-000875-AU-000380  -  CAT II
+# The Central Log Server must for public key-based authentication, implement
+# a local cache of revocation data to support path discovery and validation.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000875-AU-000380
+group:           V-263581
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004068
+control_rev5:    IA-5
+
+contribution:    Splunk can hold revocation data locally and consult it during certificate
+                 validation: server.conf [sslConfig] certificateStatusValidationMethod =
+                 crl turns on certificate status validation for every Splunk TLS channel
+                 (Splunk Web, splunkd, and Splunk-to-Splunk), and server.conf [kvstore]
+                 sslCRLPath names the local PEM certificate revocation list file, the
+                 product's CRL directory being $SPLUNK_HOME/auth/crl. The spec records that
+                 splunkd uses the CRL file when the instance runs in Common Criteria or
+                 FIPS mode, or when certificate status validation is configured.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           server.conf [kvstore] sslCRLPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [kvstore] sslCRLPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        Retrieval and refresh of the revocation list from the issuing CA's
+                 distribution point - carried by a scheduled operating-system job or the
+                 PKI's distribution process; the product consumes PEM CRL files placed for
+                 it and does not fetch or renew them.
+external:        OCSP-based status checking, where the organization requires it in addition
+                 to CRLs - not offered by the product; carried by a PKI-terminating proxy
+                 or the host platform.
+external:        Certification path discovery beyond the configured trust anchor - carried
+                 by the organization's PKI and the trust anchor supplied through the
+                 sslRootCAPath settings.
+external:        Storage and protection of the cached revocation files - carried by the
+                 host operating system's filesystem.
+
+citation:        splunk-spec-files/server.conf.spec:714 ([sslConfig]), :1125
+                 (certificateStatusValidationMethod = crl, only accepted value, default
+                 empty, CRL files in $SPLUNK_HOME/auth/crl), :5232 ([kvstore]), :5392
+                 (sslCRLPath, PEM format, default empty - no revocation list)
+finding:         The application keeps no local cache of revocation data - server.conf
+                 [sslConfig] certificateStatusValidationMethod is not set to "crl" and/or
+                 [kvstore] sslCRLPath is empty, so a revoked certificate is accepted during
+                 path validation; this determination is from the perspective of the
+                 application layer alone, the retrieval and refresh of the revocation list
+                 and any OCSP checking being carried outside the application.

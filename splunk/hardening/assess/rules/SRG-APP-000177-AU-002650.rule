@@ -1,0 +1,61 @@
+# SRG-APP-000177-AU-002650  -  CAT III
+# The Central Log Server must map the authenticated identity to the
+# individual user or group account for PKI-based authentication.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000177-AU-002650
+group:           V-206480
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000187
+control_rev5:    IA-5
+
+contribution:    Splunk extracts an identity from the presented certificate by a configured
+                 method and OID list, and maps that identity to Splunk roles through the
+                 role map stanza for the authentication strategy, which is the whole of the
+                 mapping the product performs.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+check:           authentication.conf [roleMap_<authSettings-key>] <Splunk RoleName> non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] certBasedUserAuthPivOidList https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+retired_check:   web.conf [settings] certBasedUserAuthPivOidList non_empty
+                 reason: 10.4.2 spec: "A list of object identifiers (OIDs) that the Splunk
+                         platform uses to lookup an end-user's PIV info in the Subject
+                         Alternate Name extension of the client certificate... Default:
+                         1.3.6.1.4.1.311.20.2.3, Microsoft Universal Principal Name,
+                         Microsoft User Principal Name". The CAC page gives the default as
+                         "1.3.6.1.4.1.311.20.2.3, Microsoft Universal Principal Name" and
+                         says multiple OIDs are comma-separated.
+# --- end vendor verification
+
+external:        The certificate profile that populates the Common Name, EDIPI or PIV OID
+                 the application reads
+external:        The directory service or identity provider that holds the group
+                 memberships the role map refers to, and the account the extracted identity
+                 resolves to
+external:        Whether each mapped group corresponds to the intended individual or group
+                 account is an account management decision
+
+citation:        SRG-APP-000177-AU-002650 check text; web.conf.spec:133-143
+                 (certBasedUserAuthMethod: CommonName, EDIPI or PIV; no default),
+                 web.conf.spec:144-150 (certBasedUserAuthPivOidList, the OIDs queried in
+                 the Subject Alternate Name, with a default OID set),
+                 authentication.conf.spec:351-360 ([roleMap_<authSettings-key>] holds
+                 role-to-group mappings for the named strategy, each entry a <Splunk
+                 RoleName> with a semicolon-separated list)
+finding:         web.conf does not set a certificate identity extraction method with an OID
+                 list, or authentication.conf has no role map entry for the authentication
+                 strategy in use, so the application does not map the PKI-authenticated
+                 identity to an individual user or group account.

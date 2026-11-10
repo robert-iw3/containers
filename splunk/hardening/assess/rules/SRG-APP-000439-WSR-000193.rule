@@ -1,0 +1,48 @@
+# SRG-APP-000439-WSR-000193  -  CAT II
+# The web server must disable HTTP/1.x downgrading.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000193
+group:           V-264363
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk has no HTTP version downgrade setting, so its only bearing is that
+                 web.conf [expose:<unique_name>] allowRemoteProxy and the deprecated
+                 remoteProxyLegacyRequireDoubleEncodedUriArgs remain at their default of
+                 false, leaving no legacy URI argument rewriting path enabled.
+
+external:        The reverse proxy or load balancer that terminates HTTP/2 and performs any
+                 downgrade, which must disable HTTP/1.x downgrading or validate the
+                 rewritten request against the HTTP/1.1 specification
+external:        The organizational determination that HTTP downgrading is operationally
+                 necessary, which the check text makes a CAT III finding rather than a
+                 configuration setting
+
+manual_reason:   Splunk Web and the splunkd REST server serve HTTP/1.1 only, so no HTTP/2
+                 request is ever rewritten to HTTP/1.x inside the application and no
+                 setting governs that rewrite or the validation of a rewritten request; the
+                 settings the check inventory maps here replay REST calls between search
+                 head cluster members (server.conf [shclustering] sid_proxying,
+                 ss_proxying, ra_proxying and alert_proxying are marked internal or expert
+                 use at server.conf.spec:4847-4877, restmap.conf [restreplayshc] lists
+                 replay methods and node strategies at restmap.conf.spec:465-485, and
+                 web.conf [expose:<unique_name>] allowRemoteProxy governs the remote-proxy
+                 endpoint at web.conf.spec:1545-1568), none of which selects an HTTP
+                 version.
+
+citation:        SRG-APP-000439-WSR-000193 check and fix text; web.conf.spec:1129-1142,
+                 1545-1568; server.conf.spec:4847-4877; restmap.conf.spec:465-485
+finding:         This requirement cannot be decided from Splunk configuration; the HTTP/2
+                 terminator in front of Splunk Web must be shown either to disable HTTP/1.x
+                 downgrading or to reject rewritten requests containing new lines in
+                 headers, colons in header names or spaces in the request method.

@@ -1,0 +1,51 @@
+# SRG-APP-000439-WSR-000153  -  CAT II
+# Web server cookies, such as session cookies, sent to the client using
+# SSL/TLS must not be compressed.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000153
+group:           V-206436
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can refuse TLS layer compression on the web interface, on the
+                 splunkd services and on the forwarding output, which is the only
+                 compression path that would cover cookie headers, whereas web.conf
+                 enable_gzip compresses response bodies and is therefore not decisive for
+                 cookies.
+
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [sslConfig] allowSslCompression in 0|false
+check:           web.conf [settings] allowSslCompression in 0|false
+check:           outputs.conf [tcpout:<group>] useClientSSLCompression in 0|false
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<group>] useClientSSLCompression https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          server.conf [sslConfig] allowSslCompression https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] allowSslCompression https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+# --- end vendor verification
+
+external:        Any TLS terminating reverse proxy or load balancer, whose own compression
+                 setting is outside the application
+external:        Browser and TLS library behavior, which can offer compression
+                 independently of the server
+
+citation:        SRG-APP-000439-WSR-000153 check text; server.conf.spec:1070-1078;
+                 web.conf.spec:1176-1183; outputs.conf.spec:764-775; web.conf.spec:346-348
+finding:         Splunk permits TLS layer compression on a channel that carries its cookies
+                 (server.conf or web.conf allowSslCompression, or outputs.conf
+                 useClientSSLCompression, is true), so cookie data is compressed before
+                 encryption.

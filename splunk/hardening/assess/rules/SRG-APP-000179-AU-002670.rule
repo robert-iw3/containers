@@ -1,0 +1,73 @@
+# SRG-APP-000179-AU-002670  -  CAT I
+# The Central Log Server must use FIPS-validated SHA-1 or higher hash
+# function to protect the integrity of keyed-hash message authentication
+# code (HMAC), Key Derivation Functions (KDFs), Random Bit Generation,
+# hash-only applications, and digital signature verification (legacy use
+# only).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000179-AU-002670
+group:           V-206482
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000803
+control_rev5:    IA-7
+
+contribution:    Splunk can run in FIPS mode, which restricts every hash, key derivation,
+                 random bit generation and signature operation in the instance to the
+                 FIPS-validated module, and its TLS version settings can be pinned so that
+                 the management, search and web channels negotiate only TLS 1.2.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           server.conf [sslConfig] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
+check:           server.conf [sslConfig] sslVersions not_in ssl3|tls1.0|tls1.1|tls|*
+check:           server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+corrected:       server.conf [sslConfig] sslVersionsForClient matches (^|,)\s*tls1\.2\s*(,|$) -> server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+vendor:          server.conf [sslConfig] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          server.conf [sslConfig] sslVersionsForClient https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+# --- end vendor verification
+
+external:        The FIPS 140-2 validated cryptographic module and the host kernel FIPS
+                 state, which determine which algorithms actually exist to be selected
+external:        FIPS mode is an install-time, one-way setting
+                 (splunk-launch.conf.spec:110-130), so enabling it on a running instance is
+                 a reinstall or upgrade rather than a configuration change
+external:        SPLK-CL-000430 also names outputs.conf on forwarders and the OpenLDAP
+                 client ldap.conf, which are configured on other hosts or outside Splunk's
+                 conf layer
+external:        SPLK-CL-000430 treats cipherSuite and ecdhCurves as compliant either when
+                 absent, in which case the FIPS-mode cryptographic module selects the
+                 algorithms, or when set to the exact lists its fix text names, so those
+                 two settings are not asserted as conditions here
+
+citation:        SPLK-CL-000390 fix text (SPLUNK_FIPS=1 and SPLUNK_COMMON_CRITERIA=1 before
+                 first start) and SPLK-CL-000430 fix text (sslVersions = tls1.2,
+                 sslVersionsForClient = tls1.2, with the note "Splunk Enterprise must
+                 operate in FIPS mode to limit the algorithms allowed");
+                 splunk-launch.conf.spec:110-130 (SPLUNK_FIPS vocabulary [0|1]);
+                 server.conf.spec:765-779 and 780-795 (sslVersions and sslVersionsForClient
+                 vocabulary ssl3, tls1.0, tls1.1, tls1.2, with "*" selecting all and "tls"
+                 selecting tls1.0 or newer); web.conf.spec:239-250 (same vocabulary for
+                 Splunk Web)
+finding:         splunk-launch.conf does not set SPLUNK_FIPS = 1, or the TLS version
+                 settings in server.conf [sslConfig] and web.conf [settings] are not pinned
+                 to TLS 1.2, so the application does not confine hashing, key derivation
+                 and signature operations to FIPS-validated algorithms.

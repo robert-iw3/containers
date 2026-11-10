@@ -1,0 +1,54 @@
+# SRG-APP-000760-AU-000150  -  CAT II
+# The Central Log Server must implement an audit reduction capability that
+# supports after-the-fact investigations of incidents.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000760-AU-000150
+group:           V-263561
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-003824
+control_rev5:    AU-7
+
+contribution:    Reduction for an after-the-fact investigation has to reach records still
+                 held in the index, so the application's share is both the search-time
+                 knowledge layer bound to the audit source types and the retention and
+                 archive settings that keep those records reachable.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [<source type>] present
+check:           indexes.conf [<index>] frozenTimePeriodInSecs present
+check:           indexes.conf [<index>] coldToFrozenDir present
+# --- vendor verification: generated, do not edit by hand
+vendor:          indexes.conf [<index>] coldToFrozenDir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/indexes.conf
+vendor:          indexes.conf [<index>] frozenTimePeriodInSecs https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/back-up-and-archive-your-indexes/set-a-retirement-and-archiving-policy
+# --- end vendor verification
+
+external:        The retention period that bounds how far back an investigation can reach
+                 is organization-defined and recorded in the site documentation, as product
+                 STIG SPLK-CL-000120 check text states.
+external:        Capacity and integrity of the frozen archive destination rest on the
+                 storage platform and the operating system.
+external:        Restoring archived buckets for an investigation is an operator procedure
+                 performed outside the running application.
+
+citation:        props.conf.spec:80 [<spec>], :1085 REPORT-<class>, :1102 EXTRACT-<class>,
+                 :1329 LOOKUP-<class>; indexes.conf.spec:684 frozenTimePeriodInSecs, :713
+                 coldToFrozenScript, :792 coldToFrozenDir. Product STIG SPLK-CL-000120 fix
+                 text, "Set frozenTimePeriodInSecs to the defined retention period for each
+                 index location."
+finding:         Assessed at the application layer alone: no knowledge layer is bound to
+                 the audit source types in scope, or those indexes state no retention
+                 period and no frozen archive destination, so records age out by deletion
+                 and the application's audit reduction cannot reach them for an
+                 after-the-fact investigation.

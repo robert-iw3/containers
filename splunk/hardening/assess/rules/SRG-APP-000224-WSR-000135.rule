@@ -1,0 +1,52 @@
+# SRG-APP-000224-WSR-000135  -  CAT I
+# The web server must generate a unique session identifier for each session
+# using a FIPS 140-2 approved random number generator.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000224-WSR-000135
+group:           V-206399
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001188
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise can be placed in FIPS mode, which constrains the
+                 instance to the algorithms and restrictions of FIPS Publication 140-2,
+                 including the random number generator behind session identifier
+                 generation. The generator itself is not configurable; enabling FIPS mode
+                 is the whole of the application's contribution.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        FIPS mode must be enabled during initial installation; enabling it
+                 afterward requires a reinstall or upgrade of the application -
+                 installation procedure, per the SPLK-CL-000390 fix text
+external:        The validated cryptographic module and kernel FIPS mode on the host -
+                 operating system
+external:        Uniqueness and non-sequential form of the issued identifiers, which the
+                 check verifies by comparing two users' session IDs - a product
+                 implementation property with no configuration surface
+
+citation:        splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1], whether the instance
+                 operates in Federal Information Processing Standards mode and uses the
+                 algorithms and restrictions that apply to the FIPS Publication 140-2
+                 standard); corroborated by the product STIG fix for SPLK-CL-000390, which
+                 sets SPLUNK_FIPS=1 in splunk-launch.conf before the initial start
+finding:         FIPS mode is not enabled (SPLUNK_FIPS is unset or 0), so the instance is
+                 not constrained to FIPS 140-2 approved algorithms for session identifier
+                 generation, which is the application's only contribution to this
+                 requirement.

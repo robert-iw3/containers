@@ -1,0 +1,44 @@
+# SRG-APP-000164-AU-002480  -  CAT II
+# The Central Log Server must be configured to enforce a minimum
+# 15-character password length.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000164-AU-002480
+group:           V-206467
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    Splunk's native authentication enforces a minimum password length for
+                 every password set or changed on an account it holds, and the product STIG
+                 names the value.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] minPasswordLength min 15
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] minPasswordLength https://help.splunk.com/en/splunk-cloud-platform/administer/manage-users-and-security/10.2.2510/manage-credentials-and-keys/configure-a-splunk-enterprise-password-policy-using-the-authentication.conf-configuration-file
+# --- end vendor verification
+
+external:        Where authType is LDAP or SAML, the directory service or identity provider
+                 enforces length for federated accounts; [splunk_auth] then still governs
+                 the native accounts that remain, including the emergency account of last
+                 resort
+external:        Operating system account passwords on the host
+
+citation:        SPLK-CL-000370 check text ("If the minPasswordLength is missing or is
+                 configured to 14 or less, this is a finding") and fix text
+                 ("minPasswordLength = 15 or more"); authentication.conf.spec:437-449
+                 (minPasswordLength, positive integer, default 8, rejects non-conforming
+                 password changes)
+finding:         authentication.conf [splunk_auth] minPasswordLength is absent or below 15,
+                 so the application accepts native account passwords shorter than the
+                 required minimum.

@@ -1,0 +1,40 @@
+# SRG-APP-000835-WSR-000200  -  CAT II
+# The web server must, for password-based authentication, update the list of
+# passwords on an organization-defined frequency.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000835-WSR-000200
+group:           V-264346
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004059
+control_rev5:    IA-5
+
+contribution:    None, and the web tier adds nothing: Splunk Web authenticates through
+                 authentication.conf and the product holds no password deny list to update,
+                 nor any setting expressing an update frequency for one.
+
+external:        Updating the list on the organization-defined frequency - carried by
+                 organizational policy.
+external:        Holding and refreshing the list used to screen web-tier logins - carried
+                 by the directory service or identity provider, or by a proxy that fronts
+                 Splunk Web.
+
+manual_reason:   No conf key expresses the list or the frequency of its update, so no
+                 observed configuration value can decide this requirement; the frequency is
+                 organization-defined.
+
+citation:        splunk-spec-files/authentication.conf.spec:437-600;
+                 splunk-spec-files/web.conf.spec:16
+finding:         Not a finding against the application: the product holds no password deny
+                 list for the web tier to update and has no setting for an update
+                 frequency, so this requirement is carried by organizational policy and the
+                 identity provider; this determination is from the perspective of the
+                 application layer alone.

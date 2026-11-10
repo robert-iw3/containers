@@ -1,0 +1,50 @@
+# SRG-APP-000815-WSR-000160  -  CAT II
+# The web server must require users to be individually authenticated before
+# granting access to the shared accounts or resources.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000815-WSR-000160
+group:           V-264342
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004045
+control_rev5:    IA-2
+
+contribution:    Splunk Web keeps no credential store of its own: it authenticates through
+                 the same authentication.conf [authentication] authType system as splunkd,
+                 and web.conf [settings] offers no anonymous or unauthenticated access mode
+                 to turn off. The application's share is therefore that an authentication
+                 system is in force and that shared resources are reached through role
+                 membership (authorize.conf [role_<roleName>]) rather than a shared login.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] authType non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [authentication] authType https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Issuance of an individual account per person and the prohibition on shared
+                 credentials - carried by organizational account management.
+external:        Where authType is LDAP, SAML, or ProxySSO, the web tier's individual
+                 authentication is performed by the directory service or identity provider.
+external:        Session handling in front of Splunk Web, where a reverse proxy or SSO
+                 proxy is deployed - carried by that component.
+external:        Whether role sharing in authorize.conf grants more than a person's duties
+                 require - an organizational access-control determination.
+
+citation:        splunk-spec-files/authentication.conf.spec:30;
+                 splunk-spec-files/web.conf.spec:16 ([settings], no anonymous-access
+                 setting); splunk-spec-files/authorize.conf.spec:67
+finding:         Splunk Web does not require an individual authentication before granting
+                 access to shared roles and knowledge objects because no authentication
+                 system is in force (authentication.conf [authentication] authType is
+                 empty); this determination is from the perspective of the application
+                 layer alone.

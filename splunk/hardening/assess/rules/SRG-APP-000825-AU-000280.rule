@@ -1,0 +1,62 @@
+# SRG-APP-000825-AU-000280  -  CAT II
+# The Central Log Server must implement multifactor authentication for
+# local; network; and/or remote access to privileged accounts; and/or
+# nonprivileged accounts such that the device meets organization-defined
+# strength of mechanism requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000825-AU-000280
+group:           V-263573
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004047
+control_rev5:    IA-2
+
+contribution:    The strength of the authenticator device is organization-defined, so the
+                 application's share is that it expresses a multifactor mechanism at all
+                 and binds it to a user identity. The benchmark authority's implementation
+                 for this product (SPLK-CL-000490) is the DoD CAC or other PKI credential,
+                 which Splunk expresses through web.conf [settings] enableCertBasedUserAuth
+                 plus certBasedUserAuthMethod; the product's alternative is a Duo or RSA
+                 vendor named in authentication.conf [authentication]
+                 externalTwoFactorAuthVendor/externalTwoFactorAuthSettings.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableCertBasedUserAuth in true|True|TRUE|t|1|yes
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] enableCertBasedUserAuth https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        The strength-of-mechanism requirement itself - organization-defined; no
+                 product setting states or measures a device's assurance level, so the
+                 criterion asserts only that a mechanism is configured.
+external:        The assurance level of the CAC/PIV token or of the Duo/RSA device -
+                 carried by the DoD PKI or the multifactor vendor.
+external:        Where the configured path is the product's native Duo or RSA integration
+                 rather than certificates, the factor is carried by authentication.conf
+                 externalTwoFactorAuthVendor/externalTwoFactorAuthSettings (also observed
+                 on this requirement) and the certificate settings may legitimately be
+                 absent.
+external:        Where PKI is terminated by an approved SSO proxy per SPLK-CL-000490, the
+                 mechanism is carried by that proxy.
+
+citation:        splunk-spec-files/web.conf.spec:120, :133;
+                 splunk-spec-files/authentication.conf.spec:87, :95; SPLK-CL-000490 check
+                 and fix text
+finding:         No multifactor mechanism is configured in the application -
+                 certificate-based user authentication is off in web.conf [settings] and no
+                 Duo or RSA vendor is named in authentication.conf [authentication], so no
+                 device of any strength is required at login; this determination is from
+                 the perspective of the application layer alone, the strength-of-mechanism
+                 value being organization-defined and the device supplied outside the
+                 application.

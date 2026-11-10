@@ -1,0 +1,42 @@
+# SRG-APP-000141-WSR-000078  -  CAT II
+# Web server accounts not utilized by installed features (i.e., tools,
+# utilities, specific services, etc.) must not be created and must be
+# deleted when the web server feature is uninstalled.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000078
+group:           V-206378
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    The one account the Splunk installation itself creates is the
+                 administrator defined in user-seed.conf at first start; the application
+                 can show that no such seeded account definition remains in the
+                 configuration.
+
+governs:         user-seed.conf - The initial administrator account created on a first start.
+
+check:           user-seed.conf [user_info] USERNAME absent
+
+external:        Enumeration and removal of accounts in Splunk's own user store, which is
+                 held in the instance's user data rather than in a .conf file an assessor
+                 can read, so it is reviewed through the user administration interface.
+external:        Operating system accounts created by the installation package, carried by
+                 the operating system.
+external:        Account inventory in the directory service where authentication is
+                 external, carried by that service.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000078 check and fix text;
+                 user-seed.conf.spec:25 ([user_info]), user-seed.conf.spec:28 (USERNAME)
+finding:         A seeded installation account definition remains in user-seed.conf, so the
+                 application still carries an account created by the installation process
+                 rather than by an installed feature in use.

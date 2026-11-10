@@ -1,0 +1,55 @@
+# SRG-APP-000225-WSR-000074  -  CAT II
+# The web server must augment re-creation to a stable and known baseline.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000225-WSR-000074
+group:           V-206404
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-001190
+control_rev5:    SC-24
+
+contribution:    Splunk Enterprise holds its configuration in plain .conf files that can be
+                 captured and restored wholesale, and where a deployment server is used it
+                 serves apps to clients from a server-held repository. Nothing in the
+                 product hinders reinstallation to a known baseline, which is what this
+                 requirement's finding condition turns on, and there is no setting that
+                 would either permit or prohibit it.
+
+external:        Backup and restore of the configuration and index data - organizational
+                 backup procedure
+external:        Version control or configuration management of the .conf baseline -
+                 configuration management system
+external:        Where a deployment server is used, the contents and integrity of the app
+                 repository it serves - deployment server administration
+external:        Reinstallation media and the installation procedure itself -
+                 organizational procedure
+
+manual_reason:   The check's finding condition is that the product prohibits reinstallation
+                 to a known state, and Splunk Enterprise does not. The attached keys are
+                 not operator-set hardening values: app.conf's install_source_checksum and
+                 install_source_local_checksum are populated automatically by the installer
+                 and the spec directs that they not be set by hand, and the
+                 serverclass.conf repository settings apply only where a deployment server
+                 is in use, so requiring them would fail a correctly built single instance.
+                 No condition over configuration decides this requirement.
+
+citation:        app.conf.spec:158-167 (install_source_checksum and
+                 install_source_local_checksum: "Splunk Enterprise automatically populates
+                 this value upon install. Do not set this value explicitly within your
+                 app!"); app.conf.spec:124-127 (state = disabled|enabled, default enabled);
+                 serverclass.conf.spec:68-71 (repositoryLocation), :107-113
+                 (targetRepositoryLocation), :356-362 (stateOnClient =
+                 enabled|disabled|noop); splunk-launch.conf.spec:67-73 (SPLUNK_DB)
+finding:         Not decidable from Splunk configuration: the product neither prohibits nor
+                 hinders reinstallation to a known baseline and exposes no setting bearing
+                 on it, so the application's share of this requirement is satisfied by
+                 product design and the baseline re-creation procedure is assessed against
+                 the organization's backup, restore and configuration management practice.

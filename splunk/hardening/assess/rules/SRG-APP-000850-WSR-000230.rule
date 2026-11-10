@@ -1,0 +1,55 @@
+# SRG-APP-000850-WSR-000230  -  CAT II
+# The web server must, for password-based authentication, store passwords
+# using an approved salted key derivation function, preferably using a keyed
+# hash.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000850-WSR-000230
+group:           V-264349
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004062
+control_rev5:    IA-5
+
+contribution:    For native accounts, Splunk chooses the algorithm that protects stored
+                 passwords in $SPLUNK_HOME/etc/passwd through authentication.conf
+                 [authentication] passwordHashAlgorithm. SHA512-crypt and SHA256-crypt are
+                 salted, iterated crypt derivations (5000 rounds by default, with an
+                 optional round count), which is the approved salted key derivation the
+                 requirement asks for; MD5-crypt, still in the spec's vocabulary, is not.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        A keyed hash (HMAC-based) password store, the requirement's stated
+                 preference - not offered by the product; where it is required the
+                 credential must be held by the enterprise directory service or identity
+                 provider.
+external:        File protection for the password store - carried by the operating system's
+                 file ownership and permissions on the Splunk installation.
+external:        Where authType is LDAP, SAML, or ProxySSO, Splunk stores no password for
+                 those users and the storage control rests with that provider.
+external:        FIPS validation of the hash implementation - carried by the host
+                 platform's cryptographic module (see SRG-APP-000610).
+
+citation:        splunk-spec-files/authentication.conf.spec:58 (passwordHashAlgorithm =
+                 [SHA512-crypt|SHA256-crypt|SHA512-crypt-<num_rounds>|SHA256-crypt-<num_rounds>|MD5-crypt],
+                 5000 rounds, minimum 1000 rounds, default SHA512-crypt)
+finding:         Native account passwords are not stored using an approved salted key
+                 derivation function - authentication.conf [authentication]
+                 passwordHashAlgorithm is set to MD5-crypt or to a round count below the
+                 spec minimum; this determination is from the perspective of the
+                 application layer alone, the keyed-hash option the requirement prefers not
+                 being offered by the product and the protection of the stored file resting
+                 with the host operating system.

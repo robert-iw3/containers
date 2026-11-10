@@ -1,0 +1,52 @@
+# SRG-APP-000100-AU-000730  -  CAT III
+# The Central Log Server must generate audit records containing information
+# that establishes the identity of any individual or process associated with
+# the event.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000100-AU-000730
+group:           V-221913
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001487
+control_rev5:    AU-3
+
+contribution:    Every Splunk audit record names the account that performed the operation,
+                 and those records reach a searchable index when the audit trail is queued
+                 to the index.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+
+check:           audit.conf [auditTrail] queueing not_equals false
+
+external:        Shared or service accounts defeat attribution however the application is
+                 configured; provisioning individual accounts is an organizational and
+                 directory service responsibility.
+external:        The identity field in each audit record is written by splunkd in a fixed
+                 format with no configuration surface, so its content is confirmed by
+                 inspecting a written record.
+
+citation:        Three conditions removed. savedsearches.conf dispatchAs in user|owner is
+                 the setting's entire permitted vocabulary - savedsearches.conf.spec gives
+                 "dispatchAs = [user|owner]" - so it cannot fail and is not evidence; the
+                 substantive value is "user", since "owner" runs a shared search "as if the
+                 owner of the search dispatched the search, no matter which user requested
+                 it", but the same spec notes that limits.conf
+                 force_saved_search_dispatch_as_user = true resets dispatchAs to user, a
+                 disjunction ANDed conditions cannot express, so it is left to inspection
+                 rather than asserted wrongly. authorize.conf [role_<roleName>]
+                 role_<roleName> present and props.conf [<spec>] <spec> present both name a
+                 placeholder as a key that no such setting exists for; in their determined
+                 form they are presence tests that every installation passes.
+finding:         The audit trail is not queued to an index (queueing = false) with no
+                 compensating input, so the account associated with each audited operation
+                 is not searchable in the repository.

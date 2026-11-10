@@ -1,0 +1,60 @@
+# SRG-APP-000172-WSR-000104  -  CAT I
+# The web server must encrypt passwords during transmission.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000172-WSR-000104
+group:           V-206387
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000197
+control_rev5:    IA-5
+
+contribution:    Splunk Web can be configured to serve only over TLS with a named
+                 certificate and private key, and the alternate GET-based login endpoint
+                 that would carry a password in a URL can be left disabled, so credentials
+                 never cross the network in the clear.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL equals true
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] enable_insecure_login https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] enable_insecure_login equals false
+                 reason: "Whether or not the GET-based '/account/insecurelogin' REST
+                         endpoint is enabled. Provides an alternate GET-based authentication
+                         mechanism. If 'true', the following url is available:
+                         http://localhost:8000/en-US/account/insecurelogin?loginType=splunk&username=noc&password=XXXXXXX.
+                         If 'false', only the main /account/login endpoint is available.
+                         Default: false"
+# --- end vendor verification
+
+external:        Any reverse proxy or load balancer in front of Splunk Web must not
+                 terminate TLS and forward credentials in the clear; that configuration
+                 lives in the proxy, not in Splunk
+external:        Whether the named certificate was issued by an approved certificate
+                 authority
+external:        Password transmission to an LDAP or SAML provider is additionally governed
+                 by that provider's connection settings, including the OpenLDAP client
+                 configuration named in SPLK-CL-000320
+
+citation:        SPLK-CL-000330 check and fix text (enableSplunkWebSSL = 1 with privKeyPath
+                 and serverCert); web.conf.spec:70-73 (enableSplunkWebSSL, default false),
+                 web.conf.spec:75-91 (privKeyPath and serverCert), web.conf.spec:198-205
+                 (enable_insecure_login, default false; when true the GET
+                 /account/insecurelogin endpoint accepts a password in the URL)
+finding:         web.conf [settings] does not enable TLS for Splunk Web with a named
+                 certificate and private key, or enable_insecure_login is true, so the
+                 application transmits account passwords without encryption or exposes them
+                 in a request URL.

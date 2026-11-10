@@ -1,0 +1,56 @@
+# SRG-APP-000366-AU-000220  -  CAT III
+# The Central Log Server must be configured to generate on-demand audit
+# review and analysis reports.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000366-AU-000220
+group:           V-206499
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001878
+control_rev5:    AU-7
+
+contribution:    Splunk Enterprise implements a report as a saved search object, so the
+                 application can carry report definitions that select audit events over a
+                 stated review range and can grant the search capability to the role that
+                 runs them on demand.
+
+governs:         authorize.conf - Used to create roles.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time present
+check:           savedsearches.conf [<stanza name>] dispatch.latest_time present
+check:           authorize.conf [role_user] search equals enabled
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] search equals enabled -> authorize.conf [role_user] search equals enabled
+vendor:          authorize.conf [role_<roleName>] search https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+vendor:          savedsearches.conf [<stanza name>] dispatch.earliest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] dispatch.latest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        Which events of interest the report selects is an organization-defined
+                 parameter recorded in the system security plan; Splunk can express any
+                 selection but cannot supply the organization's list.
+external:        Whether reviewing personnel are available to request a report, and the
+                 incident reporting procedure the report feeds, are organizational
+                 procedures outside the application.
+
+citation:        savedsearches.conf.spec:31 [<stanza name>], :44 search, :564
+                 dispatch.earliest_time, :571 dispatch.latest_time;
+                 authorize.conf.spec:67-71 [role_<roleName>] <capability> = <enabled>, :953
+                 [capability::search]. The staged specification set is stamped Version
+                 10.0.0; every key and value cited was confirmed present in that set.
+finding:         Assessed at the application layer alone: Splunk Enterprise carries no
+                 saved search defining an on-demand audit review and analysis report over
+                 the audit indexes in scope, or the role that performs audit review does
+                 not hold the search capability, so the application is not configured to
+                 the fullest extent it can contribute to this requirement.

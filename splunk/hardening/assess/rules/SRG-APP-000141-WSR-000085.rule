@@ -1,0 +1,48 @@
+# SRG-APP-000141-WSR-000085  -  CAT II
+# The web server must have Web Distributed Authoring (WebDAV) disabled.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000085
+group:           V-206383
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk Enterprise ships no Web Distributed Authoring service, so there is
+                 no WebDAV module to disable; the application's share is that the
+                 remote-authoring behavior it does have - endpoints that change state
+                 through an HTTP GET - is switched off.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enable_insecure_pdfgen in false|0
+check:           web.conf [settings] enable_secure_entity_move in true|1
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] enable_insecure_login https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] enable_insecure_login in false|0
+                 reason: "Whether or not the GET-based '/account/insecurelogin' REST
+                         endpoint is enabled. Provides an alternate GET-based authentication
+                         mechanism. If 'true', the following url is available:
+                         http://localhost:8000/en-US/account/insecurelogin?loginType=splunk&username=noc&password=XXXXXXX.
+                         If 'false', only the main /account/login endpoint is available.
+                         Default: false"
+# --- end vendor verification
+
+external:        WebDAV offered by any separate web server or module placed in front of the
+                 application, carried by that component and the operating system.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000085 check and fix text;
+                 web.conf.spec:198 (enable_insecure_login, default false),
+                 web.conf.spec:221 (enable_insecure_pdfgen, default false),
+                 web.conf.spec:206 (enable_secure_entity_move, default true)
+finding:         One of Splunk Web's GET-based state-changing endpoints is enabled, so the
+                 application exposes remote authoring through a URL even though it ships no
+                 WebDAV service.

@@ -1,0 +1,65 @@
+# SRG-APP-000439-WSR-000156  -  CAT II
+# A web server must maintain the confidentiality of controlled information
+# during transmission through the use of an approved TLS version.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000156
+group:           V-206439
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can pin the TLS version on every endpoint it terminates or
+                 originates - Splunk Web, the splunkd server and client sides, the
+                 receiving input, the forwarding output and the email alert action - to the
+                 highest version this release's vocabulary expresses.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] sslVersions equals tls1.2
+check:           server.conf [sslConfig] sslVersions equals tls1.2
+check:           server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+check:           inputs.conf [SSL] sslVersions equals tls1.2
+check:           outputs.conf [tcpout:<group>] sslVersions equals tls1.2
+check:           alert_actions.conf [email] sslVersions matches ^\s*(tls1\.2|tls1\.3)(\s*,\s*(tls1\.2|tls1\.3))*\s*$
+# --- vendor verification: generated, do not edit by hand
+corrected:       server.conf [sslConfig] sslVersionsForClient equals tls1.2 -> server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+corrected:       alert_actions.conf [email] sslVersions equals tls1.2 -> alert_actions.conf [email] sslVersions matches ^\s*(tls1\.2|tls1\.3)(\s*,\s*(tls1\.2|tls1\.3))*\s*$
+vendor:          alert_actions.conf [email] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          outputs.conf [tcpout:<group>] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          server.conf [sslConfig] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          server.conf [sslConfig] sslVersionsForClient https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+# --- end vendor verification
+
+external:        FIPS validated cryptographic module supplied by the host operating system,
+                 which decides which algorithms the pinned version may use
+external:        NIST SP 800-52 also governs TLS 1.3, which this release's sslVersions
+                 vocabulary does not express (ssl3, tls1.0, tls1.1 and tls1.2 only)
+external:        Peer, browser and SMTP relay TLS stacks, which must themselves support the
+                 pinned version
+external:        OpenLDAP client TLS_PROTOCOL_MIN, which the SPLK-CL-000430 fix text sets
+                 in ldap.conf outside the Splunk configuration
+
+citation:        SRG-APP-000439-WSR-000156 check text; SPLK-CL-000430 fix text;
+                 web.conf.spec:239-249; server.conf.spec:765-797;
+                 inputs.conf.spec:1035-1047; outputs.conf.spec:779-791;
+                 alert_actions.conf.spec:428-440
+finding:         At least one Splunk TLS endpoint does not pin sslVersions to tls1.2, so a
+                 connection can negotiate ssl3, tls1.0 or tls1.1.

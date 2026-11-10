@@ -1,0 +1,76 @@
+# SRG-APP-000223-WSR-000011  -  CAT II
+# Cookies exchanged between the web server and client, such as session
+# cookies, must have security settings that disallow cookie access outside
+# the originating web server and hosted application.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000223-WSR-000011
+group:           V-206397
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001664
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise sets the cookie attributes that confine a session cookie
+                 to the originating pair: HttpOnly keeps it out of reach of page
+                 JavaScript, Secure keeps it off unencrypted channels, and SameSite
+                 restricts the contexts in which the browser sends it. Both the Splunk Web
+                 session cookie and the splunkd REST authentication cookie have their own
+                 settings.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.httponly not_equals false
+check:           server.conf [httpServer] cookieAuthHttpOnly not_equals false
+check:           server.conf [httpServer] cookieAuthSecure not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] cookieSameSite https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.secure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.secure not_equals false
+                 reason: "Whether or not the browser must transmit session cookies over an
+                         HTTPS connection when Splunk Web is configured to serve requests
+                         using HTTPS (the 'enableSplunkWebSSL' setting is 'true'.) If set to
+                         'true' and 'enableSplunkWebSSL' is also 'true', then the browser
+                         must transmit the session cookie over HTTPS connections. This
+                         improves session security. Default: true"
+retired_check:   web.conf [settings] cookieSameSite in lax|strict
+                 reason: 10.4.2 spec: "cookieSameSite = [ not_specified | lax | strict |
+                         none ]... A value of 'lax' means the Splunk web server sets the
+                         'SameSite=Lax' attribute. A value of 'strict' means...
+                         'SameSite=Strict'. A value of 'none' means... to let browsers send
+                         the cookies in all contexts... The 'SameSite=None' attribute in a
+                         cookie requires that you set the 'Secure' attribute... Default:
+                         lax". The 10.0.0 spec states "Default: not_specified".
+# --- end vendor verification
+
+external:        Browser enforcement of the HttpOnly, Secure and SameSite attributes once
+                 the application sets them - client browser
+external:        Where TLS is terminated at a reverse proxy and the back end is plain HTTP,
+                 forcing the Secure bit on the returned cookie (tools.sessions.forceSecure)
+                 depends on that proxy topology - network component configuration
+external:        Cookies set by any custom app or add-on through its own code - application
+                 development
+
+citation:        web.conf.spec:943-949 (tools.sessions.httponly, default true);
+                 web.conf.spec:951-960 (tools.sessions.secure, default true);
+                 web.conf.spec:664-690 (cookieSameSite = [not_specified|lax|strict|none],
+                 default not_specified, which some browsers interpret as if SameSite=None
+                 were set; "none" exists to let a third-party iframe embed a dashboard);
+                 server.conf.spec:1291 ([httpServer]) with :1525-1530 (cookieAuthHttpOnly,
+                 default true) and :1548-1554 (cookieAuthSecure, default true).
+                 cookieSameSiteSecure is excluded as DEPRECATED per server.conf.spec:1533,
+                 and tools.sessions.forceSecure (web.conf.spec:962-969, default false)
+                 applies only where TLS is terminated at a proxy.
+finding:         Session or authentication cookie attributes are not set to the extent the
+                 product allows: HttpOnly or Secure has been disabled, or the SameSite
+                 attribute is left unspecified or set to none, permitting the cookie to be
+                 used outside the originating server and application pair.

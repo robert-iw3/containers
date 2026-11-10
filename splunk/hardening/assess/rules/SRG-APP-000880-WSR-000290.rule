@@ -1,0 +1,134 @@
+# SRG-APP-000880-WSR-000290  -  CAT II
+# The web server must protect nonlocal maintenance sessions by separating
+# the maintenance session from other network sessions with the system by
+# logically separated communications paths.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000880-WSR-000290
+group:           V-264355
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-004192
+control_rev5:    MA-4
+
+contribution:    Splunk Enterprise can encrypt both of its own administrative entry points
+                 - Splunk Web through web.conf [settings] enableSplunkWebSSL and the
+                 splunkd management and KV Store ports through server.conf [sslConfig]
+                 enableSplunkdSSL - which is the logical separation by encryption that the
+                 requirement's own discussion names as the method; it can additionally
+                 narrow admission to each of those listeners with acceptFrom, but the set
+                 of networks that constitutes the maintenance path is an
+                 organization-defined list and is not derivable from Splunk configuration.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL equals true
+check:           server.conf [sslConfig] enableSplunkdSSL not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Whether the resulting management path is in fact separated from search and
+                 data-ingestion sessions - a management VLAN or out-of-band network, a VPN
+                 concentrator, a jump host, or a reverse proxy fronting Splunk Web - is
+                 carried by the network baseline and evidenced in the system's network
+                 documentation; no Splunk setting can report it.
+external:        Selection of the networks that constitute the maintenance path is an
+                 organization-defined list recorded in the system security plan and the
+                 remote access policy. Where the organization elects to enforce that list
+                 inside the application, web.conf [settings] acceptFrom
+                 (web.conf.spec:1080) and server.conf [httpServer] acceptFrom
+                 (server.conf.spec:1345) express it, but the list itself originates outside
+                 the application and is not decidable from Splunk configuration.
+external:        The physically separated branch of MA-4 (4) (b) (2), where the
+                 organization elects physical rather than logical separation, is furnished
+                 entirely by the network baseline; the application carries only the
+                 logical, encryption-based branch.
+
+citation:        CHANGED. Three corrections to the criterion as derived; the two TLS
+                 conditions are kept, and both acceptFrom conditions are removed from the
+                 pass criterion. 1. OVER-REACH - "web.conf [settings] acceptFrom present"
+                 removed. The SRG check text (inventory/groups/MA.json,
+                 SRG-APP-000880-WSR-000290) asks only that the maintenance session be
+                 separated from other network sessions by logically separated
+                 communications paths, and the discussion names exactly one mechanism:
+                 "Communications paths can be logically separated using encryption."
+                 Nothing in the check or fix text mentions source-network admission. There
+                 is no product STIG rule for this requirement (stig_reference is empty and
+                 the group's own determination records stig_reference_status
+                 "no_reference"), so no product authority supplies an acceptFrom value
+                 either. An instance that carries TLS on Splunk Web and on the splunkd
+                 management port has done what the discussion names; failing it because
+                 acceptFrom sits at its default converts the organization's decision to
+                 separate the path at the network layer - the dependency this same
+                 criterion already records externally - into an application finding. That
+                 is case 3: the application's share is tested, the remainder is recorded,
+                 and no finding is raised against Splunk. 2. DIRECTION / ineffective test -
+                 "web.conf [settings] acceptFrom not_equals *" removed. Even if admission
+                 control were in scope here, a plain string inequality cannot decide
+                 whether the list is open. web.conf.spec:1080-1096 defines acceptFrom as an
+                 ordered rule list ("Separate multiple rules with commas or spaces ... The
+                 input applies rules in order, and uses the first one that matches") in
+                 which a bare "*" is only one of four rule formats, and the specification's
+                 own worked example at web.conf.spec:1093-1095 is "!10.1/16, *", described
+                 as allowing "connections from everywhere except the 10.1.*.* network."
+                 That value is as permissive as the "*" default for every network but one,
+                 and it satisfies not_equals:*. The condition therefore returns a confident
+                 PASS for precisely the configurations it exists to fail, which is worse
+                 than having no condition. Writing it instead as a matches regex that
+                 rejects any unprefixed "*" term would make it evaluable, but it would
+                 still be the over-reach of item 1, so it is removed rather than repaired.
+                 3. source_of_value corrected from srg_check_text to spec_default. The
+                 check text for this requirement is tautological - it restates the title
+                 and names no setting, value, or threshold - so it cannot be the source of
+                 "true" or "false". The direction of each surviving condition is fixed by
+                 the vendor-documented default: web.conf.spec:73 "Default: false" makes
+                 enableSplunkWebSSL an affirmative requirement, and server.conf.spec:733
+                 "Default: true" makes enableSplunkdSSL a prohibition on disabling.
+                 Attributing those operands to the check text invites an assessor to look
+                 for them there, find nothing, and reject the row. NOT CHANGED, and
+                 deliberately so: the conf and stanza on enableSplunkdSSL. The derived
+                 criterion placed it at server.conf [sslConfig], which is correct per
+                 server.conf.spec:712 and :724 and matches the group's own recorded
+                 mechanism. The defect is in the inventory, not the criterion -
+                 assess/inventory/checks.tsv line 1180 assigns enableSplunkdSSL to web.conf
+                 [settings] and flags it key_status "undeclared", which is accurate in that
+                 web.conf has no such key: the only web.conf.spec occurrences of the string
+                 are cross-references at :156 and :1626-equivalent prose. A condition bound
+                 to that TSV row could never resolve against a merged configuration. The
+                 row should be repointed to server.conf [sslConfig]; conditions must not be
+                 attached to it as written. ALSO CONSIDERED AND EXCLUDED, because
+                 checks.tsv declares them for this requirement and a reader will ask why
+                 they are absent from conditions. requireClientCert (web.conf.spec:151) is
+                 mutual authentication, not path separation; mandating it here would exceed
+                 the discussion's stated method, and web.conf.spec:95-97 requires it to be
+                 "false" when an encrypted private key is used, so a blanket demand would
+                 contradict a supported TLS configuration. mgmtHostPort
+                 (web.conf.spec:35-43) is "The IP address and host port where Splunk Web
+                 looks for the splunkd process" - a client-side address with a documented
+                 default of 0.0.0.0:8089 - so it does not restrict what the management
+                 listener admits and a condition over it would test nothing about
+                 separation. httpport (web.conf.spec:28) selects a listening port, and port
+                 number alone carries no separation. listenOnIPv6 selects an address
+                 family. server.conf [httpServerListener:<ip>:<port>] ssl
+                 (server.conf.spec:1612-1629) does bind an additional REST listener to one
+                 interface, but server.conf.spec:1620-1623 states these stanzas "need not
+                 be present" on a normal instance and ssl defaults to "true", so a
+                 condition over an optional stanza that usually does not exist would be
+                 unsatisfiable on a correctly configured instance.
+finding:         Splunk Enterprise does not encrypt both of its administrative entry points
+                 - web.conf [settings] enableSplunkWebSSL does not have the value "true",
+                 or server.conf [sslConfig] enableSplunkdSSL is set to "false" - so the
+                 nonlocal maintenance session is not logically separated from other network
+                 sessions by encryption to the extent the application is able to do so.

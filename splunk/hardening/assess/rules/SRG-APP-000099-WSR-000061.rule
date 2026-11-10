@@ -1,0 +1,51 @@
+# SRG-APP-000099-WSR-000061  -  CAT II
+# The web server must produce log records that contain sufficient
+# information to establish the outcome (success or failure) of events.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000099-WSR-000061
+group:           V-206364
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000134
+control_rev5:    AU-3
+
+contribution:    Every record in web_access.log and splunkd_access.log carries the HTTP
+                 status code, which is the outcome of the request. The application controls
+                 that those logs are written (log.access_file), that no REST endpoint is
+                 excluded from them (includeInAccessLog), and that rotated copies are
+                 retained; the status field itself is emitted unconditionally.
+
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           restmap.conf [<rest endpoint name>:<endpoint description string>] includeInAccessLog not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The HTTP status code is emitted by the product in a fixed record format
+                 with no configuration surface, so its presence is confirmed by inspecting
+                 a written record.
+external:        The check text's observation step - a user generating events and the logs
+                 then being reviewed - is procedural.
+
+citation:        SRG-APP-000099-WSR-000061 check text; web.conf.spec:871-874
+                 (log.access_file = <filename>, Default: web_access.log), :891-898
+                 (log.error_maxsize = <integer>, Default: 25000000);
+                 restmap.conf.spec:138-142 (includeInAccessLog = <boolean>, Default: true)
+finding:         Splunk Enterprise has no web access log configured, or excludes REST
+                 endpoints from splunkd_access.log, so the records available do not
+                 establish the success or failure of web events.

@@ -1,0 +1,65 @@
+# SRG-APP-000231-WSR-000144  -  CAT II
+# Information at rest must be encrypted using a DOD-accepted algorithm to
+# protect the confidentiality and integrity of the information.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000231-WSR-000144
+group:           V-206407
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001199
+control_rev5:    SC-28
+
+contribution:    For the data Splunk Enterprise itself encrypts, the application can
+                 constrain the algorithms used by operating in FIPS mode, and where index
+                 buckets are stored on a remote object store it selects the server-side
+                 encryption scheme for data at rest. Splunk does not encrypt index data
+                 held on local disk; that is the storage layer's work.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           indexes.conf [volume:<volume_name>] remote.s3.encryption not_equals none
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          indexes.conf [volume:<volume_name>] remote.s3.encryption https://help.splunk.com/en/data-management/manage-splunk-enterprise-indexers/10.4/deploy-smartstore/smartstore-on-s3-security-strategies
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        Encryption of index data held on local disk, which Splunk Enterprise does
+                 not perform - file system or block device encryption provided by the
+                 operating system or storage layer
+external:        The accepted-algorithm determination for the object store's server-side
+                 encryption and the keys behind it - cloud key management service and
+                 organizational policy
+external:        Encryption of configuration files, lookups and saved search artifacts on
+                 local disk - operating system or storage layer
+external:        Identification of which stored data requires protection - organizational
+                 data classification
+
+citation:        splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1], FIPS Publication
+                 140-2 algorithms and restrictions); indexes.conf.spec:2411-2420
+                 ([volume:<volume_name>] remote.s3.encryption = sse-s3 | sse-kms | sse-c |
+                 cse | none, "The encryption scheme to use for data buckets that are
+                 currently being stored (data at rest)"); indexes.conf.spec:2786-2791
+                 (remote.gs.encryption = gcp-sse-c | gcp-sse-kms | gcp-sse-gcp - every
+                 permitted value is an encryption scheme, so no condition is needed);
+                 authorize.conf.spec:544 ([capability::edit_encryption_key_provider]).
+                 Excluded as not implemented in this release: distsearch.conf.spec:557-559
+                 (remote.s3.encryption, "Currently not supported. This setting is related
+                 to a feature that is still under development") and
+                 indexes.conf.spec:2440-2453 (remote.s3.encryption.cse.algorithm and
+                 remote.s3.encryption.cse.key_type, both marked "Currently not supported").
+finding:         Data at rest is not protected to the extent the product allows: FIPS mode
+                 is not enabled, or a remote index volume is configured with its encryption
+                 scheme set to none.

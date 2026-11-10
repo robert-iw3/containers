@@ -1,0 +1,60 @@
+# SRG-APP-000790-AU-000210  -  CAT II
+# The Central Log Server must implement the capability to process, sort, and
+# search audit records for events of interest based on organization-defined
+# audit fields within audit records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000790-AU-000210
+group:           V-263567
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003830
+control_rev5:    AU-7
+
+contribution:    Splunk exposes field definition, extraction and indexing as configuration,
+                 which is what lets audit records be processed, sorted and searched on
+                 named fields; the application can also widen or narrow which records a
+                 role reaches, and its share is that the reviewing role's reach is not cut
+                 by a role filter.
+
+governs:         authorize.conf - Used to create roles.
+governs:         fields.conf - This file contains possible attribute and value pairs for: * Telling
+                 Splunk how to handle multi-value fields.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         transforms.conf - Rules that rewrite or route data as it is processed.
+
+check:           props.conf [<source type>] present
+check:           transforms.conf [<unique_transform_stanza_name>] present
+check:           fields.conf [<field name>] INDEXED present
+check:           fields.conf [<field name>] TOKENIZER present
+check:           authorize.conf [role_<roleName>] srchIndexesAllowed non_empty
+check:           authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] srchFilter absent -> authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
+vendor:          authorize.conf [role_<roleName>] srchFilter https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+# --- end vendor verification
+
+external:        The audit fields that constitute events of interest are an
+                 organization-defined parameter recorded in the system security plan;
+                 Splunk can express any field but cannot supply the list.
+external:        A field the sending component never emits cannot be extracted by Splunk,
+                 so the availability of some organization-defined fields rests on the
+                 source device's own logging configuration.
+
+citation:        props.conf.spec:80 [<spec>], :1085 REPORT-<class>, :1102 EXTRACT-<class>,
+                 :1265 FIELDALIAS-<class>, :1313 EVAL-<fieldname>, :1329 LOOKUP-<class>;
+                 transforms.conf.spec:68, :80, :115; fields.conf.spec:74 TOKENIZER =
+                 <regular expression> "No default", :89 INDEXED = <boolean> default false;
+                 authorize.conf.spec:150 srchFilter = <string>, :292 srchIndexesAllowed.
+finding:         Assessed at the application layer alone: the organization-defined audit
+                 fields are not defined or extracted for the audit source types in scope,
+                 or a role search filter or index allowance keeps the reviewing role from
+                 reaching the records, so audit records cannot be processed, sorted and
+                 searched on those fields in the application.

@@ -1,0 +1,45 @@
+# SRG-APP-000141-WSR-000083  -  CAT II
+# The web server must have resource mappings set to disable the serving of
+# certain file types.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000083
+group:           V-206382
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk Web serves static content only from a declared directory beneath a
+                 declared endpoint, and it can be kept from generating a directory listing,
+                 so the files it will return are limited to those the views reference
+                 rather than whatever the directory holds.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.staticdir.generate_indexes in 0|false
+check:           web.conf [settings] static_dir present
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] static_dir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.staticdir.generate_indexes https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        File system placement and modes of the static content directories, which
+                 decide what a reachable path can actually read, carried by the operating
+                 system.
+external:        MIME map entries added by third-party apps, carried by the app review
+                 procedure (server.conf.spec:1656).
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000083 check and fix text;
+                 web.conf.spec:333 (tools.staticdir.generate_indexes = [1 | 0], default 0),
+                 web.conf.spec:308 (static_dir), web.conf.spec:303 (static_endpoint)
+finding:         Splunk Web generates directory indexes for its static content, or declares
+                 no static directory, so the application can return file types the hosted
+                 views do not need.

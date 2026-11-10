@@ -1,0 +1,87 @@
+# SRG-APP-000315-WSR-000003  -  CAT II
+# Remote access to the web server must follow access policy or work in
+# conjunction with enterprise tools designed to enforce policy requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000315-WSR-000003
+group:           V-206416
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-002314
+control_rev5:    AC-17
+
+contribution:    Splunk enforces the remote-access requirements the discussion names from
+                 its own configuration: HTTPS on Splunk Web instead of HTTP, and an access
+                 control list on each listener it owns in place of the default that accepts
+                 connections from anywhere.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL matches ^(1|true)$
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+check:           web.conf [settings] acceptFrom non_empty
+check:           web.conf [settings] acceptFrom not_equals *
+check:           server.conf [httpServer] acceptFrom non_empty
+check:           server.conf [httpServer] acceptFrom not_equals *
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [httpServer] acceptFrom https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] acceptFrom https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Where the organization meets this requirement with an enterprise tool,
+                 that directory service, identity provider or remote-access gateway
+                 enforces the policy itself - multifactor authentication, device posture,
+                 approved access paths - and Splunk only consumes the result.
+external:        The organization defines which remote networks and clients are approved;
+                 the application stores the resulting ACL but does not determine its
+                 contents.
+external:        Perimeter firewall, VPN and network segmentation controls on the hosting
+                 network carry the remainder of the remote-access policy.
+external:        The certificate authority that issues the DoD-approved certificate named
+                 by serverCert is managed outside the application.
+
+citation:        Four of the reviewed conditions have to go. authType not_equals Splunk and
+                 authSettings non_empty invert the check text, which makes a finding only
+                 where "the web server is not configured to enforce these requirements and
+                 an enterprise tool is not in place" - an either/or. The discussion's
+                 examples of the server enforcing the policy are "implementing IP filtering
+                 rules, using https instead of http for communication, implementing secure
+                 tokens, and validating users", and native Splunk authentication validates
+                 users, so forcing authType away from its documented default of Splunk
+                 (authentication.conf.spec:30-33) fails an instance that enforces the
+                 policy itself with TLS and ACLs. That is over-reach: delegated
+                 authentication is one way to satisfy the requirement, not a condition of
+                 it, and it belongs in external dependencies. The sslVersions pair is both
+                 out of scope for this requirement and unsatisfiable in a legal case: no
+                 TLS version appears in this check or fix text, and the regex requires the
+                 literal "tls1.2" although the specification states the version "tls"
+                 "selects all versions tls1.0 or newer" and "-" removes a version
+                 (web.conf.spec:239-248), so a compliant "tls,-tls1.0,-tls1.1" - tls1.2
+                 only - is failed; TLS version floors are the subject of the crypto
+                 requirements, not AC-17(1). requireClientCert present demands a key whose
+                 default is false and which the check text never asks for
+                 (web.conf.spec:151-161). What remains is the application's full share:
+                 HTTPS exactly as the product STIG's own fix writes it under SPLK-CL-000290
+                 (enableSplunkWebSSL = 1, privKeyPath, serverCert) and the IP filtering the
+                 discussion names, where acceptFrom defaults to "*" - "accept from
+                 anywhere" - on both of the listeners the application owns
+                 (web.conf.spec:1080-1096).
+finding:         Splunk does not enforce the remote-access requirements it is capable of
+                 enforcing: Splunk Web is not configured for HTTPS with a server
+                 certificate and private key, or web.conf [settings] acceptFrom or
+                 server.conf [httpServer] acceptFrom is unset or left at "*", which accepts
+                 connections from anywhere.

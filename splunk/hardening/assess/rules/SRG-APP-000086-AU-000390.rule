@@ -1,0 +1,55 @@
+# SRG-APP-000086-AU-000390  -  CAT II
+# Where multiple log servers are installed in the enclave, each log server
+# must be configured to aggregate log records to a central aggregation
+# server or other consolidated events repository.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000086-AU-000390
+group:           V-206451
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-000174
+control_rev5:    AU-12
+
+contribution:    Where this instance is one of several log servers, Splunk can forward
+                 everything it receives to the central aggregation server: a
+                 [tcpout:<target_group>] stanza carries the aggregator's host and port in
+                 'server', the top-level 'defaultGroup' selects that group so all data is
+                 sent, and indexAndForward keeps a local copy in addition on a heavy
+                 forwarder.
+
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout] defaultGroup non_empty
+check:           outputs.conf [tcpout:<target_group>] server non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<target_group>] server https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+vendor:          outputs.conf [tcpout] defaultGroup https://help.splunk.com/en/splunk-enterprise/forward-and-process-data/forwarding-and-receiving-data/10.4/configure-forwarders/configure-forwarding-with-outputs.conf
+# --- end vendor verification
+
+external:        Whether the enclave holds multiple log servers, and therefore whether this
+                 requirement applies at all, is read from the network architecture
+                 documentation. The application cannot determine its own place in the
+                 topology, and a single-log-server site is not a finding against it.
+external:        Existence and acceptance of the central aggregation server, SIEM or
+                 consolidated events repository, which is a separate system.
+external:        Transport protection for the forwarded records, configured in the
+                 outputs.conf SSL settings and assessed under the SC requirements.
+
+citation:        SRG-APP-000086-AU-000390 check text; SPLK-CL-000110 check and fix text;
+                 outputs.conf.spec:61-70 ([tcpout], defaultGroup = <comma-separated list>);
+                 outputs.conf.spec:72-79 (indexAndForward = <boolean>, Default: false);
+                 outputs.conf.spec:118-130 ([tcpout:<target_group>], server =
+                 <comma-separated list>)
+finding:         Where this instance is one of multiple log servers, Splunk Enterprise has
+                 no outputs.conf target group naming the central aggregation server, or no
+                 defaultGroup selecting it, so the records it receives are not forwarded to
+                 the consolidated repository.

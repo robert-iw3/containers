@@ -1,0 +1,54 @@
+# SRG-APP-000098-WSR-000060  -  CAT II
+# A web server, behind a load balancer or proxy server, must produce log
+# records containing the client IP information as the source and destination
+# and not the load balancer or proxy IP information with each event.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000098-WSR-000060
+group:           V-206363
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-000133
+control_rev5:    AU-3
+
+contribution:    Where a reverse proxy or load balancer fronts the instance, Splunk can be
+                 told so: tools.proxy.on makes its HTTP services use the X-Forwarded-*
+                 headers for access request logging instead of the immediate client's
+                 address.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.proxy.on equals true
+check:           web.conf [settings] tools.proxy.base non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.proxy.base https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.proxy.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Whether a proxy or load balancer fronts the instance decides whether this
+                 requirement applies at all - the check text makes it not applicable
+                 otherwise - and that is read from the network architecture documentation.
+external:        The fronting proxy must insert the client address in an X-Forwarded-For
+                 header; Splunk can only consume a header the device sends.
+
+citation:        SCOPE drift within the product, and OVER-REACH. Removed inputs.conf
+                 [http://<name>] connection_host equals proxied_ip. That setting governs
+                 how the HTTP Event Collector stamps host on ingested events -
+                 inputs.conf.spec documents proxied_ip only in the [http://name] token
+                 stanza, where it "checks whether an X-Forwarded-For header was sent... and
+                 if so, sets the host to that value" - which is data ingestion, not the web
+                 server's own access logging that this requirement covers. An instance with
+                 no HEC token input, or whose HEC is not fronted by the proxy, would be
+                 failed for a control it satisfies. The determined row also carries no
+                 stanza, so the placeholder could not have matched.
+finding:         The instance is fronted by a proxy or load balancer but tools.proxy.on is
+                 not enabled with a tools.proxy.base, so its access records carry the
+                 proxy's address rather than the client's.

@@ -1,0 +1,68 @@
+# SRG-APP-000100-WSR-000064  -  CAT II
+# The web server must produce log records containing sufficient information
+# to establish the identity of any user/subject or process associated with
+# an event.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000100-WSR-000064
+group:           V-206365
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001487
+control_rev5:    AU-3
+
+contribution:    Splunk's web access logs name the authenticated user for each request, and
+                 the audit trail names the account behind each operation. Where an
+                 authenticating proxy supplies the identity, web.conf remoteUser names the
+                 header that carries it, remoteUserMatchExact = 1 stops the
+                 dash-and-underscore header collision the specification warns of - under
+                 which "the browser could dictate the username" - and trustedIP restricts
+                 which proxy may assert it.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           restmap.conf [<rest endpoint name>:<endpoint description string>] includeInAccessLog not_equals false
+check:           audit.conf [auditTrail] queueing not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        Where single sign-on is in use, web.conf remoteUserMatchExact must be set
+                 to 1 and trustedIP must name the authenticating proxy, as the
+                 specification directs for an SSO setup. Those two settings bear on this
+                 requirement only in an SSO deployment, so they are reported here rather
+                 than tested unconditionally - a non-SSO instance legitimately leaves both
+                 at their defaults, and failing it for them would be a false finding.
+external:        The authenticating proxy or identity provider establishes the identity it
+                 asserts; the application records the identity it is given.
+external:        The user field is emitted by the product in a fixed record format with no
+                 configuration surface.
+
+citation:        SRG-APP-000100-WSR-000064 check text; web.conf.spec:728-748 (remoteUser =
+                 <http_header_string>, Default: REMOTE_USER, with the header-normalization
+                 caution), :767-776 (remoteUserMatchExact = [0 | 1], "Set to 1 when you set
+                 up SSO", Default: 0), :797-804 (trustedIP = <ip_addresses>, "Set to a
+                 valid IP address to enable SSO", Default: not set), :871-874
+                 (log.access_file); restmap.conf.spec:138-142 (includeInAccessLog =
+                 <boolean>, Default: true); audit.conf.spec:23-29 ([auditTrail], queueing =
+                 <boolean>, Default: true)
+finding:         Splunk Enterprise has no web access log configured, excludes REST
+                 endpoints from splunkd_access.log, or has audit queueing disabled - and,
+                 where single sign-on is configured, leaves remoteUserMatchExact at 0 or
+                 trustedIP unset - so its web records do not reliably establish the
+                 identity of the user or process associated with the event.

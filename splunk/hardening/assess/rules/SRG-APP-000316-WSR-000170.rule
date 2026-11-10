@@ -1,0 +1,62 @@
+# SRG-APP-000316-WSR-000170  -  CAT II
+# The web server must provide the capability to immediately disconnect or
+# disable remote access to the hosted applications.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000316-WSR-000170
+group:           V-206418
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-002322
+control_rev5:    AC-17
+
+contribution:    Splunk owns several levers for an immediate disconnect - startwebserver 0
+                 or httpport 0 stops the Splunk Web listener, disabled on an input stanza
+                 stops a receiver, and a "!" deny rule in acceptFrom blocks a source on any
+                 listener - and all of them are available whether or not a site has
+                 declared the keys.
+
+external:        The administrator's authority and the organizational procedure for
+                 ordering and executing an immediate disconnect sit outside the
+                 application.
+external:        The check also requires that the disconnect methods be documented so the
+                 right action is taken during an attack; that is a document, not a setting.
+external:        Network-level isolation of the instance during an attack is carried by the
+                 hosting network, and host-level service control by the operating system.
+
+manual_reason:   The requirement is a capability, and the capability is present in the
+                 product whichever way the keys are left; no value decides it, so an
+                 assessor confirms the methods and their documentation rather than reading
+                 a setting.
+
+citation:        Every condition in the reviewed criterion is a present test on a key whose
+                 absence is normal and whose presence proves nothing. The check makes a
+                 finding only where "the web server is not capable of or cannot be
+                 configured to disconnect or disable remote access", and the capability
+                 exists in the product regardless: startwebserver defaults to 1 with "0
+                 disables Splunk Web" (web.conf.spec:23-26), httpport defaults to 8000 and
+                 "If omitted or 0 the server will NOT start an http listener"
+                 (web.conf.spec:28-33), and acceptFrom defaults to "*" while accepting a
+                 "!" prefix "to cause the rule to reject the connection"
+                 (web.conf.spec:1080-1096). Requiring those keys present reports a finding
+                 against an instance that is fully capable of the disconnect, which is
+                 over-reach of the worst kind because the thing demanded has no bearing on
+                 the thing checked; worse, requiring startwebserver or httpport to be
+                 declared tells an assessor nothing about whether an administrator can act.
+                 The inputs.conf disabled condition carries an empty stanza name and cannot
+                 be evaluated at all. The two acceptFrom non_empty conditions duplicate
+                 SRG-APP-000315-WSR-000004, where the check text actually asks for a
+                 restriction. No value decides this requirement, so it is a manual
+                 confirmation.
+finding:         Not expected to be a finding against the application: Splunk can stop its
+                 web listener, disable an individual input, or reject a source with a deny
+                 rule, and an assessor confirms these methods are documented; raise a
+                 finding only where the documented procedure does not exist.

@@ -1,0 +1,89 @@
+# SRG-APP-000251-WSR-000194  -  CAT II
+# The web server must interpret and normalize ambiguous HTTP requests or
+# terminate the TCP connection.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000251-WSR-000194
+group:           V-264364
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001310
+control_rev5:    SI-10
+
+contribution:    Splunk runs its own HTTP listeners, so the product can withhold on each
+                 one the HTTP/1.1 features the Content-Length and Transfer-Encoding desync
+                 depends on (forceHttp10) and reject a request whose content length exceeds
+                 a bound (max_content_length on the splunkd REST listener, max_upload_size
+                 on Splunk Web); it exposes no setting that normalizes an ambiguous
+                 request, none that drops an unnormalizable request and closes the
+                 connection, and no HTTP/2 listener option.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [httpServer] forceHttp10 not_equals never
+check:           server.conf [httpServer] max_content_length max 2147483648
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [httpServer] forceHttp10 https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [httpServer] max_content_length https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] forceHttp10 https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] max_upload_size https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] forceHttp10 not_equals never
+                 reason: "forceHttp10 = auto|never|always. How the HTTP server deals with
+                         HTTP/1.0 support for incoming clients. When set to 'always', the
+                         REST HTTP server does not use some HTTP 1.1 features such as
+                         persistent connections or chunked transfer encoding. When set to
+                         'auto', it limits HTTP 1.1 features only if the client sent no
+                         User-Agent header, or if the user agent is known to have bugs in
+                         its HTTP/1.1 support. When set to 'never', it always allows HTTP
+                         1.1, even to clients it suspects might be buggy. Default: auto"
+retired_check:   web.conf [settings] max_upload_size max 500
+                 reason: "The hard maximum limit, in megabytes, of uploaded files. Default:
+                         500"
+# --- end vendor verification
+
+external:        Normalization of an ambiguous request, and the drop-and-terminate behavior
+                 the fix text directs for requests that cannot be normalized: no Splunk
+                 setting exists for either, so this half of the objective is carried by the
+                 reverse proxy or load balancer fronting Splunk and is assessed against
+                 that component's own baseline.
+external:        The HTTP/2-only front-end to back-end path that the requirement's
+                 discussion names as the complete remedy for all smuggling variants: Splunk
+                 exposes no HTTP/2 listener setting, so it is carried by the front-end web
+                 tier.
+external:        Whether a front end is deployed at all cannot be read from Splunk
+                 configuration. Where one is, web.conf [settings] tools.proxy.on with a
+                 non-empty tools.proxy.base makes Splunk treat the front end's
+                 X-Forwarded-* headers as authoritative (web.conf.spec:1016-1032); because
+                 its correct value depends on the deployment topology rather than on the
+                 product, it is recorded here instead of being made a condition that would
+                 fail a directly exposed instance.
+
+citation:        SRG-APP-000251-WSR-000194 check, fix and discussion text (CCI-001310,
+                 SI-10); no product STIG rule shares CCI-001310. Splunk 10.x specification
+                 set (Version 10.0.0): server.conf.spec:1416 forceHttp10 within stanza
+                 [httpServer] at server.conf.spec:1291, default auto; server.conf.spec:1369
+                 max_content_length, default 2147483648 bytes, documented as rejecting HTTP
+                 requests over the configured size; web.conf.spec:1129 forceHttp10, default
+                 auto, documented as withholding HTTP/1.1 features including chunked
+                 transfer encoding when set to always; web.conf.spec:867 max_upload_size,
+                 default 500 MB; web.conf.spec:1016 tools.proxy.on and web.conf.spec:1031
+                 tools.proxy.base.
+finding:         Splunk Enterprise is not configured to the fullest extent the product
+                 allows against ambiguous HTTP requests — forceHttp10 is set to never in
+                 server.conf [httpServer] or web.conf [settings], or max_content_length or
+                 max_upload_size is raised above the vendor default bound — so a listener
+                 retains the HTTP/1.1 features and the unbounded message body on which
+                 request smuggling depends; this is assessed at the application layer
+                 alone, and ambiguous-request normalization, the drop-and-close behavior
+                 and the HTTP/2 front-end path are recorded as external dependencies
+                 carried by the reverse proxy or load balancer, not as part of this
+                 finding.

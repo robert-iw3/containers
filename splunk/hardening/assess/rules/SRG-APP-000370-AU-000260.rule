@@ -1,0 +1,54 @@
+# SRG-APP-000370-AU-000260  -  CAT III
+# The Central Log Server must be configured to generate reports that do not
+# alter original content or time ordering of log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000370-AU-000260
+group:           V-206503
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001882
+control_rev5:    AU-7
+
+contribution:    A Splunk report is a search over indexed events, so the application
+                 decides whether the report presents the record as stored. The product
+                 exposes settings that do alter presented content - search-time field
+                 filters, index-time sed scripts, and search commands that rewrite values -
+                 and the application's share is that none of them is applied to the audit
+                 data a report reads.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           field_filters.conf [<fieldFilterName>] action absent
+check:           props.conf [<spec>] SEDCMD-<class> absent
+check:           savedsearches.conf [<stanza name>] search matches tls1\.2
+check:           savedsearches.conf [<stanza name>] search not_matches (^|,)[[:space:]]*ssl3
+check:           savedsearches.conf [<stanza name>] search not_matches (^|,)[[:space:]]*tls1\.0
+check:           savedsearches.conf [<stanza name>] search not_matches (^|,)[[:space:]]*tls1\.1
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        Whether a report as rendered preserves content and time ordering is
+                 confirmed by comparing report output with the stored records, which the
+                 assessor performs.
+external:        Handling of an exported report after it leaves the application - a PDF or
+                 CSV passed on, edited or re-sorted downstream - rests on the recipient's
+                 procedures.
+
+citation:        field_filters.conf.spec:32 [<fieldFilterName>], :37-70 action = <field> =
+                 <operator> with the operator vocabulary null() | sha256() | sha512() |
+                 <string literal> | sed(<string literal>); props.conf.spec:80 [<spec>],
+                 :1243 SEDCMD-<class>; savedsearches.conf.spec:44 search.
+finding:         Assessed at the application layer alone: a field filter, a SEDCMD class or
+                 a content-rewriting search command is applied to the audit data a report
+                 reads, so the report does not present the original content of the log
+                 records.

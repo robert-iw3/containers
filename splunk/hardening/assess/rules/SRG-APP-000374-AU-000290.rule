@@ -1,0 +1,51 @@
+# SRG-APP-000374-AU-000290  -  CAT III
+# Upon receipt of the log record from hosts and devices, the Central Log
+# Server must be configured to record time stamps of the time of receipt
+# that can be mapped to Coordinated Universal Time (UTC).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000374-AU-000290
+group:           V-206504
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001890
+control_rev5:    AU-8
+
+contribution:    Splunk stamps _indextime on every event at the point its receiver accepts
+                 it and stores event time as an epoch value, which is UTC by construction.
+                 The application's configurable share is whether that receipt-time range is
+                 tracked and returned to search, and how the record's own timestamp is
+                 recognized and mapped to UTC.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           limits.conf [search] track_indextime_range in 1|true
+check:           props.conf [<source type>] DATETIME_CONFIG not_equals NONE
+check:           props.conf [<source type>] TIME_FORMAT non_empty
+check:           props.conf [<source type>] TZ non_empty
+check:           props.conf [<source type>] TZ_ALIAS present
+
+external:        The host clock that splunkd reads, and its synchronization to an
+                 authoritative time source, are provided by the operating system and the
+                 time service.
+external:        Whether the sending host's own timestamp is accurate rests on that host;
+                 Splunk records the time it received the record, not the sender's clock
+                 discipline.
+
+citation:        limits.conf.spec:315 [search], :929 track_indextime_range = <boolean>
+                 default true; props.conf.spec:502 DATETIME_CONFIG = [<filename> | CURRENT
+                 | NONE], :554 TIME_FORMAT, :580 TZ, :592 TZ_ALIAS. No condition is written
+                 over limits.conf durable.track_time_type: that key is not declared in the
+                 staged specification set, so its vocabulary cannot be confirmed.
+finding:         Assessed at the application layer alone: DATETIME_CONFIG is set to NONE
+                 for an audit source type, or TIME_FORMAT and TZ are unset so the record's
+                 timestamp is not deterministically mapped to UTC, or track_indextime_range
+                 is disabled so the receipt time is not returned to search.

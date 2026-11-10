@@ -1,0 +1,70 @@
+# SRG-APP-000065-AU-000240  -  CAT II
+# The Central Log Server must enforce the limit of three consecutive invalid
+# logon attempts by a user during a 15 minute time period.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000065-AU-000240
+group:           V-221904
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-000044
+control_rev5:    AC-7
+
+contribution:    Splunk's native authentication counts failed logons per user and locks the
+                 account itself; whether lockout is enabled, how many attempts trigger it,
+                 and the window over which attempts are counted are all application
+                 settings in authentication.conf [splunk_auth].
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] lockoutUsers in 1|true
+check:           authentication.conf [splunk_auth] lockoutAttempts present
+check:           authentication.conf [splunk_auth] lockoutAttempts max 3
+check:           authentication.conf [splunk_auth] lockoutThresholdMins present
+check:           authentication.conf [splunk_auth] lockoutThresholdMins min 15
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] lockoutAttempts https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] lockoutThresholdMins https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] lockoutUsers https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        These settings govern Splunk-native accounts only. Where users
+                 authenticate through LDAP, SAML or a scripted provider, the
+                 consecutive-invalid-attempt limit is enforced by that provider and is
+                 assessed under its own baseline.
+external:        Per authentication.conf.spec:517-518, lockout state on a search head
+                 cluster member applies to that member only and not to the cluster, so a
+                 limit spanning the cluster is not expressible in Splunk configuration.
+
+citation:        CHANGED for INVENTION. The condition 'authentication.conf [splunk_auth]
+                 lockoutMins present' has been removed. lockoutMins is the lockout
+                 duration, the number of minutes a user stays locked out after the limit is
+                 reached (authentication.conf.spec:521-530, default 30). This requirement
+                 is CCI-000044 / AC-7 a, the limit on consecutive invalid attempts; the
+                 duration of the lockout is a different control enhancement and belongs to
+                 the requirement that addresses it. The operand appears in neither the SRG
+                 check text nor the product STIG fix text for SPLK-CL-000060, whose fix
+                 sets only lockoutAttempts and lockoutThresholdMins, and because
+                 lockoutMins has a default it reads as present in every merged
+                 configuration, so the condition can never fail and adds no evidence while
+                 attributing another requirement's objective to this row. The two numeric
+                 directions were checked against the product STIG check text and are
+                 correct as written and retained: lockoutAttempts takes max:3 because more
+                 than 3 is a finding, lockoutThresholdMins takes min:15 because less than
+                 15 is a finding, and each correctly fails the vendor default of 5
+                 (authentication.conf.spec:541, :552). lockoutUsers is retained on the
+                 specification's own terms, since authentication.conf.spec:514-519 makes it
+                 the switch that gives the other two settings effect, and in:1|true accepts
+                 either boolean spelling.
+finding:         Splunk-native authentication is not configured to lock an account after
+                 three consecutive invalid logon attempts within a 15 minute window, so the
+                 application is not configured to the extent the product allows toward the
+                 attempt limit.

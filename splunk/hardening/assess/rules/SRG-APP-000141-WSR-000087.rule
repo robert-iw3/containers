@@ -1,0 +1,59 @@
+# SRG-APP-000141-WSR-000087  -  CAT II
+# Users and scripts running on behalf of users must be contained to the
+# document root or home directory tree of the web server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000087
+group:           V-206385
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk Web declares the endpoint prefix and the static directory its users
+                 operate within and can refuse to list those directories, and a role's
+                 search filter confines the searches run on a user's behalf to the data
+                 that role is scoped to.
+
+governs:         authorize.conf - Used to create roles.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [root_endpoint] root_endpoint present
+check:           authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] srchFilter non_empty -> authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
+vendor:          authorize.conf [role_<roleName>] srchFilter https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+vendor:          web.conf [root_endpoint] root_endpoint https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] static_dir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.staticdir.generate_indexes https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] static_dir present
+                 reason: "static_dir = <relative_filesystem_path>. The directory that holds
+                         the static content. This can be an absolute URL if you want to put
+                         it elsewhere. Default: share/splunk/search_mrsparkle/exposed"
+retired_check:   web.conf [settings] tools.staticdir.generate_indexes in 0|false
+                 reason: "tools.staticdir.generate_indexes = [1 | 0]. Whether or not the
+                         webserver serves a directory listing for static directories.
+                         Default: 0 (false)"
+# --- end vendor verification
+
+external:        The Splunk service account's own reach across the file system, carried by
+                 the operating system through ownership, modes, and any mandatory access
+                 control policy.
+external:        Containment of the processes themselves by chroot, namespace, or
+                 container, carried by the host.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000087 check and fix text;
+                 web.conf.spec:297 (root_endpoint), web.conf.spec:308 (static_dir),
+                 web.conf.spec:333 (tools.staticdir.generate_indexes, default 0),
+                 authorize.conf.spec:150 (srchFilter)
+finding:         Splunk Web does not declare the endpoint and static directory its users
+                 are confined to, directory listings are generated, or roles carry no
+                 search filter, so users and the searches run on their behalf are not
+                 contained to the application's own tree.

@@ -1,0 +1,76 @@
+# SRG-APP-000359-AU-000120  -  CAT III
+# The Central Log Server must be configured to send an immediate alert to
+# the System Administrator (SA) and Information System Security Officer
+# (ISSO) (at a minimum) when allocated log record storage volume reaches 75
+# percent of the repository maximum log record storage capacity.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000359-AU-000120
+group:           V-206492
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001855
+control_rev5:    AU-5
+
+contribution:    Splunk carries this requirement in the product through the health
+                 reporter: minFreeSpace sets the storage floor, the disk_space indicator
+                 thresholds fire at one and two multiples of it, and the email alert action
+                 carries the notification to a recipient list.
+
+governs:         health.conf - Thresholds for Splunk reporting on its own health.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [diskUsage] minFreeSpace non_empty
+check:           health.conf [alert_action:email] disabled equals 0
+check:           health.conf [alert_action:email] action.to non_empty
+check:           health.conf [health_reporter] alert.disabled equals 0
+check:           health.conf [health_reporter] alert.actions non_empty
+check:           health.conf [feature:disk_space] alert.disabled not_equals 1
+check:           health.conf [feature:disk_space] indicator:disk_space_remaining_multiple_minfreespace:red equals 1
+check:           health.conf [feature:disk_space] indicator:disk_space_remaining_multiple_minfreespace:yellow equals 2
+check:           health.conf [health_reporter] alert.min_duration_sec max 60
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [diskUsage] minFreeSpace https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        SMTP relay reachability and mail delivery, which depend on the mail server
+                 and the network
+external:        The ISSO and SA recipient addresses, which the organization supplies
+external:        The size of the storage volume, needed only to confirm an absolute
+                 minFreeSpace value in megabytes; a percentage value expresses the fix
+                 text's 25 percent in the product and needs nothing from outside it
+
+citation:        Four corrections. (1) health.conf [feature:disk_space] alert.actions
+                 non_empty is outside that stanza's vocabulary: the specification documents
+                 alert.actions only under [health_reporter] (health.conf.spec:93), while
+                 [feature:*] takes alert.disabled, alert.min_duration_sec,
+                 alert.threshold_color and the per-indicator alert:<indicator name>.* forms
+                 (spec:165-211). The shipped file sets alert.actions = email in
+                 [health_reporter] (health.conf:27) and in no feature stanza, so the
+                 condition failed every install for a key that stanza does not have - note
+                 too that checks.tsv marks the key "declared" because parse-mechanisms.py
+                 tests key names per file rather than per stanza. (2) alert.threshold_color
+                 in yellow|red cannot fail: those are the only two values the setting
+                 accepts (spec:101-103, default red). It is replaced by the two switches
+                 that can fail - the global alert.disabled and the feature's own override.
+                 (3) alert.min_duration_sec present is vacuous against the shipped 60 and
+                 leaves the one direction that matters untested: this requirement says
+                 "immediate", and a larger value defers the notification, so an upper bound
+                 at the product's own documented default is the condition that decides it.
+                 (4) The external dependency on volume size is overstated:
+                 server.conf.spec:1858-1866 permits a percentage, so minFreeSpace = 25%
+                 expresses the fix text's figure without any reading from the storage
+                 layer.
+finding:         The application's storage alert is incomplete: the free-space floor, the
+                 health reporter's alerting, the email recipient list, or the disk_space
+                 indicator thresholds are not configured to raise an immediate notification
+                 as storage approaches capacity.

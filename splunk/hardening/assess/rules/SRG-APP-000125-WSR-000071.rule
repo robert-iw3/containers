@@ -1,0 +1,45 @@
+# SRG-APP-000125-WSR-000071  -  CAT II
+# The log data and records from the web server must be backed up onto a
+# different system or media.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000125-WSR-000071
+group:           V-206371
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-001348
+control_rev5:    AU-9
+
+contribution:    Where the organization uses them, the frozen archive destination
+                 (coldToFrozenDir or coldToFrozenScript) and remote store-backed indexes
+                 (remotePath) put a copy of the indexed Splunk Web records on other media,
+                 and the assessor records which is in use as evidence.
+
+external:        The backup onto different media and its schedule - SPLK-CL-000250 assigns
+                 both to the operating system backup tool or another approved tool
+external:        Confirmation that the medium is unrelated to the system being logged,
+                 which the application cannot establish about a path handed to it
+
+manual_reason:   Splunk Web's records reach the internal indexes, and SPLK-CL-000250 places
+                 their backup on "the underlying OS backup tools, or another approved
+                 backup tool" with an interview as its check. The application has optional
+                 off-instance copy levers but none the authority requires, so no
+                 configuration read can decide this requirement without failing a
+                 deployment that is backed up as directed.
+
+citation:        coldToFrozenDir non_empty was the only condition, and it fails a stock
+                 install for a setting that indexes.conf.spec:792-802 presents as one
+                 alternative among several and that the product STIG does not require.
+                 Reporting a finding there would charge the application for a backup the
+                 benchmark authority itself assigns to an operating system tool.
+finding:         No backup of the Splunk Web log records onto a different system or media
+                 is in place; the application's optional archive destination is not a
+                 substitute for the backup process the requirement names.

@@ -1,0 +1,76 @@
+# SRG-APP-000291-AU-000200  -  CAT III
+# The Central Log Server must notify system administrators and ISSO when
+# accounts are created.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000291-AU-000200
+group:           V-221921
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000015
+control_rev5:    AC-2
+
+contribution:    Splunk generates the notification itself: a scheduled saved search over
+                 the audit records for account creation, with the email alert action
+                 enabled and addressed to the system administrators and the ISSO, and an
+                 SMTP relay and sender address configured in alert_actions.conf, is the
+                 product's reporting and notification mechanism that the product STIG fix
+                 text directs an administrator to use.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           alert_actions.conf [email] mailserver not_equals localhost
+check:           alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+check:           savedsearches.conf [<search name>] enableSched equals 1
+check:           savedsearches.conf [<search name>] cron_schedule non_empty
+check:           savedsearches.conf [<search name>] action.email in 1|true
+check:           savedsearches.conf [<search name>] action.email.to non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] mailserver non_empty -> alert_actions.conf [email] mailserver not_equals localhost
+corrected:       alert_actions.conf [email] from non_empty -> alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+vendor:          alert_actions.conf [email] from https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          alert_actions.conf [email] mailserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The SMTP relay that accepts and delivers the message is a separate
+                 component; the product specification states plainly that a mail server "is
+                 not included with the Splunk instance".
+external:        Which addresses belong to the system administrators and the ISSO is
+                 organization-defined, as is the reporting frequency expressed in the cron
+                 schedule; the criterion tests that recipients and a schedule are
+                 expressed, not their values.
+external:        The product STIG verifies this by interviewing the administrator that a
+                 report exists and the ISSO that it is received, so confirmation of receipt
+                 is a procedural step outside the application.
+external:        Whether the saved search's own query selects account-creation records is a
+                 matter of search language content rather than a configuration value, and
+                 needs reviewer inspection alongside these conditions.
+external:        Account creations performed in an external directory service or identity
+                 provider are notified from the records that component sends to Splunk, so
+                 coverage depends on those sources being onboarded.
+
+citation:        splunk-spec-files/alert_actions.conf.spec:157-166 ([email], from =
+                 <string>, default splunk), 276-285 (mailserver = <host>[:<port>], SMTP
+                 server "is not included with the Splunk instance", default localhost);
+                 splunk-spec-files/savedsearches.conf.spec:73-78 (enableSched = [0 | 1],
+                 default 0), 79-90 (cron_schedule), 249-254 (counttype), 270-274
+                 (alert_condition), 300-303 (action.email = <boolean>, default false),
+                 304-307 (action.email.to = <email list>, REQUIRED, empty default); product
+                 STIG SPLK-CL-000020 check and fix text.
+finding:         Splunk is not configured to notify the system administrators and the ISSO
+                 when accounts are created, because no scheduled saved search with the
+                 email action enabled and addressed to those recipients exists, or
+                 alert_actions.conf [email] names no SMTP relay or sender for the
+                 notification to be sent through; this is assessed at the application layer
+                 alone, with the mail relay, the recipient addresses, the notification
+                 frequency, and the ISSO's confirmation of receipt recorded as external
+                 dependencies.

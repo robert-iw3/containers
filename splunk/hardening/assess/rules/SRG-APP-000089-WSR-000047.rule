@@ -1,0 +1,64 @@
+# SRG-APP-000089-WSR-000047  -  CAT II
+# The web server must generate, at a minimum, log records for system startup
+# and shutdown, system access, and system authentication events.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000089-WSR-000047
+group:           V-206356
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000169
+control_rev5:    AU-12
+
+contribution:    Splunk's web tier records system access in the Splunk Web HTTP access log
+                 named by web.conf log.access_file and REST access in splunkd_access.log
+                 for every endpoint not excluded by restmap.conf includeInAccessLog;
+                 authentication successes and failures and splunkd startup and shutdown are
+                 written by the product unconditionally, and the audit trail reaches a
+                 searchable index when audit.conf [auditTrail] queueing is true.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           restmap.conf [<rest endpoint name>:<endpoint description string>] includeInAccessLog not_equals false
+check:           audit.conf [auditTrail] queueing not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        System startup and shutdown records are written by splunkd to its own
+                 service log with no configuration surface, so that part of the objective
+                 is verified by inspecting the written log rather than by reading
+                 configuration.
+external:        The operating system's service manager decides when splunkd and Splunk Web
+                 start and stop, so the boundaries of a startup and shutdown record belong
+                 to it.
+external:        audit.conf in Splunk Enterprise 10.4.2 declares only 'queueing' under
+                 [auditTrail]; the 'logging_format' key carried in the check inventory is
+                 not a setting in this release's specification, so no condition is written
+                 over it and the audit record format is fixed in the product.
+
+citation:        SRG-APP-000089-WSR-000047 check text; web.conf.spec:16 ([settings]),
+                 web.conf.spec:871-874 (log.access_file = <filename>, Default:
+                 web_access.log); restmap.conf.spec:70 ([<rest endpoint name>:<endpoint
+                 description string>]), restmap.conf.spec:138-142 (includeInAccessLog =
+                 <boolean>, Default: true); audit.conf.spec:23-29 ([auditTrail], queueing =
+                 <boolean>, Default: true)
+finding:         Splunk Enterprise has no web access log configured, excludes REST
+                 endpoints from splunkd_access.log, or sets audit.conf [auditTrail]
+                 queueing to false without an input tailing the audit log, so system access
+                 and authentication events are not recorded or indexed by the application.

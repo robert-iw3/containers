@@ -1,0 +1,59 @@
+# SRG-APP-000156-AU-002380  -  CAT II
+# The Central Log Server must use FIPS-validated SHA-1 or higher hash
+# function to provide replay-resistant authentication mechanisms for network
+# access to privileged accounts.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000156-AU-002380
+group:           V-206465
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001941
+control_rev5:    IA-2
+
+contribution:    Splunk can be placed in FIPS mode, which restricts it to FIPS-validated
+                 algorithms, and Splunk Web can be configured to serve only over TLS with a
+                 named server certificate and private key, so the authenticated session
+                 over which privileged users log on is protected by a FIPS-validated hash.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           web.conf [settings] enableSplunkWebSSL equals true
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Whether the named certificate was issued under DoD PKI, which is a
+                 function of the issuing certificate authority and not readable from Splunk
+                 configuration
+external:        The FIPS-validated cryptographic module supplied with the platform, and
+                 the kernel FIPS state of the host
+external:        Replay resistance on the host's own network access paths, such as SSH,
+                 carried by the operating system
+
+citation:        SPLK-CL-000330 check and fix text (web.conf enableSplunkWebSSL = 1 with
+                 privKeyPath and serverCert) and SPLK-CL-000390 fix text (SPLUNK_FIPS = 1
+                 in splunk-launch.conf); splunk-launch.conf.spec:110-130 (SPLUNK_FIPS
+                 vocabulary [0|1], one-time setting); web.conf.spec:70-73
+                 (enableSplunkWebSSL, default false), web.conf.spec:75-91 (privKeyPath and
+                 serverCert defaults point at the auto-generated pair)
+finding:         Splunk is not in FIPS mode (splunk-launch.conf SPLUNK_FIPS is not 1), or
+                 Splunk Web is not configured for TLS with a named server certificate and
+                 private key, so the application does not provide a FIPS-validated
+                 replay-resistant authentication channel for privileged network access.

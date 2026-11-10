@@ -1,0 +1,49 @@
+# SRG-APP-000860-WSR-000250  -  CAT II
+# The web server must, for password-based authentication, allow user
+# selection of long passwords and passphrases, including spaces and all
+# printable characters.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000860-WSR-000250
+group:           V-264351
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004064
+control_rev5:    IA-5
+
+contribution:    Passwords set through Splunk Web are governed by the same platform
+                 settings: the product imposes no maximum length and excludes no printable
+                 character, and the configurable share is authentication.conf [splunk_auth]
+                 minPasswordLength, which the product STIG sets to 15 or more. The spec's
+                 reservation of the semicolon from the special-character rule is the one
+                 product limitation on "all printable characters".
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] minPasswordLength min 15
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] minPasswordLength https://help.splunk.com/en/splunk-cloud-platform/administer/manage-users-and-security/10.2.2510/manage-credentials-and-keys/configure-a-splunk-enterprise-password-policy-using-the-authentication.conf-configuration-file
+# --- end vendor verification
+
+external:        Where authentication is external (LDAP, SAML, ProxySSO) or fronted by an
+                 SSO proxy, password length and character set are enforced by that
+                 provider.
+external:        Browser and workstation handling of spaces and non-ASCII printable
+                 characters at the change dialog.
+external:        The organization's length policy - organization-defined; the asserted
+                 value is the product STIG's.
+
+citation:        splunk-spec-files/authentication.conf.spec:441, :477; SPLK-CL-000370 check
+                 and fix text
+finding:         Passwords set through Splunk Web are not required to be long -
+                 authentication.conf [splunk_auth] minPasswordLength is missing or 14 or
+                 less, leaving the spec default of 8 in force; this determination is from
+                 the perspective of the application layer alone, with the semicolon
+                 reservation in the special-character rule noted as a product limitation.

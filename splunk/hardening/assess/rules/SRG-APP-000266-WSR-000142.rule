@@ -1,0 +1,59 @@
+# SRG-APP-000266-WSR-000142  -  CAT II
+# The web server must display a default hosted application web page, not a
+# directory listing, when a requested web page cannot be found.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000266-WSR-000142
+group:           V-206411
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001312
+control_rev5:    SI-11
+
+contribution:    Splunk Web can deny the enumeration the requirement is aimed at outright
+                 rather than mask it per directory: tools.staticdir.generate_indexes
+                 determines whether the web server serves a directory listing for static
+                 directories at all, and simple_error_page determines the content of the
+                 page returned when a requested page cannot be found.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.staticdir.generate_indexes not_equals 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.staticdir.generate_indexes https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Placing a default page in every web document directory, which the fix text
+                 directs literally: the content of the static document directory below
+                 $SPLUNK_HOME is carried by the app packaging and the installation's file
+                 layout, not by any Splunk setting.
+external:        The directories in scope are bounded by web.conf [settings] static_dir,
+                 static_endpoint and root_endpoint (web.conf.spec:308, 303, 297), which the
+                 assessor reads to scope the check; they define where the document
+                 directory is exposed and do not themselves decide the requirement.
+external:        Any directory listing served by a front-end web server, object store or
+                 CDN mapped into the same URI space is carried by that component and
+                 assessed against its own baseline.
+
+citation:        SRG-APP-000266-WSR-000142 check, fix and discussion text (CCI-001312,
+                 SI-11 a); no product STIG rule shares CCI-001312. Splunk 10.x
+                 specification set (Version 10.0.0): web.conf.spec:333
+                 tools.staticdir.generate_indexes = [1 | 0], default 0, documented as
+                 controlling whether the webserver serves a directory listing for static
+                 directories; scoping keys web.conf.spec:297 root_endpoint,
+                 web.conf.spec:303 static_endpoint, web.conf.spec:308 static_dir;
+                 web.conf.spec:227 simple_error_page.
+finding:         web.conf [settings] tools.staticdir.generate_indexes is set to 1, so
+                 Splunk Web generates a directory listing for a static document directory
+                 instead of denying the enumeration outright; this is assessed at the
+                 application layer alone, and the placement of a default page in each web
+                 document directory is recorded as an external dependency carried by the
+                 app packaging and the installation's file layout rather than as part of
+                 this finding.

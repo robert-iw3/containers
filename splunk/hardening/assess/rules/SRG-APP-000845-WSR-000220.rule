@@ -1,0 +1,52 @@
+# SRG-APP-000845-WSR-000220  -  CAT II
+# The web server must, for password-based authentication, verify when users
+# create or update passwords, that the passwords are not found on the list
+# of commonly-used, expected, or compromised passwords in IA-5 (1) (a).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000845-WSR-000220
+group:           V-264348
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004061
+control_rev5:    IA-5
+
+contribution:    Password changes made through Splunk Web are evaluated by the same
+                 platform settings, so the web tier's share is the [splunk_auth] password
+                 history the benchmark authority prescribes for this product in
+                 SPLK-CL-000410: enablePasswordHistory makes the platform retain previously
+                 used passwords and passwordHistoryCount sets how many are refused at the
+                 change dialog. The composition rules also observed here are asserted under
+                 SRG-APP-000870.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] enablePasswordHistory in true|True|TRUE|t|1|yes
+check:           authentication.conf [splunk_auth] passwordHistoryCount min 5
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] enablePasswordHistory https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] passwordHistoryCount https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Screening a new password against a list of commonly used, expected, or
+                 compromised passwords - not offered by the product; carried by the
+                 directory service or identity provider and the organization's policy.
+external:        Where authentication is external (LDAP, SAML, ProxySSO), the password is
+                 created and verified at that provider and Splunk Web never sees the
+                 change.
+
+citation:        splunk-spec-files/authentication.conf.spec:554, :561; SPLK-CL-000410 check
+                 and fix text
+finding:         Password changes made through Splunk Web are not checked against
+                 previously used passwords as the product STIG requires -
+                 authentication.conf [splunk_auth] enablePasswordHistory is missing or
+                 false, or passwordHistoryCount is 4 or less; this determination is from
+                 the perspective of the application layer alone, screening against a deny
+                 list being carried by the identity provider and the organization's policy.

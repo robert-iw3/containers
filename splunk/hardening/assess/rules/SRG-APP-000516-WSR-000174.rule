@@ -1,0 +1,56 @@
+# SRG-APP-000516-WSR-000174  -  CAT II
+# The web server must be configured in accordance with the security
+# configuration settings based on DoD security configuration or
+# implementation guidance, including STIGs, NSA configuration guides, CTOs,
+# and DTMs.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-WSR-000174
+group:           V-206445
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    The application can hold the two concrete settings the benchmark authority
+                 states for this product, and can carry the rest of the applicable guidance
+                 as explicit values in its own .conf files rather than relying on shipped
+                 defaults.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL in true|1
+check:           server.conf [sslConfig] enableSplunkdSSL in true|1
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        The rest of this requirement is the sum of the other rules in this
+                 checklist: it has no setting of its own beyond the values the product STIG
+                 states, and the check inventory attaches whole .conf files to it rather
+                 than a key.
+external:        Which guidance applies - the STIGs, NSA configuration guides, CTOs, and
+                 DTMs in scope - is an organizational determination, and the operating
+                 system, network, and procedural portions of those documents are carried
+                 outside the application.
+external:        Precedence matters when reading the result: a value in the system-local
+                 layer outranks the hardening app, so guidance delivered as an app can be
+                 overridden on the host.
+
+citation:        SPLK-CL-000290 check and fix text; Web Server SRG
+                 SRG-APP-000516-WSR-000174 check text; web.conf.spec:70
+                 (enableSplunkWebSSL, default false), server.conf.spec:724
+                 (enableSplunkdSSL)
+finding:         The settings the benchmark authority states for this product are not
+                 configured, so the application is not configured in accordance with the
+                 security configuration guidance that applies to it.

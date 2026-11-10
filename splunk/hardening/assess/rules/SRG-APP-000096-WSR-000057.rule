@@ -1,0 +1,48 @@
+# SRG-APP-000096-WSR-000057  -  CAT II
+# The web server must produce log records containing sufficient information
+# to establish when (date and time) events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000096-WSR-000057
+group:           V-206360
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-000131
+control_rev5:    AU-3
+
+contribution:    Every record Splunk's web tier writes to web_access.log and
+                 splunkd_access.log begins with a date and time that no setting suppresses;
+                 what the application configures is that those logs are written.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] log.access_file non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        The timestamp itself is emitted unconditionally by the product at the
+                 start of each record in both access logs, so that part of the objective
+                 has no configuration surface and is confirmed by inspecting a written
+                 record.
+
+citation:        SCOPE and INVENTION. Removed props.conf [<spec>] TZ present. TZ is an
+                 index-time setting that assigns a time zone to data Splunk ingests; it
+                 does not govern what the web tier writes into its own access logs, which
+                 is what this requirement covers. props.conf.spec also gives "Default:
+                 empty string" and a documented fallback chain - a zone in the record's raw
+                 text, then TZ, then the forwarder's zone, then "the timezone of the system
+                 that is running splunkd" - so an unset TZ is a supported configuration and
+                 requiring it would fail a correct instance. The condition also
+                 contradicted the criterion's own statement that the timestamp is emitted
+                 unconditionally.
+finding:         No HTTP access log is named in web.conf, so the web tier writes no record
+                 for the date and time of each event to appear on.

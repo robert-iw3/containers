@@ -1,0 +1,43 @@
+# SRG-APP-000435-WSR-000147  -  CAT II
+# The web server must be protected from being stopped by a non-privileged
+# user.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000435-WSR-000147
+group:           V-206432
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002385
+control_rev5:    SC-5
+
+contribution:    Splunk Web can only keep its process ID file at the vendor-mandated
+                 location inside the Splunk installation so the file inherits the
+                 installation's ownership; it cannot set permissions on that file or on the
+                 utilities that start and stop the server.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] pid_path equals var/run/splunk/splunkweb.pid
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] pid_path https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Operating system ownership and permission bits on the process ID file and
+                 on the splunk start and stop utilities
+external:        Service manager (systemd unit or container runtime) that decides which
+                 accounts may stop splunkd and splunkweb
+external:        Privileged account management procedure that assigns those rights to
+                 privileged accounts only
+
+citation:        SRG-APP-000435-WSR-000147 check text; web.conf.spec:1035-1038
+finding:         web.conf [settings] pid_path does not hold the vendor-mandated value
+                 var/run/splunk/splunkweb.pid, so the Splunk Web process ID file is written
+                 outside the Splunk installation directory where the installation's
+                 ownership does not protect it.

@@ -1,0 +1,40 @@
+# SRG-APP-000116-AU-000270  -  CAT III
+# The Central Log Server must be configured to use internal system clocks to
+# generate time stamps for log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000116-AU-000270
+group:           V-206457
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000159
+control_rev5:    AU-8
+
+contribution:    Splunk Enterprise stamps each event either from the timestamp its own
+                 timestamp processor recognizes in the event text or from the clock of the
+                 host running splunkd, and props.conf is the only place that choice is
+                 configurable, so the application's share is to leave timestamp assignment
+                 with splunkd rather than accepting a time handed up by the input layer.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [<source type>] DATETIME_CONFIG not_equals NONE
+
+external:        Accuracy and synchronization of the host clock that splunkd reads - the
+                 operating system time service (NTP or chrony), which no Splunk setting
+                 reaches
+external:        Time zone of the host operating system, used when an event carries no zone
+                 in its raw text and props.conf TZ is unset (props.conf.spec:580-592)
+
+citation:        SRG-APP-000116-AU-000270 (V-206457) check text; props.conf.spec:502-519,
+                 580-592
+finding:         props.conf sets DATETIME_CONFIG = NONE for one or more source types, so
+                 the event time is carried up from the input layer instead of being
+                 assigned by splunkd from the host system clock.

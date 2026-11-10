@@ -1,0 +1,47 @@
+# SRG-APP-000086-AU-000020  -  CAT III
+# The Central Log Server must be configured to aggregate log records from
+# organization-defined devices and hosts within its scope of coverage.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000086-AU-000020
+group:           V-206449
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000174
+control_rev5:    AU-12
+
+contribution:    Splunk can declare the receiving input that accepts records from the
+                 covered hosts and devices, a Splunk-to-Splunk receiver for forwarded data.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [splunktcp] present
+
+external:        The list of in-scope devices and hosts is organization-defined and held in
+                 the site security plan; SPLK-CL-000100 directs the assessor to that
+                 document to decide whether the declared inputs cover it.
+external:        Each sending host's own forwarding configuration (outputs.conf on the
+                 forwarder, or the device's syslog target) is configured on that host, not
+                 on the instance under review.
+
+citation:        INVENTION. The original condition named key "splunktcp" inside stanza
+                 [splunktcp]. inputs.conf has no setting of that name - splunktcp is a
+                 stanza, not a key - so the engine searches [splunktcp] for a key that
+                 cannot exist and reports it absent on every instance, a guaranteed false
+                 finding. The determined row carries an empty key, which assess.sh treats
+                 as a stanza-presence test, so key is set to empty to match that
+                 convention. Scope caveat for the assessor: where the covered hosts send by
+                 HEC or syslog instead, the corresponding input stanza carries this
+                 objective and the receiver named here would not apply.
+finding:         No Splunk-to-Splunk receiving input is declared in inputs.conf, so the
+                 instance has no configured means of accepting the log records forwarded
+                 from the hosts and devices in its scope of coverage.

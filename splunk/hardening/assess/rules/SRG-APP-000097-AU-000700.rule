@@ -1,0 +1,47 @@
+# SRG-APP-000097-AU-000700  -  CAT III
+# The Central Log Server must produce audit records containing information
+# to establish where the events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000097-AU-000700
+group:           V-221910
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000132
+control_rev5:    AU-3
+
+contribution:    Splunk stamps host, source, sourcetype and index on every record it
+                 indexes. The application assigns the destination index and the sourcetype
+                 per data input, and derives the host either statically (inputs.conf host)
+                 or from the path of the file being read (host_regex, host_segment), so
+                 each record states where it came from and where it is held.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [<input stanza>] index non_empty
+check:           inputs.conf [<input stanza>] sourcetype non_empty
+
+external:        For records arriving over the network the origin is resolved by
+                 inputs.conf connection_host, assessed under SRG-APP-000098-AU-000710, and
+                 reverse lookups there depend on the DNS service.
+external:        The sending host must identify itself in the record or in the
+                 Splunk-to-Splunk header; Splunk cannot reconstruct an origin the sender
+                 withheld.
+external:        Where host_regex or host_segment derives the host from a path, the naming
+                 convention of that path is a property of the sending system.
+
+citation:        SRG-APP-000097-AU-000700 check text; SPLK-CL-000110 fix text;
+                 inputs.conf.spec:60 (host = <string>), :93-96 (index = <string>), :113-116
+                 (sourcetype = <string>), :244-262 (host_regex = <regular expression>,
+                 host_segment = <integer>)
+finding:         Data inputs in inputs.conf do not assign the destination index and
+                 sourcetype, so the records Splunk Enterprise produces do not establish
+                 where the event occurred or where it is held.

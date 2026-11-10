@@ -1,0 +1,71 @@
+# SRG-APP-000251-WSR-000195  -  CAT II
+# The web server must terminate the connection if server-level exceptions
+# are triggered when handling requests to prevent HTTP request smuggling
+# attacks.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000251-WSR-000195
+group:           V-264365
+severity:        medium
+cat:             CAT II
+determination:   UNDETERMINED
+grade:           E
+decidable:       manual
+confidence:      derived
+cci:             CCI-001310
+control_rev5:    SI-10
+
+contribution:    Nothing configurable: whether the splunkd HTTP server and the Python
+                 application server tear the socket down rather than return it to the
+                 keep-alive pool when a server-level exception is raised is internal,
+                 non-configurable product behavior, so the application has no setting
+                 bearing on this requirement.
+
+external:        The bundled CherryPy-based application server and the splunkd HTTP server
+                 themselves: the teardown behavior is fixed in the product build, so any
+                 deficiency is a vendor matter recorded against the product rather than
+                 against the configuration baseline.
+external:        A behavioral test procedure — a request that forces a server-side
+                 exception against each listener in scope (management and REST port, Splunk
+                 Web, HTTP Event Collector) with the exchange captured — is required to
+                 decide the requirement, and is carried by the assessment procedure, not by
+                 configuration review.
+external:        Termination of connections on back-end exceptions where a reverse proxy or
+                 load balancer fronts Splunk, carried by that component and assessed
+                 against its own baseline.
+
+manual_reason:   The requirement concerns whether the HTTP server tears the connection down
+                 when an exception is raised during request handling, not whether the
+                 exception is disclosed, which is a separate requirement. Splunk Enterprise
+                 exposes no setting that conditions a connection close on a server-level
+                 exception: the whole server.conf [httpServer] stanza
+                 (server.conf.spec:1291 onward, 26 keys) carries no exception-handling or
+                 connection-termination key, and the nearest web.conf [settings] keys
+                 govern disclosure (request.show_tracebacks, web.conf.spec:910),
+                 application server shutdown (appServerProcessShutdownTimeout,
+                 web.conf.spec:1278) and response timeouts (response.timeout,
+                 web.conf.spec:971) — none of which closes a connection because an
+                 exception occurred. checks.tsv accordingly attaches no key to this
+                 requirement. Absence of a setting is not absence of the behavior, so the
+                 requirement is settled by sending a request that forces a server-side
+                 exception to each listener in scope and observing whether the response
+                 carries Connection: close and the TCP connection is torn down rather than
+                 reused; configuration cannot decide it in either direction.
+
+citation:        SRG-APP-000251-WSR-000195 check and fix text (CCI-001310, SI-10); no
+                 product STIG rule shares CCI-001310; no conf, stanza or key is attached to
+                 this requirement in the mechanism inventory. Splunk 10.x specification set
+                 (Version 10.0.0), keys enumerated and excluded as non-implementing:
+                 server.conf.spec:1291 stanza [httpServer] in full; web.conf.spec:910
+                 request.show_tracebacks; web.conf.spec:971 response.timeout;
+                 web.conf.spec:1278 appServerProcessShutdownTimeout.
+finding:         No Splunk Enterprise setting governs connection termination when a
+                 server-level exception is raised, so this requirement is not decided by
+                 application configuration: any finding rests on the listener's observed
+                 teardown behavior, which is fixed in the product build, or on the
+                 front-end proxy that terminates the connection, and is recorded against
+                 those rather than against the Splunk application configuration assessed
+                 here.

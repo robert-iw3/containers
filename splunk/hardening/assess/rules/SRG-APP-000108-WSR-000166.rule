@@ -1,0 +1,60 @@
+# SRG-APP-000108-WSR-000166  -  CAT II
+# The web server must use a logging mechanism that is configured to alert
+# the ISSO and SA in the event of a processing failure.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000108-WSR-000166
+group:           V-206366
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000139
+control_rev5:    AU-5
+
+contribution:    Splunk's health reporter watches its own features, including the indexing
+                 and queue features that signal a log processing failure, and fires the
+                 alert actions named in health.conf when a feature holds at the threshold
+                 color; alert_actions.conf [email] configures the delivery channel. A
+                 scheduled saved search with action.email, action.email.to and an
+                 alert_condition is the product's second route to the same notification.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         health.conf - Thresholds for Splunk reporting on its own health.
+
+check:           health.conf [health_reporter] alert.disabled equals 0
+check:           health.conf [health_reporter] alert.actions non_empty
+check:           alert_actions.conf [email] mailserver not_equals localhost
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] email present -> alert_actions.conf [email] mailserver not_equals localhost
+vendor:          alert_actions.conf [email] email https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The SMTP relay that carries the notification, and the ISSO and SA
+                 addresses it is sent to, are organization-defined; alert_actions.conf
+                 holds the mail server and sender but the recipients are the organization's
+                 to supply, so the criterion tests only that the product can express them.
+external:        A processing failure that stops splunkd outright - a full filesystem, a
+                 terminated process - cannot be alerted on by the application itself and is
+                 reported by the operating system's own monitoring.
+external:        The ISSO and SA role assignments are organizational designations.
+
+citation:        SRG-APP-000108-WSR-000166 check text; health.conf.spec:32
+                 ([health_reporter]), :88-91 (alert.disabled = [0|1], Default: 0), :93-94
+                 (alert.actions = <string>), :96-99 (alert.min_duration_sec = <integer>,
+                 Default: 60), :101-103 (alert.threshold_color = [yellow|red], Default:
+                 red), :105-110 (alert.suppress_period = <integer>[m|s|h|d], Default: 10m);
+                 alert_actions.conf.spec:157-162 ([email]); savedsearches.conf.spec:73-77
+                 (enableSched = [0 | 1], Default: 0), :270-274 (alert_condition = <search
+                 string>), :300-306 (action.email = <boolean>, Default: false;
+                 action.email.to = <email list>, REQUIRED)
+finding:         health.conf disables the health reporter's alerting (alert.disabled = 1),
+                 names no alert actions, or has no configured email action, so Splunk
+                 Enterprise raises no alert to the ISSO and SA when a log processing
+                 failure occurs.

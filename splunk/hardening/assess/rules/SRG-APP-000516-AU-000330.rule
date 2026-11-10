@@ -1,0 +1,46 @@
+# SRG-APP-000516-AU-000330  -  CAT II
+# The Central Log Server must be configured to retain the identity of the
+# original source host or device where the event occurred as part of the log
+# record.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000330
+group:           V-206512
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    On a network input Splunk stamps each received event with the identity of
+                 the connection it arrived on, and the application can keep that behavior
+                 rather than discarding it.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [] connection_host not_equals none
+
+external:        Whether each sending device puts its own identity in the payload, and
+                 whether the name service resolves the sending address, carried by the
+                 forwarders and by the network name service.
+external:        Where the true origin is inside the message rather than on the connection
+                 - a relayed syslog record, for example - the product STIG fix directs a
+                 props.conf and transforms.conf host extraction instead; which extraction
+                 is correct depends on the format each sending device emits, so it is a
+                 per-source data decision (SPLK-CL-000260 fix text,
+                 transforms.conf.spec:241).
+
+citation:        Central Log Server SRG SRG-APP-000516-AU-000330 check text; SPLK-CL-000260
+                 check and fix text; inputs.conf.spec:526 (connection_host =
+                 [ip|dns|none]), inputs.conf.spec:60 (host), transforms.conf.spec:241
+                 (DEST_KEY)
+finding:         A network input is set to discard the connection's host identity, so
+                 records aggregated through it do not retain the device where the event
+                 occurred.

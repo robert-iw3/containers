@@ -1,0 +1,43 @@
+# SRG-APP-000855-WSR-000240  -  CAT II
+# The web server must, for password-based authentication, require immediate
+# selection of a new password upon account recovery.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000855-WSR-000240
+group:           V-264350
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004063
+control_rev5:    IA-5
+
+contribution:    None: Splunk Web presents the login and password-change pages but exposes
+                 no self-service recovery flow and no setting that forces a new password
+                 after a reset; web.conf [settings] carries only the login page hint text,
+                 and authentication.conf has no change-at-next-login key.
+
+external:        The recovery procedure and the obligation to change the password
+                 immediately after it - carried by the organization's account-management
+                 procedure.
+external:        Where authentication is external (LDAP, SAML, ProxySSO) or fronted by an
+                 SSO proxy, the recovery flow and any forced change belong to that
+                 provider.
+
+manual_reason:   No conf key represents account recovery or a forced change at next login
+                 for the web tier, so no observed configuration value can decide this
+                 requirement.
+
+citation:        splunk-spec-files/authentication.conf.spec:509;
+                 splunk-spec-files/web.conf.spec:1430 (loginPasswordHint - login page text
+                 only, no recovery flow)
+finding:         Not a finding against the application: Splunk Web has no setting that
+                 requires selection of a new password upon account recovery, so this
+                 requirement is carried by the organization's account-management procedure
+                 and by the identity provider where authentication is external; this
+                 determination is from the perspective of the application layer alone.

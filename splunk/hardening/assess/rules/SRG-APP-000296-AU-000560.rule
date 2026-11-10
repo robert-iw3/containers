@@ -1,0 +1,63 @@
+# SRG-APP-000296-AU-000560  -  CAT II
+# The Central Log Server must provide a logout capability for user initiated
+# communication session.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000296-AU-000560
+group:           V-221923
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-002363
+control_rev5:    AC-12
+
+contribution:    Splunk Web provides a logout control in its own interface for every
+                 authenticated session and no configuration setting removes it, so the
+                 application already carries this requirement as far as the product allows.
+
+external:        Where authentication is delegated to a SAML identity provider, the
+                 identity provider must publish and honor a single-logout endpoint at the
+                 configured idpSLOUrl and binding; Splunk can send the logout request but
+                 cannot make the identity provider end its own session.
+external:        Invalidating session tokens cluster-wide on logout requires search head
+                 clustering and the App Key Value store to be enabled, which is deployment
+                 architecture rather than a value assertable on a single instance.
+external:        Closing the browser or the remote-access session that carries it is the
+                 user's action and the hosting platform's, not the application's.
+
+manual_reason:   No setting in the 10.4.2 specification set enables, disables or weakens
+                 the logout control; Splunk Web presents it unconditionally, so an assessor
+                 confirms the capability in the interface rather than reading a value.
+
+citation:        Each of the five reviewed conditions produces a false finding. server.conf
+                 [general] invalidateSessionTokensOnLogout "has an effect only if search
+                 head clustering and App Key Value store are enabled" and defaults to false
+                 (server.conf.spec:81-87), so requiring it true fails a standalone indexer
+                 or search head where the setting does nothing at all.
+                 logoutCacheRefreshInterval "has no effect when
+                 'invalidateSessionTokensOnLogout' is disabled" and defaults to 30s
+                 (server.conf.spec:89-92), so requiring it present tests nothing and can
+                 only fail an instance that has no reason to declare it. The three
+                 authentication.conf conditions sit in a [<saml-authSettings-key>] stanza
+                 that exists only where authType is SAML, against a default authType of
+                 Splunk (authentication.conf.spec:30-33, 44), and because conditions are
+                 ANDed they report a finding on every instance not using SAML; idpSLOUrl
+                 and redirectAfterLogoutToUrl have no defaults
+                 (authentication.conf.spec:687-690, 780-784), and sloBinding's "Acceptable
+                 options are 'HTTPPost' and 'HTTPRedirect'" with HTTPPost the default
+                 (authentication.conf.spec:1109-1113) means in:HTTPPost|HTTPRedirect cannot
+                 fail any legal value and decides nothing. Since no setting governs whether
+                 the logout capability exists, this is case 4: there is nothing to test,
+                 and the single-logout and cluster-token behavior belongs in external
+                 dependencies where it is stated rather than silently asserted.
+finding:         Not expected to be a finding against the application: Splunk Web presents
+                 a logout control for user-initiated sessions unconditionally, and an
+                 assessor records that observation; raise a finding only if a logout
+                 observed in the interface leaves the session usable.

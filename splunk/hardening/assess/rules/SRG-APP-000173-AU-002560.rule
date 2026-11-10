@@ -1,0 +1,49 @@
+# SRG-APP-000173-AU-002560  -  CAT III
+# The Central Log Server must be configured to enforce 24 hours/1 day as the
+# minimum password lifetime.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000173-AU-002560
+group:           V-206476
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    The product can only limit reuse, not frequency: enablePasswordHistory
+                 with passwordHistoryCount stops a user returning to a stored previous
+                 password, and authType can delegate native authentication to a provider
+                 that does enforce a minimum age.
+
+external:        An external authentication provider selected through authentication.conf
+                 authType (LDAP, SAML or Scripted), whose policy engine can enforce a
+                 24-hour minimum password lifetime
+external:        The organization's password management procedure for the native emergency
+                 account of last resort
+external:        Operating system password aging for host accounts
+
+manual_reason:   Splunk Enterprise 10.4.2 has no minimum password age or minimum password
+                 lifetime setting. The complete set of native password controls at
+                 authentication.conf.spec:437-568 covers minimum length, character-class
+                 minimums, expiry in days, expiry alerting, lockout, and password history;
+                 none of them prevents a password from being changed again inside 24 hours,
+                 so no configuration value can decide this requirement and a condition over
+                 password history would report a finding for a control the product does not
+                 implement.
+
+citation:        SRG-APP-000173-AU-002560 check text; authentication.conf.spec:437-568
+                 (full [splunk_auth] control set; expirePasswordDays at 487-494 is a
+                 maximum lifetime, not a minimum; enablePasswordHistory at 554-560 and
+                 passwordHistoryCount at 561-568), authentication.conf.spec:30-33 (authType
+                 vocabulary)
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 provides
+                 no minimum password lifetime or minimum password age setting, and the
+                 24-hour floor is carried by the external authentication provider or by
+                 organizational password procedure.

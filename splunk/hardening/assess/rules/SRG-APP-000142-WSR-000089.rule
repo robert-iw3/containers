@@ -1,0 +1,54 @@
+# SRG-APP-000142-WSR-000089  -  CAT II
+# The web server must be configured to use a specified IP address and port.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000142-WSR-000089
+group:           V-206386
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000382
+control_rev5:    CM-7
+
+contribution:    Splunk can be bound to one address and one port on each of its listeners:
+                 Splunk Web through its socket host and port, and the daemon's own
+                 listeners through the bind address in the launch configuration.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] server.socket_host not_in 0.0.0.0|::
+check:           splunk-launch.conf [] SPLUNK_BINDIP non_empty
+check:           web.conf [settings] mgmtHostPort present
+# --- vendor verification: generated, do not edit by hand
+vendor:          splunk-launch.conf [] SPLUNK_BINDIP https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] httpport https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] mgmtHostPort https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] server.socket_host https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.6/start-splunk-enterprise-and-perform-initial-tasks/bind-splunk-to-an-ip
+retired_check:   web.conf [settings] httpport present
+                 reason: "httpport = <positive integer>. The TCP port on which Splunk Web
+                         listens for incoming connections. Must be present for Splunk Web to
+                         start. If omitted or 0 the server will NOT start an http listener.
+                         If using SSL, set to the HTTPS port number. Default: 8000"
+# --- end vendor verification
+
+external:        Which address the instance is permitted to use, and any further
+                 restriction on who can reach it, carried by the host's network
+                 configuration and the firewall.
+external:        Confirming from a client that no other address answers, which the check
+                 performs by test rather than by reading configuration.
+
+citation:        Web Server SRG SRG-APP-000142-WSR-000089 check and fix text;
+                 web.conf.spec:28 (httpport, default 8000), web.conf.spec:844
+                 (server.socket_host, 0.0.0.0 means any active interface), web.conf.spec:35
+                 (mgmtHostPort), splunk-launch.conf.spec:79 (SPLUNK_BINDIP)
+finding:         Splunk Web or the daemon is left listening on every interface of the host,
+                 or its port is not declared, so the application does not confine itself to
+                 one specified address and port.

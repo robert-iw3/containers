@@ -1,0 +1,50 @@
+# SRG-APP-000439-WSR-000152  -  CAT II
+# Web server session IDs must be sent to the client using SSL/TLS.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000152
+group:           V-206435
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk Web can serve sessions only over HTTPS and set the Secure attribute
+                 on the session cookie, including when an upstream proxy terminates HTTPS,
+                 so the session identifier is never returned on an unencrypted hop it
+                 controls.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL in 1|true
+check:           web.conf [settings] tools.sessions.forceSecure in 1|true
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.forceSecure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.secure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.secure in 1|true
+                 reason: "Whether or not the browser must transmit session cookies over an
+                         HTTPS connection when Splunk Web is configured to serve requests
+                         using HTTPS (the 'enableSplunkWebSSL' setting is 'true'.) If set to
+                         'true' and 'enableSplunkWebSSL' is also 'true', then the browser
+                         must transmit the session cookie over HTTPS connections. This
+                         improves session security. Default: true"
+# --- end vendor verification
+
+external:        Browser enforcement of the Secure cookie attribute
+external:        Any TLS terminating reverse proxy, whose hop to the client is outside the
+                 application's configuration
+
+citation:        SRG-APP-000439-WSR-000152 check text; SPLK-CL-000330 fix text;
+                 web.conf.spec:70-73, 951-969
+finding:         Splunk Web does not guarantee that the session identifier is sent only
+                 over TLS: enableSplunkWebSSL is not enabled, or tools.sessions.secure or
+                 tools.sessions.forceSecure is false, so the session cookie can be returned
+                 without the Secure attribute.

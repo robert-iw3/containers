@@ -1,0 +1,55 @@
+# SRG-APP-000175-AU-002630  -  CAT I
+# The Central Log Server, when utilizing PKI-based authentication, must
+# validate certificates by constructing a certification path (which includes
+# status information) to an accepted trust anchor.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000175-AU-002630
+group:           V-206478
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000185
+control_rev5:    IA-5
+
+contribution:    Splunk can be given a certificate authority store to build the
+                 certification path to, and can be told to perform certificate status
+                 validation, which is the product's share of validating a presented
+                 certificate to an accepted trust anchor with status information.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        The content of the certificate authority store, and whether its anchors
+                 are the accepted ones, is a PKI decision outside Splunk configuration
+external:        Current CRL files must be present in the instance's auth/crl directory in
+                 PEM format and refreshed from the issuing certificate authority, which is
+                 a distribution procedure rather than a Splunk setting
+external:        The requirement is Not Applicable where PKI-based authentication is not
+                 used; selecting PKI authentication is assessed under
+                 SRG-APP-000149-AU-002280 and SRG-APP-000150-AU-002320
+
+citation:        SRG-APP-000175-AU-002630 check text; server.conf.spec:1125-1147
+                 (certificateStatusValidationMethod: only acceptable value is crl, default
+                 empty string meaning status validation is off, and it then applies to
+                 Splunk Web, splunkd and Splunk-to-Splunk channels; CRL files live under
+                 the instance's auth/crl directory in PEM format),
+                 server.conf.spec:996-1010 (sslRootCAPath, the concatenated CA store, no
+                 default), web.conf.spec:108-119 (web.conf sslRootCAPath falls back to the
+                 server.conf setting of the same name)
+finding:         server.conf [sslConfig] does not set certificateStatusValidationMethod =
+                 crl or leaves sslRootCAPath empty, so the application does not validate
+                 presented certificates to a named trust anchor with revocation status.

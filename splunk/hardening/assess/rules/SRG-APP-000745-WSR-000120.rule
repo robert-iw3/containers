@@ -1,0 +1,49 @@
+# SRG-APP-000745-WSR-000120  -  CAT II
+# The web server must implement the capability to centrally review and
+# analyze audit records from multiple components within the system.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000745-WSR-000120
+group:           V-264339
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003821
+control_rev5:    AU-6
+
+contribution:    Splunk Web is the application's own review and analysis interface, served
+                 by the same instance; the application enables that interface and sets the
+                 breadth of records the reviewing role can reach through it.
+
+governs:         authorize.conf - Used to create roles.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           authorize.conf [role_<roleName>] srchIndexesAllowed non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] startwebserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] startwebserver equals 1
+                 reason: "startwebserver = [0 | 1]. Set whether or not to start Splunk Web.
+                         0 disables Splunk Web, 1 enables it. Default: 1"
+# --- end vendor verification
+
+external:        The scope of coverage the interface must reach is organization-defined and
+                 recorded in the site security plan, per product STIG SPLK-CL-000100.
+external:        Reaching Splunk Web from an analyst workstation depends on network access
+                 and on the host firewall, which are not application settings.
+external:        Where the indexers are separate instances, distsearch.conf
+                 [distributedSearch] servers must name them; a single-instance deployment
+                 has no search peers and their absence is not a finding.
+
+citation:        web.conf.spec:16 [settings], :23 startwebserver = [0 | 1] default 1;
+                 authorize.conf.spec:67 [role_<roleName>], :292 srchIndexesAllowed;
+                 distsearch.conf.spec:29, :81 servers. Product STIG SPLK-CL-000100.
+finding:         Assessed at the application layer alone: Splunk Web is disabled, or the
+                 role that performs audit review is not allowed to search the indexes
+                 holding the aggregated records, so the application's own central review
+                 interface cannot reach audit records from multiple components.

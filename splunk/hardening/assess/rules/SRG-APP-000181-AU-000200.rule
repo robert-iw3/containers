@@ -1,0 +1,45 @@
+# SRG-APP-000181-AU-000200  -  CAT II
+# The Central Log Server must be configured to perform audit reduction that
+# supports on-demand reporting requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000181-AU-000200
+group:           V-206483
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001876
+control_rev5:    AU-7
+
+contribution:    Audit reduction and on-demand reporting are native Splunk search
+                 functions; what the application configures is the reporting content itself
+                 - saved searches with a defined search string and a bounded dispatch
+                 window, supported by search macros, data model acceleration and metric
+                 rollup policies.
+
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] dispatch.earliest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The organization's on-demand reporting requirements - which reports are
+                 required, over which fields, and for which recipients - which the check
+                 text leaves organization-defined and no Splunk setting supplies
+external:        Review of the report output by the responsible staff
+
+citation:        SRG-APP-000181-AU-000200 (V-206483) check text;
+                 savedsearches.conf.spec:44, 564-570; datamodels.conf.spec:29-40;
+                 macros.conf.spec:52; metric_rollups.conf.spec:38-48
+finding:         No saved report with a defined search string and dispatch window exists
+                 over the audit data, so the application carries no configured audit
+                 reduction to support the organization's on-demand reporting requirements.

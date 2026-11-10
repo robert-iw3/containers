@@ -1,0 +1,45 @@
+# SRG-APP-000516-AU-000340  -  CAT II
+# The Central Log Server that aggregates log records from hosts and devices
+# must be configured to use TCP for transmission.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000340
+group:           V-206513
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk chooses which transports it will accept log records on, and it can
+                 be configured with no connectionless receiver, leaving only its
+                 acknowledged TCP receivers in service.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [udp:<port>] disabled absent
+# --- vendor verification: generated, do not edit by hand
+vendor:          inputs.conf [udp:<port>] disabled https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+# --- end vendor verification
+
+external:        The transport each sending device actually uses, carried by that device's
+                 own configuration - on a Splunk forwarder, its outputs.conf
+                 [tcpout:<target_group>] (outputs.conf.spec:121) - since a receiver can
+                 refuse connectionless traffic but cannot make a sender switch.
+external:        Network reachability of the TCP receiving port, carried by the firewall
+                 and the network.
+
+citation:        SPLK-CL-000270 check and fix text; Central Log Server SRG
+                 SRG-APP-000516-AU-000340 check text; inputs.conf.spec:1314 ([udp:<port>]),
+                 inputs.conf.spec:1227 ([udp://<remote server>:<port>]),
+                 outputs.conf.spec:121 ([tcpout:<target_group>])
+finding:         A UDP input remains configured on the aggregating instance, so the
+                 application still accepts log records over a transport that does not
+                 acknowledge delivery.

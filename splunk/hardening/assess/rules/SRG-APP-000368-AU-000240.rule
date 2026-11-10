@@ -1,0 +1,57 @@
+# SRG-APP-000368-AU-000240  -  CAT III
+# The Central Log Server must be configured to generate reports that support
+# after-the-fact investigations of security incidents.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000368-AU-000240
+group:           V-206501
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001880
+control_rev5:    AU-7
+
+contribution:    Splunk can define a report whose dispatch range reaches back over past
+                 events and can keep those events reachable by setting index retention and
+                 an archive destination for buckets that roll to frozen, which is the
+                 application's whole share of supporting an after-the-fact investigation.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.latest_time present
+check:           indexes.conf [<index>] frozenTimePeriodInSecs present
+check:           indexes.conf [<index>] coldToFrozenDir present
+# --- vendor verification: generated, do not edit by hand
+vendor:          indexes.conf [<index>] coldToFrozenDir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/indexes.conf
+vendor:          indexes.conf [<index>] frozenTimePeriodInSecs https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/back-up-and-archive-your-indexes/set-a-retirement-and-archiving-policy
+vendor:          savedsearches.conf [<stanza name>] dispatch.earliest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] dispatch.latest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The retention period, which sets how far back any investigation can reach,
+                 is organization-defined and recorded in the site documentation.
+external:        Capacity of the archive destination and the integrity of the media holding
+                 it rest on the operating system and the storage platform.
+external:        The investigative procedure that consumes the report, and the decision on
+                 what period an incident requires, are organizational.
+
+citation:        savedsearches.conf.spec:44 search, :564 dispatch.earliest_time, :571
+                 dispatch.latest_time; indexes.conf.spec:382-388 [<index>] per-index
+                 options, :684 frozenTimePeriodInSecs = <nonnegative integer> default
+                 188697600, :713 coldToFrozenScript, :792 coldToFrozenDir.
+finding:         Assessed at the application layer alone: no saved search defines a
+                 retrospective report over the audit indexes in scope, or those indexes
+                 state no retention period and no frozen archive destination, so records
+                 age out by deletion and the application is not configured to the fullest
+                 extent it can contribute to this requirement.

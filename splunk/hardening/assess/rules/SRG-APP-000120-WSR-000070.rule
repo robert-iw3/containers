@@ -1,0 +1,49 @@
+# SRG-APP-000120-WSR-000070  -  CAT II
+# The log information from the web server must be protected from
+# unauthorized deletion.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000120-WSR-000070
+group:           V-206370
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000164
+control_rev5:    AU-9
+
+contribution:    The application withholds the in-product delete path from the
+                 general-purpose roles and keeps the internal indexes that hold Splunk
+                 Web's records out of every role's delete scope.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] delete_by_keyword absent
+check:           authorize.conf [role_power] delete_by_keyword absent
+check:           authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] deleteIndexesAllowed matches tls1\.2 -> authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+vendor:          authorize.conf [role_<roleName>] deleteIndexesAllowed https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+# --- end vendor verification
+
+external:        Delete permissions on the Splunk log directory - SPLK-CL-000190 implements
+                 this at the operating system layer
+external:        Which roles the organization authorizes to run the delete command
+
+citation:        The deleteIndexesAllowed condition carries the wildcard inversion
+                 corrected on SRG-APP-000119-AU-000110. log.access_maxfiles min 1 and
+                 log.error_maxfiles min 1 are removed: the rotated-backup count appears in
+                 neither the check text nor the product STIG fix text, and what it governs
+                 - how many generations rotation keeps before discarding the oldest - is
+                 authorized retention behavior rather than protection from unauthorized
+                 deletion, which SPLK-CL-000190 assigns to file permissions.
+finding:         A general-purpose role holds delete_by_keyword, or a role's
+                 deleteIndexesAllowed list reaches the internal indexes, so the indexed
+                 Splunk Web records can be deleted from search results by an unprivileged
+                 account.

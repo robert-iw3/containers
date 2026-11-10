@@ -1,0 +1,55 @@
+# SRG-APP-000775-AU-000180  -  CAT II
+# The Central Log Server must implement a report generation capability that
+# supports after-the-fact investigations of incidents.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000775-AU-000180
+group:           V-263564
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-003827
+control_rev5:    AU-7
+
+contribution:    A report generation capability for an after-the-fact investigation depends
+                 on a retrospective dispatch range over records still held in the index,
+                 both of which are application settings.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time non_empty
+check:           savedsearches.conf [<stanza name>] dispatch.latest_time present
+check:           indexes.conf [<index>] frozenTimePeriodInSecs present
+check:           indexes.conf [<index>] coldToFrozenDir present
+# --- vendor verification: generated, do not edit by hand
+vendor:          indexes.conf [<index>] coldToFrozenDir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/indexes.conf
+vendor:          indexes.conf [<index>] frozenTimePeriodInSecs https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/back-up-and-archive-your-indexes/set-a-retirement-and-archiving-policy
+vendor:          savedsearches.conf [<stanza name>] dispatch.earliest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] dispatch.latest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The retention period that bounds how far back a report can reach is
+                 organization-defined and recorded in the site documentation.
+external:        Capacity and integrity of the frozen archive destination rest on the
+                 storage platform and the operating system, and restoring archived buckets
+                 is an operator procedure.
+external:        The investigative procedure that consumes the report is organizational.
+
+citation:        savedsearches.conf.spec:44 search, :564 dispatch.earliest_time, :571
+                 dispatch.latest_time; indexes.conf.spec:684 frozenTimePeriodInSecs default
+                 188697600, :713 coldToFrozenScript, :792 coldToFrozenDir.
+finding:         Assessed at the application layer alone: no saved search implements a
+                 retrospective report over the audit indexes in scope, or those indexes
+                 state no retention period and no frozen archive destination, so the
+                 application cannot generate a report that reaches the period an
+                 investigation needs.

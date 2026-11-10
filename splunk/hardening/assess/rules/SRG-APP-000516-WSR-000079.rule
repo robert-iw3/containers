@@ -1,0 +1,51 @@
+# SRG-APP-000516-WSR-000079  -  CAT II
+# All accounts installed with the web server software and tools must have
+# passwords assigned and default passwords changed.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-WSR-000079
+group:           V-206444
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can show that no seeded installation password remains in its
+                 configuration, and it can declare a password policy and force any account
+                 whose password falls short of it to change that password at next login.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         user-seed.conf - The initial administrator account created on a first start.
+
+check:           user-seed.conf [user_info] PASSWORD absent
+check:           authentication.conf [splunk_auth] forceWeakPasswordChange in true|1
+check:           authentication.conf [splunk_auth] minPasswordLength present
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] forceWeakPasswordChange https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] minPasswordLength https://help.splunk.com/en/splunk-cloud-platform/administer/manage-users-and-security/10.2.2510/manage-credentials-and-keys/configure-a-splunk-enterprise-password-policy-using-the-authentication.conf-configuration-file
+# --- end vendor verification
+
+external:        Whether each existing account's password has actually been changed from
+                 its installed value, which is held in the instance's user store rather
+                 than in a .conf file an assessor can read.
+external:        Operating system accounts created by the installation package, carried by
+                 the operating system.
+external:        Accounts held in the directory service where authentication is external,
+                 carried by that service's own password policy.
+
+citation:        Web Server SRG SRG-APP-000516-WSR-000079 check and fix text;
+                 user-seed.conf.spec:14 and 32 (PASSWORD, clear text),
+                 user-seed.conf.spec:36 (HASHED_PASSWORD), authentication.conf.spec:509
+                 (forceWeakPasswordChange), authentication.conf.spec:441
+                 (minPasswordLength), authentication.conf.spec:514 (lockoutUsers)
+finding:         A seed password remains declared in the configuration, or no password
+                 policy is declared and accounts with weak passwords are not forced to
+                 change them, so the application does not require installed accounts to
+                 hold a changed, non-default password.

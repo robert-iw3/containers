@@ -1,0 +1,49 @@
+# SRG-APP-000095-AU-000680  -  CAT III
+# The Central Log Server must produce audit records containing information
+# to establish what type of events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000095-AU-000680
+group:           V-221908
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000130
+control_rev5:    AU-3
+
+contribution:    Splunk stamps every indexed record with the sourcetype assigned to its
+                 input, which is the record's event type, and its own audit records reach a
+                 searchable index when the audit trail is queued to the index.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [] sourcetype non_empty
+check:           audit.conf [auditTrail] queueing not_equals false
+
+external:        The originating hosts and devices must emit an event type or category in
+                 the records they transmit; Splunk classifies what it receives and cannot
+                 add a type the sender omitted.
+
+citation:        OVER-REACH and INVENTION. Removed eventtypes.conf [<eventtype>] search
+                 non_empty: the shipped eventtypes.conf declares "search =" empty in its
+                 default stanza and ships no event types, so the condition fails a stock
+                 instance that nonetheless stamps a sourcetype on every record; event types
+                 are an optional search-time classification feature and neither the check
+                 nor the fix text requires them. Also removed props.conf [<spec>] <spec>
+                 present, which named the spec-file placeholder as both stanza and key:
+                 props.conf has no setting of that name, so the condition could never
+                 match, and the determined row is a whole-file presence test that every
+                 installation passes.
+finding:         Splunk does not establish the type of each record it holds - inputs have
+                 no sourcetype assigned, or the audit trail is not queued to an index - so
+                 the event type cannot be determined from the stored records.

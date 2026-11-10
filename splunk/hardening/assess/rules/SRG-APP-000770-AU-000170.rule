@@ -1,0 +1,53 @@
+# SRG-APP-000770-AU-000170  -  CAT II
+# The Central Log Server must implement a report generation capability that
+# supports on-demand reporting requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000770-AU-000170
+group:           V-263563
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003826
+control_rev5:    AU-7
+
+contribution:    Splunk sets both report dispatch and report delivery in configuration,
+                 which is what carries a report generation capability past ad hoc search
+                 into support for a standing reporting requirement.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] enableSched equals 1
+check:           savedsearches.conf [<stanza name>] cron_schedule non_empty
+check:           savedsearches.conf [<stanza name>] schedule_window present
+check:           savedsearches.conf [<stanza name>] action.email in 1|true
+check:           savedsearches.conf [<stanza name>] action.email.to non_empty
+check:           savedsearches.conf [<stanza name>] action.email.sendpdf present
+check:           alert_actions.conf [email] present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] action.email.sendpdf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] schedule_window https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        Recipients, reporting cycle and report format are organization-defined
+                 parameters recorded in the system security plan.
+external:        SMTP relay reachability, relay credentials and actual delivery rest on the
+                 mail infrastructure and the network.
+
+citation:        savedsearches.conf.spec:73 enableSched = [0|1] default 0, :79
+                 cron_schedule, :193 schedule_window = <unsigned integer> | auto, :300
+                 action.email = <boolean> default false, :304 action.email.to = <email
+                 list> "REQUIRED", :383 action.email.sendpdf = [1|0] default 0;
+                 alert_actions.conf.spec:157 [email].
+finding:         Assessed at the application layer alone: a report defined to satisfy an
+                 audit reporting requirement is not dispatched on a stated cycle, or names
+                 no recipients, so the application's report generation capability does not
+                 support the reporting requirement.

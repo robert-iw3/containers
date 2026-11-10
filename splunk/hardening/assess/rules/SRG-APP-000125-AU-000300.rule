@@ -1,0 +1,54 @@
+# SRG-APP-000125-AU-000300  -  CAT III
+# The Central Log Server must be configured to back up the log records
+# repository at least every seven days onto a different system or system
+# component other than the system or component being audited.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000125-AU-000300
+group:           V-206458
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-001348
+control_rev5:    AU-9
+
+contribution:    Where the organization chooses to use them, Splunk can place a second copy
+                 of the indexed records off the indexing instance through a frozen archive
+                 destination (coldToFrozenDir or coldToFrozenScript), remote store-backed
+                 indexes (remotePath), or index replication in a cluster, and the assessor
+                 records which is in use as evidence rather than as a pass condition.
+
+external:        The seven-day backup schedule, the backup tool and the medium -
+                 SPLK-CL-000250 assigns all three to the operating system backup tool or
+                 another approved tool
+external:        Confirmation that the destination is a different system or component,
+                 which the application cannot establish about a path or endpoint handed to
+                 it
+
+manual_reason:   The benchmark authority implements this requirement outside the
+                 application: SPLK-CL-000250's check is an interview with the system
+                 administrator and its fix directs "the underlying OS backup tools, or
+                 another approved backup tool". Splunk has optional levers that place a
+                 second copy off the indexing instance, but none that the authority
+                 requires, so any condition over them fails a deployment that is backed up
+                 exactly as directed.
+
+citation:        server.conf [clustering] replication_factor min 2 is removed:
+                 server.conf.spec:2929-2935 makes the setting valid only for "mode=manager"
+                 with a default of 3, so a single-instance indexer and a cluster peer alike
+                 have no such setting and would be failed for not running a feature the
+                 requirement never asks for. coldToFrozenDir non_empty is removed for the
+                 same class of error: it fails a stock install whose backups are taken with
+                 the operating system tool SPLK-CL-000250 names. Because conditions are
+                 ANDed, the pair also demanded index clustering and a frozen archive at the
+                 same time, which no single deployment shape satisfies.
+finding:         No backup of the log records repository onto a different system or
+                 component is in place; the application's optional off-instance copy levers
+                 are not a substitute for the backup process the requirement names.

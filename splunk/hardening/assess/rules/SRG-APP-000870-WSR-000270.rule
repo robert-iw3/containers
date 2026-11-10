@@ -1,0 +1,72 @@
+# SRG-APP-000870-WSR-000270  -  CAT II
+# The web server must, for password-based authentication, enforce
+# organization-defined composition and complexity rules.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000870-WSR-000270
+group:           V-264353
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    Composition and complexity for native accounts, including those set
+                 through Splunk Web, are entirely configurable in authentication.conf
+                 [splunk_auth]: minPasswordUppercase, minPasswordLowercase,
+                 minPasswordDigit, minPasswordSpecial, and minPasswordLength are enforced
+                 at password set and modify time, and expirePasswordDays bounds the
+                 password's life. The composition rules are organization-defined, and the
+                 values asserted below are the ones the benchmark authority sets for this
+                 product in SPLK-CL-000340 through SPLK-CL-000400.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] minPasswordUppercase min 1
+check:           authentication.conf [splunk_auth] minPasswordLowercase min 1
+check:           authentication.conf [splunk_auth] minPasswordDigit min 1
+check:           authentication.conf [splunk_auth] minPasswordSpecial min 1
+check:           authentication.conf [splunk_auth] minPasswordLength min 15
+check:           authentication.conf [splunk_auth] expirePasswordDays max 60
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] expirePasswordDays https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] minPasswordDigit https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] minPasswordLength https://help.splunk.com/en/splunk-cloud-platform/administer/manage-users-and-security/10.2.2510/manage-credentials-and-keys/configure-a-splunk-enterprise-password-policy-using-the-authentication.conf-configuration-file
+vendor:          authentication.conf [splunk_auth] minPasswordLowercase https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] minPasswordSpecial https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] minPasswordUppercase https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        The composition and complexity rules themselves - organization-defined;
+                 the values asserted here are those the product STIG sets for this product,
+                 and an organization imposing stricter rules still passes because each
+                 condition is a minimum or a maximum.
+external:        Where authType is LDAP, SAML, or ProxySSO, [splunk_auth] governs native
+                 accounts only and complexity for everyone else is enforced by the
+                 directory service or identity provider.
+external:        expirePasswordDays takes effect only when expireUserAccounts is enabled
+                 per the spec; that setting is not among this requirement's determined
+                 check rows, so the condition is limited to the value SPLK-CL-000400 names
+                 and the expiration switch should be confirmed alongside it.
+
+citation:        splunk-spec-files/authentication.conf.spec:437 ([splunk_auth]), :441
+                 (minPasswordLength, default 8), :450 (minPasswordUppercase, default 0),
+                 :459 (minPasswordLowercase, default 0), :468 (minPasswordDigit, default
+                 0), :477 (minPasswordSpecial, default 0), :487 (expirePasswordDays,
+                 0-3650, default 90), :505 (expireUserAccounts, default false);
+                 SPLK-CL-000340, 000350, 000360, 000370, 000380, 000400 check and fix text
+finding:         The application does not enforce the required password composition and
+                 complexity rules for native accounts - one or more of authentication.conf
+                 [splunk_auth] minPasswordUppercase, minPasswordLowercase,
+                 minPasswordDigit, minPasswordSpecial (each must be at least 1),
+                 minPasswordLength (at least 15), or expirePasswordDays (no more than 60)
+                 is missing or weaker than the product STIG requires; this determination is
+                 from the perspective of the application layer alone, and governs native
+                 accounts only where authentication is delegated to a directory service or
+                 identity provider.

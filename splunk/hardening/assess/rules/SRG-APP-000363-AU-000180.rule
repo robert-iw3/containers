@@ -1,0 +1,56 @@
+# SRG-APP-000363-AU-000180  -  CAT III
+# The Central Log Server must be configured to perform on-demand searches of
+# log records for events of interest based on the content of
+# organization-defined audit fields within log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000363-AU-000180
+group:           V-206496
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000158
+control_rev5:    AU-7
+
+contribution:    Searching is the product's core function; what the application configures
+                 is that the general-purpose role which audit reviewers hold retains the
+                 search capability and an index grant to search with.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] srchIndexesAllowed non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          authorize.conf [role_user] search https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+retired_check:   authorize.conf [role_user] search equals enabled
+                 reason: [capability::search] "Lets a user run a search using Search
+                         Processing Language (SPL) or SPL version 2 (SPL2)." Granted only by
+                         appearing in a role stanza with the value enabled.
+# --- end vendor verification
+
+external:        The organization's definition of the events of interest and the audit
+                 fields that identify them, which the check text leaves
+                 organization-defined
+external:        Which roles the organization's audit reviewers hold, and any custom role
+                 it defines in place of the shipped ones
+
+citation:        Both conditions were written over [role_<roleName>], which makes them
+                 undecidable rather than strict. Read over every role they fail the shipped
+                 role_can_delete, which carries neither key (authorize.conf:240-248), and
+                 capabilities and index grants are inherited through importRoles
+                 (authorize.conf.spec:73-74, 79-84), so a role that holds search by
+                 inheritance - role_power imports user - has no line to read and would be
+                 failed for a capability it holds. Read instead as "at least one role" they
+                 pass trivially on every install and are not evidence. Pinning both to the
+                 shipped general-purpose role, where each key is always present in btool
+                 output, gives a condition that can only fail where the capability or the
+                 grant has actually been removed.
+finding:         The general-purpose role no longer holds the search capability or has no
+                 index grant, so on-demand searching of log records is not available to the
+                 accounts that perform audit review.

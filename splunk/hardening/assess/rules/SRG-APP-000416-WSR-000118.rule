@@ -1,0 +1,89 @@
+# SRG-APP-000416-WSR-000118  -  CAT II
+# The web server must implement required cryptographic protections using
+# cryptographic modules complying with applicable federal laws, Executive
+# Orders, directives, policies, regulations, standards, and guidance when
+# encrypting data that must be compartmentalized.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000416-WSR-000118
+group:           V-239371
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-002450
+control_rev5:    SC-13
+
+contribution:    Splunk Enterprise can be run in FIPS mode and Common Criteria mode, which
+                 constrains the instance to FIPS Publication 140-2 algorithms, and the TLS
+                 version list and cipher string can be set explicitly on both the splunkd
+                 and Splunk Web listeners so that the protections applied to data in
+                 transit use approved algorithms rather than whatever the underlying
+                 library offers by default.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           splunk-launch.conf [] SPLUNK_COMMON_CRITERIA equals 1
+check:           server.conf [sslConfig] sslVersions matches tls1\.2
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*ssl3
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
+check:           server.conf [sslConfig] sslVersions not_in *|tls
+check:           server.conf [sslConfig] cipherSuite non_empty
+check:           web.conf [settings] sslVersions matches tls1\.2
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*ssl3
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
+check:           web.conf [settings] sslVersions not_in *|tls
+check:           web.conf [settings] cipherSuite non_empty
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          server.conf [sslConfig] cipherSuite https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] cipherSuite https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+# --- end vendor verification
+
+external:        FIPS mode is enabled at install time; the SPLK-CL-000390 fix text states
+                 that enabling it afterward requires a reinstall or upgrade of the
+                 application - installation procedure
+external:        The validated cryptographic module itself and kernel FIPS mode on the host
+                 - operating system and the OpenSSL FIPS module
+external:        Identification of which data is compartmentalized and therefore requires
+                 cryptographic protection - organizational policy, which the check text
+                 directs be read from policy documents
+external:        The approved cipher string and TLS profile for the environment -
+                 organization-defined value
+
+citation:        Product STIG SPLK-CL-000390 fix text, which adds SPLUNK_COMMON_CRITERIA=1
+                 and SPLUNK_FIPS=1 to splunk-launch.conf before the initial start of Splunk
+                 Enterprise, and whose check text verifies "splunk show fips-mode" returns
+                 FIPS mode enabled; splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1]);
+                 server.conf.spec:1005-1006 (Common Criteria mode is a documented operating
+                 mode: "If you run Splunk Enterprise in Common Criteria mode, then you must
+                 give this setting a value"); server.conf.spec:714 ([sslConfig]) with
+                 :765-778 (sslVersions = <comma-separated list>; available versions ssl3,
+                 tls1.0, tls1.1, tls1.2; "*" selects all supported versions and "tls"
+                 selects all versions tls1.0 or newer; a "-" prefix excludes a version),
+                 :940 (cipherSuite), :996-1009 (sslRootCAPath, no default);
+                 web.conf.spec:239-245 (sslVersions, same vocabulary), :255-261
+                 (cipherSuite; "If not set, uses the default cipher string provided by
+                 OpenSSL")
+finding:         Cryptographic protections are not configured to the extent the product
+                 allows: FIPS or Common Criteria mode is not enabled, a TLS version list
+                 selects a protocol below TLS 1.2 or uses a wildcard that admits one, a
+                 cipher string is left to the library default, or the root certificate
+                 authority path required in Common Criteria mode is unset.

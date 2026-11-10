@@ -1,0 +1,65 @@
+# SRG-APP-000233-WSR-000146  -  CAT II
+# The web server document directory must be in a separate partition from the
+# web servers system files.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000233-WSR-000146
+group:           V-206408
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001084
+control_rev5:    SC-3
+
+contribution:    Splunk Enterprise locates all index data under a single configurable root,
+                 SPLUNK_DB, and each index's bucket paths are expressed relative to that
+                 root, so index data can be placed outside the installation tree and on its
+                 own file system. Whether the resulting path is a distinct partition is a
+                 file system fact the application cannot read.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_DB non_empty
+check:           splunk-launch.conf [] SPLUNK_DB matches tls1\.2
+check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*ssl3
+check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*tls1\.0
+check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*tls1\.1
+check:           indexes.conf [<index_name>] homePath matches ^\$SPLUNK_DB/
+check:           indexes.conf [<index_name>] coldPath matches ^\$SPLUNK_DB/
+check:           indexes.conf [<index_name>] thawedPath matches ^\$SPLUNK_DB/
+# --- vendor verification: generated, do not edit by hand
+vendor:          indexes.conf [<index_name>] coldPath https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/manage-index-storage/use-multiple-partitions-for-index-data
+vendor:          indexes.conf [<index_name>] homePath https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/manage-index-storage/use-multiple-partitions-for-index-data
+vendor:          indexes.conf [<index_name>] thawedPath https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/manage-index-storage/configure-index-storage
+vendor:          splunk-launch.conf [] SPLUNK_DB https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        Whether the path SPLUNK_DB resolves to is a separate partition or mount
+                 point - operating system file system layout and mount table
+external:        Partition sizing and the mount options applied to the index file system -
+                 operating system
+external:        The location of the installation tree itself relative to the operating
+                 system's own file systems - operating system
+
+citation:        splunk-launch.conf.spec:67-73 (SPLUNK_DB = <string>, "The fully qualified
+                 path to the directory containing the index directories", primarily used by
+                 paths expressed in indexes.conf); indexes.conf.spec:412-418 (homePath,
+                 best practice "homePath = $SPLUNK_DB/$_index_name/db");
+                 indexes.conf.spec:446-452 (coldPath, best practice
+                 "$SPLUNK_DB/$_index_name/colddb"); indexes.conf.spec:468-474 (thawedPath,
+                 required, cannot contain a volume reference). tstatsHomePath is excluded
+                 because indexes.conf.spec:531-536 requires it to be defined in terms of a
+                 volume definition rather than a direct path.
+finding:         Index data is not separated from the product's system files to the extent
+                 the application allows: SPLUNK_DB is unset or expressed under the
+                 installation directory, or an index's home, cold or thawed path is set to
+                 a fixed path rather than one relative to the index root.

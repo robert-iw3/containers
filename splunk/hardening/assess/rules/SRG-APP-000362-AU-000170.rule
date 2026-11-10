@@ -1,0 +1,50 @@
+# SRG-APP-000362-AU-000170  -  CAT III
+# The Central Log Server must be configured to perform on-demand sorting of
+# log records for events of interest based on the content of
+# organization-defined audit fields within log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000362-AU-000170
+group:           V-206495
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+revised:         yes
+cci:             CCI-000158
+control_rev5:    AU-7
+
+contribution:    Sorting log records is a native Splunk search command and needs no
+                 configuration, so the application's share is that the saved content the
+                 organization sorts with exists in the product.
+
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The organization's definition of which audit fields are of interest, which
+                 the check text leaves organization-defined and no product setting supplies
+external:        The field extractions the organization writes for its own sources
+                 (props.conf EXTRACT- and REPORT- classes with transforms.conf), whose
+                 content is specific to the data it collects
+
+citation:        fields.conf [<field name>] INDEXED present is removed.
+                 fields.conf.spec:89-94 makes it a boolean defaulting to false and states
+                 that search-time extraction "accounts for the majority of fields", so the
+                 condition failed twice over: present is satisfied by INDEXED = false and
+                 therefore decides nothing, and requiring an index-time field declaration
+                 before a record can be sorted fails the ordinary Splunk deployment, which
+                 extracts at search time. Sorting itself needs no configuration, and which
+                 fields are of interest is organization-defined, so no condition can carry
+                 that part; it is recorded as an external dependency instead.
+finding:         The product stores no saved search content for audit review, so the
+                 organization's sorting of its audit fields is not expressed in the
+                 application.

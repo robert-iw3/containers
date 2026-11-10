@@ -1,0 +1,50 @@
+# SRG-APP-000151-AU-002330  -  CAT II
+# The Central Log Server must use multifactor authentication for local
+# access using privileged user accounts.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000151-AU-002330
+group:           V-206463
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000765
+control_rev5:    IA-2
+
+contribution:    Local privileged access to Splunk runs through the splunkd REST layer that
+                 the CLI uses, and the product's one setting that extends a second factor
+                 to that path is enableMfaAuthRest inside the configured multifactor vendor
+                 stanza; Splunk Web certificate authentication does not cover the local
+                 CLI.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [<duo-externalTwoFactorAuthSettings-key>] enableMfaAuthRest equals true
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [<duo-externalTwoFactorAuthSettings-key>] enableMfaAuthRest https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Logon at the host console or over SSH is authenticated by the operating
+                 system and its smart-card or PAM configuration, which Splunk cannot reach
+external:        Duo or RSA enrollment and policy for the privileged accounts, held by the
+                 multifactor vendor
+external:        Splunk offers no PKI-based second factor for the CLI or REST path, so a
+                 site standardized on PKI alone carries this part of the objective in the
+                 operating system's console authentication
+
+citation:        SRG-APP-000151-AU-002330 check and fix text;
+                 authentication.conf.spec:1421-1427 (the vendor stanza is the one named by
+                 externalTwoFactorAuthSettings), authentication.conf.spec:1568-1578
+                 (enableMfaAuthRest, default false; the equivalent RSA setting is at
+                 authentication.conf.spec:1718); web.conf.spec:120-132
+finding:         The configured multifactor vendor stanza in Splunk authentication.conf
+                 does not set enableMfaAuthRest = true, so the application accepts
+                 single-factor credentials on the REST and CLI path used for local
+                 privileged access, which is the only part of local access the product can
+                 gate.

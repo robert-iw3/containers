@@ -1,0 +1,46 @@
+# SRG-APP-000855-AU-000340  -  CAT II
+# The Central Log Server must for password-based authentication, require
+# immediate selection of a new password upon account recovery.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000855-AU-000340
+group:           V-263578
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004063
+control_rev5:    IA-5
+
+contribution:    None that bears on account recovery: Splunk Enterprise 10.4.2 has no
+                 setting that marks a password as reset and forces its replacement at next
+                 login. The nearest adjacent setting, authentication.conf [splunk_auth]
+                 forceWeakPasswordChange, makes users replace a password that fails the
+                 current complexity rules, which is keyed on weakness rather than on
+                 recovery, and the product offers no self-service password recovery to
+                 configure.
+
+external:        The account recovery procedure, including requiring the user to select a
+                 new password immediately after an administrator reset - carried by the
+                 organization's account-management procedure.
+external:        Where authType is LDAP, SAML, or ProxySSO, recovery and the forced change
+                 at next login are performed by the directory service or identity provider.
+
+manual_reason:   No conf key represents account recovery or a change-at-next-login
+                 obligation, so no observed configuration value can decide this
+                 requirement.
+
+citation:        splunk-spec-files/authentication.conf.spec:509 (forceWeakPasswordChange,
+                 default false - weak-password replacement, not recovery); no recovery or
+                 change-at-next-login key exists in [splunk_auth] at :437-600
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 has no
+                 setting that forces selection of a new password upon account recovery, so
+                 this requirement is carried by the organization's account-management
+                 procedure and by the directory service or identity provider where
+                 authentication is external; this determination is from the perspective of
+                 the application layer alone.

@@ -1,0 +1,39 @@
+# SRG-APP-000516-AU-000380  -  CAT II
+# The Central Log Server must be configured with the organization-defined
+# severity or criticality levels of each event that is being sent from
+# individual devices or hosts.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000380
+group:           V-206517
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can carry a severity value on each alert it raises, so the
+                 organization's own criticality levels are expressed in the application's
+                 configuration rather than assigned by hand after the fact.
+
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [] alert.severity present
+
+external:        The criticality levels themselves and the mapping of event to level, which
+                 the check takes from the site's system security plan.
+external:        Severity or facility values that each sending device stamps on its own
+                 records before transmission, carried by that device.
+
+citation:        Central Log Server SRG SRG-APP-000516-AU-000380 check text;
+                 savedsearches.conf.spec:887 (alert.severity = <integer>, valid values 1
+                 through 6, default 3); props.conf.spec:80 ([<spec>] stanza forms)
+finding:         Alerts carry no severity value, so the application does not express the
+                 organization's criticality levels for the events it receives from
+                 individual devices and hosts.

@@ -1,0 +1,46 @@
+# SRG-APP-000141-WSR-000015  -  CAT II
+# The web server must not perform user management for hosted applications.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000015
+group:           V-206374
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk can hand authentication and account management to an external
+                 directory service or identity provider through authentication.conf, so
+                 that the application is not the place where accounts for its users are
+                 created and maintained.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] authType in LDAP|SAML|Scripted|ProxySSO
+check:           authentication.conf [authentication] authSettings non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [authentication] authSettings https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [authentication] authType https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        The directory service or identity provider itself, and the account
+                 lifecycle it runs - password complexity, lockout after failed logins, and
+                 management of temporary and emergency accounts - carried by that service.
+external:        Splunk retains a small native account store for break-glass access
+                 regardless of authType; whether those accounts are limited to that purpose
+                 is an organizational access-approval matter.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000015 discussion and check text;
+                 authentication.conf.spec:30 (authType =
+                 [Splunk|LDAP|Scripted|SAML|ProxySSO], default Splunk),
+                 authentication.conf.spec:44 (authSettings)
+finding:         Splunk is configured for native authentication, or names no external
+                 strategy, so the application is performing user management for its own
+                 hosted views rather than deferring it to the enterprise directory service.

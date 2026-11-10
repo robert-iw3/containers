@@ -1,0 +1,89 @@
+# SRG-APP-000033-WSR-000169  -  CAT II
+# The web server must enforce approved authorizations for logical access to
+# hosted applications and resources in accordance with applicable access
+# control policies.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000033-WSR-000169
+group:           V-206355
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-000213
+control_rev5:    AC-3
+
+contribution:    Splunk Web resolves every authenticated identity to one or more roles
+                 before serving content and refuses a request whose role lacks the
+                 capability or the index scope for it, so the application's configurable
+                 share of the authorization check is the role structure in authorize.conf
+                 that the check is made against.
+
+governs:         authorize.conf - Used to create roles.
+
+retired_check:   authorize.conf [role_<roleName>] role_<roleName> present
+                 reason: The stanza placeholder was repeated in the key position. The keys
+                         of a role stanza are capabilities and search scope settings -
+                         authorize.conf.spec:76 states them as "<capability> = enabled" -
+                         so no key in a role stanza is named role_something, the condition
+                         matched nothing, and it reported Open on every instance. That is a
+                         wrong answer, not a strict one.
+
+external:        Where identities come from an external store, the role a user receives is
+                 decided by the group membership that authentication.conf
+                 [roleMap_<authSettings-key>] (authentication.conf.spec:351) or
+                 [roleMap_<saml-authSettings-key>] (:1230) maps; the directory service or
+                 identity provider asserts that membership and is assessed under its own
+                 baseline.
+external:        Whether the role an identity receives is the correct one for the content
+                 requested is fixed by the organization's access control policy, not by any
+                 Splunk setting.
+
+manual_reason:   The benchmark check text asks whether an authorization check is performed
+                 before the requested content is served. Splunk Web is the product's web
+                 management interface, served on port 8000 by default. No setting in the
+                 specification set shipped with this version turns that check on or off, so
+                 no configuration value decides the requirement. Treating the check as
+                 always performed would be an inherent classification, which needs its own
+                 evidence and is not asserted here. The role structure the check is made
+                 against is reported in the evidence, and whether the role an identity
+                 holds is the right one for the content requested is fixed by the access
+                 control policy. A condition testing only that roles exist cannot fail,
+                 because the product ships role stanzas in system/default, so it would be
+                 inert - the same objection recorded below against enableCertBasedUserAuth.
+
+citation:        CHANGED for INVENTION. The condition 'web.conf [settings]
+                 enableCertBasedUserAuth present' has been removed. Per
+                 web.conf.spec:120-131 that setting selects whether splunkd uses a digital
+                 certificate to identify a user, and :125 requires requireClientCert to be
+                 true alongside it; it governs how an identity is established, not whether
+                 an established identity is authorized for the content it requested, which
+                 is the whole of this check text. The operand appears in neither the check
+                 text nor the fix text, and no product STIG rule shares this CCI. It is
+                 also inert as a test: the setting has a default of false
+                 (web.conf.spec:131), so in the merged configuration the assessment reads
+                 it is always present and the condition can never fail, which leaves a
+                 reader of the checklist with certificate-based authentication cited as the
+                 criterion for an authorization requirement and no evidence behind it.
+                 certBasedUserAuthMethod and requireClientCert are left out for the same
+                 reason, with the role mapping that external providers drive recorded in
+                 external_dependencies. The wildcard-stanza evaluation rule given under
+                 SRG-APP-000033-AU-001610 applies to the remaining condition: it is
+                 satisfied when at least one [role_<roleName>] stanza is present.
+                 That remaining condition is itself now retired, above, and this
+                 requirement is decided as manual, for the reason given under
+                 SRG-APP-000033-AU-001610: the condition repeated the stanza placeholder in
+                 the key position and so reported Open on every instance, and the existence
+                 test it was meant to be cannot fail.
+finding:         Not a finding against the application: Splunk Web resolves an
+                 authenticated identity to its roles before serving content and refuses a
+                 request whose role lacks the capability or the index scope for it. Whether
+                 the role an identity holds is the correct one for the content requested is
+                 decided against the organization's access control policy, which is an
+                 assessor inspection.

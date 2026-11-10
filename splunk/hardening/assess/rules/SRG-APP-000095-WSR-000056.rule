@@ -1,0 +1,56 @@
+# SRG-APP-000095-WSR-000056  -  CAT II
+# The web server must produce log records containing sufficient information
+# to establish what type of events occurred.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000095-WSR-000056
+group:           V-206359
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000130
+control_rev5:    AU-3
+
+contribution:    Splunk's web tier records the request method, URI and target endpoint -
+                 the event type for a web transaction - in web_access.log and
+                 splunkd_access.log, and the application configures that those logs are
+                 written and that no endpoint is excluded.
+
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           restmap.conf [] includeInAccessLog not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The record layout of the splunk_web_access and splunkd_access sourcetypes
+                 is built into the product and is not a props.conf setting in the 10.4.2
+                 specification, so the fields present in a written record are confirmed by
+                 inspecting one.
+
+citation:        INVENTION. Removed web.conf [settings] log.access_maxfiles min 1.
+                 web.conf.spec defines it as "The maximum number of backup files to keep
+                 after the web_access.log file has reached its maximum size" - a
+                 rotation-retention count that has no bearing on what information each
+                 record contains. The type is <integer>, so 0 is permitted, and an instance
+                 keeping no backups still records the request method and URI in the current
+                 log; the condition would fail a configuration that satisfies the
+                 objective. Neither the check nor the fix text mentions log rotation. The
+                 restmap placeholder stanza was replaced with the empty stanza the
+                 determined row carries.
+finding:         The web tier does not record what type of request occurred - no access log
+                 is named, or a REST endpoint is excluded from splunkd_access.log - so the
+                 event type for those transactions cannot be established.

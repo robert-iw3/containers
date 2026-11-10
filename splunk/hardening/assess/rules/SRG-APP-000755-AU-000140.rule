@@ -1,0 +1,51 @@
+# SRG-APP-000755-AU-000140  -  CAT II
+# The Central Log Server must implement an audit reduction capability that
+# supports on-demand reporting requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000755-AU-000140
+group:           V-263560
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003823
+control_rev5:    AU-7
+
+contribution:    The same search-time knowledge layer that reduces audit records feeds the
+                 saved reports that satisfy a reporting requirement, and both the reduction
+                 and the report that consumes it are set in application configuration.
+
+governs:         macros.conf - Reusable fragments of search language.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           props.conf [<source type>] present
+check:           macros.conf [<STANZA_NAME>] definition non_empty
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] enableSched equals 1
+check:           savedsearches.conf [<stanza name>] cron_schedule non_empty
+check:           savedsearches.conf [<stanza name>] action.email.sendpdf present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] action.email.sendpdf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The reporting cycle, the recipients and the required report format are
+                 organization-defined parameters recorded in the system security plan.
+external:        Delivery of the rendered report rests on the mail transfer agent and on
+                 network reachability from the Splunk host.
+
+citation:        props.conf.spec:80 [<spec>], :1085 REPORT-<class>, :1329 LOOKUP-<class>;
+                 macros.conf.spec:52 definition; savedsearches.conf.spec:44 search, :73
+                 enableSched = [0|1] default 0, :79 cron_schedule, :383
+                 action.email.sendpdf = [1|0] default 0.
+finding:         Assessed at the application layer alone: no knowledge layer is bound to
+                 the audit source types in scope, or the report that consumes the reduction
+                 is not dispatched on a stated cycle, so the application's audit reduction
+                 does not support the reporting requirement.

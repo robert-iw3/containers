@@ -1,0 +1,314 @@
+[
+  {
+    "evidence": "The setting still exists at web.conf.spec:233. The 10.4.2 specification adds a clause the Splunk 8.x era text did not carry: \"Supports any text including HTML. The Splunk platform sanitizes HTML for security purposes by removing potentially dangerous tags and attributes\" (web.conf.spec:235-236). The sunsetted fix text implements the consent banner by setting login_content to a <script> block invoking a DoDBanner() alert(). A script element is the canonical dangerous tag that clause removes, so applying DISA's published fix verbatim on 10.4.2 is expected to yield a login page with no banner and no error. Sites following the sunsetted STIG text need a non-script implementation, and any assessment must examine the rendered login page rather than the configured value.",
+    "setting": "web.conf [settings] login_content",
+    "status": "present but behavior changed - prescribed implementation method no longer viable",
+    "stig_rule": "SPLK-CL-000080"
+  },
+  {
+    "evidence": "Because login_content strips script, the modal dialog that supplied the positive OK acknowledgement in the Splunk 8.x implementation is unavailable in 10.4.2. The specification set contains no other acknowledgement or click-through control for the login page: a search of all 71 specification files for consent, acknowled, click-through or splash returned only federated.conf.spec:113-115 needs_consent, which concerns federated search definitions, and the indexer acknowledgment settings. global-banner.conf.spec:26-43 renders only after authentication and offers no acknowledgement action. SRG-APP-000069-AU-000420 is therefore implementable only as a persistent login-page notice, not as a click-through.",
+    "setting": "web.conf [settings] login_content - acknowledgement behavior",
+    "status": "consequential gap for the companion AC-8 b requirement",
+    "stig_rule": "SPLK-CL-000080"
+  },
+  {
+    "evidence": "Both settings are present: lockoutAttempts at authentication.conf.spec:532 and lockoutThresholdMins at authentication.conf.spec:543, with lockoutUsers at :514 and lockoutMins at :521, and all four are returned by splunk btool authentication list --debug on a live 10.4.2 instance. The sunsetted check text directs the assessor to view the authentication.conf file in the system local directory and to record a finding if that file does not exist. On 10.4.2 the effective value can be set in an app layer or inherited from the default layer, so a file-level inspection can both miss a compliant setting and miss an overriding one; btool resolution of [splunk_auth] is the sound examination. The reference also omits two conditions that affect the result: authentication.conf.spec:539 and :550 state that lockout applies per search head cluster member rather than cluster-wide, and authorize.conf.spec:867 [capability::never_lockout] exempts any role granted it.",
+    "setting": "authentication.conf [splunk_auth] lockoutAttempts, lockoutThresholdMins",
+    "status": "settings confirmed in 10.4.2 - examination method in the reference is incomplete",
+    "stig_rule": "SPLK-CL-000060"
+  },
+  {
+    "evidence": "The sunsetted rule's check text directs an interview of the SA and the ISSO and its fix text says only to configure Splunk \"using the reporting and notification tools\". No conf file, stanza or key is named, so there is no referenced setting to confirm or refute against the 10.4.2 specification set. The implementing surface identified by this assessment is savedsearches.conf (enableSched at :73, cron_schedule at :79, alert_condition at :270, action.email and action.email.to at :300 and :304) with alert_actions.conf [email] at :157. This affects both SRG-APP-000291-AU-000200 and SRG-APP-000292-AU-000420, which DISA mapped to this single rule.",
+    "setting": "none named",
+    "status": "reference names no configuration setting",
+    "stig_rule": "SPLK-CL-000020"
+  },
+  {
+    "evidence": "The fix text of SPLK-CL-000010 directs \"tools.session.timeout = 15\". web.conf.spec:924 defines tools.sessions.timeout, and no line of web.conf.spec contains tools.session.timeout; a search of the merged web configuration of a live Splunk Enterprise 10.4.2 instance for tools.session.timeout returns 0 lines. The same rule's check text spells the key correctly as tools.sessions.timeout, so the rule is internally inconsistent and an operator following its fix text alone would write a key the product ignores.",
+    "setting": "web.conf tools.session.timeout",
+    "status": "withdrawn_or_never_existed \u2014 the implemented key in 10.4.2 is tools.sessions.timeout (plural \"sessions\")",
+    "stig_rule": "SPLK-CL-000010"
+  },
+  {
+    "evidence": "The fix text of SPLK-CL-000290 directs the search head portion of the configuration to $SPLUNK_HOME/etc/opt/system/local/web.conf. web.conf.spec:6-7 states that custom configurations are placed in a web.conf in $SPLUNK_HOME/etc/system/local/. The settings named in that fix text, enableSplunkWebSSL, privKeyPath and serverCert, do exist in 10.4.2 at web.conf.spec:70, :75 and :82; only the directory is wrong.",
+    "setting": "$SPLUNK_HOME/etc/opt/system/local/web.conf",
+    "status": "incorrect path \u2014 the local web.conf path is $SPLUNK_HOME/etc/system/local/web.conf",
+    "stig_rule": "SPLK-CL-000290"
+  },
+  {
+    "evidence": "inputs.conf.spec:986 ([SSL]), :990 (serverCert) and :1002 (sslPassword) confirm the settings the rule names. In the same stanza, inputs.conf.spec:1009-1010 marks password deprecated in favor of sslPassword, and :1012-1013 marks rootCA deprecated in favor of server.conf [sslConfig] sslRootCAPath. An implementer working from an eight-era example that uses password or rootCA would be configuring keys the product no longer honors.",
+    "setting": "inputs.conf [SSL] serverCert, sslPassword",
+    "status": "confirmed in 10.4.2; two adjacent keys in the same stanza are now deprecated",
+    "stig_rule": "SPLK-CL-000290"
+  },
+  {
+    "evidence": "The sunsetted rule's fix text directs \"tools.session.timeout = 15\" in web.conf. In 10.4.2 the setting is documented as tools.sessions.timeout at web.conf.spec:924, with related keys tools.sessions.restart_persist (:934), tools.sessions.httponly (:943) and tools.sessions.secure (:951) all using the plural form. The singular name returns zero matches in web.conf.spec and resolves zero times in btool web list settings on a live 10.4.2 instance, so a configuration written to the rule as published would be inert and would fail silently.",
+    "setting": "tools.session.timeout (web.conf)",
+    "status": "renamed",
+    "stig_rule": "SPLK-CL-000010"
+  },
+  {
+    "evidence": "The rule's fix text directs adding SPLUNK_COMMON_CRITERIA=1 to splunk-launch.conf before first start. splunk-launch.conf.spec in 10.4.2 returns zero matches for SPLUNK_COMMON_CRITERIA; the only occurrence anywhere in the 128-file specification set is a cross-reference at server.conf.spec:5399 describing when splunkd consults a revocation list. The Common Criteria mode concept persists, and authentication.conf.spec:1385 still varies the [secrets] default by it, but the setting is no longer documented where the rule directs it to be written.",
+    "setting": "SPLUNK_COMMON_CRITERIA (splunk-launch.conf)",
+    "status": "not documented in the launch configuration specification",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "The rule's fix text directs adding PYTHONDONTWRITEBYTECODE=1 to splunk-launch.conf. The term returns zero matches across all 128 files of the 10.4.2 specification set, including splunk-launch.conf.spec, which documents the adjacent PYTHONHTTPSVERIFY immediately after SPLUNK_FIPS at splunk-launch.conf.spec:110. The principal setting the rule names, SPLUNK_FIPS, is confirmed present.",
+    "setting": "PYTHONDONTWRITEBYTECODE (splunk-launch.conf)",
+    "status": "withdrawn",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "The rule's fix text directs \"sslEnabled = 1\" under the LDAP strategy stanza. The 10.4.2 specification set documents the key as SSLEnabled = [0|1] at authentication.conf.spec:121; a search for the exact string \"sslEnabled\" returns zero matches across all 128 files. The other settings the rule names are confirmed: authType (authentication.conf.spec:30), authSettings (:44), host (:115), port (:127), idpSSOUrl (:625), idpCertPath (:642) and entityId (:710). The variance is letter case rather than a withdrawal, but it should be reconciled before the name is copied into a configuration.",
+    "setting": "sslEnabled (authentication.conf, LDAP strategy stanza)",
+    "status": "renamed (letter case)",
+    "stig_rule": "SPLK-CL-000320"
+  },
+  {
+    "evidence": "expirePasswordDays is confirmed at authentication.conf.spec:487 and resolves on a live 10.4.2 instance. The rule directs only expirePasswordDays, yet authentication.conf.spec:504 documents expireUserAccounts as the boolean that enables password expiration at all, with \"Default: false (user passwords do not expire)\". A configuration written to this rule alone would set a lifetime that does not take effect, so an assessment that reads expirePasswordDays without reading expireUserAccounts would reach a wrong result.",
+    "setting": "expirePasswordDays (authentication.conf [splunk_auth])",
+    "status": "confirmed, but the rule omits the setting that activates it",
+    "stig_rule": "SPLK-CL-000400"
+  },
+  {
+    "evidence": "Both rules direct edits to an openldap/ldap.conf file. That file is the bundled OpenLDAP client library's configuration, not a Splunk conf file: it has no specification file in the 128-file set, and the set references it only in passing at authentication.conf.spec:123 (\"See the file $SPLUNK_HOME/etc/openldap/ldap.conf for SSL LDAP settings\"). The file does still ship in 10.4.2, confirmed present on a live instance alongside its .default counterpart, so the rule remains actionable; the TLS_* keys cannot be read or validated through btool and need a direct file examination instead.",
+    "setting": "ldap.conf TLS_REQCERT, TLS_CACERT, TLS_PROTOCOL_MIN, TLS_CIPHER_SUITE",
+    "status": "outside the Splunk configuration surface",
+    "stig_rule": "SPLK-CL-000320 and SPLK-CL-000430"
+  },
+  {
+    "evidence": "The sunsetted rule's check and fix text instruct the assessor to run ls, stat, chown, chgrp and chmod against both $SPLUNK_HOME and $SPLUNK_ETC. $SPLUNK_HOME remains a documented configuration variable at splunk-launch.conf.spec:52. $SPLUNK_ETC appears in no file in the 10.4.2 specification set: a search of all 128 files in the set, specifications and shipped defaults alike, returns no match, and the complete list of top-level variables in splunk-launch.conf.spec is SPLUNK_HOME, SPLUNK_DB, SPLUNK_BINDIP, SPLUNK_OS_USER, SPLUNK_FIPS, PYTHONHTTPSVERIFY, SPLUNK_SERVER_NAME, SPLUNK_WEB_NAME, OPTIMISTIC_ABOUT_FILE_LOCKING, SPLUNK_PYTHON_DONT_ESCAPE_PRINTABLE and ENABLE_CPUSHARES. On a running 10.4.2 instance (build 33c3bf42cd73) the variable is unset in the service process environment, so the rule's commands cannot be executed as written against 10.4.2. The configuration directory must be addressed as a path relative to SPLUNK_HOME instead.",
+    "setting": "$SPLUNK_ETC",
+    "status": "withdrawn",
+    "stig_rule": "SPLK-CL-000190"
+  },
+  {
+    "evidence": "The sunsetted rule referenced by SRG-APP-000125-AU-000300, SRG-APP-000125-AU-000310 and SRG-APP-000125-WSR-000071 is interview-based: its check text directs the assessor to interview the SA about a backup process and its fix text directs the use of operating system or third-party backup tools. It names no Splunk configuration setting, so there is no referenced setting to confirm against the 10.4.2 specification set. The product does expose native off-load and archive settings for indexed log records, which the reference does not acknowledge: indexes.conf.spec:543 remotePath, :792 coldToFrozenDir, :713 coldToFrozenScript, and server.conf.spec:2929 replication_factor.",
+    "setting": "(none named)",
+    "status": "no_reference",
+    "stig_rule": "SPLK-CL-000250"
+  },
+  {
+    "evidence": "The sunsetted rule referenced by SRG-APP-000360-AU-000130 is interview-based: its check text directs the assessor to interview the SA and the ISSO about a notification report and its fix text directs the use of \"the reporting and notification tools\" without naming a file, stanza or key. There is therefore no referenced setting to confirm. The implementing settings exist in 10.4.2 at savedsearches.conf.spec:137 realtime_schedule, :270 alert_condition, :304 action.email.to, and health.conf.spec:93 alert.actions with :217 [alert_action:*].",
+    "setting": "(none named)",
+    "status": "no_reference",
+    "stig_rule": "SPLK-CL-000170"
+  },
+  {
+    "evidence": "The setting is present at server.conf.spec:1856 and :1858 and is readable on a 10.4.2 instance via btool server list diskUsage --debug. The rule's instruction that \"the value is in megabytes\" is now incomplete rather than wrong: in 10.4.2 minFreeSpace accepts either an integer size in binary megabytes or a percentage of the partition written as a decimal followed by a percent sign, so the rule's own intent of 25 percent of the volume can be expressed directly. The companion settings the rule names are also confirmed: health.conf.spec:217 [alert_action:*] with disabled at :218 and action.<action parameter> at :222, realized in the shipped health.conf as [alert_action:email] with action.to and action.cc, and the [feature:disk_space] indicator thresholds keyed on minFreeSpace.",
+    "setting": "server.conf [diskUsage] minFreeSpace",
+    "status": "confirmed_in_10_4_2, value syntax extended",
+    "stig_rule": "SPLK-CL-000160"
+  },
+  {
+    "evidence": "The sunsetted fix text directs the reviewer to modify props.conf to include the identity of the original source host, but the 10.4.2 specification set exposes no host-assignment key in props.conf. Host assignment and override are keyed in inputs.conf (inputs.conf.spec:60 host, :248 host_regex, :260 host_segment, :530 connection_host = [ip|dns|none]) and in transforms.conf (transforms.conf.spec:256 DEST_KEY = MetaData:Host), reached from props.conf only through TRANSFORMS-<class> (props.conf.spec:1131). The capability is present; the reference names the wrong file.",
+    "setting": "props.conf (no key named) for retaining the identity of the original source host",
+    "status": "imprecise_reference",
+    "stig_rule": "SPLK-CL-000260"
+  },
+  {
+    "evidence": "The role mechanism the rule names still exists in 10.4.2 (authorize.conf.spec:69 [role_<roleName>]; authentication.conf group mapping). The rule is mapped to SRG-APP-000795-AU-000220 and SRG-APP-000795-WSR-000130 through CCI-003831, but its check and fix address who holds the admin role and say nothing about alerting personnel upon detection of unauthorized access, modification, or deletion of audit information. A site following this reference alone would not implement the requirement.",
+    "setting": "admin role membership (Settings >> Users; Settings >> Authentication Method >> LDAP Settings >> Map Groups)",
+    "status": "confirmed_but_off_objective",
+    "stig_rule": "SPLK-CL-000140"
+  },
+  {
+    "evidence": "indexes.conf.spec:761 frozenTimePeriodInSecs = <nonnegative integer>, under PER INDEX OPTIONS at indexes.conf.spec:441-442. Confirmed readable through btool indexes list --debug on a 10.4.2 instance. The rule is mapped to SRG-APP-000516-AU-000060 through the generic CCI-000366 and does not address applying a change without a restart.",
+    "setting": "indexes.conf frozenTimePeriodInSecs",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000120"
+  },
+  {
+    "evidence": "inputs.conf.spec:1233 [udp://<remote server>:<port>] and :1320 [udp:<port>] both still exist in 10.4.2, so the condition the rule tests for remains expressible. The rule is mapped to SRG-APP-000516-AU-000060 through CCI-000366 only and does not address the reload-without-restart objective.",
+    "setting": "inputs.conf UDP input stanzas",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000270"
+  },
+  {
+    "evidence": "The capability the rule relies on is present: savedsearches.conf.spec:305 alert_condition, :335 action.email, :339 action.email.to and alert_actions.conf.spec:176 [email]. The rule names no setting, is satisfied by interview and by a report artifact, and does not address the reload-without-restart objective of SRG-APP-000516-AU-000060 to which it is mapped.",
+    "setting": "Reporting and Alert tools (no conf key named)",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000280"
+  },
+  {
+    "evidence": "inputs.conf.spec:880 [splunktcp-ssl:<port>], :990 [SSL], :994 serverCert, :1006 sslPassword; outputs.conf.spec:652 clientCert, :647 sslPassword; web.conf.spec:126 enableSplunkWebSSL, :131 privKeyPath, :138 serverCert. The fields the rule's check query selects are still emitted by 10.4.2: records in metrics.log carrying group=tcpin_connections include hostname, sourceIp, destPort and ssl. The rule is mapped to SRG-APP-000516-AU-000060 through CCI-000366 only and does not address the reload-without-restart objective.",
+    "setting": "inputs.conf [SSL] serverCert, sslPassword; outputs.conf clientCert, sslPassword; web.conf enableSplunkWebSSL, privKeyPath, serverCert; metrics.log group=tcpin_connections ssl field",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000290"
+  },
+  {
+    "evidence": "outputs.conf.spec:61 [tcpout], :121 [tcpout:<target_group>], :123 server on the sending side and inputs.conf.spec:630 [splunktcp], :880 [splunktcp-ssl:<port>] on the receiving side all exist in 10.4.2. The reference covers real-time off-load between Splunk instances only; the weekly off-load of a standalone instance required by SRG-APP-000515-AU-000110 is served by indexes.conf coldToFrozenDir (indexes.conf.spec:892) or coldToFrozenScript (:790), which the reference does not name.",
+    "setting": "outputs.conf forwarder output; inputs.conf receiver input",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000150"
+  },
+  {
+    "evidence": "inputs.conf.spec:239 [monitor://<path>], :630 [splunktcp], :880 [splunktcp-ssl:<port>], :1652 [http] all exist in 10.4.2, and inputs.conf is readable through btool inputs list --debug. The reference is satisfied against site documentation of the scope of coverage, which is an organization-defined parameter rather than a product setting.",
+    "setting": "Settings >> Data Inputs (inputs.conf)",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000100"
+  },
+  {
+    "evidence": "The check text for SPLK-CL-000110 directs the reviewer to 'the output.conf file' and 'the input.conf file'. No such files exist in Splunk Enterprise; the files are outputs.conf and inputs.conf, present in the 10.4.2 specification set as outputs.conf.spec and inputs.conf.spec, and readable on the live instance via btool outputs list --debug and btool inputs list --debug. The rule's fix text spells both correctly, so this is a defect in the check text only.",
+    "setting": "output.conf and input.conf (as named in the check text)",
+    "status": "renamed",
+    "stig_rule": "SPLK-CL-000110"
+  },
+  {
+    "evidence": "The setting the rule names, enableDataIntegrityControl, is confirmed in 10.4.2 at indexes.conf.spec:671. However the check text states 'If the indexes.conf file does not exist, this is a finding', scoped to the system/local directory. In 10.4.2 index definitions are legitimately carried in app contexts as well as in system/local, and btool indexes list --debug on the live instance resolves enableDataIntegrityControl for 19 index entries from the layered configuration. Treating the absence of a system/local indexes.conf as a finding would produce a false positive against a compliant layered configuration; the assessment must read the resolved value rather than one file's presence.",
+    "setting": "indexes.conf located in $SPLUNK_HOME/etc/system/local",
+    "status": "check locus is version-stale",
+    "stig_rule": "SPLK-CL-000090"
+  },
+  {
+    "evidence": "The rule's fix and check text address only LDAP group mapping. Splunk 10.4.2 also binds assertion groups to roles through authentication.conf [roleMap_<saml-authSettings-key>] (authentication.conf.spec:1347) and [userToRoleMap_<saml-authSettings-key>] (:1368), in addition to [roleMap_<authSettings-key>] for LDAP (:353). A SAML deployment assessed strictly against this rule's check text would leave the actual role membership unexamined.",
+    "setting": "LDAP group-to-role mapping (Settings >> Authentication Method >> LDAP Settings >> Map Groups)",
+    "status": "incomplete for 10.4.2",
+    "stig_rule": "SPLK-CL-000140"
+  },
+  {
+    "evidence": "The task names the supplied 128-file set as the configuration surface of Splunk Enterprise 10.4.2. It is a 10.0.0 snapshot: 70 of its 71 .spec files carry the header 'Version 10.0.0', while 67 of the 71 .spec files in the live instance's own README directory carry 'Version 10.4.2' (instance reports Splunk 10.4.2, build 33c3bf42cd73). Every capability-absence determination in this group was therefore re-run against the live 10.4.2 specification set before being relied on. Any grade A claim made from the supplied set alone is not defensible against challenge.",
+    "setting": "Version of the supplied specification set",
+    "status": "wrong product version",
+    "stig_rule": "n/a - finding against the supplied specification set, not a STIG rule"
+  },
+  {
+    "evidence": "The supplied audit.conf.spec documents a single key, [auditTrail] queueing. The 10.4.2 product additionally exposes logging_format = v1|v2|both (audit.conf.spec:36 in the live set) and [auditconfig:/path] with enabled and disabled lists (:47, :48, :57), including the behavior that 'Protected actions such as delete always remain logged even if the setting omits them'. Both are live on the instance: its default audit.conf carries logging_format = both and three [auditconfig:...] stanzas with disabled = all, which btool audit list --debug resolves. An exhaustive search for 'logging_format' and 'auditconfig' across all 128 supplied files returned zero hits. This gap bears directly on the AU-3 requirements in this group, whose audit-record content depends on the selected audit format and on which REST actions are suppressed.",
+    "setting": "audit.conf logging_format and [auditconfig:/path] enabled / disabled",
+    "status": "absent from the supplied set, present in 10.4.2",
+    "stig_rule": "n/a - finding against the supplied specification set, not a STIG rule"
+  },
+  {
+    "evidence": "The capability is documented in the supplied 10.0.0 set at authorize.conf.spec:500. It is absent from the 10.4.2 specification set (a search for 'dispatch_as' across all 71 live .spec files returns only limits.conf.spec:891 force_saved_search_dispatch_as_user and savedsearches.conf.spec:63) and absent from the instance's default authorize.conf. The surviving mechanism for the identity a scheduled search is attributed to is savedsearches.conf dispatchAs (:55) with limits.conf force_saved_search_dispatch_as_user (:891). Cited under SRG-APP-000100-AU-000730 accordingly.",
+    "setting": "authorize.conf [capability::edit_dispatch_as]",
+    "status": "withdrawn",
+    "stig_rule": "n/a - finding against the supplied specification set, not a STIG rule"
+  },
+  {
+    "evidence": "The per-channel log levels for splunkd and the Splunk Web appserver, which govern whether startup, shutdown and component-attribution messages are emitted, are set in log.cfg. It is not a .conf file, has no .spec, and is referenced from the specification set only in passing at server.conf.spec:4778. The live 10.4.2 instance's log.cfg carries 456 category lines. Requirements SRG-APP-000089-WSR-000047, SRG-APP-000092-WSR-000055 and SRG-APP-000097-WSR-000058 cannot be fully assessed from btool output alone and require log.cfg to be examined directly.",
+    "setting": "log.cfg logging channel levels",
+    "status": "outside the .conf specification surface",
+    "stig_rule": "n/a - finding against the supplied specification set, not a STIG rule"
+  },
+  {
+    "evidence": "Splunk 8-era audit event signing is present in neither the supplied 10.0.0 set nor the live 10.4.2 set: an exhaustive search for 'eventHash|auditSignature' across all 128 supplied files returned zero hits, and across all 71 live 10.4.2 .spec files returned zero hits. The only surviving reference to the legacy mechanism is the signedaudit key on the deprecated fschange input (inputs.conf.spec:1526). The AU-10 non-repudiation mechanism in 10.4.2 is indexes.conf enableDataIntegrityControl, which is what SPLK-CL-000090 names, so no AU-1 determination depends on the withdrawn capability. Recorded so that a reviewer does not expect audit-record signing to be configurable.",
+    "setting": "audit trail event signing (audit.conf eventHash, privateKey, publicKey)",
+    "status": "withdrawn",
+    "stig_rule": "n/a - observation, not a STIG rule"
+  },
+  {
+    "evidence": "The Monitoring Console app is present in Splunk 10.4.2, but no Mode selector remains. A case-insensitive search of the two configuration views it ships (monitoringconsole_configure and monitoringconsole_instances) for 'standalone', 'distributed' and 'mode' returns no match. The app's own specification file, splunk_monitoring_console_assets.conf.spec, exposes only [settings] with disabled, configuredPeers and blackList, plus per-peer host and host_fqdn overrides and indexerClusters[] / searchHeadClusters[]; it carries no mode key and is marked 'THIS FILE IS FOR INTERNAL USE ONLY. DO NOT EDIT'. Consequence: the 13 CM requirements that inherit this rule cannot be assessed by the navigation and setting the rule names; they are assessed instead against the component disable settings cited in those determinations.",
+    "setting": "Monitoring Console 'Mode' type (Standalone / Distributed), reached per the rule's check and fix text at Settings >> Monitoring Console >> Settings >> General Setup",
+    "status": "withdrawn",
+    "stig_rule": "SPLK-CL-000300"
+  },
+  {
+    "evidence": "In Splunk 10.4.2 the Monitoring Console navigation exposes the views monitoringconsole_configure, monitoringconsole_forwarder_setup and monitoringconsole_alerts_setup. No view named General Setup is present in the app's shipped view set. The general configuration page named by the rule corresponds to monitoringconsole_configure in this version.",
+    "setting": "Monitoring Console 'General Setup' configuration page",
+    "status": "renamed",
+    "stig_rule": "SPLK-CL-000300"
+  },
+  {
+    "evidence": "An exhaustive search of all 128 files of the shipped 10.4.2 specification set for 'server_?roles' returns no match, so server roles are not exposed anywhere in the product's configuration surface. In 10.4.2 server_roles exists only as a field computed inside Monitoring Console searches, for example in that app's savedsearches.conf, macros.conf and checklist.conf, derived from the distributed peer and server-info endpoints. A rule that directs an assessor to 'set each instance only with the server roles necessary' therefore names no settable value in this version.",
+    "setting": "Per-instance 'server roles' as a configurable value",
+    "status": "withdrawn as a configuration setting",
+    "stig_rule": "SPLK-CL-000300"
+  },
+  {
+    "evidence": "No etc/opt directory exists in the Splunk 10.4.2 installation layout, while etc/system/local is present; the rule's fix text transposes the path. The three settings the rule names are confirmed in the 10.4.2 specification set: web.conf.spec:70 (enableSplunkWebSSL), :75 (privKeyPath), :82 (serverCert). The rule's other named settings are also confirmed: inputs.conf.spec:876 ([splunktcp-ssl:<port>]), :986-1015 ([SSL] serverCert, sslPassword, requireClientCert); outputs.conf.spec:647 (sslPassword), :652 and :884 (clientCert), :201 (disabled).",
+    "setting": "web.conf path given as $SPLUNK_HOME/etc/opt/system/local/web.conf",
+    "status": "path malformed in the reference; the settings it names are confirmed present",
+    "stig_rule": "SPLK-CL-000290"
+  },
+  {
+    "evidence": "server.conf.spec:676-678 states: 'NOTE: The [config_change_audit] stanza, which was previously mentioned in the Splunk version 8.2.0 documentation and configuration specification files, is now DEPRECATED.' The configuration-change audit mechanism in 10.4.2 is server.conf [config_change_tracker] at server.conf.spec:598, carrying disabled, mode = [auto|diff|track-only], denylist, exclude_fields and the throttling settings. Any check text or automation written against the Splunk 8.x stanza name will return nothing on a 10.4.2 instance and must be retargeted.",
+    "setting": "server.conf [config_change_audit]",
+    "status": "renamed to [config_change_tracker]",
+    "stig_rule": "none - Splunk 8.x specification baseline, relevant to SRG-APP-000805-AU-000240 and SRG-APP-000805-WSR-000140"
+  },
+  {
+    "evidence": "The rule's fix text reads \"Upgrade to a version supported by the vendor.\" and its check text states that the STIG is sunset and no longer maintained. Searched all 67 .conf.spec files of the 10.4.2 specification set for a key that acquires, schedules or applies a Splunk Enterprise update and found none; the only update-related keys are web.conf.spec:192 updateCheckerBaseURL (vendor notification, disablable), app.conf.spec:116 show_upgrade_notification (app scope) and serverclass.conf.spec:316 updaterRunningFilter (deployment clients, separately installed self-updater). This reference is shared by SRG-APP-000456-AU-000270 and SRG-APP-000456-WSR-000187; both are recorded as no_reference for that reason, not because the reference is absent.",
+    "setting": "None named - the rule's fix text directs a version upgrade rather than a configuration setting",
+    "status": "no setting to confirm; the reference is procedural, so nothing could be confirmed, renamed or withdrawn in 10.4.2",
+    "stig_rule": "SPLK-CL-000510"
+  },
+  {
+    "evidence": "The fix text directs that PYTHONDONTWRITEBYTECODE=1 be added to the launch configuration before initial start. The setting is declared nowhere in the 10.4.2 specification set: grep -c -i PYTHONDONTWRITEBYTECODE across all 128 files returns zero matches. splunk-launch.conf.spec declares eleven keys, among them PYTHONHTTPSVERIFY at :129 and SPLUNK_PYTHON_DONT_ESCAPE_PRINTABLE at :223, but no byte-code suppression key.",
+    "setting": "PYTHONDONTWRITEBYTECODE",
+    "status": "withdrawn",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "The fix text directs that SPLUNK_COMMON_CRITERIA=1 be added to the launch configuration. The key is absent from the splunk-launch.conf.spec key list in 10.4.2, yet server.conf.spec:5398-5399 still names Common Criteria mode with SPLUNK_COMMON_CRITERIA=1 as one of the conditions under which splunkd consults the CRL file. The setting continues to influence product behavior but is no longer documented where an assessor would look for it.",
+    "setting": "SPLUNK_COMMON_CRITERIA",
+    "status": "undeclared_but_still_honored",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "Both settings exist in 10.4.2 at authentication.conf.spec:554 and :561. They implement reuse prevention against the account's own prior passwords - :563 states that on password change the user is not allowed to pick an old password. The SRG requirement they are cited against, SRG-APP-000845 under IA-5 (1) (b), calls for verification against a list of commonly used, expected or compromised passwords, for which the specification set declares no key. The reference therefore does not reach the objective it is mapped to.",
+    "setting": "enablePasswordHistory, passwordHistoryCount",
+    "status": "confirmed_but_addresses_a_different_objective",
+    "stig_rule": "SPLK-CL-000410"
+  },
+  {
+    "evidence": "The fix text names no Splunk configuration setting and prescribes an external SSO proxy to present PKI credentials to the application. The proxy path still exists in 10.4.2 (web.conf.spec:787 SSOMode, :797 trustedIP, :728 remoteUser; authentication.conf.spec:30 authType accepting SAML and ProxySSO), but 10.4.2 also implements certificate-based user authentication natively, with DoD-specific identifier extraction: web.conf.spec:120 enableCertBasedUserAuth, :133-143 certBasedUserAuthMethod accepting CommonName, EDIPI and PIV, and :144 certBasedUserAuthPivOidList. The sunsetted STIG predates this capability, so its remediation is no longer the only path to the requirement.",
+    "setting": "SSO proxy service (Apache, IIS, F5, SAML)",
+    "status": "superseded_by_a_native_mechanism",
+    "stig_rule": "SPLK-CL-000490"
+  },
+  {
+    "evidence": "The fix text directs edits to ldap.conf in the host's OpenLDAP client configuration directory. That file is not part of the Splunk configuration surface and is declared nowhere in the 128-file specification set; it belongs to the host operating system's LDAP client baseline. The Splunk settings the same rule names - sslVersions, sslVersionsForClient, cipherSuite and ecdhCurves - are all confirmed present in 10.4.2 at server.conf.spec:765, :780, :940, :955; web.conf.spec:239, :255, :276; inputs.conf.spec:929-931; and outputs.conf.spec:779, :664, :676.",
+    "setting": "/etc/openldap/ldap.conf TLS_PROTOCOL_MIN, TLS_CIPHER_SUITE",
+    "status": "outside_the_application_boundary",
+    "stig_rule": "SPLK-CL-000430"
+  },
+  {
+    "evidence": "A case-insensitive search of splunk-launch.conf.spec for \"COMMON_CRITERIA\" returns zero matches, while the file documents SPLUNK_FIPS at line 110, PYTHONHTTPSVERIFY at 129 and PYTHONUTF8 at 134. The only occurrence in the whole specification set is server.conf.spec:5399, which refers to \"Common Criteria mode (SPLUNK_COMMON_CRITERIA=1)\" as a condition under which splunkd uses the CRL file, without documenting the setting itself.",
+    "setting": "SPLUNK_COMMON_CRITERIA (splunk-launch.conf)",
+    "status": "No longer documented in the splunk-launch.conf specification for 10.4.2; the mode name survives only as a cross-reference in another file",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "A search of all 71 specification files for \"PYTHONDONTWRITEBYTECODE\" returns zero matches. splunk-launch.conf.spec documents only PYTHONHTTPSVERIFY (line 129) and PYTHONUTF8 (line 134) among its Python interpreter settings, so the third line the sunsetted fix text directs an administrator to add is not part of the documented configuration surface.",
+    "setting": "PYTHONDONTWRITEBYTECODE (splunk-launch.conf)",
+    "status": "Withdrawn - absent from the entire 10.4.2 specification set",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "inputs.conf.spec documents \"disabled = <boolean>\" twelve times, none of them within the TCP receiving stanzas: a line-range search of 700-1000, which spans [splunktcp], [splunktcp://], [splunktcp:<port>], [splunktcp-ssl:<port>], [tcp-ssl:<port>] and [SSL] (stanza headers at 626, 770, 839, 876, 939 and 986), returns no \"disabled\" setting. The forwarder half of the rule is unaffected: outputs.conf.spec:201 documents \"disabled\" under [tcpout<any of above>].",
+    "setting": "disabled (inputs.conf, under [splunktcp-ssl:<port>])",
+    "status": "Not documented for the stanza the rule names in 10.4.2; documented for other input types",
+    "stig_rule": "SPLK-CL-000460"
+  },
+  {
+    "evidence": "The rule's check and fix text names only inputs.conf and outputs.conf settings for the forwarder-to-indexer channel. Eleven requirements in this group carry it as their product reference, including those addressing session identifiers, cookie attributes, TLS version selection, export ciphers and HTTP/2, for which it names no setting; the mechanisms for those were established from the specification set instead (web.conf.spec:70, 239, 255, 943, 951, 962, 1176 and server.conf.spec:765, 940, 1070, 1525).",
+    "setting": "Scope of the rule relative to the SRG requirements it is mapped to",
+    "status": "Present but narrower than the requirements sharing its CCI",
+    "stig_rule": "SPLK-CL-000460"
+  },
+  {
+    "evidence": "splunk-launch.conf.spec:110-127 documents SPLUNK_FIPS = [0|1] with the same name and the same one-time, install-time semantics the sunsetted rule relies on. Confirmed against a live instance reporting Splunk 10.4.2 (build 33c3bf42cd73).",
+    "setting": "SPLUNK_FIPS",
+    "status": "confirmed_in_10_4_2",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "The sunsetted fix text directs adding SPLUNK_COMMON_CRITERIA=1 to the launch file, but splunk-launch.conf.spec enumerates SPLUNK_HOME, SPLUNK_DB, SPLUNK_BINDIP, SPLUNK_OS_USER, SPLUNK_FIPS, PYTHONHTTPSVERIFY and PYTHONUTF8 only; Common Criteria mode is referenced at splunk-launch.conf.spec:59-64 without naming the variable, and the variable itself appears only at server.conf.spec:5398-5399 as a condition on sslCRLPath use. The generic form at splunk-launch.conf.spec:33 still accepts it, so the setting remains usable but is undocumented in the specification set.",
+    "setting": "SPLUNK_COMMON_CRITERIA",
+    "status": "not_documented_as_a_key_in_the_10_4_2_specification_set",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "splunk-launch.conf.spec:129-139 documents PYTHONHTTPSVERIFY and PYTHONUTF8 as the Python-related launch settings; PYTHONDONTWRITEBYTECODE does not appear anywhere in the 71 .conf.spec files. It remains accepted under the generic <environment_variable>=<value> form at splunk-launch.conf.spec:33 but carries no specification entry, so no product statement governs its behavior in 10.4.2.",
+    "setting": "PYTHONDONTWRITEBYTECODE",
+    "status": "not_documented_as_a_key_in_the_10_4_2_specification_set",
+    "stig_rule": "SPLK-CL-000390"
+  },
+  {
+    "evidence": "The sunsetted rule's check and fix text direct an operator to inspect a certificate file with `openssl x509 -text -inform PEM` and to place a DoD-approved certificate and root CA in PEM format, but name no conf file, stanza or key. The settings that carry the trust anchors in 10.4.2, and which an assessment must resolve before it can know which file to inspect, are sslRootCAPath (web.conf.spec:108, server.conf.spec:996, outputs.conf.spec:691, authentication.conf.spec:1552 and :1694), caCertFile (server.conf.spec:1026, inputs.conf.spec:1747), requireClientCert (web.conf.spec:151, server.conf.spec:858) and enableCertBasedUserAuth (web.conf.spec:120). The rule as written cannot be executed without them.",
+    "setting": "(no configuration setting named by the rule)",
+    "status": "no_reference",
+    "stig_rule": "SPLK-CL-000450"
+  }
+]

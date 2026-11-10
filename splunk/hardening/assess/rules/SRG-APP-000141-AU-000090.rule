@@ -1,0 +1,53 @@
+# SRG-APP-000141-AU-000090  -  CAT II
+# The Central Log Server must be configured to disable non-essential
+# capabilities.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-AU-000090
+group:           V-221920
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk can turn each role-bearing service on an instance on or off
+                 independently - Splunk Web, the KV Store, and distributed search - so that
+                 an instance carries only the roles its deployment design calls for.
+
+governs:         distsearch.conf - How a search head reaches the indexers it searches.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [kvstore] disabled present
+check:           distsearch.conf [distributedSearch] disabled present
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] startwebserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] startwebserver present
+                 reason: "startwebserver = [0 | 1]. Set whether or not to start Splunk Web.
+                         0 disables Splunk Web, 1 enables it. Default: 1"
+# --- end vendor verification
+
+external:        Which roles a given instance is meant to carry, which comes from the
+                 distributed deployment design and the system security plan; the product
+                 STIG check reads the Monitoring Console mode and the role assignment, and
+                 marks a standalone installation not applicable because every function it
+                 provides is then necessary.
+external:        Non-essential capabilities of the host outside the application - operating
+                 system services, packages, and browser plug-ins on analyst workstations -
+                 carried by the operating system and the workstation build.
+
+citation:        SPLK-CL-000300 check and fix text; web.conf.spec:23 (startwebserver = [0 |
+                 1], default 1), server.conf.spec:5234 (kvstore disabled, default false),
+                 distsearch.conf.spec:36 (distributedSearch disabled, default false)
+finding:         The role-bearing services the application can switch off - Splunk Web, the
+                 KV Store, and distributed search - are left at their shipped defaults
+                 rather than declared for this instance's role, so the configuration does
+                 not show that only the necessary capabilities are enabled.

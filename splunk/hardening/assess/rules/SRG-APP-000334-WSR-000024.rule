@@ -1,0 +1,112 @@
+# SRG-APP-000334-WSR-000024  -  CAT II
+# The web server must uniquely identify and authenticate source by
+# organization, system, application, and/or individual for information
+# transfer.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000334-WSR-000024
+group:           V-279028
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-002205 CCI-000366
+control_rev5:    AC-4 CM-6
+
+contribution:    Splunk both identifies and authenticates the source of transferred data
+                 from its own configuration: connection_host stamps each received event
+                 with the sending system's address or resolved name, TLS with a required
+                 client certificate authenticates the sender on the receiving port, the
+                 forwarder presents its own certificate and validates the receiver, Splunk
+                 Web serves over HTTPS, and no UDP input is accepted because a UDP input
+                 has no connection to authenticate.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           inputs.conf [splunktcp-ssl:<port>] connection_host in ip|dns
+check:           inputs.conf [SSL] serverCert non_empty
+check:           inputs.conf [SSL] sslPassword non_empty
+check:           inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1, with [SSL] accepted as an equivalent placement and the stanza resolved against the stanzas that actually exist
+check:           inputs.conf [udp://<remote server>:<port>] * absent
+check:           inputs.conf [udp:<port>] * absent
+check:           outputs.conf [tcpout:<target_group>] useSSL in true|1
+check:           outputs.conf [tcpout:<group>] sslPassword non_empty
+check:           outputs.conf [tcpout:<group>] sslVerifyServerCert matches ^(1|true)$
+check:           web.conf [settings] enableSplunkWebSSL matches ^(1|true)$
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       inputs.conf [SSL] requireClientCert matches ^(1|true)$ -> inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1, with [SSL] accepted as an equivalent placement and the stanza resolved against the stanzas that actually exist
+corrected:       outputs.conf [tcpout:<group>] clientCert non_empty -> outputs.conf [tcpout:<target_group>] useSSL in true|1
+vendor:          inputs.conf [SSL] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          inputs.conf [splunktcp-ssl:<port>] connection_host https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          outputs.conf [tcpout:<group>] clientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-splunk-indexing-and-forwarding-to-use-tls-certificates
+vendor:          outputs.conf [tcpout:<group>] sslPassword https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-splunk-indexing-and-forwarding-to-use-tls-certificates
+vendor:          outputs.conf [tcpout:<group>] sslVerifyServerCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        The public key infrastructure that issues the DoD-approved certificates,
+                 and the certificate authority trust chain each receiver and sender
+                 validates against, are managed outside the application.
+external:        Forwarder-side settings in outputs.conf live on a separate host by
+                 definition, so on an indexer only the receiving half of this criterion can
+                 be read.
+external:        Whether the address or name that connection_host records is the true
+                 origin depends on the network path: an intervening relay, proxy or load
+                 balancer substitutes its own address, and DNS must resolve consistently
+                 for the "dns" setting to be meaningful.
+external:        Mapping an authenticated source to an organization, system, application or
+                 individual is an organizational naming and attribution scheme; the
+                 application records the identifier it is given.
+
+citation:        Three corrections. First, serverCert, sslPassword and requireClientCert
+                 are moved to the [SSL] stanza. They are legal inside
+                 [splunktcp-ssl:<port>] only as per-port deviations - "To specify global
+                 TLS settings, that are applicable for all ports, add the settings to the
+                 [SSL] stanza. Specify any TLS setting that deviates from the global
+                 setting here" (inputs.conf.spec:919-932) - and the product STIG's own fix
+                 for SPLK-CL-000290 writes [splunktcp-ssl:9997] with disabled = 0 and then
+                 puts serverCert and sslPassword under [SSL]. Requiring them under the port
+                 stanza therefore reports a finding against an instance built exactly as
+                 the benchmark authority prescribes, and against every deployment that sets
+                 TLS once for all ports; [SSL] is also the stanza whose values apply to all
+                 receiving ports (inputs.conf.spec:986-1015). Second, inputs.conf host
+                 non_empty is removed because it asks for the opposite of the requirement:
+                 connection_host = none "leaves the host as specified in inputs.conf,
+                 typically the hostname of the system running Splunk software"
+                 (inputs.conf.spec:526-534), so a static host is how source identity is
+                 lost, not retained, and requiring it alongside connection_host in ip|dns
+                 demands both halves of a contradiction - it also carried an empty stanza
+                 name and could not be evaluated. Third, the UDP rule was missing.
+                 SPLK-CL-000270 shares this SRG and is checked as "If any input is
+                 configured to use a UDP port, this is a finding" and fixed by replacing
+                 UDP inputs with TCP ports; a datagram input authenticates nothing, so this
+                 is the most direct application-layer condition the requirement has, and it
+                 is machine-checkable against both UDP stanza forms (inputs.conf.spec:1227,
+                 1314). requireClientCert true is kept deliberately: server-side TLS
+                 authenticates the receiver, not the source, and the fix text's own
+                 clientCert on the forwarder authenticates the sender only if the receiver
+                 demands the certificate (inputs.conf.spec:1015-1023). connection_host
+                 in:ip|dns is within the setting's vocabulary [ip|dns|none] and both
+                 receiving defaults are already ip or dns (inputs.conf.spec:526-534,
+                 889-891), so it fails only an explicit "none".
+finding:         Splunk does not uniquely identify and authenticate the source of
+                 transferred data: connection_host is set to "none" on a receiving input,
+                 the receiver's TLS certificate or client-certificate requirement is unset
+                 in inputs.conf [SSL], the forwarder presents no client certificate or does
+                 not verify the receiver, Splunk Web is not served over HTTPS, or a UDP
+                 input is configured, which the product STIG prohibits because it cannot
+                 authenticate a sender.

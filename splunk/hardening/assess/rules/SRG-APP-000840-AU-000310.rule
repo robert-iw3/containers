@@ -1,0 +1,46 @@
+# SRG-APP-000840-AU-000310  -  CAT II
+# The Central Log Server must for password-based authentication, update the
+# list of passwords when organizational passwords are suspected to have been
+# compromised directly or indirectly.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000840-AU-000310
+group:           V-263576
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004060
+control_rev5:    IA-5
+
+contribution:    None toward the list: the product has no deny list to update on suspicion
+                 of compromise. What the application can do once a specific credential is
+                 suspected is force its replacement - an administrator resets the account
+                 and the [splunk_auth] history and complexity settings prevent reuse of a
+                 stored previous password - but that acts on one account, not on a list of
+                 compromised passwords, and there is no setting that represents such an
+                 event.
+
+external:        Detection and declaration of suspected password compromise, and the
+                 resulting update to the list - carried by the organization's incident
+                 response and account-management procedures.
+external:        Holding and updating the list - carried by the directory service or
+                 identity provider where authType is LDAP, SAML, or ProxySSO.
+
+manual_reason:   The requirement is to update a list the product does not hold, triggered
+                 by an event no configuration value records; nothing observable in Splunk
+                 configuration can decide it.
+
+citation:        splunk-spec-files/authentication.conf.spec:437-600 ([splunk_auth];
+                 enablePasswordHistory at :554 and passwordHistoryCount at :561 prevent
+                 reuse per account, not list maintenance)
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 holds no
+                 password deny list and has no setting representing suspected compromise,
+                 so this requirement is carried by the organization's incident response
+                 procedure and by the identity provider that holds the list; this
+                 determination is from the perspective of the application layer alone.

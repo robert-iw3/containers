@@ -1,0 +1,52 @@
+# SRG-APP-000175-WSR-000095  -  CAT II
+# The web server must perform RFC 5280-compliant certification path
+# validation.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000175-WSR-000095
+group:           V-206388
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000185
+control_rev5:    IA-5
+
+contribution:    Certification path validation for the Splunk Web channel is driven by the
+                 same two splunkd settings: the certificate authority store that supplies
+                 the trust anchor, and the certificate status validation method that adds
+                 revocation status to the path check.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        The path validation algorithm itself is implemented by the cryptographic
+                 library shipped with the product; its RFC 5280 conformance is a property
+                 of that library, not a configurable setting
+external:        CRL files must be present and current in the instance's auth/crl
+                 directory, supplied by the issuing certificate authority
+external:        Not Applicable where the web server does not use PKI
+
+citation:        SRG-APP-000175-WSR-000095 check text (RFC 5280-compliant path validation;
+                 Not Applicable where PKI is not used); server.conf.spec:1125-1147
+                 (certificateStatusValidationMethod = crl is the only acceptable value,
+                 default empty string turns the checks off, and the checks apply to the
+                 Splunk Web channel as well), server.conf.spec:996-1010 (sslRootCAPath, no
+                 default), web.conf.spec:108-119 (web.conf sslRootCAPath is used only when
+                 requireClientCert and enableCertBasedUserAuth are both true and otherwise
+                 falls back to server.conf)
+finding:         server.conf [sslConfig] does not set certificateStatusValidationMethod =
+                 crl or leaves sslRootCAPath empty, so the Splunk Web channel does not
+                 perform path validation to a named trust anchor with revocation status.

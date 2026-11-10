@@ -1,0 +1,62 @@
+# SRG-APP-000515-AU-000110  -  CAT III
+# The Central Log Server must be configured to off-load interconnected
+# systems in real time and off-load standalone systems weekly, at a minimum.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000515-AU-000110
+group:           V-206511
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001851
+control_rev5:    AU-4
+
+contribution:    Splunk itself implements off-load: it forwards received data to another
+                 receiver in real time through the target group named in outputs.conf, and
+                 off-loads aged data by archiving buckets that roll to frozen to the
+                 destination named in indexes.conf.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout:<target_group>] server non_empty
+check:           indexes.conf [<index>] frozenTimePeriodInSecs present
+check:           indexes.conf [<index>] coldToFrozenDir present
+# --- vendor verification: generated, do not edit by hand
+corrected:       outputs.conf [tcpout] server non_empty -> outputs.conf [tcpout:<target_group>] server non_empty
+vendor:          indexes.conf [<index>] coldToFrozenDir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/indexes.conf
+vendor:          indexes.conf [<index>] frozenTimePeriodInSecs https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/back-up-and-archive-your-indexes/set-a-retirement-and-archiving-policy
+vendor:          outputs.conf [tcpout] server https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+# --- end vendor verification
+
+external:        The benchmark's Not Applicable note turns on whether an external
+                 application or the operating system performs the off-load; that is a site
+                 determination recorded in the system security plan, not an application
+                 setting, and where it holds the site records an inherited implementation
+                 rather than an application finding.
+external:        Whether the system is interconnected or standalone - which sets the
+                 real-time versus at-least-weekly interval - is an organization
+                 determination about the system, not a Splunk setting.
+external:        Network reachability of the receiving system, and the capacity and
+                 integrity of the archive destination, rest on the network and the storage
+                 platform.
+external:        Product STIG SPLK-CL-000150 places the outputs.conf side of this on the
+                 forwarder, which is a separate instance; this criterion assesses the
+                 configuration present on the instance under review.
+
+citation:        outputs.conf.spec:61 [tcpout], :121 [tcpout:<target_group>], :123 server =
+                 <comma-separated list>; indexes.conf.spec:684 frozenTimePeriodInSecs, :713
+                 coldToFrozenScript, :792 coldToFrozenDir. Product STIG SPLK-CL-000150 fix
+                 and check text.
+finding:         Assessed at the application layer alone: no tcpout target group names a
+                 receiver for real-time off-load, and the audit indexes state no retention
+                 period and no frozen archive destination, so Splunk performs neither form
+                 of off-load the product can perform.

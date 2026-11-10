@@ -1,0 +1,53 @@
+# SRG-APP-000516-AU-000360  -  CAT II
+# The Central Log Server must be configured to automatically create trouble
+# tickets for organization-defined threats and events of interest as they
+# are detected in real time (within seconds).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000360
+group:           V-206515
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can hand a triggered detection to an outside system as it fires,
+                 through the webhook alert action or a script action, which is how a ticket
+                 is opened from the application without a person in the loop.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<saved search>] action.webhook in 1|true and savedsearches.conf [<saved search>] action.webhook.param.url non_empty
+check:           savedsearches.conf [] enableSched equals 1
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [webhook] command present -> savedsearches.conf [<saved search>] action.webhook in 1|true and savedsearches.conf [<saved search>] action.webhook.param.url non_empty
+vendor:          alert_actions.conf [webhook] command https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The ticket system itself and the endpoint it accepts submissions on, which
+                 the application posts to but does not provide.
+external:        Which threats and events of interest warrant a ticket, left to the
+                 organization by the check text.
+external:        Detection "within seconds" depends on a real-time or continuously
+                 scheduled search and the search capacity to sustain it, which is a sizing
+                 and deployment-design decision rather than a setting.
+external:        Where the server performs no analysis, the benchmark marks the requirement
+                 not applicable, which is a deployment-design determination.
+
+citation:        Central Log Server SRG SRG-APP-000516-AU-000360 check text;
+                 alert_actions.conf.spec:599 ([webhook]), alert_actions.conf.spec:87
+                 (command), alert_actions.conf.spec:100 (payload_format = [xml|json],
+                 default xml), savedsearches.conf.spec:73 (enableSched),
+                 savedsearches.conf.spec:403 (action.script)
+finding:         No alert action is configured that can hand a triggered detection to an
+                 outside system, or detections are not scheduled to run by themselves, so
+                 the application cannot open a ticket as an event of interest is detected.

@@ -1,0 +1,64 @@
+# SRG-APP-000820-WSR-000170  -  CAT II
+# The web server must implement multifactor authentication for local;
+# network; and/or remote access to privileged accounts; and/or nonprivileged
+# accounts such that one of the factors is provided by a device separate
+# from the system gaining access.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000820-WSR-000170
+group:           V-264343
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004046
+control_rev5:    IA-2
+
+contribution:    Splunk can carry a second authentication factor itself:
+                 authentication.conf [authentication] externalTwoFactorAuthVendor loads a
+                 supported multifactor vendor (Duo or RSA) and
+                 externalTwoFactorAuthSettings points at that vendor's configuration
+                 stanza, which places the second factor on a device separate from the one
+                 being used to reach Splunk. The product's alternative path for the same
+                 objective is a CAC/PIV certificate (web.conf enableCertBasedUserAuth,
+                 requireClientCert), where the separate device is the card itself.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] externalTwoFactorAuthVendor in Duo|RSA
+check:           authentication.conf [authentication] externalTwoFactorAuthSettings non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       authentication.conf [authentication] externalTwoFactorAuthVendor non_empty -> authentication.conf [authentication] externalTwoFactorAuthVendor in Duo|RSA
+vendor:          authentication.conf [authentication] externalTwoFactorAuthSettings https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [authentication] externalTwoFactorAuthVendor https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        The separate device itself and its enrollment per user (phone for Duo
+                 push, RSA token) - carried by the multifactor vendor's service and the
+                 organization's enrollment procedure.
+external:        Reachability of the Duo or RSA service from the instance - carried by the
+                 network and the vendor's service.
+external:        Where the second factor is instead a CAC/PIV card accepted by the
+                 product's certificate-based authentication, or is terminated by an
+                 approved SSO proxy, these native vendor settings may legitimately be empty
+                 and the factor is carried by that card or proxy; the web.conf cert
+                 settings observed on this requirement show which path is in use.
+external:        The determination of which accounts (privileged, non-privileged, local,
+                 network, remote) must be in scope - organization-defined.
+
+citation:        splunk-spec-files/authentication.conf.spec:87
+                 (externalTwoFactorAuthVendor; empty string disables multifactor
+                 authentication), :95 (externalTwoFactorAuthSettings, no default);
+                 splunk-spec-files/web.conf.spec:120, :151 (alternative CAC path)
+finding:         Splunk Web is not configured for multifactor authentication with a factor
+                 from a separate device - authentication.conf [authentication]
+                 externalTwoFactorAuthVendor/externalTwoFactorAuthSettings are empty and no
+                 certificate-based (CAC/PIV) or approved SSO proxy path was presented in
+                 their place; this determination is from the perspective of the application
+                 layer alone, the separate device and its enrollment being outside the
+                 application.

@@ -1,0 +1,59 @@
+# SRG-APP-000220-WSR-000201  -  CAT II
+# The web server must invalidate session identifiers upon hosted application
+# user logout or other session termination.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000220-WSR-000201
+group:           V-206396
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001185
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise can invalidate the tokens associated with a logged-out
+                 session, delete the session cookie when the browser quits rather than
+                 persisting it across restarts, and give authorization tokens a finite
+                 expiration so no issued identifier outlives the session indefinitely.
+                 Cross-node propagation of a logout takes effect only where search head
+                 clustering and the App Key Value store are in use.
+
+governs:         authorize.conf - Used to create roles.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [general] invalidateSessionTokensOnLogout equals true
+check:           web.conf [settings] tools.sessions.restart_persist not_equals true
+check:           authorize.conf [tokens_auth] expiration not_equals never
+# --- vendor verification: generated, do not edit by hand
+vendor:          authorize.conf [tokens_auth] expiration https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+vendor:          server.conf [general] invalidateSessionTokensOnLogout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] tools.sessions.restart_persist https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Propagation of a logout across nodes, which the spec states takes effect
+                 only when search head clustering and the App Key Value store are enabled -
+                 the deployment architecture
+external:        Deletion of the session cookie in the user's browser once the server has
+                 invalidated it - client browser
+external:        Invalidation of sessions held by a fronting SSO proxy or identity provider
+                 at logout - that component's single logout configuration
+
+citation:        server.conf.spec:81-87 (invalidateSessionTokensOnLogout = <boolean>,
+                 invalidates tokens associated with a logged-out session, default false;
+                 effective only with search head clustering and App Key Value store
+                 enabled); web.conf.spec:934-940 (tools.sessions.restart_persist =
+                 <boolean>; false deletes the session cookie when the browser quits);
+                 authorize.conf.spec:381 ([tokens_auth]) with :390-409 (expiration =
+                 <relative-time-modifier>|never, default +30d)
+finding:         Session identifiers are not invalidated on termination to the extent the
+                 product allows: logout token invalidation is not enabled, the session
+                 cookie is configured to persist across browser restarts, or authorization
+                 tokens are set never to expire.

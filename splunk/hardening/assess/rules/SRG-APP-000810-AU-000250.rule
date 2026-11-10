@@ -1,0 +1,61 @@
+# SRG-APP-000810-AU-000250  -  CAT II
+# The Central Log Server must prevent the installation of
+# organization-defined software and firmware components without verification
+# that the component has been digitally signed using a certificate that is
+# recognized and approved by the organization.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000810-AU-000250
+group:           V-263571
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003992
+control_rev5:    CM-14
+
+contribution:    Splunk can close the channel by which an app is pulled straight onto the
+                 instance, confine the capability that permits an app to be installed to
+                 administrative roles, and verify after the fact that the installed files
+                 still match the release manifest.
+
+governs:         authorize.conf - Used to create roles.
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [applicationsManagement] allowInternetAccess in false|0
+check:           limits.conf [system_checks] enable_install_apps equals true ; authorize.conf [role_user] install_apps absent ; authorize.conf [role_user] edit_local_apps absent ; authorize.conf [role_power] install_apps absent ; authorize.conf [role_power] edit_local_apps absent
+check:           limits.conf [system_checks] installed_files_integrity equals enabled
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] install_apps absent -> limits.conf [system_checks] enable_install_apps equals true ; authorize.conf [role_user] install_apps absent ; authorize.conf [role_user] edit_local_apps absent ; authorize.conf [role_power] install_apps absent ; authorize.conf [role_power] edit_local_apps absent
+vendor:          authorize.conf [role_<roleName>] install_apps https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+vendor:          server.conf [applicationsManagement] allowInternetAccess https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        Verification that a component is digitally signed with a certificate the
+                 organization recognizes: Splunk Enterprise 10.4.2 exposes no setting that
+                 requires or validates a package signature before an app loads, so this
+                 part of the objective is carried by the package producer's signing, the
+                 organization's software acceptance procedure, and the operating system
+                 package manager's signature checking.
+external:        Which software and firmware components are in scope, which the requirement
+                 leaves to the organization.
+external:        Firmware components, which are outside the application entirely and are
+                 carried by the platform.
+
+citation:        Central Log Server SRG SRG-APP-000810-AU-000250 check and fix text;
+                 server.conf.spec:1734 (allowInternetAccess), authorize.conf.spec:760
+                 ([capability::install_apps]), authorize.conf.spec:68 (capabilities
+                 disabled by default), limits.conf.spec:4450 (installed_files_integrity =
+                 enabled | log_only | disabled, default enabled)
+finding:         The instance can reach the remote applications repository, a
+                 non-administrative role holds the capability to install apps, or
+                 installed-file integrity verification is off, so the application does not
+                 confine component installation to the paths where a verification step can
+                 be applied.

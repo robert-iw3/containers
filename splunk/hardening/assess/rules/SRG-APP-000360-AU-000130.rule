@@ -1,0 +1,65 @@
+# SRG-APP-000360-AU-000130  -  CAT III
+# For the host and devices within its scope of coverage, the Central Log
+# Server must be configured to send a real-time alert to the System
+# Administrator (SA) and Information System Security Officer (ISSO) (at a
+# minimum) of all audit failure events, such as loss of communications with
+# hosts and devices, or if log records are no longer being received.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000360-AU-000130
+group:           V-206493
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001858
+control_rev5:    AU-5
+
+contribution:    Splunk carries this with its own reporting and notification tools, which
+                 is what the product STIG directs: a scheduled search over the audit data
+                 with an alert condition and an email recipient list, and the health
+                 reporter's alerting wired to an action.
+
+governs:         health.conf - Thresholds for Splunk reporting on its own health.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] alert_condition non_empty
+check:           savedsearches.conf [<stanza name>] action.email.to non_empty
+check:           savedsearches.conf [<stanza name>] enableSched equals 1
+check:           health.conf [health_reporter] alert.disabled equals 0
+check:           health.conf [health_reporter] alert.actions non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] alert_condition https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        SMTP relay reachability and delivery within seconds, which depends on the
+                 mail server and the network rather than on Splunk
+external:        The SA and ISSO recipient addresses, which the organization supplies
+external:        Which hosts and devices are within the scope of coverage, and the ISSO's
+                 confirmation of receipt that SPLK-CL-000170 obtains by interview
+
+citation:        Two corrections. savedsearches.conf realtime_schedule in 1|true is both
+                 vacuous and a misreading: savedsearches.conf.spec:137-155 defaults it to
+                 true and describes it as how the scheduler computes the next run time, not
+                 whether the alert is real time, and spec:151 directs continuous scheduling
+                 (false) whenever summary indexing is enabled - so the condition could fail
+                 a legitimate configuration while never catching an alert that is not
+                 scheduled at all. enableSched, which defaults to 0 (spec:73-77), is the
+                 setting that decides that. health.conf [feature:*] alert.actions non_empty
+                 is outside the feature stanza's vocabulary: alert.actions is documented
+                 only under [health_reporter] (health.conf.spec:93) and the shipped file
+                 sets it there (health.conf:27), so the condition failed every install;
+                 read over [feature:*] it also demanded an action on the three dozen
+                 shipped features that have nothing to do with audit failure, two of which
+                 ship with alerting disabled (health.conf:74, 83).
+finding:         The application has no enabled, scheduled alert with a recipient list over
+                 audit failure events, or health reporter alerting is turned off, so loss
+                 of communications or a halt in received records raises no notification.

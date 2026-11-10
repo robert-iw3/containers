@@ -1,0 +1,74 @@
+# SRG-APP-001035-WSR-000340  -  CAT I
+# The web server must be a version supported by the vendor.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-001035-WSR-000340
+group:           V-279029
+severity:        high
+cat:             CAT I
+determination:   ORGANIZATIONAL
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-003376
+control_rev5:    SA-22
+
+contribution:    The HTTP service in scope is the Splunk Web application server bundled
+                 inside Splunk Enterprise and started by web.conf [settings] startwebserver
+                 (web.conf.spec:23), not a separately procured and separately versioned web
+                 server product, so the application's contribution is to serve that
+                 component from the single installed Splunk Enterprise release and report
+                 that release through its own interfaces; the specification set exposes no
+                 version or support attribute for the embedded server, and no setting that
+                 makes its release a supported one.
+
+external:        Software deployment that fixes the installed release: Splunk Web is
+                 patched by rebuilding or reinstalling the Splunk Enterprise package or
+                 image, and there is no separate web server package to update.
+external:        Splunk Enterprise software maintenance and support entitlement covering
+                 the installed release, which carries Splunk Web.
+external:        Organizational software lifecycle and patch management procedure
+                 establishing the supported-release baseline and the upgrade trigger before
+                 vendor end of support.
+external:        Where the organization places a separately procured HTTP front end in the
+                 boundary, that product is a distinct component assessed for version
+                 support under its own baseline and entitlement, not against the Splunk
+                 application.
+
+manual_reason:   Splunk Web has no release or support attribute of its own: its support
+                 status is the support status of the Splunk Enterprise release that carries
+                 it, which is a property of the installed package rather than of
+                 configuration. checks.tsv assigns no conf, stanza, or key to this
+                 requirement, and the sweep of all 67 Splunk 10.4.2 *.conf.spec files
+                 returns no key reporting or constraining an embedded HTTP server version
+                 or support level; the only version-adjacent web setting is
+                 web.conf.spec:192-196 updateCheckerBaseURL, a release-notification URL
+                 that may be disabled, which does not determine support status. Deciding
+                 this requirement requires reading the installed release, which is not
+                 Splunk configuration, so no condition in the criterion vocabulary can be
+                 written over it.
+
+citation:        Web Server SRG V4R5, SRG-APP-001035-WSR-000340 (V-279029), severity high,
+                 CCI-003376, SA-22 a: check text "Verify that the web server is a version
+                 supported by the vendor"; fix text "Install or upgrade the webserver to a
+                 version supported by the vendor." No product STIG rule shares CCI-003376;
+                 the sunset Splunk Enterprise 8.x for Linux STIG V2R3 SPLK-CL-000510
+                 (V-274465) fix text is "Upgrade to a version supported by the vendor.",
+                 naming no configuration value. Specification basis that the web server is
+                 an internal component of the product rather than a separately versioned
+                 one: web.conf.spec:16 [settings], web.conf.spec:23 startwebserver,
+                 web.conf.spec:28 httpport, web.conf.spec:70 enableSplunkWebSSL; only
+                 version-adjacent web setting: web.conf.spec:192-196 updateCheckerBaseURL.
+finding:         This determination is made from the perspective of the application layer
+                 alone: the web server addressed here is the Splunk Web component of Splunk
+                 Enterprise, which exposes no configuration setting bearing on its own
+                 version support, so the application's share of this requirement is limited
+                 to serving that component from, and reporting, the single installed Splunk
+                 Enterprise release, and a finding is sustained only where that release is
+                 at or past the vendor's published end of support, or where a separately
+                 procured HTTP front end in the boundary runs an unsupported version under
+                 its own baseline, in either case remedied by upgrading the product rather
+                 than by any Splunk configuration change.

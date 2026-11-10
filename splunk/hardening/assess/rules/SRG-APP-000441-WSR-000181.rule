@@ -1,0 +1,70 @@
+# SRG-APP-000441-WSR-000181  -  CAT II
+# The web server must maintain the confidentiality and integrity of
+# information during preparation for transmission.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000441-WSR-000181
+group:           V-206441
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002420
+control_rev5:    SC-8
+
+contribution:    Before data leaves the instance Splunk can establish TLS to a verified
+                 receiver with its own client certificate on a pinned version, require
+                 indexer acknowledgment so that queued events are not discarded as sent,
+                 and use TLS for the email alert action through either use_ssl for implicit
+                 TLS or use_tls for STARTTLS.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout:<target_group>] useSSL in true|1
+check:           outputs.conf [tcpout:<group>] sslPassword non_empty
+check:           outputs.conf [tcpout:<group>] sslVersions equals tls1.2
+check:           outputs.conf [tcpout:<group>] sslVerifyServerCert in 1|true
+check:           outputs.conf [tcpout:<group>] useACK in 1|true
+check:           alert_actions.conf [email] use_tls in 1|true (added alongside the existing sslVerifyServerCert in 1|true condition)
+check:           alert_actions.conf [email] sslVersions matches ^\s*(tls1\.2|tls1\.3)(\s*,\s*(tls1\.2|tls1\.3))*\s*$
+# --- vendor verification: generated, do not edit by hand
+corrected:       outputs.conf [tcpout:<group>] clientCert non_empty -> outputs.conf [tcpout:<target_group>] useSSL in true|1
+corrected:       alert_actions.conf [email] sslVerifyServerCert in 1|true -> alert_actions.conf [email] use_tls in 1|true (added alongside the existing sslVerifyServerCert in 1|true condition)
+corrected:       alert_actions.conf [email] sslVersions equals tls1.2 -> alert_actions.conf [email] sslVersions matches ^\s*(tls1\.2|tls1\.3)(\s*,\s*(tls1\.2|tls1\.3))*\s*$
+vendor:          alert_actions.conf [email] sslVerifyServerCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          alert_actions.conf [email] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          outputs.conf [tcpout:<group>] clientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-splunk-indexing-and-forwarding-to-use-tls-certificates
+vendor:          outputs.conf [tcpout:<group>] sslPassword https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-splunk-indexing-and-forwarding-to-use-tls-certificates
+vendor:          outputs.conf [tcpout:<group>] sslVerifyServerCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+vendor:          outputs.conf [tcpout:<group>] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          outputs.conf [tcpout:<group>] useACK https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/get-data-into-the-indexer-cluster/use-forwarders-to-get-data-into-the-indexer-cluster
+# --- end vendor verification
+
+external:        Operating system permissions on the persistent queue files when
+                 outputs.conf persistentQueueSize is set, since data staged on disk before
+                 transmission is protected by the file system rather than by the
+                 application
+external:        The receiving indexer's own TLS configuration, which completes the
+                 protected channel
+external:        The SMTP relay's TLS support, which determines whether the email alert
+                 action uses implicit TLS or STARTTLS
+external:        Certificate authority and key material placed on the host per
+                 SPLK-CL-000450
+
+citation:        SRG-APP-000441-WSR-000181 check text; SPLK-CL-000460 fix text;
+                 SPLK-CL-000430 fix text; outputs.conf.spec:160-175, 345-360, 647-712,
+                 779-791, 832-855; alert_actions.conf.spec:287-300, 428-450
+finding:         Data staged for transmission leaves Splunk without the protection the
+                 product can apply: the [tcpout:<group>] output lacks a client certificate,
+                 does not pin sslVersions to tls1.2, does not verify the receiver's
+                 certificate or does not use indexer acknowledgment, or the email alert
+                 action does not verify the SMTP server's certificate on an approved TLS
+                 version.

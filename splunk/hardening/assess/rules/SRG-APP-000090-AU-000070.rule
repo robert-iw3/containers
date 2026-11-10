@@ -1,0 +1,56 @@
+# SRG-APP-000090-AU-000070  -  CAT III
+# The Central Log Server must be configured to allow only the Information
+# System Security Manager (ISSM) (or individuals or roles appointed by the
+# ISSM) to select which auditable events are to be retained.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000090-AU-000070
+group:           V-206454
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000171
+control_rev5:    AU-12
+
+contribution:    Splunk can restrict who may change what is collected and retained: the
+                 capabilities that let a user alter audit settings, inputs, forwarding and
+                 index definitions (change_audit, edit_monitor, edit_tcp, edit_forwarders,
+                 indexes_edit) are granted per role in authorize.conf and are disabled
+                 unless listed, and authentication.conf [roleMap_<authSettings-key>] binds
+                 directory groups to those roles rather than to individual local accounts.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] change_audit absent
+check:           authorize.conf [role_user] indexes_edit absent
+check:           authorize.conf [role_user] edit_monitor absent
+check:           authorize.conf [role_user] edit_tcp absent
+check:           authorize.conf [role_user] edit_forwarders absent
+
+external:        The ISSM's list of individuals or roles appointed to select which
+                 auditable events are retained, and the comparison of role membership
+                 against it, is an organizational record; SPLK-CL-000140 performs that
+                 comparison against site documentation.
+external:        Membership of the LDAP or SAML group mapped to the privileged role is held
+                 in the directory service and administered outside the application, which
+                 is why SPLK-CL-000140 directs the assessor to the LDAP administrator for
+                 it.
+
+citation:        SRG-APP-000090-AU-000070 check text; SPLK-CL-000140 check and fix text;
+                 authorize.conf.spec:67-77 ([role_<roleName>], <capability> = <enabled>,
+                 "'enabled' is the only accepted value here, as capabilities are disabled
+                 by default"); authorize.conf.spec:483-485 ([capability::change_audit]),
+                 :555 ([capability::edit_forwarders]), :597 ([capability::edit_monitor]),
+                 :699 ([capability::edit_tcp]), :753 ([capability::indexes_edit]);
+                 authentication.conf.spec:351-360 ([roleMap_<authSettings-key>])
+finding:         The general-purpose 'user' role in authorize.conf holds one or more of the
+                 capabilities that select what is collected and retained (change_audit,
+                 indexes_edit, edit_monitor, edit_tcp, edit_forwarders), so accounts beyond
+                 those appointed by the ISSM can change which auditable events are
+                 retained.

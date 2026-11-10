@@ -1,0 +1,55 @@
+# SRG-APP-000374-WSR-000172  -  CAT II
+# The web server must generate log records that can be mapped to Coordinated
+# Universal Time (UTC) or Greenwich Mean Time (GMT).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000374-WSR-000172
+group:           V-206425
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001890
+control_rev5:    AU-8
+
+contribution:    Splunk Web is a component of the same Splunk Enterprise instance rather
+                 than a separate web server, so the application names its own access log
+                 and, where that log is indexed, maps its timestamps to UTC through the
+                 splunk_web_access source type.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           props.conf [splunk_web_access] TIME_PREFIX non_empty
+check:           props.conf [splunk_web_access] TIME_FORMAT non_empty
+check:           props.conf [splunk_web_access] TZ non_empty
+check:           props.conf [splunk_web_access] TZ_ALIAS present
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The time zone of the splunkd process that writes the access record comes
+                 from the host process environment, which is set outside the Splunk
+                 configuration files assessed here.
+external:        Host clock accuracy and synchronization to an authoritative time source
+                 are operating system and time service functions.
+external:        Where the Splunk Web access log is monitored into an index by a different
+                 instance, that instance's input configuration carries the remainder.
+
+citation:        web.conf.spec:16 [settings], :871 log.access_file = <filename> default
+                 web_access.log; props.conf.spec:529 TIME_PREFIX, :554 TIME_FORMAT, :580
+                 TZ, :592 TZ_ALIAS.
+finding:         Assessed at the application layer alone: Splunk Web names no access log,
+                 or the splunk_web_access source type states no TIME_FORMAT and no TZ, so
+                 the access record timestamps are not deterministically mapped to UTC or
+                 GMT by application configuration.

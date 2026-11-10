@@ -1,0 +1,54 @@
+# SRG-APP-000095-AU-000050  -  CAT III
+# The System Administrator (SA) and Information System Security Manager
+# (ISSM) must configure the retention of the log records based on
+# criticality level, event type, and/or retention period, at a minimum.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000095-AU-000050
+group:           V-241819
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001914 CCI-000130
+control_rev5:    AU-12 AU-3
+
+contribution:    Splunk sets retention per index: frozenTimePeriodInSecs is the retention
+                 period in seconds, so the product can express whatever period the
+                 organization documents.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+
+check:           indexes.conf [] frozenTimePeriodInSecs present
+
+external:        The documented retention period, criticality levels and event types are
+                 organization-defined; SPLK-CL-000120 compares frozenTimePeriodInSecs
+                 against the site documentation, which the application cannot supply.
+external:        Assignment of the SA and ISSM to a Splunk role that holds indexes_edit is
+                 account provisioning and ISSM appointment; authorize.conf records a role's
+                 capabilities, not who holds the role.
+
+citation:        DIRECTION, inverted. Removed authorize.conf [role_user] indexes_edit
+                 absent. The check text reads "Verify the SA and ISSM have been assigned
+                 the privileges needed to allow these roles to change the level and type of
+                 log records that are retained", and CCI-001914 is a provision requirement
+                 - the capability must exist for the named roles. Withholding indexes_edit
+                 from the ordinary user role is the opposite test, and it passes vacuously
+                 anyway: the shipped [role_user] in system/default/authorize.conf does not
+                 list indexes_edit, so the condition reports compliant without any evidence
+                 that the required privilege exists. A positive condition is not a sound
+                 replacement either, because authorize.conf.spec accepts only "enabled" for
+                 a capability and the product ships indexes_edit = enabled under
+                 [role_admin], so such a condition could never fail. The privilege question
+                 is therefore recorded as an external dependency.
+finding:         No retention period is expressed for the indexes in scope
+                 (frozenTimePeriodInSecs is not set), so the retention the organization
+                 documented by criticality level, event type and period is not configured
+                 in the product.

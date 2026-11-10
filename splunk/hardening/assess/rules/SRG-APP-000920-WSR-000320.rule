@@ -1,0 +1,48 @@
+# SRG-APP-000920-WSR-000320  -  CAT II
+# The web server must synchronize system clocks within and between systems
+# or system components.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000920-WSR-000320
+group:           V-264358
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-004922
+control_rev5:    SC-45
+
+contribution:    Splunk Web has no NTP client and takes its clock from the host, so the
+                 application's share is the skew bound it enforces between the search head
+                 and its peers and the unambiguous time zone it applies to events and to
+                 the user interface.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+
+check:           limits.conf [search] addpeer_skew_limit present
+check:           limits.conf [search] max_tolerable_skew present
+
+external:        The host operating system's time service (NTP or chrony), which
+                 synchronizes the clock Splunk Web reads
+external:        The authoritative time source shared with the host and with the devices in
+                 scope of coverage
+external:        props.conf TZ, which is set per source type in a [<spec>] stanza and is
+                 correctly left unset where the host or forwarder time zone is intended
+                 (props.conf.spec:580-590), and user-prefs.conf [general] tz, which is a
+                 per-user display preference that falls back to the search head time zone
+                 when unset (user-prefs.conf.spec:53-58)
+external:        Operating system STIG settings for the time service
+
+citation:        SRG-APP-000920-WSR-000320 check text; SRG-APP-000086-AU-000030 check text;
+                 limits.conf.spec:493-502, 529-536; props.conf.spec:580-590;
+                 user-prefs.conf.spec:53-58
+finding:         Splunk expresses no clock skew bound between its own components
+                 (limits.conf [search] addpeer_skew_limit or max_tolerable_skew is not
+                 available in the assessed configuration), so divergence between the search
+                 head serving the web interface and its peers is neither refused nor
+                 reported.

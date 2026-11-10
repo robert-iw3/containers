@@ -1,0 +1,56 @@
+# SRG-APP-000367-AU-000230  -  CAT III
+# The Central Log Server must be configured to generate reports that support
+# on-demand reporting requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000367-AU-000230
+group:           V-206500
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001879
+control_rev5:    AU-7
+
+contribution:    Splunk can define a report, dispatch it on a stated cycle, and deliver the
+                 rendered result through the email alert action, which is what carries
+                 report generation past ad hoc search into support for a reporting
+                 requirement.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] enableSched equals 1
+check:           savedsearches.conf [<stanza name>] cron_schedule non_empty
+check:           savedsearches.conf [<stanza name>] action.email in 1|true
+check:           savedsearches.conf [<stanza name>] action.email.sendpdf present
+check:           savedsearches.conf [<stanza name>] schedule_window present
+check:           alert_actions.conf [email] present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] action.email.sendpdf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] schedule_window https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The reporting cycle, the recipients and the required report format are
+                 organization-defined parameters recorded in the system security plan.
+external:        Delivery of the report rests on the mail transfer agent, its credentials
+                 and network reachability from the Splunk host, none of which is Splunk
+                 configuration.
+
+citation:        savedsearches.conf.spec:44 search, :73 enableSched = [0|1] default 0, :79
+                 cron_schedule, :193 schedule_window, :300 action.email = <boolean> default
+                 false, :383 action.email.sendpdf = [1|0] default 0;
+                 alert_actions.conf.spec:157 [email].
+finding:         Assessed at the application layer alone: a report defined in
+                 savedsearches.conf to satisfy an audit reporting requirement is not
+                 dispatched (enableSched not 1 or no cron_schedule) or has no delivery
+                 action configured, so the application is not configured to the fullest
+                 extent it can contribute to this requirement.

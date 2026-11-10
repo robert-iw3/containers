@@ -1,0 +1,58 @@
+# SRG-APP-000225-WSR-000141  -  CAT II
+# The web server must provide a clustering capability.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000225-WSR-000141
+group:           V-206406
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-001190
+control_rev5:    SC-24
+
+contribution:    Splunk Enterprise provides the clustering capability this requirement asks
+                 for: server.conf configures index clustering, where an instance operates
+                 as a cluster manager, peer or search head with a replication factor, and
+                 search head clustering, where members share a management URI list and
+                 replicate search artifacts. The capability is present in the product;
+                 whether it is turned on is an availability decision about this deployment.
+
+external:        Whether this instance is designated a high-availability server, which
+                 determines whether the requirement applies at all - system security plan
+                 and organizational availability decision
+external:        The site's high-availability architecture, including the number of peers,
+                 the replication and search factors chosen, and any load balancer in front
+                 of the search tier - deployment architecture
+external:        Failover of components outside Splunk, such as storage and network paths -
+                 infrastructure
+
+manual_reason:   The requirement is that the product provide a clustering capability, and
+                 the check makes the rule not applicable where the server is not a
+                 high-availability server. Splunk Enterprise provides both index clustering
+                 and search head clustering, so the application's share is met by product
+                 design. Whether this instance is designated high availability cannot be
+                 established from configuration, and a condition requiring [clustering]
+                 mode to be other than "disabled" would fail a correctly built
+                 single-instance deployment - a false finding against the application.
+
+citation:        server.conf.spec:2432-2438 ([clustering] mode =
+                 [manager|peer|searchhead|disabled], "Sets operational mode for this
+                 cluster node", default disabled); server.conf.spec:2443-2449
+                 (manager_uri); server.conf.spec:2468-2474 (manager_switchover_mode =
+                 [disabled|auto|manual], cluster manager redundancy);
+                 server.conf.spec:2929-2935 ([clustering] replication_factor, default 3);
+                 server.conf.spec:4479-4482 ([shclustering] servers_list);
+                 server.conf.spec:4534-4537 ([shclustering] replication_factor, default 3);
+                 server.conf.spec:4087 and :5137 ([replication_port://<port>] and
+                 [replication_port-ssl://<port>])
+finding:         Not decidable from Splunk configuration: Splunk Enterprise provides both
+                 index clustering and search head clustering, so the capability this
+                 requirement asks for exists in the product; whether clustering must be
+                 enabled follows from the system's high-availability designation, which is
+                 recorded outside the application.

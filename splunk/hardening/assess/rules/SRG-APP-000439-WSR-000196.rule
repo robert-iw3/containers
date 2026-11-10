@@ -1,0 +1,41 @@
+# SRG-APP-000439-WSR-000196  -  CAT II
+# The web server must only use forward proxies that route HTTP/2 requests
+# upstream.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000196
+group:           V-264366
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk can only state whether splunkd sends its own outbound requests
+                 through a proxy and for which destinations, through server.conf
+                 [proxyConfig] http_proxy, https_proxy, proxy_rules and no_proxy; it cannot
+                 select the HTTP version used upstream.
+
+external:        The forward proxy product, which decides whether it routes HTTP/2 requests
+                 upstream
+external:        The organizational determination of whether a forward proxy is used at
+                 all, which triggers the check text's own not applicable clause
+
+manual_reason:   The check text makes the requirement not applicable where no forward proxy
+                 is used, and where one is used Splunk exposes no setting for the upstream
+                 HTTP version: server.conf.spec:1201-1288 limits [proxyConfig] to naming a
+                 proxy server and the destinations routed through it, and states that
+                 splunkd supports only the HTTP CONNECT method for proxied HTTPS requests,
+                 while enable_tls_proxy merely moves outbound TLS to the splunk-tlsd helper
+                 for Splunk Telemetry and SplunkBase connections.
+
+citation:        SRG-APP-000439-WSR-000196 check text; server.conf.spec:1201-1288
+finding:         This requirement cannot be decided from Splunk configuration; where a
+                 forward proxy is used, that proxy must be shown to route HTTP/2 requests
+                 upstream.

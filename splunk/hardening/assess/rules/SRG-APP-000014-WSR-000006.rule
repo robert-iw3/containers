@@ -1,0 +1,120 @@
+# SRG-APP-000014-WSR-000006  -  CAT II
+# The web server must use encryption strength in accordance with the
+# categorization of data hosted by the web server when remote connections
+# are provided.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000014-WSR-000006
+group:           V-206352
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-000068
+control_rev5:    AC-17
+
+contribution:    Splunk selects the TLS versions, cipher suites, and elliptic curves for
+                 both the Splunk Web listener and the splunkd listener, and selects whether
+                 the instance runs its cryptographic modules in FIPS mode; those settings
+                 are the whole of the application's share of encryption strength.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           web.conf [settings] enableSplunkWebSSL in 1|true
+check:           web.conf [settings] sslVersions matches ^\s*(tls1\.2|\*|tls)(\s*,\s*-(ssl2|ssl3|tls1\.0|tls1\.1))*\s*$
+check:           web.conf [settings] sslVersions matches tls1\.2
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*ssl3
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
+check:           web.conf [settings] cipherSuite non_empty
+check:           server.conf [sslConfig] sslVersions matches ^\s*(tls1\.2|\*|tls)(\s*,\s*-(ssl2|ssl3|tls1\.0|tls1\.1))*\s*$
+check:           server.conf [sslConfig] sslVersions matches tls1\.2
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*ssl3
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
+check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
+check:           server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+check:           server.conf [sslConfig] cipherSuite non_empty
+check:           server.conf [sslConfig] ecdhCurves non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS in 1|true -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+corrected:       server.conf [sslConfig] sslVersionsForClient matches ^\s*(tls1\.2|\*|tls)(\s*,\s*-(ssl2|ssl3|tls1\.0|tls1\.1))*\s*$ -> server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+vendor:          server.conf [sslConfig] cipherSuite https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] ecdhCurves https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          server.conf [sslConfig] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          server.conf [sslConfig] sslVersionsForClient https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] cipherSuite https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          web.conf [settings] ecdhCurves https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+retired_check:   web.conf [settings] ecdhCurves non_empty
+                 reason: 10.4.2 spec: "A list of ECDH curves to use for ECDH key
+                         negotiation... The server supports only the curves specified in the
+                         list. Splunk software only supports named curves that have been
+                         specified by their SHORT names... Example setting: 'ecdhCurves =
+                         prime256v1,secp384r1,secp521r1'. The default can vary." Vendor
+                         page: the [sslConfig] setting "controls key exchange curves for TLS
+                         1.2 connections", and for TLS 1.3 "the equivalent setting is
+                         'groups' in the [tls1.3] stanza".
+# --- end vendor verification
+
+external:        The categorization of the data hosted, and therefore the required
+                 algorithm strength, is an organizational determination recorded in the
+                 system security plan.
+external:        FIPS mode depends on the host operating system providing a validated
+                 cryptographic module and, per splunk-launch.conf.spec:114-115, a kernel
+                 operating in FIPS mode; the operating system baseline carries that part.
+external:        SPLUNK_FIPS is a one-time setting that must be in place before the
+                 instance first starts (splunk-launch.conf.spec:118-122), so remediation of
+                 this condition is carried by the build or installation procedure rather
+                 than by a configuration change on a running instance.
+
+citation:        CHANGED for INVENTION and a verdict-altering false finding in the
+                 sslVersions test. (1) The reviewed regex
+                 ^\s*(tls1\.2|\*\s*,\s*-ssl3\s*,\s*-tls1\.0\s*,\s*-tls1\.1)\s*$ admits
+                 exactly two spellings and rejects hardened values the specification
+                 explicitly permits. Tested against the reviewed pattern, all three of
+                 'tls1.2,-ssl3', '*,-ssl2,-ssl3,-tls1.0,-tls1.1' and
+                 'tls,-ssl3,-tls1.0,-tls1.1' fail, yet web.conf.spec:245 and
+                 server.conf.spec:772-773 state that '-ssl2 is accepted in the version list
+                 but does nothing', and :242-244 and :769 make 'tls' a legitimate positive
+                 term. An instance hardened with the -ssl2 spelling, which is the form the
+                 vendor's own default files have historically carried, would be written up
+                 as a finding with no weak protocol enabled anywhere. The replacement is a
+                 two-condition property test, both halves anchored so it behaves
+                 identically under re.search and re.fullmatch: the first restricts the
+                 list's positive term and confines the rest to exclusions, the second
+                 requires all three weak versions to be excluded whenever the positive term
+                 is a wildcard. Verified over 18 values: it passes tls1.2, tls1.2 with
+                 exclusions, '*,-ssl3,-tls1.0,-tls1.1' in both spaced and unspaced form,
+                 '*,-ssl2,-ssl3,-tls1.0,-tls1.1' and 'tls,-ssl3,-tls1.0,-tls1.1'; it fails
+                 '*', 'tls', '*,-ssl2', '*,-ssl3,-tls1.0', 'tls1.1', 'ssl3',
+                 'tls1.0,tls1.2', 'tls1.2,tls1.1' and the empty value. Note for
+                 maintenance, not a defect: the spec set shipped here lists only ssl3,
+                 tls1.0, tls1.1 and tls1.2 (web.conf.spec:241, server.conf.spec:767), so a
+                 value of tls1.3 fails both patterns; if a later maintenance release adds
+                 tls1.3 to the vocabulary the first pattern must be widened, or this
+                 criterion will fail a stronger configuration. (2) SPLUNK_FIPS equals:1 is
+                 outside the vocabulary the authority itself uses:
+                 splunk-launch.conf.spec:110 declares [0|1] but :115 and :119-120 instruct
+                 the operator to set it to 'true', so an instance configured exactly as the
+                 specification directs would fail. Relaxed to in:1|true. (3) No scope
+                 change: every condition remains a Splunk configuration value, and the
+                 kernel and module dependency plus the one-time install constraint are
+                 stated in external_dependencies so remediation is not misrepresented as a
+                 live configuration edit.
+finding:         Splunk Enterprise is not configured to restrict the Splunk Web and splunkd
+                 listeners to TLS 1.2 with FIPS mode enabled, so the application is not
+                 configured to the extent the product allows toward approved encryption
+                 strength for remote connections.

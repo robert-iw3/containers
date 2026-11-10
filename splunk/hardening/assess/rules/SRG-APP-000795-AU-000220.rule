@@ -1,0 +1,71 @@
+# SRG-APP-000795-AU-000220  -  CAT II
+# The Central Log Server must alert organization-defined personnel or roles
+# upon detection of unauthorized access, modification, or deletion of audit
+# information.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000795-AU-000220
+group:           V-263568
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003831
+control_rev5:    AU-9
+
+contribution:    Splunk implements alerting as a saved search carrying a trigger condition
+                 and a notification action, and supplies its own detection sources - the
+                 audit trail for access to audit information and rawdata hashing for its
+                 modification or deletion - so the application can hold the whole alert and
+                 the recipient list the organization names.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           savedsearches.conf [<stanza name>] alert_condition non_empty
+check:           savedsearches.conf [<stanza name>] counttype equals custom
+check:           savedsearches.conf [<stanza name>] action.email in 1|true
+check:           savedsearches.conf [<stanza name>] action.email.to non_empty
+check:           alert_actions.conf [email] present
+check:           indexes.conf [<index>] enableDataIntegrityControl in 1|true
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] alert_condition https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] counttype https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The personnel or roles to notify are an organization-defined parameter;
+                 the application can hold the list but cannot determine it.
+external:        Delivery of the notification rests on the mail transfer agent and on
+                 network reachability from the Splunk host.
+external:        Product STIG SPLK-CL-000140, attached through this requirement's CCI,
+                 carries a personnel element - that admin role membership matches the
+                 ISSM's appointment list - through the directory service group mapped to
+                 the admin role and through an ISSM-maintained roster; neither the roster
+                 nor the directory group membership is a Splunk setting.
+external:        Detecting unauthorized access to or deletion of the index files outside
+                 Splunk requires operating system file auditing, which Splunk can ingest
+                 but cannot generate.
+
+citation:        savedsearches.conf.spec:31 [<stanza name>], :44 search, :249 counttype =
+                 number of events | number of hosts | number of sources | custom | always
+                 default always, :270 alert_condition = <search string>, :300 action.email,
+                 :304 action.email.to "REQUIRED"; alert_actions.conf.spec:157 [email];
+                 indexes.conf.spec:594 enableDataIntegrityControl default false. Product
+                 STIG SPLK-CL-000140 check and fix text. No condition is written over
+                 audit.conf [auditconfig:/path] enabled, which is not declared in the
+                 staged specification set.
+finding:         Assessed at the application layer alone: no saved search carries a trigger
+                 condition over access to, modification of, or deletion of audit
+                 information with a notification action and a recipient list, or rawdata
+                 integrity hashing is not enabled on the audit indexes so the modification
+                 detection has no source.

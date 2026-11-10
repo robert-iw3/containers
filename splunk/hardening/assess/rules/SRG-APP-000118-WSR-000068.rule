@@ -1,0 +1,54 @@
+# SRG-APP-000118-WSR-000068  -  CAT II
+# Web server log files must only be accessible by privileged users.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000118-WSR-000068
+group:           V-206368
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000162
+control_rev5:    AU-9
+
+contribution:    Splunk Web's access and service records are reachable through the product
+                 only by way of the internal indexes, so the application's share is that
+                 the general-purpose roles are not granted search of those indexes.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] srchIndexesAllowed matches tls1\.2
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*ssl3
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.0
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.1
+check:           authorize.conf [role_power] srchIndexesAllowed matches tls1\.2
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*ssl3
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.0
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.1
+
+external:        File permissions on the log directory holding web_access.log and
+                 web_service.log - SPLK-CL-000190 implements this with splunk-user
+                 ownership and mode 700 at the operating system layer
+external:        Which roles the organization treats as privileged for web server log
+                 review
+
+citation:        Three corrections. not_in *|_* carries the same wildcard inversion
+                 documented on SRG-APP-000118-AU-000100 and is replaced.
+                 srchIndexesDisallowed present is removed because the setting has no
+                 default (authorize.conf.spec:297-307) and no shipped role sets it, so the
+                 condition marked a stock, correctly scoped install as a finding - and the
+                 deny-list is not the only way to express the boundary, since the
+                 allow-list already excludes internal indexes. web.conf log.access_file
+                 non_empty is removed as vacuous (web.conf.spec:871-874 supplies the
+                 default) and because protecting the file itself is the operating system
+                 permission that SPLK-CL-000190 sets, now stated as an external dependency
+                 instead of being tested as though Splunk configured it.
+finding:         The role_user or role_power definition grants search of the internal
+                 indexes that carry the Splunk Web access and service records, so those
+                 records are readable by unprivileged accounts.

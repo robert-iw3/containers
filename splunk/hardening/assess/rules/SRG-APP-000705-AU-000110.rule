@@ -1,0 +1,63 @@
+# SRG-APP-000705-AU-000110  -  CAT II
+# The Central Log Server must disable accounts when the accounts are no
+# longer associated to a user.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000705-AU-000110
+group:           V-263557
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-003628
+control_rev5:    AC-2
+
+contribution:    Splunk cannot itself determine that an account no longer belongs to a
+                 user; it keeps the path open on which an external identity authority's
+                 disable or delete arrives, and surfaces the trace a departed owner leaves
+                 behind in scheduled searches.
+
+external:        The enterprise directory service or identity provider determines when an
+                 account is no longer associated to a user and must push the resulting
+                 disable or delete; Splunk honors it at the next authentication.
+external:        Where accounts are provisioned through SCIM, the provisioning authority
+                 issues the deprovisioning call.
+external:        The organization's offboarding procedure, and the review that finds
+                 accounts with no owner, are procedural and outside the application.
+external:        An assessor may use Splunk's orphaned scheduled search notification as
+                 evidence that departed owners are detected, but it notifies rather than
+                 disables.
+
+manual_reason:   No setting in the 10.4.2 specification set determines that an account is
+                 no longer associated to a user, or disables it on that basis, so
+                 configuration cannot decide this requirement.
+
+citation:        limits.conf [system_checks] orphan_searches "Enables/disables automatic UI
+                 message notifications to admins for scheduled saved searches with invalid
+                 owners" and defaults to enabled (limits.conf.spec:4486-4498). It raises a
+                 message about a search; it disables no account, so equals:enabled yields a
+                 confident status for a requirement it does not touch, and because enabled
+                 is already the default the condition can only fail an instance that has
+                 turned the notification off - a finding over a UI message, not over
+                 account disabling. The server.conf [teleport_supervisor] disabled and
+                 web-features.conf [feature:identity_sidecar_scim] enabled conditions are
+                 the SCIM token process and the SAML dialog toggle described under
+                 SRG-APP-000700-WSR-000100: both already sit in the state the criterion
+                 demands by default (server.conf.spec:6584-6591,
+                 web-features.conf.spec:400-410), neither disables an account, and neither
+                 appears in any check or fix text, since this SRG carries no product STIG
+                 rule. The inventory's scimSupportedDomains and scsSyncUserDeletes keys
+                 exist in no .conf.spec in the 10.4.2 set. Nothing in the product expresses
+                 disassociation, so this is case 4: manual, with the lifecycle authority
+                 named in the external dependencies rather than asserted through a proxy
+                 setting.
+finding:         No application-layer finding is available: Splunk has no setting that
+                 detects an account with no associated user or disables it, so the assessor
+                 records the identity authority that performs the disable; raise a finding
+                 only where no authority outside the application does so.

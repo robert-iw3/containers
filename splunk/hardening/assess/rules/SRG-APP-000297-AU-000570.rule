@@ -1,0 +1,61 @@
+# SRG-APP-000297-AU-000570  -  CAT III
+# The Central Log Server must display an explicit logout message to users
+# indicating the reliable termination of authenticated communications
+# sessions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000297-AU-000570
+group:           V-221924
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-002364
+control_rev5:    AC-12
+
+contribution:    Splunk Web renders its own logout page after a user-initiated logout; the
+                 application displays the message but exposes no setting that supplies,
+                 suppresses or alters its text.
+
+external:        The wording of Splunk Web's built-in logout page is compiled into the
+                 product, so an assessor confirms the explicit logout message by observing
+                 a logout in the interface.
+external:        Where logout redirects to a SAML identity provider or to a URL named by
+                 redirectAfterLogoutToUrl, the final page the user sees is that service's
+                 and is outside the application.
+external:        Where the logout message must carry organization-specific wording, that is
+                 a product feature request, not a configuration item.
+
+manual_reason:   The wording of Splunk Web's logout page is compiled into the product and
+                 no .conf setting in the 10.4.2 specification set expresses it, so the
+                 explicit logout message is confirmed by observing a logout rather than by
+                 reading a value.
+
+citation:        The reviewed criterion contradicts itself: its own contribution text
+                 states the logout page wording is compiled into the product and not
+                 exposed by configuration, then makes the verdict turn on
+                 authentication.conf redirectAfterLogoutToUrl. That setting has no default
+                 and lives inside a SAML [<saml-authSettings-key>] stanza
+                 (authentication.conf.spec:780-784) that exists only where authType is SAML
+                 against a default of Splunk (authentication.conf.spec:30-33), so as the
+                 single ANDed condition it reports a finding on every instance not using
+                 SAML - a finding for a message the product displays and no setting can
+                 change. The messages.conf keys the inventory carries for this requirement
+                 do not reach it either: [<component>:<key>] message, action and target
+                 define platform bulletin messages keyed to a component the software itself
+                 raises, with target choosing between Splunk Web and the log
+                 (messages.conf.spec:68-73, 79-83, 116-124), and there is no component or
+                 key for a user-initiated logout. Nothing in the specification set
+                 expresses the logout message, so the criterion is manual and
+                 redirectAfterLogoutToUrl is recorded as the related SAML behavior, not as
+                 a test.
+finding:         Not expected to be a finding against the application: Splunk Web displays
+                 its built-in logout page on a user-initiated logout, and an assessor
+                 records that observation; raise a finding only if no logout confirmation
+                 is displayed.

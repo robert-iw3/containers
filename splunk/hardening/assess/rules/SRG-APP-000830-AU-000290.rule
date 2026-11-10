@@ -1,0 +1,53 @@
+# SRG-APP-000830-AU-000290  -  CAT II
+# The Central Log Server must for password-based authentication, maintain a
+# list of commonly used, expected, or compromised passwords on an
+# organization-defined frequency.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000830-AU-000290
+group:           V-263574
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004058
+control_rev5:    IA-5
+
+contribution:    None toward the list itself: Splunk Enterprise 10.4.2 has no configuration
+                 setting that holds, references, or maintains a list of commonly used,
+                 expected, or compromised passwords. What the product can do about weak
+                 passwords is enforce composition rules and reject reuse in
+                 authentication.conf [splunk_auth] (minPasswordLength,
+                 minPasswordUppercase, minPasswordLowercase, minPasswordDigit,
+                 minPasswordSpecial, enablePasswordHistory, passwordHistoryCount); those
+                 are assessed under SRG-APP-000845 and SRG-APP-000870 and are not a deny
+                 list.
+
+external:        The list of commonly used, expected, or compromised passwords and the
+                 frequency at which it is maintained - carried by organizational policy.
+external:        Screening of passwords against that list - carried by the enterprise
+                 directory service or identity provider (for example an Active Directory
+                 password filter) where authentication.conf authType is LDAP, SAML, or
+                 ProxySSO.
+external:        For native Splunk accounts, no screening component exists in the product,
+                 so compliance for those accounts rests on the organization's
+                 account-management procedure.
+
+manual_reason:   No conf key in the product expresses a password deny list or the frequency
+                 at which it is maintained, so no observed configuration value can decide
+                 this requirement; the frequency is organization-defined in any case.
+
+citation:        splunk-spec-files/authentication.conf.spec:437-600 ([splunk_auth]:
+                 complexity, history, expiration and lockout settings only; no deny-list
+                 setting in the stanza)
+finding:         Not a finding against the application: Splunk Enterprise 10.4.2 has no
+                 setting that maintains a list of commonly used, expected, or compromised
+                 passwords, so this requirement is carried by the organization's policy and
+                 by the directory service or identity provider that screens passwords; this
+                 determination is from the perspective of the application layer alone and
+                 the status must be recorded from those components.

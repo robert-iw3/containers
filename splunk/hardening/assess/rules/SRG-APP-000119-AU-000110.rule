@@ -1,0 +1,56 @@
+# SRG-APP-000119-AU-000110  -  CAT II
+# The Central Log Server must protect audit information from unauthorized
+# modification.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000119-AU-000110
+group:           V-221915
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000163
+control_rev5:    AU-9
+
+contribution:    Indexed data cannot be edited through Splunk; the only in-product path
+                 that changes what a search returns is the delete command, which needs both
+                 the delete_by_keyword capability and an index named in the role's
+                 deleteIndexesAllowed list, so the application's share is to keep that path
+                 off the general-purpose roles and away from the internal indexes.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] delete_by_keyword absent
+check:           authorize.conf [role_power] delete_by_keyword absent
+check:           authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] deleteIndexesAllowed matches tls1\.2 -> authorize.conf [role_can_delete] deleteIndexesAllowed not_matches (^|;)[[:space:]]*_
+vendor:          authorize.conf [role_<roleName>] deleteIndexesAllowed https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+# --- end vendor verification
+
+external:        Write access to the index bucket files on disk - SPLK-CL-000190 implements
+                 this with splunk-user ownership and mode 700 at the operating system layer
+external:        Which roles the organization authorizes to run the delete command
+
+citation:        Two corrections. delete_by_keyword absent read over every role stanza
+                 fails a stock install: the shipped role_can_delete holds it
+                 (authorize.conf:243) and exists for exactly that purpose, and neither the
+                 check text nor SPLK-CL-000190 directs its removal. It also cannot be read
+                 over arbitrary roles at all, because capabilities are inherited through
+                 importRoles (authorize.conf.spec:73-74, 79-84), so a role holding the
+                 capability by inheritance has no line to read. Pinned to the two shipped
+                 general-purpose roles the condition passes stock and fails a real grant.
+                 deleteIndexesAllowed not_in *|_* repeats the wildcard inversion: the
+                 shipped role_can_delete value is "*" (authorize.conf:247), which per
+                 spec:312 and spec:284-288 cannot reach the internal indexes, so the
+                 condition failed stock, while "*;_*" would have passed a literal not_in.
+finding:         A general-purpose role holds delete_by_keyword, or a role's
+                 deleteIndexesAllowed list reaches the internal indexes, so the records in
+                 the audit trail can be masked from search by an account that is not
+                 privileged.

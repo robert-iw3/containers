@@ -1,0 +1,44 @@
+# SRG-APP-000123-AU-000150  -  CAT II
+# The Central Log Server must protect audit tools from unauthorized
+# deletion.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000123-AU-000150
+group:           V-221919
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001495
+control_rev5:    AU-9
+
+contribution:    Deleting a saved search, report or configuration object that serves as an
+                 audit tool requires write access to it or the capability that bypasses
+                 access control lists, so the application's share is that this capability
+                 stays off the general-purpose roles.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] admin_all_objects absent
+check:           authorize.conf [role_power] admin_all_objects absent
+
+external:        Delete permissions on the Splunk binaries and installation directories -
+                 SPLK-CL-000190 implements this at the operating system layer
+external:        Object-level write access recorded in default.meta, which the btool-based
+                 collector does not read
+
+citation:        restmap.conf capability.delete present is removed for the reason given on
+                 SRG-APP-000121-AU-000130 - the stanza exists only where an app declares
+                 its own REST endpoint, so the condition fails a conformant deployment that
+                 declares none. admin_all_objects absent over [role_<roleName>] fails every
+                 install because the shipped role_admin holds it (authorize.conf:290);
+                 pinned to the two shipped general-purpose roles it passes stock and fails
+                 a real grant.
+finding:         A general-purpose role holds admin_all_objects, so the objects that serve
+                 as audit tools can be deleted by an account that is not privileged.

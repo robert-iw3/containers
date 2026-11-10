@@ -1,0 +1,62 @@
+# SRG-APP-000875-WSR-000280  -  CAT II
+# The web server must, for public key-based authentication, implement a
+# local cache of revocation data to support path discovery and validation.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000875-WSR-000280
+group:           V-264354
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004068
+control_rev5:    IA-5
+
+contribution:    For the web tier the application can require a client certificate and
+                 validate its status against locally held revocation data: web.conf
+                 [settings] requireClientCert makes Splunk Web demand and validate the
+                 client certificate, and server.conf [sslConfig]
+                 certificateStatusValidationMethod = crl turns on certificate status
+                 validation across all Splunk TLS channels, Splunk Web included, consuming
+                 the PEM revocation files held in the instance's CRL directory.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           web.conf [settings] requireClientCert in true|True|TRUE|t|1|yes
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        Retrieval and refresh of the revocation list - carried by a scheduled
+                 operating-system job or the PKI's distribution process; the product does
+                 not fetch CRLs.
+external:        The trust anchor for path discovery - supplied through web.conf
+                 sslRootCAPath, which the spec documents as falling back to the server.conf
+                 setting of the same name; an empty web.conf value is therefore not
+                 asserted and is not by itself a shortfall.
+external:        OCSP-based status checking, if required in addition to CRLs - not offered
+                 by the product; carried by a PKI-terminating proxy or the host platform.
+external:        Where an SSO proxy terminates PKI in front of Splunk Web per
+                 SPLK-CL-000490, client certificate validation and revocation checking are
+                 carried by that proxy.
+
+citation:        splunk-spec-files/server.conf.spec:1125
+                 (certificateStatusValidationMethod, applies to Splunk Web channel, default
+                 empty); splunk-spec-files/web.conf.spec:108 (sslRootCAPath, falls back to
+                 server.conf), :151 (requireClientCert, default false)
+finding:         The web tier does not validate presented certificates against locally
+                 cached revocation data - server.conf [sslConfig]
+                 certificateStatusValidationMethod is not set to "crl" and/or web.conf
+                 [settings] requireClientCert is false, so a revoked certificate would not
+                 be detected at login; this determination is from the perspective of the
+                 application layer alone, the retrieval of revocation data and any upstream
+                 PKI termination being carried outside the application.

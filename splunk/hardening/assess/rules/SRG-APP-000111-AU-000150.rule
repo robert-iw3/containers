@@ -1,0 +1,48 @@
+# SRG-APP-000111-AU-000150  -  CAT III
+# The Central Log Server must be configured to perform analysis of log
+# records across multiple devices and hosts in the enclave that can be
+# reviewed by authorized individuals.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000111-AU-000150
+group:           V-206455
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000154
+control_rev5:    AU-6
+
+contribution:    Splunk's search layer analyzes records from every host and device together
+                 because they share one index set, and role configuration determines which
+                 of those indexes an authorized reviewer may search.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [] srchIndexesAllowed non_empty
+
+external:        Which individuals are authorized to review the analysis, and their
+                 assignment to a Splunk role, is an organizational and directory service
+                 matter.
+
+citation:        OVER-REACH, and one mislabeled dependency. Removed savedsearches.conf
+                 [<stanza name>] search non_empty: the shipped savedsearches.conf declares
+                 "search =" empty, so the condition fails a stock instance, and saved
+                 searches are not required for cross-host analysis - the search layer
+                 analyzes the whole index set on demand. Separately, distsearch.conf
+                 [distributedSearch] servers was listed as an external dependency: it is
+                 Splunk configuration, which the application can reach, so that label is
+                 wrong. It is not promoted to a condition either, because an
+                 indexer-cluster search head receives its peer list from the cluster
+                 manager rather than from distsearch.conf, so a mandatory non_empty would
+                 falsely fail that topology; the assessor reads whichever of the two
+                 applies.
+finding:         No role is permitted to search the indexes holding the aggregated records
+                 (srchIndexesAllowed is unset), so cross-host analysis cannot be reviewed
+                 by the authorized individuals.

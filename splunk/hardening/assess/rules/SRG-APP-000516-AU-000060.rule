@@ -1,0 +1,59 @@
+# SRG-APP-000516-AU-000060  -  CAT III
+# The Central Log Server must be configured so changes made to the level and
+# type of log records stored in the centralized repository must take effect
+# immediately without the need to reboot or restart the application.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000060
+group:           V-241820
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366 CCI-001914
+control_rev5:    AU-12 CM-6
+
+contribution:    Splunk binds a configuration file to a reload handler through the app.conf
+                 [triggers] stanza, which is the product's own mechanism for applying a
+                 change in place instead of restarting; the application's share is that the
+                 files governing the level and type of records stored are bound to a reload
+                 rather than marked as requiring a restart.
+
+governs:         app.conf - Settings for an installed app: whether it is enabled, visible, and what it
+                 may do.
+
+check:           app.conf [triggers] reload.audit not_equals never
+check:           app.conf [triggers] reload.inputs not_equals never
+check:           app.conf [triggers] reload.props not_equals never
+check:           app.conf [triggers] reload.transforms not_equals never
+
+external:        Settings whose own specification states that a restart is required -
+                 indexes.conf coldToFrozenDir is one, per indexes.conf.spec:800 - cannot be
+                 applied in place by any configuration, so for those settings the remainder
+                 of the objective rests on the site's change management procedure rather
+                 than on Splunk.
+external:        A configuration change pushed from a deployment server or cluster manager
+                 reaches this instance on that component's own schedule, which is outside
+                 this instance's configuration.
+external:        Product STIG SPLK-CL-000270 and SPLK-CL-000290, attached through this
+                 requirement's CCI set, direct changes to inputs.conf and outputs.conf on
+                 the indexer, forwarder and search head; where those are separate instances
+                 their configuration is assessed on those instances.
+
+citation:        app.conf.spec:180 [triggers], :186 reload.<conf_file_name> = [ simple |
+                 never | rest_endpoints | access_endpoints <handler_url> | http_get
+                 <handler_url> | http_post <handler_url> ], :206 "If set to never, Splunk
+                 Enterprise initiates a restart after any state change", :212
+                 reload.<conf_file_name>.<conf_stanza_prefix>; indexes.conf.spec:800. No
+                 condition is written over audit.conf [auditconfig:/path]: that stanza is
+                 not declared in the staged specification set, which is stamped Version
+                 10.0.0.
+finding:         Assessed at the application layer alone: an app.conf [triggers] entry for
+                 a configuration file governing the level or type of stored log records is
+                 set to "never", so a change to that file requires a restart of the
+                 application when the product can apply it in place.

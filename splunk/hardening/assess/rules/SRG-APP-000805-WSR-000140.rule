@@ -1,0 +1,52 @@
+# SRG-APP-000805-WSR-000140  -  CAT II
+# The web server must automatically generate audit records of the
+# enforcement actions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000805-WSR-000140
+group:           V-264341
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003938
+control_rev5:    CM-5
+
+contribution:    Splunk writes a record of every change made to its own configuration
+                 files, including the values that changed, and queues its audit trail to an
+                 index; it also holds the capability that permits audit settings to be
+                 altered, so the record cannot be quietly narrowed by an ordinary user.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [config_change_tracker] disabled in false|0
+check:           server.conf [config_change_tracker] mode in auto|diff
+check:           audit.conf [auditTrail] queueing in true|1
+check:           server.conf [config_change_tracker] denylist absent
+check:           server.conf [config_change_tracker] exclude_fields absent
+
+external:        Enforcement actions by components in front of the web interface - a
+                 reverse proxy's denials, for example - carried by that component.
+external:        Operating system level access denials against the installation's files,
+                 carried by the operating system's own audit subsystem.
+external:        Which roles hold the change_audit capability that permits audit settings
+                 to be altered is assessed under the role requirement,
+                 SRG-APP-000380-WSR-000072 (authorize.conf.spec:483).
+
+citation:        Web Server SRG SRG-APP-000805-WSR-000140 check and fix text;
+                 server.conf.spec:599 (disabled, default false), server.conf.spec:608
+                 (mode, default auto), server.conf.spec:636 (denylist),
+                 server.conf.spec:661 (exclude_fields), audit.conf.spec:24 (queueing,
+                 default true), authorize.conf.spec:483 ([capability::change_audit])
+finding:         Configuration change tracking is switched off, set to track-only, or
+                 narrowed by a denylist or excluded fields, or the audit trail is not
+                 queued to an index, so the web server does not automatically generate
+                 records of the enforcement actions it takes.

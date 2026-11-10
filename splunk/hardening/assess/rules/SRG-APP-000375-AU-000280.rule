@@ -1,0 +1,45 @@
+# SRG-APP-000375-AU-000280  -  CAT III
+# The Central Log Server must be configured to record time stamps for when
+# log records are received by the log server that meet a granularity of one
+# second for a minimum degree of precision.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000375-AU-000280
+group:           V-206505
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001889
+control_rev5:    AU-8
+
+contribution:    Splunk stores event time as an epoch value with a subsecond extension,
+                 which already exceeds a one-second floor; the application's configurable
+                 share is whether the strptime format applied to a source type reads the
+                 record's seconds field rather than truncating to a coarser unit.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [<source type>] TIME_FORMAT matches %S
+
+external:        Whether the sending host emits a timestamp carrying seconds at all is a
+                 property of that host's own logging configuration, not of Splunk.
+external:        Host clock resolution and synchronization are operating system and time
+                 service functions.
+
+citation:        props.conf.spec:554 TIME_FORMAT = <strptime-style format> and :562-564
+                 "the <strptime-style format> should describe the day of the year and the
+                 time of day"; props.conf.spec:684-700 ADD_EXTRA_TIME_FIELDS = [none |
+                 subseconds | all | <boolean>], default true. No condition is written over
+                 ADD_EXTRA_TIME_FIELDS: the specification states that setting it to "none"
+                 strips the index-time timestamp fields but still returns the
+                 second-granularity timestamp in _time, which meets this requirement's
+                 one-second minimum, so a finding on that value would be a false finding.
+finding:         Assessed at the application layer alone: a TIME_FORMAT set for an audit
+                 source type reads no seconds field, so the recorded receipt timestamp for
+                 those records is coarser than the one-second minimum.

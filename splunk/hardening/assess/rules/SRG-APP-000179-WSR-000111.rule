@@ -1,0 +1,60 @@
+# SRG-APP-000179-WSR-000111  -  CAT II
+# The web server must use cryptographic modules that meet the requirements
+# of applicable federal laws, Executive Orders, directives, policies,
+# regulations, standards, and guidance for such authentication.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000179-WSR-000111
+group:           V-206391
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000803
+control_rev5:    IA-7
+
+contribution:    For authentication, Splunk can run in FIPS mode so that every
+                 cryptographic operation uses the validated module, store passwords under a
+                 SHA-based hash, and serve the logon only over TLS 1.2.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           web.conf [settings] enableSplunkWebSSL equals true
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+# --- end vendor verification
+
+external:        The FIPS 140-2 validated cryptographic module shipped with the platform
+                 and the host kernel FIPS state
+external:        Cryptographic modules used by an LDAP or SAML identity provider when it
+                 performs the authentication, including the OpenLDAP client configuration
+                 named in SPLK-CL-000320
+external:        FIPS mode must be set before first start
+                 (splunk-launch.conf.spec:110-130), so enabling it later is a reinstall or
+                 upgrade
+
+citation:        SPLK-CL-000390 check and fix text (FIPS mode) and SPLK-CL-000430 fix text
+                 (tls1.2 pin, with the note that the instance must operate in FIPS mode to
+                 limit the algorithms allowed); splunk-launch.conf.spec:110-130;
+                 authentication.conf.spec:58-80; web.conf.spec:70-73 (enableSplunkWebSSL,
+                 default false), web.conf.spec:239-250 (sslVersions vocabulary; ssl3 always
+                 disabled in FIPS mode)
+finding:         splunk-launch.conf does not set SPLUNK_FIPS = 1, passwordHashAlgorithm is
+                 outside the SHA families, or Splunk Web is not serving over TLS 1.2, so
+                 authentication is not performed with validated cryptographic modules to
+                 the extent the product allows.

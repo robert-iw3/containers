@@ -1,0 +1,64 @@
+# SRG-APP-000389-AU-000180  -  CAT III
+# The Central Log Server must require users to reauthenticate when
+# organization-defined circumstances or situations require reauthentication.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000389-AU-000180
+group:           V-221926
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002038
+control_rev5:    IA-11
+
+contribution:    Splunk can force reauthentication by expiring the web session after a
+                 bounded period of inactivity, by stopping the client-side poller that
+                 keeps a session alive, and by discarding the session cookie when the
+                 browser quits.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.timeout max 15
+check:           web.conf [settings] ui_inactivity_timeout min 1
+check:           web.conf [settings] ui_inactivity_timeout max 15
+check:           web.conf [settings] tools.sessions.restart_persist equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.sessions.restart_persist https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+vendor:          web.conf [settings] ui_inactivity_timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+# --- end vendor verification
+
+external:        The organization defines which circumstances require reauthentication;
+                 beyond inactivity and browser restart, circumstances such as a change of
+                 role or a privilege escalation event have no corresponding Splunk setting
+                 and are carried by procedure or by the identity provider's session policy
+external:        Session lifetime for a SAML or ProxySSO logon is also governed by the
+                 identity provider, which can reissue an assertion without a fresh
+                 authentication
+external:        SPLK-CL-000010 is Not Applicable on an instance that is not used as a
+                 search head
+external:        Reauthentication for shell or CLI access to the host is an operating
+                 system function
+
+citation:        SPLK-CL-000010 check text ("If the tools.sessions.timeout is missing or is
+                 configured to 16 or more, this is a finding") and fix text (15 minutes;
+                 the fix text writes "tools.session.timeout", a typo for the setting name
+                 given at web.conf.spec:924); web.conf.spec:924-932
+                 (tools.sessions.timeout, minutes of inactivity before a session expires,
+                 default 60), web.conf.spec:403-410 (ui_inactivity_timeout, minutes without
+                 interface activity before client pollers are told to stop; a value under 1
+                 means the notification never fires and sessions stay alive as long as the
+                 browser is open; default 60), web.conf.spec:934-941
+                 (tools.sessions.restart_persist, default true, sessions persist across
+                 browser restarts)
+finding:         web.conf [settings] leaves tools.sessions.timeout above 15 minutes or
+                 unset, leaves ui_inactivity_timeout outside the range that lets that
+                 timeout take effect, or keeps tools.sessions.restart_persist = true, so
+                 the application does not force users to reauthenticate in the
+                 circumstances it is able to detect.

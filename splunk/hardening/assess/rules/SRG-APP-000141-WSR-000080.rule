@@ -1,0 +1,48 @@
+# SRG-APP-000141-WSR-000080  -  CAT II
+# The web server must provide install options to exclude installation of
+# utility programs, services, plug-ins, and modules not necessary for
+# operation.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000080
+group:           V-206379
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Every utility, plug-in, and module Splunk adds beyond the core daemon
+                 arrives as an app or as an optional process, and the application can set
+                 each app's state explicitly, record whether the app permits being
+                 disabled, and switch off the optional KV Store process.
+
+governs:         app.conf - Settings for an installed app: whether it is enabled, visible, and what it
+                 may do.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           app.conf [install] state present
+check:           app.conf [install] allows_disable present
+check:           server.conf [kvstore] disabled present
+
+external:        The installer's option set and uninstall facility, which are properties of
+                 the distributed package rather than of the running configuration.
+external:        Utility programs present on the host outside the application, carried by
+                 the operating system build.
+external:        Which app-supplied utilities the deployment genuinely needs, carried by
+                 the app review procedure.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000080 check and fix text;
+                 app.conf.spec:124 (state), app.conf.spec:154 (allows_disable, default
+                 true), server.conf.spec:5234 (kvstore disabled)
+finding:         Installed apps carry no declared state or disable property, or the
+                 optional KV Store process is left at its default, so the application does
+                 not show that only the utilities and modules needed for operation are
+                 present and active.

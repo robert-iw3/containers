@@ -1,0 +1,77 @@
+# SRG-APP-000223-WSR-000145  -  CAT II
+# The web server must accept only system-generated session identifiers.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000223-WSR-000145
+group:           V-206398
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001664
+control_rev5:    SC-23
+
+contribution:    Splunk Web issues and tracks its own session identifiers through its
+                 session subsystem, and the only route by which an externally supplied
+                 identity can be accepted is the trusted-header SSO path. The product can
+                 close that route: strict SSO mode confines SSO requests to trusted source
+                 addresses, the trusted IP list must be agreed in both server.conf and
+                 web.conf, and exact matching of the remote user header prevents a client
+                 from substituting a look-alike header name.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] remoteUserMatchExact equals 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] SSOMode https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] allowSsoWithoutChangingServerConf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] remoteUserMatchExact https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.sessions.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.on equals true
+                 reason: The spec states the setting as a literal rather than a type:
+                         "tools.sessions.on = true. Whether or not user session support is
+                         enabled. Always set this to true." No default is stated.
+retired_check:   web.conf [settings] SSOMode not_equals permissive
+                 reason: 10.4.2 spec: "SSOMode = [permissive | strict]... When set to
+                         'permissive': Requests to Splunk Web that originate from an
+                         untrusted IP address are redirected to a login page where they can
+                         log into Splunk Web without using SSO. When set to 'strict': All
+                         requests to Splunk Web will be restricted to those originating from
+                         a trusted IP except those to endpoints that do not require
+                         authentication. Default: lax" - 'lax' is not one of its own two
+                         values. The vendor 10.4 web.conf page states the default is strict.
+                         The 10.4 CAC page states SSOMode "must use permissive" for CAC
+                         authentication, with trustedIP set to 127.0.0.1.
+retired_check:   web.conf [settings] allowSsoWithoutChangingServerConf not_equals 1
+                 reason: "Whether or not to allow SSO without setting the 'trustedIP'
+                         setting in server.conf as well as in web.conf. If set to 1, enables
+                         web-based SSO without a 'trustedIP' setting configured in
+                         server.conf. Default: 0"
+# --- end vendor verification
+
+external:        Stripping of client-supplied identity headers by the authenticating proxy
+                 before forwarding - reverse proxy configuration
+external:        The contents of the trusted IP list - organization-defined
+external:        Session identifier generation itself, which is a fixed property of the
+                 product's session subsystem and has no configuration surface - Splunk
+                 Enterprise implementation
+
+citation:        web.conf.spec:920-922 (tools.sessions.on = true, "Always set this to
+                 true"); web.conf.spec:787-795 (SSOMode = [permissive|strict], default
+                 strict; strict restricts all requests to those originating from a trusted
+                 IP); web.conf.spec:806-811 (allowSsoWithoutChangingServerConf = [0|1],
+                 default 0; 1 enables SSO without a trustedIP setting in server.conf);
+                 web.conf.spec:767-775 (remoteUserMatchExact = [0|1], default 0, "Set to 1
+                 when you set up SSO"); web.conf.spec:728-734 (remoteUser, with the spec's
+                 own caution on the treatment of HTTP headers); web.conf.spec:977-983
+                 (tools.sessions.storage_type = [file])
+finding:         The application does not confine itself to system-generated session
+                 identifiers to the extent the product allows: session support is not
+                 enabled, SSO is in permissive mode, SSO is permitted without the agreed
+                 trusted IP setting in server.conf, or exact matching of the remote user
+                 header is not enforced.

@@ -1,0 +1,49 @@
+# SRG-APP-000174-AU-002570  -  CAT III
+# The Central Log Server must be configured to enforce a 180-day maximum
+# password lifetime restriction.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000174-AU-002570
+group:           V-206477
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    Splunk's native authentication can turn password expiry on and set the
+                 number of days after which a password must be changed, which is the whole
+                 of the maximum password lifetime for accounts the application holds.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] expireUserAccounts in true|1
+check:           authentication.conf [splunk_auth] expirePasswordDays max 180
+# --- vendor verification: generated, do not edit by hand
+corrected:       authentication.conf [splunk_auth] expireUserAccounts equals true -> authentication.conf [splunk_auth] expireUserAccounts in true|1
+vendor:          authentication.conf [splunk_auth] expirePasswordDays https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] expireUserAccounts https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Where authType is LDAP or SAML, password lifetime for federated accounts
+                 is enforced by the directory service or identity provider; [splunk_auth]
+                 governs the native accounts that remain, including the emergency account
+                 of last resort
+external:        Operating system password aging for host accounts
+
+citation:        SPLK-CL-000400 check text ("If the expirePasswordDays is missing or is
+                 configured to 61 or more, this is a finding") and fix text
+                 ("expirePasswordDays = 60"); authentication.conf.spec:487-494
+                 (expirePasswordDays, minimum 0, maximum 3650, default 90),
+                 authentication.conf.spec:504-508 (expireUserAccounts, boolean, default
+                 false, meaning passwords do not expire)
+finding:         authentication.conf [splunk_auth] does not enable password expiry
+                 (expireUserAccounts is not true) or expirePasswordDays exceeds 180 days,
+                 so the application does not enforce a maximum password lifetime on the
+                 accounts it holds.

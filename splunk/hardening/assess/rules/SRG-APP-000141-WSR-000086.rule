@@ -1,0 +1,46 @@
+# SRG-APP-000141-WSR-000086  -  CAT II
+# The web server must protect system resources and privileged operations
+# from hosted applications.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000086
+group:           V-206384
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk bounds what an app's searches and endpoints may reach: a role
+                 declares the indexes its searches are allowed to run against, and each
+                 REST endpoint declares the capability the session user must hold before it
+                 will run.
+
+governs:         authorize.conf - Used to create roles.
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+
+check:           authorize.conf [role_<roleName>] srchIndexesAllowed non_empty
+check:           restmap.conf [] capability present
+
+external:        CPU, memory, and file system limits on the Splunk processes themselves,
+                 carried by the operating system through cgroups and resource limits or by
+                 the container runtime; workload_pools.conf cpu_weight and mem_weight
+                 apportion only the share already granted to the daemon and depend on host
+                 cgroup support (workload_pools.conf.spec:74, workload_pools.conf.spec:80).
+external:        Privileged operations on the host that no Splunk setting mediates, carried
+                 by the service account's own privileges and any mandatory access control
+                 policy.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000086 check and fix text;
+                 authorize.conf.spec:292 (srchIndexesAllowed), restmap.conf.spec:111
+                 (capability = <capabilityName>), workload_pools.conf.spec:74
+finding:         Roles do not declare the indexes their searches may reach, or REST
+                 endpoints do not declare a required capability, so the application does
+                 not confine a hosted app's searches and endpoints to the resources it
+                 needs.

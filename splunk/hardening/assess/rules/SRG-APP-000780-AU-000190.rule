@@ -1,0 +1,55 @@
+# SRG-APP-000780-AU-000190  -  CAT II
+# The Central Log Server must implement an audit reduction capability that
+# does not alter original content or time ordering of audit records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000780-AU-000190
+group:           V-263565
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003828
+control_rev5:    AU-7
+
+contribution:    Splunk reduces audit records at search time over the stored rawdata
+                 journal, so reduction does not of itself rewrite the stored record. The
+                 product does expose settings that write to the stored event or that
+                 remove, hash or replace field values, so the application's share is that
+                 none of them is applied to audit data, and that rawdata hashing is enabled
+                 so the stored content can be shown unaltered.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         transforms.conf - Rules that rewrite or route data as it is processed.
+
+check:           transforms.conf [<unique_transform_stanza_name>] DEST_KEY not_equals _raw
+check:           props.conf [<source type>] SEDCMD-<class> absent
+check:           field_filters.conf [<fieldFilterName>] action absent
+check:           indexes.conf [<index>] enableDataIntegrityControl in 1|true
+
+external:        Confirming that a reduced view matches the stored record is a comparison
+                 the assessor performs against the rawdata journal; the application
+                 supplies the hashes that comparison uses.
+external:        Protecting the index files from modification outside Splunk rests on
+                 operating system file permissions and on the storage platform.
+
+citation:        transforms.conf.spec:68 [<unique_transform_stanza_name>], :241 DEST_KEY =
+                 <KEY> with the KEY list at the end of the file (_raw among them) and :244
+                 "This setting is only valid for index-time field extractions";
+                 props.conf.spec:1043 TRANSFORMS-<class>, :1243 SEDCMD-<class>;
+                 field_filters.conf.spec:32, :37-70; indexes.conf.spec:594
+                 enableDataIntegrityControl = <boolean> default false. The checks inventory
+                 lists _raw against transforms.conf as undeclared because it is a DEST_KEY
+                 value drawn from the specification's KEYS list rather than a setting name.
+finding:         Assessed at the application layer alone: a transform writing to DEST_KEY =
+                 _raw, a SEDCMD class, or a field filter is applied to audit data, or
+                 rawdata integrity hashing is not enabled on the audit indexes, so the
+                 application's audit reduction does not demonstrably preserve the original
+                 content of the records.

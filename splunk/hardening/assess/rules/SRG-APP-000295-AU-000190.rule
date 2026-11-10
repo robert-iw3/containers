@@ -1,0 +1,80 @@
+# SRG-APP-000295-AU-000190  -  CAT II
+# The Central Log Server must automatically terminate a user session after
+# organization-defined conditions or trigger events requiring session
+# disconnect.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000295-AU-000190
+group:           V-221922
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-002361
+control_rev5:    AC-12
+
+contribution:    Splunk terminates sessions on its own timer: web.conf
+                 tools.sessions.timeout expires the Splunk Web session after a set period
+                 of inactivity, and ui_inactivity_timeout must not be set below 1, which
+                 would stop the browser-side pollers ever yielding and keep the session
+                 alive indefinitely.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.timeout present
+check:           web.conf [settings] tools.sessions.timeout max 15
+check:           web.conf [settings] tools.sessions.timeout min 2
+check:           web.conf [settings] ui_inactivity_timeout min 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.sessions.timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+vendor:          web.conf [settings] ui_inactivity_timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+# --- end vendor verification
+
+external:        The organization defines the conditions and trigger events beyond
+                 inactivity that require session disconnect - incident response actions,
+                 time-of-day restrictions - and Splunk expresses only the time-based
+                 trigger.
+external:        The product STIG scopes SPLK-CL-000010 to the search head, so on an
+                 instance that is not a search head the benchmark authority declares the
+                 rule Not Applicable.
+external:        Where a reverse proxy, load balancer or SSO gateway fronts Splunk Web, its
+                 own session timer also has to expire, and it is not an application
+                 setting.
+external:        Terminating the operating system session or the remote-access session that
+                 carries the browser is outside the application.
+
+citation:        Three of the reviewed conditions fail a configuration built exactly as the
+                 benchmark authority prescribes. The product STIG fix for SPLK-CL-000010
+                 sets one key, tools.session.timeout = 15, and its check makes a finding
+                 only where tools.sessions.timeout is missing or 16 or more.
+                 ui_inactivity_timeout max 15 appears in no check or fix text for that key,
+                 and its documented default is 60 (web.conf.spec:403-410), so the condition
+                 reports a finding against an instance configured per the fix text
+                 verbatim, which is a false finding of the most damaging kind.
+                 ui_inactivity_timeout present fails for the same reason: the default of 60
+                 is at or above 1 and does not defeat termination, so demanding the key be
+                 declared penalizes a compliant default. server.conf [general]
+                 sessionTimeout present is also dropped here: the setting defaults to "1"
+                 (1 hour) and therefore already terminates the splunkd session
+                 (server.conf.spec:73-78), so requiring its declaration again fails the
+                 STIG-prescribed configuration; the eight-hour bound on that key is tested
+                 where the check text supplies a number, in SRG-APP-000295-WSR-000012. What
+                 is kept is grounded and directional: max 15 matches the product STIG check
+                 ("16 or more" is a finding), min 2 is the specification's own floor ("Use
+                 a value of 2 or higher, as a value of 1 causes a race condition with the
+                 browser refresh", web.conf.spec:924-932), and ui_inactivity_timeout min 1
+                 catches the one value a site can set that defeats the requirement
+                 outright, since below 1 "Sessions stay alive for as long as the browser is
+                 open" (web.conf.spec:403-410); an absent key resolves to the documented
+                 default of 60 and satisfies it.
+finding:         Splunk Web does not expire inactive sessions within the required period:
+                 web.conf [settings] tools.sessions.timeout is unset or 16 or more minutes,
+                 or ui_inactivity_timeout is set below 1, which stops the inactivity
+                 notification firing and keeps sessions alive for as long as the browser
+                 stays open.

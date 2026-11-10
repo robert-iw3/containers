@@ -1,0 +1,103 @@
+# SRG-APP-000427-AU-000040  -  CAT II
+# The Central Log Server must only allow the use of DoW Public Key
+# Infrastructure (PKI)-established certificate authorities for verification
+# of the establishment of protected sessions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000427-AU-000040
+group:           V-221927
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002470
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise can be pointed at a specific root certificate authority
+                 store and a specific server certificate in place of the certificates it
+                 auto-generates at first start, and it can be made to validate the
+                 certificate presented by the far end on the connections it initiates and
+                 to require a certificate from the clients that connect to it.
+                 Configuration records which trust anchor and certificate files are in use;
+                 it cannot record who issued them.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+check:           server.conf [sslConfig] serverCert matches tls1\.2
+check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*ssl3
+check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*tls1\.0
+check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*tls1\.1
+check:           server.conf [sslConfig] sslVerifyServerCert equals true
+check:           web.conf [settings] serverCert matches tls1\.2
+check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*ssl3
+check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*tls1\.0
+check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*tls1\.1
+check:           outputs.conf [tcpout:<target_group>] sslVerifyServerCert in 1|true
+check:           inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1
+# --- vendor verification: generated, do not edit by hand
+corrected:       outputs.conf [tcpout] sslVerifyServerCert not_equals false -> outputs.conf [tcpout:<target_group>] sslVerifyServerCert in 1|true
+corrected:       inputs.conf [splunktcp-ssl] requireClientCert not_equals false -> inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1
+vendor:          inputs.conf [splunktcp-ssl] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          outputs.conf [tcpout] sslVerifyServerCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+vendor:          server.conf [sslConfig] serverCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslVerifyServerCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Whether the issuer of the installed certificate is an approved certificate
+                 authority - the product STIG verifies this by inspecting the certificate
+                 with openssl on the host operating system; configuration records the trust
+                 anchor's path, never its issuer
+external:        Issuance of the server certificate and supply of the root CA public
+                 certificate - the approved public key infrastructure
+external:        Certificate revocation distribution and checking - the issuing PKI and its
+                 CRL or OCSP service
+external:        File system protection of the private key and certificate files -
+                 operating system
+external:        Certificate validation performed by a fronting reverse proxy or load
+                 balancer that terminates TLS - that component's configuration
+
+citation:        Product STIG SPLK-CL-000450 fix text: "Request a DOD-approved certificate
+                 and a copy of the DOD root CA public certificate, and place the files in a
+                 location for Splunk use. Configure the certificate files to the PEM
+                 format"; its check text verifies the issuer by running openssl against the
+                 certificate on the host operating system. server.conf.spec:714
+                 ([sslConfig]) with :798-823 (sslVerifyServerCert = <boolean>, whether
+                 splunkd as a client validates the certificate a server presents; default
+                 false, and a false value means any valid certificate is acceptable),
+                 :858-874 (requireClientCert, default false), :971-981 (serverCert, "The
+                 Splunk daemon auto-generates certificates when you start Splunk Enterprise
+                 the first time"; "replace the default certificate with a certificate that
+                 you either create on your own or obtain from a third party"; default
+                 $SPLUNK_HOME/etc/auth/server.pem), :996-1009 (sslRootCAPath, the
+                 certificate authority or root certificate store, PEM format, no default);
+                 outputs.conf.spec:700-708 ([tcpout] sslVerifyServerCert, default false);
+                 web.conf.spec:82-91 (serverCert, default
+                 $SPLUNK_HOME/etc/auth/splunkweb/cert.pem); inputs.conf.spec:876
+                 ([splunktcp-ssl:<port>]) with :1015-1021 (requireClientCert). Excluded as
+                 deprecated or out of stanza: server.conf.spec:1026-1032 (caCertFile,
+                 "DEPRECATED. Use the 'sslRootCAPath' setting instead"),
+                 inputs.conf.spec:1747-1748 (caCertFile, deprecated in favor of server.conf
+                 sslRootCAPath), outputs.conf.spec:691-695 ([tcpout] sslRootCAPath,
+                 deprecated in favor of server.conf sslRootCAPath), and
+                 server.conf.spec:5392 (sslCRLPath, documented only under [kvstore] in this
+                 release).
+finding:         Certificate trust is not configured to the extent the product allows: the
+                 root certificate authority store is unset, an auto-generated default
+                 certificate is still in use on the splunkd or Splunk Web listener, server
+                 certificate verification is disabled on connections the instance
+                 establishes, or client certificates are not required on the receiving
+                 port.

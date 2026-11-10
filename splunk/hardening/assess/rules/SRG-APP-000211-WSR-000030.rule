@@ -1,0 +1,53 @@
+# SRG-APP-000211-WSR-000030  -  CAT II
+# Web server accounts accessing the directory tree, the shell, or other
+# operating system functions and utilities must only be administrative
+# accounts.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000211-WSR-000030
+group:           V-206393
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001082
+control_rev5:    SC-2
+
+contribution:    Splunk Enterprise adopts the privileges of a named, non-root operating
+                 system account for splunkd (SPLUNK_OS_USER), so the account that reaches
+                 the directory tree and shell on behalf of the product is a dedicated
+                 service account rather than a privileged one; role design additionally
+                 bounds capability inheritance and delegation scope through importRoles and
+                 grantableRoles.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_OS_USER non_empty
+check:           splunk-launch.conf [] SPLUNK_OS_USER not_equals root
+# --- vendor verification: generated, do not edit by hand
+vendor:          splunk-launch.conf [] SPLUNK_OS_USER https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        The inventory of operating system accounts on the host and whether any are
+                 nonprivileged with access they do not need - operating system account
+                 management
+external:        Shell access and login capability for the splunkd service account -
+                 operating system (shell assignment, PAM)
+external:        File system ownership and permissions on the installation directory and
+                 index paths - operating system
+external:        Which Splunk roles hold capabilities that reach operating system functions
+                 - assessed against SRG-APP-000211-WSR-000129 and SRG-APP-000246-WSR-000149
+
+citation:        splunk-launch.conf.spec:97-103 (SPLUNK_OS_USER = <string> | <nonnegative
+                 integer>; splunkd abandons root privileges immediately on start and
+                 acquires this user's privileges); authorize.conf.spec:79-84 (importRoles);
+                 authorize.conf.spec:86-92 (grantableRoles)
+finding:         SPLUNK_OS_USER is unset or set to root, so splunkd retains privileges
+                 beyond those needed for its role and the application makes no contribution
+                 toward restricting the account that reaches the directory tree and shell.

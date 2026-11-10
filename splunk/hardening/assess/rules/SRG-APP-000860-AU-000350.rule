@@ -1,0 +1,54 @@
+# SRG-APP-000860-AU-000350  -  CAT II
+# The Central Log Server must for password-based authentication, allow user
+# selection of long passwords and passphrases, including spaces and all
+# printable characters.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000860-AU-000350
+group:           V-263579
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004064
+control_rev5:    IA-5
+
+contribution:    Splunk places no maximum length on a native password and excludes no
+                 printable character from one, so long passphrases are permitted by the
+                 product as shipped; what it can be configured to do is require length,
+                 through authentication.conf [splunk_auth] minPasswordLength, which the
+                 product STIG sets to 15 or more. One product limitation applies: the spec
+                 states the semicolon is not allowed by the special-character rule, so that
+                 one printable character is not available for the minPasswordSpecial count.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] minPasswordLength min 15
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] minPasswordLength https://help.splunk.com/en/splunk-cloud-platform/administer/manage-users-and-security/10.2.2510/manage-credentials-and-keys/configure-a-splunk-enterprise-password-policy-using-the-authentication.conf-configuration-file
+# --- end vendor verification
+
+external:        Where authType is LDAP, SAML, or ProxySSO, the permitted length and
+                 character set are enforced by the directory service or identity provider,
+                 not by Splunk.
+external:        Entry of spaces and non-ASCII printable characters at the client - carried
+                 by the browser and the workstation's keyboard handling.
+external:        The organization's own minimum and maximum length policy -
+                 organization-defined; the value asserted here is the one the product STIG
+                 sets for this product.
+
+citation:        splunk-spec-files/authentication.conf.spec:441 (minPasswordLength, default
+                 8, no maximum), :477 (minPasswordSpecial - "The semicolon character is not
+                 allowed"); SPLK-CL-000370 check and fix text
+finding:         The application does not require long passwords for native accounts -
+                 authentication.conf [splunk_auth] minPasswordLength is missing or 14 or
+                 less, leaving the spec default of 8 or a weaker configured value in force;
+                 this determination is from the perspective of the application layer alone,
+                 and note that the product reserves the semicolon from the
+                 special-character rule, which is a product limitation rather than a
+                 configuration shortfall.

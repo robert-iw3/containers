@@ -1,0 +1,55 @@
+# SRG-APP-000358-AU-000100  -  CAT II
+# The Central Log Server must be configured to off-load log records onto a
+# different system or media than the system being audited.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000358-AU-000100
+group:           V-206491
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+revised:         yes
+cci:             CCI-001851
+control_rev5:    AU-4
+
+contribution:    Splunk off-loads log records through outputs.conf, where the target group
+                 names the receiving systems, and that naming is the whole of the
+                 application's share.
+
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout:<target_group>] server non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<target_group>] server https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+# --- end vendor verification
+
+external:        The receiving indexer or external repository and its own inputs.conf -
+                 SPLK-CL-000150 places that configuration on a separate machine, "which is
+                 always a separate machine regardless of environment"
+external:        The requirement's own not-applicable clause where an external application
+                 or the operating system performs the off-load
+external:        Where a target group uses indexerDiscovery instead of a static server
+                 list, the cluster manager that supplies the receivers
+
+citation:        outputs.conf [tcpout] defaultGroup non_empty is a false finding.
+                 outputs.conf.spec:63-70 states "If you don't want to forward data
+                 automatically, don't configure this setting", that it is overridden by
+                 _TCP_ROUTING in inputs.conf, and that "Starting with version 4.2, this
+                 setting is no longer required" - so a deployment that routes per input
+                 forwards correctly with no defaultGroup at all. The setting also appears
+                 in neither the check text nor the fix text, and in no checks.tsv row for
+                 this requirement. One caution on the condition kept: outputs.conf.spec:128
+                 makes server "Required if the 'indexerDiscovery' setting is not set", so a
+                 target group that discovers its receivers satisfies the requirement
+                 without it. The vocabulary has no way to express that alternative, so it
+                 is recorded as an external dependency and the assessor must accept
+                 indexerDiscovery as equivalent.
+finding:         No forwarding target group names a receiving system, so the application is
+                 not configured to off-load its log records to another system.

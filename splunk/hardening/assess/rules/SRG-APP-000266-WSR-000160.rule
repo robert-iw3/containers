@@ -1,0 +1,89 @@
+# SRG-APP-000266-WSR-000160  -  CAT II
+# Debugging and trace information used to diagnose the web server must be
+# disabled.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000266-WSR-000160
+group:           V-206413
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001312
+control_rev5:    SI-11
+
+contribution:    Splunk Web exposes each debugging and trace facility the requirement names
+                 as a distinct setting the product can turn off: the /debug REST endpoints
+                 (enableWebDebug), the traceback rendered to the user
+                 (request.show_tracebacks), the client-side JavaScript logger including the
+                 mode that posts to a server endpoint (js_logger_mode), dashboard
+                 performance metrics emitted to the browser console
+                 (simple_xml_perf_debug), the development auto-restart facility
+                 (engine.autoreload.on) and application server standard error reaching the
+                 Splunk log (appServerProcessLogStderr).
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] request.show_tracebacks equals false
+check:           web.conf [settings] simple_xml_perf_debug not_equals true
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] appServerProcessLogStderr https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] enableWebDebug https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] engine.autoreload.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] js_logger_mode https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] request.show_tracebacks https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] simple_xml_perf_debug https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] enableWebDebug not_equals true
+                 reason: "Whether or not the debug REST endpoints are accessible, for
+                         example., /debug/**splat. Default: false"
+retired_check:   web.conf [settings] js_logger_mode not_in Firebug|Server
+                 reason: "js_logger_mode = [None | Firebug | Server]. The JavaScript Logger
+                         mode. Available modes: None, Firebug, Server. Mode None: Does not
+                         log anything. Mode Firebug: Use firebug by default if it exists, or
+                         defer to the older less promiscuous version of firebug lite. Mode
+                         Server: Log to a defined server endpoint... Default: None"
+retired_check:   web.conf [settings] engine.autoreload.on not_equals true
+                 reason: "Whether or not the appserver will auto-restart if it detects a
+                         python file has changed. Default: false"
+retired_check:   web.conf [settings] appServerProcessLogStderr not_equals true
+                 reason: "If set to true, messages written to the standard error stream by
+                         the Python-based application server processes will be logged to
+                         splunkd.log under the 'UiAppServer' channel. This can be useful
+                         when debugging issues when the appserver process fails to start.
+                         However, some appserver code may print sensitive information such
+                         as session ID strings to standard error so this defaults to
+                         disabled. Default: false"
+# --- end vendor verification
+
+external:        Debugging and developer tooling shipped inside installed Splunk apps —
+                 dashboard debug parameters, app-level logging and any diagnostic views an
+                 app provides — is carried by the app developer and the app approval
+                 process, not by web.conf.
+external:        Interpreter-level tracing, core dumps and debug symbols on the host
+                 running Splunk are carried by the operating system baseline.
+external:        Where a reverse proxy or load balancer fronts Splunk, URI filtering of the
+                 /debug path is an additional layer carried by that component and assessed
+                 against its own baseline.
+
+citation:        SRG-APP-000266-WSR-000160 check and fix text (CCI-001312, SI-11 a); no
+                 product STIG rule shares CCI-001312. Splunk 10.x specification set
+                 (Version 10.0.0): web.conf.spec:1295 enableWebDebug, default false,
+                 controlling access to the debug REST endpoints; web.conf.spec:910
+                 request.show_tracebacks, default true; web.conf.spec:379 js_logger_mode =
+                 [None | Firebug | Server], default None; web.conf.spec:1054
+                 simple_xml_perf_debug, default false; web.conf.spec:915
+                 engine.autoreload.on, default false; web.conf.spec:1285
+                 appServerProcessLogStderr, default false.
+finding:         A debugging or trace facility remains enabled in web.conf [settings] —
+                 enableWebDebug, simple_xml_perf_debug, engine.autoreload.on or
+                 appServerProcessLogStderr is true, request.show_tracebacks is not false,
+                 or js_logger_mode is set to Firebug or Server — so Splunk Web retains
+                 diagnostic output the requirement directs be disabled; this is assessed at
+                 the application layer alone, and developer tooling supplied inside
+                 installed apps and host-level tracing are recorded as external
+                 dependencies rather than as part of this finding.

@@ -1,0 +1,52 @@
+# SRG-APP-000121-AU-000130  -  CAT II
+# The Central Log Server must protect audit tools from unauthorized access.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000121-AU-000130
+group:           V-221917
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001493
+control_rev5:    AU-9
+
+contribution:    Splunk's audit tools are its own search, reporting and configuration
+                 endpoints, and the application's share is to keep the capability that
+                 bypasses every access control off the general-purpose roles.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] admin_all_objects absent
+check:           authorize.conf [role_power] admin_all_objects absent
+
+external:        Ownership and mode of the Splunk binaries and installation directories -
+                 SPLK-CL-000190 implements this with splunk-user ownership and mode 700 at
+                 the operating system layer
+external:        Object-level access control lists recorded in default.meta, which the
+                 btool-based collector does not read and which must be reviewed by hand
+
+citation:        Both original conditions produced false findings. restmap.conf [<endpoint
+                 stanza>] capability present fails any deployment that adds no REST
+                 endpoints of its own: the stanza is the declaration of an additional
+                 endpoint an app brings (restmap.conf.spec:70, 303-312), while Splunk's own
+                 endpoints are gated by capabilities compiled into the product, so a
+                 conformant install has no such stanza to read. authorize.conf
+                 list_all_objects absent is both vacuous and inverted - the shipped
+                 authorize.conf grants it in the [default] stanza (line 193), which applies
+                 to every role, so no role stanza carries it and the condition always
+                 passes while every role in fact holds it; and spec:458-460 describes that
+                 capability as the control that "prevents unauthorized access to
+                 configuration endpoints", so demanding its absence works against its
+                 purpose. admin_all_objects is the capability the specification itself
+                 calls an ACL bypass and it ships on role_admin alone, which makes it the
+                 one condition here that passes a stock install and fails a real weakening.
+finding:         A general-purpose role holds admin_all_objects, so the access control list
+                 on every saved search, report and configuration object used as an audit
+                 tool is bypassed for accounts that are not privileged.

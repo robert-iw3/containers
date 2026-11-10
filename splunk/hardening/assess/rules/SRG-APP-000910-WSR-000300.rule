@@ -1,0 +1,52 @@
+# SRG-APP-000910-WSR-000300  -  CAT II
+# The web server must include only approved trust anchors in trust stores or
+# certificate stores managed by the organization.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000910-WSR-000300
+group:           V-264356
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004909
+control_rev5:    SC-17
+
+contribution:    Splunk Web validates certificates through the same splunkd trust store, so
+                 the application's contribution is a single organization-curated PEM store,
+                 the restriction of validation to that store, and revocation checking.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+check:           server.conf [sslConfig] caTrustStore equals splunk
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] caTrustStore https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        The content of the trust store file, which the organization populates with
+                 approved anchors and which the SPLK-CL-000450 check text verifies with
+                 openssl on the host operating system
+external:        Operating system file permissions on the trust store and revocation list
+                 files
+external:        web.conf sslRootCAPath and requireClientCert, which take effect only for
+                 certificate based user authentication (web.conf.spec:108-130) and so
+                 cannot carry this requirement on their own
+external:        Any TLS terminating reverse proxy in front of Splunk Web, which holds its
+                 own trust store
+
+citation:        SRG-APP-000910-WSR-000300 check text; SPLK-CL-000450 check and fix text;
+                 server.conf.spec:902-937, 996-1009, 1125-1145; web.conf.spec:108-130
+finding:         Splunk Web does not restrict certificate validation to the
+                 organization-managed trust store: server.conf [sslConfig] sslRootCAPath is
+                 unset, caTrustStore admits the operating system anchors, or certificate
+                 status validation is off.

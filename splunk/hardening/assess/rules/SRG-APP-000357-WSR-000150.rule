@@ -1,0 +1,69 @@
+# SRG-APP-000357-WSR-000150  -  CAT II
+# The web server must use a logging mechanism that is configured to allocate
+# log record storage capacity large enough to accommodate the logging
+# requirements of the web server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000357-WSR-000150
+group:           V-206421
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001849
+control_rev5:    AU-4
+
+contribution:    Splunk expresses its own log storage allocation in several places it
+                 configures: a size ceiling per index, a free-space floor that pauses
+                 indexing, and explicit size and generation counts on the Splunk Web and
+                 splunkd stderr logs.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           indexes.conf [<index name>] maxTotalDataSizeMB present
+check:           server.conf [diskUsage] minFreeSpace present
+check:           web.conf [settings] log.access_maxsize present
+check:           web.conf [settings] log.access_maxfiles present
+check:           web.conf [settings] log.error_maxsize present
+check:           web.conf [settings] log.error_maxfiles present
+check:           server.conf [stderr_log_rotation] maxFileSize present
+check:           server.conf [stderr_log_rotation] BackupIndex present
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [diskUsage] minFreeSpace https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        The size of the partitions and storage volumes presented to Splunk,
+                 provisioned at the operating system and storage layer, which is what the
+                 allocation is measured against
+external:        The organization's SP 800-92 sizing figures, which no product setting
+                 supplies
+
+citation:        The four web.conf min 1 conditions point the wrong way for a capacity
+                 requirement: web.conf.spec:878 and 893 state that 0, or the setting
+                 commented out, means unlimited file size, so min 1 fails exactly the
+                 configuration that allows the most storage and passes a one-byte ceiling.
+                 Since the size is organization-defined against SP 800-92, the criterion is
+                 that the product expresses the allocation. indexes.conf [volume:<name>]
+                 maxVolumeDataSizeMB present is removed: indexes.conf.spec:2078-2091 marks
+                 it Optional and ignores it on remote storage, so a deployment that defines
+                 no volume stanza has nothing to read and would be failed for not using an
+                 optional feature. maxTotalDataSizeMB, the per-index allocation the
+                 determination for this requirement names, is the lever that always exists.
+                 Note for the inventory rather than the criterion: checks.tsv lost
+                 maxTotalDataSizeMB, homePath.maxDataSizeMB and coldPath.maxDataSizeMB here
+                 because parse-mechanisms.py cuts the key list at the first "]" it finds in
+                 the mechanism text, so keys written before the stanza are dropped.
+finding:         The application does not express its log storage allocation - a per-index
+                 size ceiling, a free-space floor, or the size and generation counts on the
+                 Splunk Web and splunkd stderr logs is unset - so the capacity allocated to
+                 log records is not configured.

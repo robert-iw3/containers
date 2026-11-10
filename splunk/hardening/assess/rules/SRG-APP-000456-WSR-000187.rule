@@ -1,0 +1,77 @@
+# SRG-APP-000456-WSR-000187  -  CAT II
+# The web server must install security-relevant software updates within 30
+# days unless the time period is directed by an authoritative source (e.g.,
+# IAVM, CTOs, DTMs, STIGs).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000456-WSR-000187
+group:           V-206443
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-002605
+control_rev5:    SI-2
+
+contribution:    Nothing toward installation: Splunk Web can be configured to check for new
+                 vendor versions through web.conf [settings] updateCheckerBaseURL, or to
+                 stop that outbound contact by setting it to 0, but the product has no
+                 setting that acquires, schedules or applies a security-relevant update to
+                 itself.
+
+external:        The organization's flaw remediation procedure covering the Splunk Web
+                 component of Splunk Enterprise, naming the authoritative source monitored
+                 and the installation time period.
+external:        The configuration management record of upgrades performed, which evidences
+                 the period actually met.
+external:        The vendor's supported release list, against which the installed version
+                 and build are compared — the basis the attached product rule
+                 SPLK-CL-000510 directs.
+external:        The package or container image build and deployment pipeline that replaces
+                 the installation, assessed against its own baseline; where
+                 updateCheckerBaseURL is set to 0 for an enclave with no outbound vendor
+                 contact, the authoritative source for update notice is carried entirely by
+                 that procedure.
+
+manual_reason:   Splunk Web is a component of the Splunk Enterprise installation and is not
+                 separately patchable; it is updated when the whole installation is
+                 replaced from a vendor-supplied package. The requirement's discussion
+                 anticipates a web server configured both to check for and to install
+                 security-relevant updates, and Splunk exposes the checking half only:
+                 web.conf.spec:192 updateCheckerBaseURL causes Splunk Web to ping the
+                 vendor for notice of new versions, and setting it to 0 stops that contact,
+                 which is the value taken where outbound vendor contact is not permitted —
+                 so the key records which authoritative source the procedure must monitor
+                 rather than deciding the requirement, and it is not made a condition
+                 because neither value installs anything. No key in the specification set
+                 acquires, schedules or applies an update, and checks.tsv attaches no conf,
+                 stanza or key to this requirement. Because the objective is the
+                 installation of the update within a time period and the product provides
+                 no installation mechanism, the determination rests on the installed
+                 version and build compared against the vendor's supported release list,
+                 and on the flaw remediation and upgrade record.
+
+citation:        SRG-APP-000456-WSR-000187 check, fix and discussion text (CCI-002605, SI-2
+                 c); attached product rule SPLK-CL-000510, whose fix text directs an
+                 upgrade to a vendor-supported version and whose check text states the STIG
+                 is sunset — no configuration setting is named. No conf, stanza or key is
+                 attached to this requirement in the mechanism inventory. Splunk 10.x
+                 specification set (Version 10.0.0): web.conf.spec:192
+                 updateCheckerBaseURL, documented as the vendor URL Splunk Web pings for
+                 new versions and settable to 0 to stop the ping — a notification control,
+                 not an installer; app.conf.spec:116 show_upgrade_notification (app scope);
+                 serverclass.conf.spec:316 updaterRunningFilter (deployment clients).
+finding:         Splunk Web is not separately patchable and Splunk Enterprise provides no
+                 setting that installs its own updates, so this requirement is not decided
+                 by application configuration: a finding is raised only where the installed
+                 version and build are no longer vendor-supported, or where the flaw
+                 remediation record does not show security-relevant updates installed
+                 within 30 days or within the period an authoritative source directs, and
+                 it is recorded against the organization's flaw remediation process and the
+                 installed software rather than against the Splunk application
+                 configuration assessed here.

@@ -1,0 +1,39 @@
+# SRG-APP-000224-WSR-000138  -  CAT II
+# The web server must generate a session ID using as much of the character
+# set as possible to reduce the risk of brute force.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000224-WSR-000138
+group:           V-206402
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-001188
+control_rev5:    SC-23
+
+contribution:    The character set used to compose a session identifier is chosen by Splunk
+                 Enterprise's session subsystem. The product offers no setting governing
+                 which characters appear in a generated identifier, so there is nothing for
+                 the application to configure toward this requirement.
+
+external:        The character set used in generated session identifiers - a fixed property
+                 of Splunk Enterprise's session subsystem; establish it by inspecting an
+                 issued session cookie or by vendor attestation from Splunk
+
+manual_reason:   No setting in web.conf or any other configuration file governs the
+                 alphabet used for session identifier generation; the tools.sessions.*
+                 settings control only session support, expiry, storage and cookie
+                 attributes. A condition over any of them would not decide the requirement.
+
+citation:        web.conf.spec:920-983 (the complete set of tools.sessions.* settings; none
+                 specifies a character set or alphabet for generated identifiers)
+finding:         Not decidable from Splunk configuration: the product exposes no setting
+                 for the session identifier character set, so the application's share of
+                 this requirement is satisfied by product design and the character set must
+                 be established by inspecting an issued cookie or by vendor attestation.

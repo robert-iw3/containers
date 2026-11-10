@@ -1,0 +1,62 @@
+# SRG-APP-000383-WSR-000175  -  CAT II
+# The web server must prohibit or restrict the use of nonsecure or
+# unnecessary ports, protocols, modules, and/or services.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000383-WSR-000175
+group:           V-206428
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001762
+control_rev5:    CM-7
+
+contribution:    Splunk decides which ports it opens and what protocol each one speaks: it
+                 can be configured with no connectionless input at all, and it can require
+                 TLS on the management port, the web port, and the receiving port with a
+                 declared protocol version list and cipher suite.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           inputs.conf [udp:<port>] disabled absent
+check:           server.conf [sslConfig] enableSplunkdSSL in true|1
+check:           web.conf [settings] enableSplunkWebSSL in true|1
+check:           server.conf [sslConfig] sslVersions non_empty
+check:           server.conf [sslConfig] cipherSuite non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          inputs.conf [udp:<port>] disabled https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          server.conf [sslConfig] cipherSuite https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          server.conf [sslConfig] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Which ports are reachable from where, carried by the host firewall and the
+                 network; the application can close a listener but cannot filter who
+                 reaches an open one.
+external:        The protocol versions and ciphers the underlying TLS library actually
+                 offers, carried by the platform build, since the shipped cipher default
+                 comes from the OpenSSL binary.
+external:        Approval of the ports and protocols in use for a production system, which
+                 is an organizational determination recorded against the ports, protocols,
+                 and services registration.
+
+citation:        SPLK-CL-000270 and SPLK-CL-000290 check and fix text;
+                 inputs.conf.spec:1314 ([udp:<port>]), server.conf.spec:724
+                 (enableSplunkdSSL), web.conf.spec:70 (enableSplunkWebSSL, default false),
+                 server.conf.spec:765 and 775 (sslVersions, default varies by shipped
+                 file), server.conf.spec:940 (cipherSuite, otherwise the OpenSSL default)
+finding:         A UDP input remains configured, or a management, web, or receiving
+                 listener does not require TLS with a declared version list and cipher
+                 suite, so the application still offers a nonsecure or unnecessary port or
+                 protocol.

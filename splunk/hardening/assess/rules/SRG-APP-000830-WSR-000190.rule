@@ -1,0 +1,47 @@
+# SRG-APP-000830-WSR-000190  -  CAT II
+# The web server must, for password-based authentication, maintain a list of
+# commonly used, expected, or compromised passwords on an
+# organization-defined frequency.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000830-WSR-000190
+group:           V-264345
+severity:        medium
+cat:             CAT II
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       manual
+confidence:      derived
+cci:             CCI-004058
+control_rev5:    IA-5
+
+contribution:    None toward the list itself, and the web tier adds nothing beyond the
+                 platform: Splunk Web keeps no credential store of its own and
+                 authenticates through authentication.conf, which has no setting holding or
+                 referencing a list of commonly used, expected, or compromised passwords.
+                 The product's only weak-password controls are the composition and history
+                 settings in [splunk_auth], assessed under SRG-APP-000845 and
+                 SRG-APP-000870.
+
+external:        The list and its maintenance frequency - carried by organizational policy.
+external:        Screening of passwords against the list at the point of authentication -
+                 carried by the directory service or identity provider where authType is
+                 LDAP, SAML, or ProxySSO.
+external:        Where a reverse proxy or SSO proxy fronts Splunk Web, any deny-list
+                 screening at that tier is carried by that component.
+
+manual_reason:   No conf key in the product expresses a password deny list or its
+                 maintenance frequency, so no observed configuration value can decide this
+                 requirement.
+
+citation:        splunk-spec-files/authentication.conf.spec:437-600;
+                 splunk-spec-files/web.conf.spec:16 ([settings] holds no credential or
+                 password-list setting)
+finding:         Not a finding against the application: the web tier authenticates through
+                 authentication.conf, which has no password deny-list setting, so this
+                 requirement is carried by organizational policy and by the identity
+                 provider that screens passwords; this determination is from the
+                 perspective of the application layer alone.

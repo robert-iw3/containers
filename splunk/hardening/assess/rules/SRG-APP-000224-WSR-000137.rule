@@ -1,0 +1,45 @@
+# SRG-APP-000224-WSR-000137  -  CAT II
+# The web server must generate a session ID long enough that it cannot be
+# guessed through brute force.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000224-WSR-000137
+group:           V-206401
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-001188
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise generates session identifiers internally and exposes no
+                 setting for their length; the session settings in web.conf govern only
+                 whether session support is on, when a session expires, and how the session
+                 store is held. There is accordingly no configuration value for the
+                 application to set toward a minimum identifier length.
+
+external:        The length in bits of a generated session identifier - a fixed property of
+                 Splunk Enterprise's session subsystem; establish it by inspecting an
+                 issued session cookie or by vendor attestation from Splunk
+external:        Any session identifier substituted by a fronting reverse proxy or SSO
+                 component - that component's configuration
+
+manual_reason:   Session identifier length is fixed by the product's session subsystem.
+                 web.conf.spec exposes tools.sessions.on, tools.sessions.timeout,
+                 tools.sessions.restart_persist, tools.sessions.storage_type and the cookie
+                 attribute settings, and none of them bears on the number of bits in a
+                 generated identifier. Writing a condition over any of them would test
+                 something that does not decide the requirement.
+
+citation:        web.conf.spec:920-983 (the complete set of tools.sessions.* settings: on,
+                 timeout, restart_persist, httponly, secure, forceSecure, storage_type,
+                 storage_path - no length or strength setting among them)
+finding:         Not decidable from Splunk configuration: the product exposes no session
+                 identifier length setting, so the application's share of this requirement
+                 is satisfied by product design and the identifier length must be
+                 established by inspecting an issued cookie or by vendor attestation.

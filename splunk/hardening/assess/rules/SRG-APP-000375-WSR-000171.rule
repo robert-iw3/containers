@@ -1,0 +1,51 @@
+# SRG-APP-000375-WSR-000171  -  CAT II
+# The web server must record time stamps for log records to a minimum
+# granularity of one second.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000375-WSR-000171
+group:           V-206426
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001889
+control_rev5:    AU-8
+
+contribution:    Splunk Web is a component of the application, so this requirement falls
+                 inside the application boundary; the application names the access log and
+                 sets the strptime format applied to it when the record is indexed.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           props.conf [splunk_web_access] TIME_FORMAT matches %S
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The layout of the access record Splunk Web writes is fixed by the product
+                 and is not a configurable setting, so the granularity present in the file
+                 itself is a product property rather than something configuration can raise
+                 or lower.
+external:        Host clock resolution and synchronization to an authoritative source are
+                 operating system and time service functions.
+
+citation:        web.conf.spec:16 [settings], :871 log.access_file; props.conf.spec:554
+                 TIME_FORMAT, :684-700 ADD_EXTRA_TIME_FIELDS default true. No condition is
+                 written over ADD_EXTRA_TIME_FIELDS, because "none" still returns a
+                 second-granularity _time per props.conf.spec:690-694 and so meets this
+                 requirement's floor.
+finding:         Assessed at the application layer alone: Splunk Web names no access log,
+                 or the TIME_FORMAT set for its source type reads no seconds field, so its
+                 log records do not carry a timestamp to one-second granularity.

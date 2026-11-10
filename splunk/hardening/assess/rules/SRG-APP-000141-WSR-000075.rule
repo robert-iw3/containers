@@ -1,0 +1,54 @@
+# SRG-APP-000141-WSR-000075  -  CAT II
+# The web server must only contain services and functions necessary for
+# operation.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000075
+group:           V-206375
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk can deactivate each service and function it ships - Splunk Web, the
+                 KV Store, distributed search - and can set every installed app to a
+                 declared enabled or disabled state, which is the product's equivalent of
+                 deactivating a feature.
+
+governs:         app.conf - Settings for an installed app: whether it is enabled, visible, and what it
+                 may do.
+governs:         distsearch.conf - How a search head reaches the indexers it searches.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           app.conf [install] state present
+check:           server.conf [kvstore] disabled present
+check:           distsearch.conf [distributedSearch] disabled present
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] startwebserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] startwebserver present
+                 reason: "startwebserver = [0 | 1]. Set whether or not to start Splunk Web.
+                         0 disables Splunk Web, 1 enables it. Default: 1"
+# --- end vendor verification
+
+external:        Which features and processes the deployment actually needs, which comes
+                 from the deployment design; the product STIG marks a standalone
+                 installation not applicable because all functions it provides are then
+                 necessary.
+external:        Services and packages installed on the host outside the application,
+                 carried by the operating system build.
+
+citation:        SPLK-CL-000300 fix text; app.conf.spec:124 (state = disabled | enabled,
+                 default enabled), web.conf.spec:23, server.conf.spec:5234,
+                 distsearch.conf.spec:36
+finding:         The services and apps the application can deactivate are left at their
+                 shipped defaults rather than declared, so the configuration does not show
+                 that only the services and functions needed for operation are running.

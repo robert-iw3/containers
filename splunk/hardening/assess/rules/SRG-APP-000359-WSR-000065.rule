@@ -1,0 +1,57 @@
+# SRG-APP-000359-WSR-000065  -  CAT II
+# The web server must use a logging mechanism that is configured to provide
+# a warning to the ISSO and SA when allocated record storage volume reaches
+# 75% of maximum log record storage capacity.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000359-WSR-000065
+group:           V-206424
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001855
+control_rev5:    AU-5
+
+contribution:    The application sets its own storage floor in server.conf and can raise a
+                 scheduled alert with an email recipient list as capacity is approached;
+                 both the floor and the alert are configured in the product.
+
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [diskUsage] minFreeSpace non_empty
+check:           savedsearches.conf [<stanza name>] alert_condition non_empty
+check:           savedsearches.conf [<stanza name>] action.email.to non_empty
+check:           savedsearches.conf [<stanza name>] enableSched equals 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] alert_condition https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+vendor:          server.conf [diskUsage] minFreeSpace https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        SMTP relay reachability and mail delivery, which depend on the mail server
+                 and the network
+external:        The ISSO and SA recipient addresses, which the organization supplies
+external:        The size of the storage volume, needed only to confirm an absolute
+                 minFreeSpace value; a percentage value expresses 25 percent in the product
+
+citation:        web.conf log.access_maxsize min 1 is removed on two counts: nothing in the
+                 check text or the fix text ties a web access log rotation ceiling to a 75
+                 percent capacity warning, and web.conf.spec:878 makes 0 mean unlimited, so
+                 the bound fails the largest allocation. enableSched is added because
+                 savedsearches.conf.spec:73-77 defaults it to 0: the criterion as written
+                 reported a satisfied alert path - condition set, recipient set - for a
+                 saved search that never runs. One limitation to record: the three
+                 savedsearches conditions are independent per-key tests and the schema
+                 cannot bind them to one stanza, so the assessor must confirm they describe
+                 the same saved search.
+finding:         The application has no enabled, scheduled alert with a recipient list that
+                 warns as log record storage approaches capacity, or its free-space floor
+                 is unset.

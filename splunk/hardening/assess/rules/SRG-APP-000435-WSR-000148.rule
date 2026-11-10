@@ -1,0 +1,65 @@
+# SRG-APP-000435-WSR-000148  -  CAT II
+# The web server must be tuned to handle the operational requirements of the
+# hosted application.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000435-WSR-000148
+group:           V-206433
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-002385
+control_rev5:    SC-5
+
+contribution:    Splunk can cap simultaneous HTTP connections, HTTP worker threads and
+                 concurrent searches on each of its listeners so that normal traffic cannot
+                 exhaust the instance, while the magnitudes themselves come from the site's
+                 expected traffic.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] maxSockets min 0
+check:           web.conf [settings] maxThreads min 0
+check:           server.conf [httpServer] maxSockets min 0
+check:           server.conf [httpServer] maxThreads min 0
+check:           inputs.conf [http] maxSockets min 0
+check:           inputs.conf [http] maxThreads min 0
+check:           server.conf [httpServer] streamInWriteTimeout min 1
+check:           limits.conf [search] base_max_searches present
+check:           limits.conf [search] max_searches_per_cpu present
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [httpServer] maxSockets https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [httpServer] maxThreads https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] maxSockets https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] maxThreads https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Expected user traffic and the risk analysis documents that set the limit
+                 magnitudes, which are organizational determinations the check text calls
+                 for
+external:        Operating system file descriptor and process limits (ulimit, or systemd
+                 LimitNOFILE and LimitNPROC), which bound what the application limits can
+                 reach
+external:        Host CPU and memory sizing, since the automatic limits are derived from
+                 estimated server capacity
+external:        Any front-end load balancer or reverse proxy performing rate limiting or
+                 connection shaping
+
+citation:        SRG-APP-000435-WSR-000148 check text; web.conf.spec:1098-1113;
+                 server.conf.spec:1362-1402; inputs.conf.spec:1683-1706;
+                 limits.conf.spec:445-464
+finding:         Splunk accepts HTTP connections, worker threads or concurrent searches
+                 without an enforced limit on at least one listener (a negative maxSockets
+                 or maxThreads value in web.conf, server.conf or inputs.conf), so ordinary
+                 traffic can exhaust the instance.

@@ -1,0 +1,85 @@
+# SRG-APP-000251-WSR-000157  -  CAT II
+# The web server must limit the character set used for data entry.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000251-WSR-000157
+group:           V-206410
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001310
+control_rev5:    SI-10
+
+contribution:    Splunk Enterprise can fix the character set on both of its data-entry
+                 paths — Splunk Web decodes every string entering its controller methods as
+                 UTF-8 and forces UTF-8 on outgoing responses in place of honoring the
+                 client's Accept-Charset header, and props.conf CHARSET declares the
+                 expected encoding of data entering the indexing pipeline per source type;
+                 the fourth key attached to this requirement,
+                 override_JSON_MIME_type_with_text_plain, is charset-neutral because both
+                 permitted values emit charset=UTF-8 (web.conf.spec:364-369), so it is
+                 examined but is not a deciding operand.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           props.conf [<spec>] CHARSET non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.decode.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.encode.encoding https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] tools.encode.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.decode.on not_equals false
+                 reason: "Whether or not all strings that come into CherryPy controller
+                         methods are decoded as unicode (assumes UTF-8 encoding). CAUTION:
+                         Setting this to false will likely break the application, as all
+                         incoming strings are assumed to be unicode. Default: true"
+retired_check:   web.conf [settings] tools.encode.on not_equals false
+                 reason: "Whether or not to encode all controller method response strings
+                         into UTF-8 str objects in Python. CAUTION: Disabling this will
+                         likely cause high byte character encoding to fail. Default: true"
+retired_check:   web.conf [settings] tools.encode.encoding matches ^[Uu][Tt][Ff][-_]?8$
+                 reason: "tools.encode.encoding = <codec>. Forces all outgoing characters to
+                         be encoded into UTF-8. This setting only takes effect when
+                         'tools.encode.on' is set to 'true'. By setting this to 'utf-8',
+                         CherryPy default behavior of observing the Accept-Charset header is
+                         overwritten and forces utf-8 output. Only change this if you know a
+                         particular browser installation must receive some other character
+                         encoding (Latin-1 iso-8859-1, etc). CAUTION: Change this setting at
+                         your own risk. Default: utf-8"
+# --- end vendor verification
+
+external:        Per-field or per-request character allow lists: the product exposes
+                 codec-level control only, so any enumeration of permitted characters is
+                 carried by the hosted Splunk apps' own input validation and their custom
+                 REST handlers.
+external:        The determination of which source types carry a non-UTF-8 encoding rests
+                 with the data owner's source inventory; the application can express the
+                 declaration but cannot decide its content.
+external:        Request-level character filtering at the perimeter is carried by the
+                 reverse proxy, load balancer or web application firewall placed in front
+                 of Splunk, assessed against that component's own baseline.
+
+citation:        SRG-APP-000251-WSR-000157 check and fix text (CCI-001310, SI-10); no
+                 product STIG rule shares CCI-001310. Splunk 10.x specification set
+                 (Version 10.0.0): web.conf.spec:985 tools.decode.on, default true;
+                 web.conf.spec:992 tools.encode.on, default true; web.conf.spec:999
+                 tools.encode.encoding, default utf-8, documented as overriding CherryPy's
+                 observation of the client Accept-Charset header; web.conf.spec:364
+                 override_JSON_MIME_type_with_text_plain, both values emitting
+                 charset=UTF-8; props.conf.spec:238 CHARSET within stanza [<spec>] at
+                 props.conf.spec:80, defaults at props.conf.spec:257-259.
+finding:         Splunk Enterprise does not fix the character set of its data-entry paths —
+                 web.conf [settings] tools.decode.on or tools.encode.on is set to false,
+                 tools.encode.encoding forces a codec other than UTF-8, or a props.conf
+                 CHARSET declaration is written with an empty value — so the accepted and
+                 emitted character set is negotiated from the client or left undeclared
+                 rather than limited to the set the hosted applications expect; this is
+                 assessed at the application layer alone, and per-character input
+                 validation inside the hosted apps and any perimeter filtering are recorded
+                 as external dependencies rather than as part of this finding.

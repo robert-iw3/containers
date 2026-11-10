@@ -1,0 +1,57 @@
+# SRG-APP-000815-AU-000260  -  CAT II
+# The Central Log Server must require users to be individually authenticated
+# before granting access to the shared accounts or resources.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000815-AU-000260
+group:           V-263572
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004045
+control_rev5:    IA-2
+
+contribution:    Splunk authenticates every session against the authentication system named
+                 in authentication.conf [authentication] authType and has no anonymous or
+                 guest mode to disable, so access to shared resources is always preceded by
+                 an individual authentication; shared access is then delivered by role
+                 membership and role inheritance (authorize.conf [role_<roleName>]
+                 importRoles) rather than by a shared login. The condition below therefore
+                 confirms an authentication system is in force - it cannot tell one person
+                 from several people using one account.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] authType non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [authentication] authType https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Issuance of an individual account per person and the prohibition on shared
+                 credentials - carried by organizational account management; no product
+                 setting can distinguish two people sharing one credential.
+external:        Where authType is LDAP, SAML, or ProxySSO, the individual authentication
+                 event occurs at the directory service or identity provider.
+external:        The built-in admin account retained as the account of last resort -
+                 carried by the documented break-glass procedure; the product STIG's own
+                 check text assumes no other local accounts exist.
+external:        Whether a role shared through authorize.conf importRoles grants more than
+                 a person's duties require - an organizational access-control
+                 determination.
+
+citation:        splunk-spec-files/authentication.conf.spec:26 ([authentication]), :30
+                 (authType = [Splunk|LDAP|Scripted|SAML|ProxySSO], default Splunk);
+                 splunk-spec-files/authorize.conf.spec:67 ([role_<roleName>]), :79
+                 (importRoles)
+finding:         No authentication system is in force for the instance (authentication.conf
+                 [authentication] authType is empty), so access to shared roles and
+                 knowledge objects is not preceded by an individual authentication; this
+                 determination is from the perspective of the application layer alone, the
+                 uniqueness of each account being an account-management matter outside the
+                 application.

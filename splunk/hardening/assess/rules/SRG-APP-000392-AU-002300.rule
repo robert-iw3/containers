@@ -1,0 +1,61 @@
+# SRG-APP-000392-AU-002300  -  CAT II
+# The Central Log Server must be configured to electronically verify the DoW
+# common access card (CAC) credential.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000392-AU-002300
+group:           V-206507
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001954
+control_rev5:    IA-2
+
+contribution:    Splunk can verify a presented card certificate rather than merely accept
+                 it: requireClientCert makes the TLS layer validate the certificate against
+                 the configured root CA, server.conf [sslConfig]
+                 certificateStatusValidationMethod = crl turns on certificate status
+                 (revocation) validation for every Splunk TLS channel including Splunk Web,
+                 splunkd, and S2S, and certBasedUserAuthMethod binds the validated
+                 certificate to a Splunk identity.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] requireClientCert in true|True|TRUE|t|1|yes
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        Retrieval and refresh of revocation data - carried by a scheduled process
+                 or the PKI's distribution mechanism; the product consumes PEM CRL files
+                 placed in its CRL directory and does not fetch them itself.
+external:        DoD PKI CRL distribution points and responders - carried by the
+                 organization's PKI.
+external:        Trust anchor file - supplied through web.conf sslRootCAPath or its
+                 fallback to the server.conf setting of the same name, so an empty web.conf
+                 value is not by itself a shortfall.
+external:        Where PKI is terminated by an approved SSO proxy, certificate validation
+                 is performed by that proxy and the application's share reduces to trusting
+                 its assertion.
+
+citation:        splunk-spec-files/server.conf.spec:714 ([sslConfig]), :1125
+                 (certificateStatusValidationMethod = crl, only accepted value, default
+                 empty); splunk-spec-files/web.conf.spec:133, :151
+finding:         Splunk is not configured to verify a presented CAC/PIV certificate -
+                 client certificate authentication is not required at the web tier and
+                 certificate status validation is off (server.conf [sslConfig]
+                 certificateStatusValidationMethod is unset), so a revoked card certificate
+                 would still be honored; this determination is from the perspective of the
+                 application layer alone.

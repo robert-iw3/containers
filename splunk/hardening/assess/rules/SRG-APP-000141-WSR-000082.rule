@@ -1,0 +1,40 @@
+# SRG-APP-000141-WSR-000082  -  CAT II
+# The web server must allow the mappings to unused and vulnerable scripts to
+# be removed.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000082
+group:           V-206381
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    A script mapping in Splunk is a custom search command stanza that binds a
+                 command name to a file and an interpreter; the application can show that
+                 no mapping still names a retired interpreter version.
+
+governs:         commands.conf - Custom search commands an app provides.
+
+check:           commands.conf [] python.version not_equals python2
+
+external:        Which command mappings the deployment's searches and dashboards still use,
+                 carried by the app review procedure; the application cannot tell an unused
+                 mapping from a rarely used one.
+external:        Removal of the script files themselves from the app directories, carried
+                 by the operating system file system.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000082 check and fix text;
+                 commands.conf.spec:57 (python.version =
+                 {default|python|python2|python3|python3.7|python3.9|latest}),
+                 commands.conf.spec:68 (filename), commands.conf.spec:53 (type)
+finding:         A custom search command mapping still selects the retired python2
+                 interpreter, so the application retains a mapping to a script interpreter
+                 that is no longer supported.

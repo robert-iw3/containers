@@ -1,0 +1,42 @@
+# SRG-APP-000141-WSR-000077  -  CAT II
+# The web server must provide install options to exclude the installation of
+# documentation, sample code, example applications, and tutorials.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000077
+group:           V-206377
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk delivers its tutorial content, sample dashboards, and example apps
+                 as apps, each of which the application can set to a disabled state and
+                 hide from the app menu, which is the strongest removal the running
+                 configuration can express.
+
+governs:         app.conf - Settings for an installed app: whether it is enabled, visible, and what it
+                 may do.
+
+check:           app.conf [install] state present
+check:           app.conf [ui] is_visible present
+
+external:        Physical removal of the sample, tutorial, and documentation app
+                 directories from the installation, carried by the operating system file
+                 system and the installation procedure.
+external:        The installer's option set - whether the distributed package offers an
+                 exclude choice and an uninstall facility - which is a property of the
+                 package, not of the running configuration an assessor reads.
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000077 check and fix text;
+                 app.conf.spec:124 (state), app.conf.spec:287 (is_visible)
+finding:         Sample, tutorial, and documentation apps are left without a declared state
+                 or visibility, so the application does not show that the example content
+                 shipped with the product is disabled and out of reach.

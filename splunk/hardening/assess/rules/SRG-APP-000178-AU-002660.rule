@@ -1,0 +1,62 @@
+# SRG-APP-000178-AU-002660  -  CAT I
+# The Central Log Server must obfuscate authentication information during
+# the authentication process so that the authentication is not visible.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000178-AU-002660
+group:           V-206481
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000206
+control_rev5:    IA-6
+
+contribution:    Splunk can keep credentials out of view during authentication: it serves
+                 the logon over TLS, it can leave the GET-based login endpoint that would
+                 put a password in a URL disabled, and it can stop the stored-credentials
+                 REST endpoint and the SPL rest command from returning passwords in
+                 cleartext.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL equals true
+check:           limits.conf [storage_passwords_masking] view_cleartext_spl_rest equals false
+check:           limits.conf [storage_passwords_masking] view_cleartext_allowlist not_equals *
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] enable_insecure_login https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] enable_insecure_login equals false
+                 reason: "Whether or not the GET-based '/account/insecurelogin' REST
+                         endpoint is enabled. Provides an alternate GET-based authentication
+                         mechanism. If 'true', the following url is available:
+                         http://localhost:8000/en-US/account/insecurelogin?loginType=splunk&username=noc&password=XXXXXXX.
+                         If 'false', only the main /account/login endpoint is available.
+                         Default: false"
+# --- end vendor verification
+
+external:        Suppression of local echo while a password is typed at a terminal is a
+                 function of the operating system's console and of the browser's password
+                 field
+external:        Any reverse proxy or load balancer in front of Splunk Web must preserve
+                 TLS end to end
+external:        Credential prompting and masking performed by an LDAP or SAML identity
+                 provider's own logon page
+
+citation:        SRG-APP-000178-AU-002660 check text; web.conf.spec:70-73
+                 (enableSplunkWebSSL, default false), web.conf.spec:198-205
+                 (enable_insecure_login, default false; when true the password travels in
+                 the URL), limits.conf.spec:5072-5092 (view_cleartext_allowlist, default
+                 "*" meaning cleartext passwords are always returned),
+                 limits.conf.spec:5094-5101 (view_cleartext_spl_rest, default true, lets
+                 the SPL rest command return cleartext passwords)
+finding:         Splunk does not keep authenticators out of view to the extent the product
+                 allows: Splunk Web is not on TLS, the insecure GET login endpoint is
+                 enabled, or the storage_passwords_masking settings are left at defaults
+                 that return stored passwords in cleartext.

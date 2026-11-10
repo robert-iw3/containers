@@ -1,0 +1,43 @@
+# SRG-APP-000439-WSR-000192  -  CAT II
+# The web server must use HTTP/2, at a minimum.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000439-WSR-000192
+group:           V-264362
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002418
+control_rev5:    SC-8
+
+contribution:    Splunk Web's own HTTP server implements HTTP/1.x only, so the
+                 application's whole contribution is to not withhold HTTP/1.1 from clients
+                 and to operate correctly behind an HTTP/2 terminator through
+                 tools.proxy.on and tools.proxy.base.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] forceHttp10 not_equals always
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] forceHttp10 https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        A reverse proxy or load balancer terminating HTTP/2 in front of Splunk
+                 Web, since the product's web server does not implement HTTP/2 and no
+                 configuration setting selects it
+external:        The protocol version that terminator uses on its upstream connection to
+                 Splunk Web, which is the terminator's own setting
+external:        The requirement that browsers support HTTP/2 only in HTTPS mode, which the
+                 fix text notes and which the TLS terminator carries
+
+citation:        SRG-APP-000439-WSR-000192 check and fix text; web.conf.spec:1016-1033,
+                 1129-1142
+finding:         web.conf [settings] forceHttp10 is set to always, so Splunk Web withholds
+                 HTTP/1.1 features from every client and sits further below the required
+                 HTTP version than the product requires.

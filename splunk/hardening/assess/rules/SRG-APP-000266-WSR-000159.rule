@@ -1,0 +1,77 @@
+# SRG-APP-000266-WSR-000159  -  CAT II
+# Warning and error messages displayed to clients must be modified to
+# minimize the identity of the web server, patches, loaded modules, and
+# directory paths.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000266-WSR-000159
+group:           V-206412
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001312
+control_rev5:    SI-11
+
+contribution:    The check text looks for a mode of operation that minimizes the
+                 information returned to clients on error conditions, and Splunk Web offers
+                 exactly that choice: simple_error_page selects a page carrying only the
+                 HTTP error status in place of a verbose page, request.show_tracebacks
+                 suppresses the Python traceback that would disclose loaded module names
+                 and installation paths, and appServerProcessLogStderr keeps application
+                 server standard error — which the specification warns may carry session
+                 identifier strings — out of the Splunk log.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] simple_error_page equals true
+check:           web.conf [settings] request.show_tracebacks equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] appServerProcessLogStderr https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] request.show_tracebacks https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] simple_error_page https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] appServerProcessLogStderr not_equals true
+                 reason: "If set to true, messages written to the standard error stream by
+                         the Python-based application server processes will be logged to
+                         splunkd.log under the 'UiAppServer' channel. This can be useful
+                         when debugging issues when the appserver process fails to start.
+                         However, some appserver code may print sensitive information such
+                         as session ID strings to standard error so this defaults to
+                         disabled. Default: false"
+# --- end vendor verification
+
+external:        Product identification carried in HTTP response headers and on the login
+                 page: no key in the examined specification set strips Splunk's own
+                 identification from those surfaces, so header rewriting and banner
+                 suppression are carried by the reverse proxy or load balancer fronting
+                 Splunk.
+external:        Error pages and warning text rendered by custom apps, dashboards and
+                 custom REST handlers: their templates are carried by the app developer and
+                 the app approval process, not by web.conf.
+external:        Protection of the splunkd.log content that application server standard
+                 error lands in — file permissions, retention and onward forwarding — is
+                 carried by the host operating system and the log management baseline.
+
+citation:        SRG-APP-000266-WSR-000159 check and fix text (CCI-001312, SI-11 a); no
+                 product STIG rule shares CCI-001312. Splunk 10.x specification set
+                 (Version 10.0.0): web.conf.spec:227 simple_error_page, default false,
+                 contrasting a page containing only the error status against a verbose page
+                 containing the home link, message, results link, crashes, referrer, debug
+                 output and byline; web.conf.spec:910 request.show_tracebacks, default
+                 true, controlling whether an exception traceback is displayed to the user
+                 on fatal exceptions; web.conf.spec:1285 appServerProcessLogStderr, default
+                 false, whose text warns that appserver code may print sensitive
+                 information such as session ID strings to standard error.
+finding:         Splunk Web is not in its information-minimizing mode — web.conf [settings]
+                 simple_error_page is not true, request.show_tracebacks is not false, or
+                 appServerProcessLogStderr is true — so error responses carry the verbose
+                 page's debug output, referrer, crash and byline detail, or a Python
+                 traceback disclosing loaded modules and installation paths; this is
+                 assessed at the application layer alone, and product identification in
+                 HTTP response headers and error templates supplied by custom apps are
+                 recorded as external dependencies rather than as part of this finding.

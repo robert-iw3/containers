@@ -1,0 +1,50 @@
+# SRG-APP-000516-AU-000370  -  CAT II
+# For devices and hosts within the scope of coverage, the Central Log Server
+# must be configured to automatically aggregate events that indicate account
+# actions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000370
+group:           V-206516
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can bring account-action events from every device in scope together
+                 by routing each input's data to a declared index and classifying the
+                 events with event types, so a single search reaches all of them.
+
+governs:         eventtypes.conf - Used to configure event types and their properties.
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [] index non_empty
+check:           eventtypes.conf [] search present
+# --- vendor verification: generated, do not edit by hand
+vendor:          inputs.conf [] index https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+# --- end vendor verification
+
+external:        Which events each sending device emits for account creation, modification,
+                 disablement, and removal, carried by that device's own audit policy; the
+                 application can only aggregate what it is sent.
+external:        A props.conf or transforms.conf route that discards events to the null
+                 queue would drop them before indexing; whether a given filter does so is a
+                 per-deployment data-routing decision (props.conf.spec:1043,
+                 transforms.conf.spec:241).
+
+citation:        Central Log Server SRG SRG-APP-000516-AU-000370 check text;
+                 inputs.conf.spec:93 (index), inputs.conf.spec:128 (queue =
+                 [parsingQueue|indexQueue]), eventtypes.conf.spec:36 ([<$EVENTTYPE>]),
+                 eventtypes.conf.spec:51 (search)
+finding:         Inputs do not declare the index their data lands in, or no event type
+                 classifies account actions, so the application does not bring
+                 account-action events together for the devices within its scope of
+                 coverage.

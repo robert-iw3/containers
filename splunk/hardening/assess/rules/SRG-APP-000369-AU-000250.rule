@@ -1,0 +1,43 @@
+# SRG-APP-000369-AU-000250  -  CAT III
+# The Central Log Server must be configured to perform audit reduction that
+# does not alter original content or time ordering of log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000369-AU-000250
+group:           V-206502
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001881
+control_rev5:    AU-7
+
+contribution:    Splunk performs audit reduction at search time over the stored rawdata
+                 journal, so reduction does not rewrite the stored record; the
+                 application's own contribution is to compute and store hashes over the
+                 rawdata slices so that any alteration of the stored record is detectable
+                 rather than assumed absent.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+
+check:           indexes.conf [<index>] enableDataIntegrityControl in 1|true
+
+external:        Confirming that a given reduction left content and time ordering intact is
+                 a comparison of search output against the stored journal, which the
+                 assessor performs; the application setting supplies the hash baseline that
+                 comparison relies on.
+external:        Protecting the index files from modification outside Splunk rests on
+                 operating system file permissions and on the storage platform.
+
+citation:        indexes.conf.spec:382-388 [<index>] per-index options, :594
+                 enableDataIntegrityControl = <boolean>, :599 "Default: false".
+finding:         Assessed at the application layer alone: enableDataIntegrityControl is not
+                 enabled on the indexes holding audit records, so Splunk computes no
+                 rawdata hashes and the application offers no means of showing that
+                 reduction left the stored content unaltered.

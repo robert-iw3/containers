@@ -1,0 +1,96 @@
+# SRG-APP-000015-WSR-000014  -  CAT II
+# The web server must use cryptography to protect the integrity of remote
+# sessions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000015-WSR-000014
+group:           V-206353
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-001453
+control_rev5:    AC-17
+
+contribution:    Splunk Web can be required to serve every remote session over TLS with a
+                 named server certificate and private key, an explicit protocol floor and
+                 cipher string, and a session cookie bound to the protected channel; that
+                 is the application's share of protecting the integrity of a remote access
+                 session to this web server.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL in 1|true
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+check:           web.conf [settings] sslVersions matches ^\s*(tls1\.2|\*|tls)(\s*,\s*-(ssl2|ssl3|tls1\.0|tls1\.1))*\s*$
+check:           web.conf [settings] sslVersions matches tls1\.2
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*ssl3
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
+check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
+check:           web.conf [settings] cipherSuite non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] cipherSuite https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] sslVersions https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-protocol-version-support-for-secure-connections-between-splunk-platform-instances
+vendor:          web.conf [settings] tools.sessions.secure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.secure in 1|true
+                 reason: "Whether or not the browser must transmit session cookies over an
+                         HTTPS connection when Splunk Web is configured to serve requests
+                         using HTTPS (the 'enableSplunkWebSSL' setting is 'true'.) If set to
+                         'true' and 'enableSplunkWebSSL' is also 'true', then the browser
+                         must transmit the session cookie over HTTPS connections. This
+                         improves session security. Default: true"
+# --- end vendor verification
+
+external:        A certificate signed by an approved certificate authority, rather than the
+                 self-signed certificate the daemon generates on first start, is supplied
+                 by the organization's PKI; the application can only be told which file to
+                 present.
+external:        Where a reverse proxy or load balancer terminates TLS in front of Splunk
+                 Web, the integrity of the segment between the client and that device is
+                 carried by the proxy and is assessed under its own baseline.
+
+citation:        CHANGED for OVER-REACH and for the same sslVersions regex defect corrected
+                 under SRG-APP-000014-WSR-000006. (1) The condition 'server.conf
+                 [sslConfig] sslVerifyServerCert in:1|true' has been removed. Per
+                 server.conf.spec:798-823 this setting governs splunkd acting as a TLS
+                 client validating a certificate that a server presents to it, named there
+                 for distributed search and deployment-client polling, and its default is
+                 false (:823). It therefore decides nothing about the integrity of a remote
+                 user's session with this web server, which is what CCI-001453 and this
+                 check text address; it belongs to the requirement on authenticating
+                 communicating peers. Because the default is false, the reviewed criterion
+                 would record a finding against a standalone instance whose Splunk Web
+                 sessions are fully TLS protected, and the remediation it implies is
+                 operationally loaded: server.conf.spec:1189-1190 warns that enabling peer
+                 verification requires [sslConfig]/sslRootCAPath to be correct first, so an
+                 assessor acting on this row could break distributed search while closing a
+                 row that was never open. This is not an external dependency and has not
+                 been recorded as one, because it is an application setting; it is simply
+                 assessed under a different requirement. (2) The sslVersions operand has
+                 been replaced with the same verified two-condition property test, for the
+                 reasons and with the test results given under SRG-APP-000014-WSR-000006;
+                 the reviewed single pattern rejected 'tls1.2,-ssl3',
+                 '*,-ssl2,-ssl3,-tls1.0,-tls1.1' and 'tls,-ssl3,-tls1.0,-tls1.1', all
+                 permitted by web.conf.spec:239-245. (3) Scope boundary stated explicitly:
+                 the inventory rows for this requirement carry no server.conf key that
+                 enables TLS on the splunkd management listener, so this criterion covers
+                 the Splunk Web listener only. That is the honest limit of the row and it
+                 must not be papered over by testing sslVerifyServerCert instead.
+                 requireClientCert (web.conf.spec:151-165) is likewise left out: mutual
+                 certificate authentication is an optional method, not a condition of
+                 integrity protection, and requiring it would fail compliant deployments.
+finding:         Splunk Web is not configured to serve remote sessions over TLS 1.2 or
+                 better with a named server certificate, private key and cipher string, and
+                 a session cookie bound to the protected channel, so the application is not
+                 configured to the extent the product allows toward protecting the
+                 integrity of remote sessions.

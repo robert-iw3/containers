@@ -1,0 +1,51 @@
+# SRG-APP-000086-AU-000030  -  CAT III
+# Time stamps recorded on the log records in the Central Log Server must be
+# configured to synchronize to within one second of the host server or, if
+# NTP is configured directly in the log server, the NTP time source must be
+# the same as the host and devices within its scope of coverage.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000086-AU-000030
+group:           V-206450
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000174
+control_rev5:    AU-12
+
+contribution:    Splunk ships no NTP client, so it cannot synchronize a clock; what it
+                 configures is faithful timestamp recognition on the records it receives,
+                 plus the skew bounds it tolerates between a search head and its peers.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [<spec>] DATETIME_CONFIG not_in NONE|CURRENT
+check:           limits.conf [search] max_tolerable_skew max 60
+check:           limits.conf [search] addpeer_skew_limit max 600
+
+external:        Clock synchronization to within one second of the host server, and to the
+                 same upstream time source as the covered hosts and devices, is performed
+                 by the operating system's time service; Splunk Enterprise 10.4.2 contains
+                 no NTP client for the check text's conditional clause to apply to.
+
+citation:        Under-test corrected. The original excluded only NONE. props.conf.spec
+                 treats the two values together - "Both 'CURRENT' and 'NONE' explicitly
+                 disable the per-text timestamp identification" - and CURRENT is the worse
+                 case for this requirement, since it substitutes the aggregator's clock for
+                 the time the record carries, which is exactly the agreement the
+                 requirement is about. SRG-APP-000096-AU-000690 in this same group already
+                 excludes both, so leaving CURRENT permitted here made two criteria resting
+                 on one setting disagree. The skew conditions are kept: both are ceilings
+                 and the direction is correct.
+finding:         Timestamp recognition is disabled for the sourcetypes in scope
+                 (DATETIME_CONFIG set to NONE or CURRENT), so the time recorded on a
+                 received record is the log server's own processing time rather than the
+                 time the record carries.

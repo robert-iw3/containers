@@ -1,0 +1,54 @@
+# SRG-APP-000092-WSR-000055  -  CAT II
+# The web server must initiate session logging upon start up.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000092-WSR-000055
+group:           V-206357
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001464
+control_rev5:    AU-14
+
+contribution:    Splunk Web opens its HTTP access log when the application server starts,
+                 and splunkd records REST access in splunkd_access.log from the same
+                 moment; the application configures which log receives that traffic and
+                 that no endpoint is excluded from it.
+
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           restmap.conf [] includeInAccessLog not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The operating system's service manager decides when splunkd and Splunk Web
+                 start, so whether logging begins at system boot depends on the boot-start
+                 configuration, not on the application.
+
+citation:        INVENTION. Removed web.conf [settings] appServerPorts not_equals 0.
+                 web.conf.spec defines the setting as "appServerPorts = <positive
+                 integer>[, <positive integer>...]" and states "At one time, setting this
+                 to zero indicated that the web service should be run in a legacy mode as a
+                 separate service, but as of Splunk 8.0 this is no longer supported." Zero
+                 is outside the permitted vocabulary on 10.4.2, so the condition tests a
+                 state the product cannot be in and contributes no evidence; neither the
+                 check nor the fix text mentions it. The restmap placeholder stanza was
+                 replaced with the empty stanza the determined row carries.
+finding:         The web tier's access logging is not fully configured - no access log is
+                 named, or a REST endpoint is excluded from splunkd_access.log - so logging
+                 does not capture all requests from the moment the application server
+                 starts.

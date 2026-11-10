@@ -1,0 +1,52 @@
+# SRG-APP-000219-WSR-000190  -  CAT II
+# The web server must restrict a consistent inbound source IP for the entire
+# management session.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000219-WSR-000190
+group:           V-264360
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001184
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise has no setting that binds an authenticated management
+                 session to the source IP address it was established from. What the product
+                 can do is restrict the set of addresses from which management connections
+                 are accepted at all, through the source address list on the splunkd
+                 management listener, and restrict general remote login. The criterion
+                 tests only that share.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [httpServer] acceptFrom non_empty
+check:           server.conf [httpServer] acceptFrom not_equals *
+check:           server.conf [general] allowRemoteLogin not_equals always
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [general] allowRemoteLogin https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [httpServer] acceptFrom https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        Binding a management session to the source IP address it was established
+                 from - Splunk Enterprise exposes no per-session source address setting;
+                 this is carried by a reverse proxy, load balancer or firewall placed in
+                 front of the management port
+external:        The permitted management source addresses themselves -
+                 organization-defined network allowlist
+
+citation:        server.conf.spec:1291 ([httpServer]) with :1345-1360 (acceptFrom =
+                 <network_acl>, default "*" accept from anywhere); server.conf.spec:106-120
+                 (allowRemoteLogin = always|never|requireSetPassword, "Controls remote
+                 management by restricting general login", default requireSetPassword)
+finding:         The splunkd management listener accepts connections from any source
+                 address, or general remote login is set to always, so the application does
+                 not restrict the inbound source of a management session to the extent the
+                 product allows.

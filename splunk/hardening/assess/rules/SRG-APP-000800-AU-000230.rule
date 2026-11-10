@@ -1,0 +1,63 @@
+# SRG-APP-000800-AU-000230  -  CAT II
+# The Central Log Server must implement the capability for
+# organization-defined individuals or roles to change the auditing to be
+# performed on organization-defined system components based on
+# organization-defined selectable event criteria within organization-defined
+# time thresholds.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000800-AU-000230
+group:           V-263569
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003834
+control_rev5:    AU-12
+
+contribution:    Splunk restricts who may change audit settings to the holders of a named
+                 capability and applies such a change on a reload rather than a restart,
+                 which is the product's means of meeting a time threshold; together these
+                 cover the role and the threshold elements of the requirement.
+
+governs:         app.conf - Settings for an installed app: whether it is enabled, visible, and what it
+                 may do.
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_admin] change_audit equals enabled
+check:           app.conf [triggers] reload.audit not_equals never
+# --- vendor verification: generated, do not edit by hand
+corrected:       authorize.conf [role_<roleName>] change_audit equals enabled -> authorize.conf [role_admin] change_audit equals enabled
+vendor:          authorize.conf [role_<roleName>] change_audit https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+# --- end vendor verification
+
+external:        The individuals or roles permitted to change the auditing, the system
+                 components in scope, the selectable event criteria and the time threshold
+                 are all organization-defined parameters recorded in the system security
+                 plan; the product can express the role and apply the change promptly but
+                 cannot supply any of these values.
+external:        Where role membership is supplied by a directory service, which
+                 individuals hold the designated role is determined in that directory
+                 rather than in Splunk configuration.
+external:        Pushing the changed auditing to other instances in a distributed
+                 deployment is carried by the deployment server or cluster manager, not by
+                 this instance's configuration.
+
+citation:        authorize.conf.spec:67-71 [role_<roleName>] <capability> = <enabled> with
+                 "capabilities are disabled by default", :483 [capability::change_audit];
+                 app.conf.spec:180 [triggers], :186 reload.<conf_file_name> vocabulary,
+                 :206 "If set to never, Splunk Enterprise initiates a restart after any
+                 state change". The selectable per-path audit criteria are set in
+                 audit.conf, but the staged specification set is stamped Version 10.0.0 and
+                 declares only [auditTrail] queueing, so no condition is written over
+                 per-path audit settings.
+finding:         Assessed at the application layer alone: no role holds the change_audit
+                 capability, so no designated role can change the auditing through the
+                 application, or the app.conf [triggers] entry for audit.conf is set to
+                 "never", so a change requires a restart rather than taking effect on a
+                 reload.

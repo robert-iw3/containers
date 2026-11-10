@@ -1,0 +1,67 @@
+# SRG-APP-000340-WSR-000029  -  CAT II
+# Non-privileged accounts on the hosting system must only access web server
+# security-relevant information and functions through a distinct
+# administrative account.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000340-WSR-000029
+group:           V-206419
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-002235
+control_rev5:    AC-6
+
+contribution:    Splunk's own role-based access control is where the separation is
+                 expressed: capabilities are disabled by default and each authorize.conf
+                 [role_<roleName>] stanza grants them explicitly, so the product can hold a
+                 distinct administrative role whose security-relevant capabilities no
+                 non-privileged role inherits.
+
+external:        The SRG scopes this to non-privileged accounts on the hosting system:
+                 operating system accounts, their group membership, and their access to the
+                 installation directory and configuration files are carried by the
+                 operating system.
+external:        Which Splunk roles and accounts count as privileged is an organizational
+                 determination the application cannot infer from any value.
+external:        Where authentication is delegated, the directory service or identity
+                 provider decides group membership and therefore which role a user
+                 receives.
+external:        An assessor reviews the capability grants in each authorize.conf
+                 [role_<roleName>] stanza against the organization's list of administrative
+                 and non-privileged roles.
+
+manual_reason:   Separation depends on which capabilities each role carries and which
+                 accounts hold which role, and the vocabulary cannot name "the
+                 non-privileged roles" without the organization's own role assignment; the
+                 SRG's subject is also accounts on the hosting system.
+
+citation:        importRoles present and grantableRoles present test nothing about
+                 separation and fail compliant roles. A role is defined by its capability
+                 lines - "<capability> = <enabled>", and "'enabled' is the only accepted
+                 value here, as capabilities are disabled by default" - while importRoles
+                 defaults to "A role imports no other roles" (authorize.conf.spec:67-84),
+                 so a non-privileged role that imports nothing is exactly what this
+                 requirement wants and a present test reports it as a finding.
+                 grantableRoles is narrower still: it bounds what a user holding
+                 "edit_roles_grantable" and "edit_user" may manage
+                 (authorize.conf.spec:86-98), so requiring it of every role stanza is a
+                 finding against every role that delegates no user management, which is
+                 most of them. Neither key says whether a non-privileged account can reach
+                 security-relevant information or functions; that is decided by the
+                 capability set of each role and by the organization's designation of which
+                 roles and accounts are privileged, neither of which this vocabulary can
+                 express over a generic [role_<roleName>] stanza. The SRG's subject is also
+                 "non-privileged accounts on the hosting system", which is the operating
+                 system's account base, so the larger part of this objective was never the
+                 application's to carry.
+finding:         Non-privileged Splunk roles hold capabilities that reach security-relevant
+                 information or functions, instead of those capabilities being confined to
+                 a distinct administrative role in authorize.conf.

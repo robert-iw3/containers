@@ -1,0 +1,57 @@
+# SRG-APP-000176-AU-002640  -  CAT I
+# The Central Log Server, when using PKI-based authentication, must enforce
+# authorized access to the corresponding private key.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000176-AU-002640
+group:           V-206479
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000186
+control_rev5:    IA-5
+
+contribution:    Splunk can hold the private key at a site-managed path and protect it with
+                 a password that is itself kept out of cleartext in the configuration, so
+                 the key is usable only by the service that holds the password rather than
+                 by anyone who can read the conf layer.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           server.conf [sslConfig] sslPassword not_equals password
+check:           web.conf [settings] privKeyPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] sslPassword https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        File system ownership and permissions on the private key file and on
+                 splunk.secret, which are operating system controls
+external:        Custody of the key and the designated PKI Sponsor's authorization, which
+                 are procedural
+external:        web.conf.spec:93-99 notes that an encrypted web private key requires
+                 splunkd client authentication to be off, so encrypting that key is a
+                 deployment trade-off against the client certificate requirement assessed
+                 under SRG-APP-000149-AU-002280
+external:        Not Applicable where PKI-based authentication is not used
+
+citation:        SRG-APP-000176-AU-002640 check text (Not Applicable where PKI-based
+                 authentication is not used); server.conf.spec:989-991 (sslPassword, the
+                 password for the server certificate, documented default "password"),
+                 web.conf.spec:75-80 (privKeyPath, default is the auto-generated key),
+                 web.conf.spec:93-99 (web.conf sslPassword protects the key named by
+                 privKeyPath; with an encrypted key, splunkd client authentication must be
+                 off), server.conf.spec:547-560 (encrypt_fields keeps sslPassword entries
+                 stored encrypted)
+finding:         server.conf [sslConfig] sslPassword is left at the documented default
+                 value, or web.conf privKeyPath does not name a site-managed key, so the
+                 application does not restrict use of the private key to the extent the
+                 product allows.

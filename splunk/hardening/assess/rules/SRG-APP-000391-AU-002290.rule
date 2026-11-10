@@ -1,0 +1,61 @@
+# SRG-APP-000391-AU-002290  -  CAT II
+# The Central Log Server must be configured to accept the DoW common access
+# card (CAC) credential to support identity management and personal
+# authentication.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000391-AU-002290
+group:           V-206506
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001953
+control_rev5:    IA-2
+
+contribution:    Splunk Enterprise 10.4.2 can accept a CAC/PIV certificate as the login
+                 credential on its own: web.conf [settings] enableCertBasedUserAuth turns
+                 on certificate-based user authentication, requireClientCert makes Splunk
+                 Web demand the client certificate, and certBasedUserAuthMethod selects how
+                 the user identity is taken from the card certificate (CommonName, EDIPI,
+                 or PIV).
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableCertBasedUserAuth in true|True|TRUE|t|1|yes
+check:           web.conf [settings] requireClientCert in true|True|TRUE|t|1|yes
+check:           web.conf [settings] certBasedUserAuthMethod in CommonName|EDIPI|PIV
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] certBasedUserAuthMethod https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] enableCertBasedUserAuth https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+vendor:          web.conf [settings] requireClientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
+# --- end vendor verification
+
+external:        Card reader and PKI middleware at the workstation - carried by the client
+                 operating system.
+external:        DoD PKI trust anchor and issuing CA chain - carried by the organization's
+                 PKI; supplied to the product through web.conf sslRootCAPath or its
+                 documented fallback to the server.conf setting of the same name, which is
+                 why no condition is written over the web.conf value alone.
+external:        Where the approved implementation terminates PKI upstream instead,
+                 SPLK-CL-000490's own fix names an Apache, IIS, F5, or SAML SSO proxy;
+                 credential acceptance is then carried by that proxy and the native
+                 web.conf settings may legitimately be absent.
+external:        Applicability: SPLK-CL-000490 records this check as Not Applicable on a
+                 distributed-deployment instance running with the web interface disabled.
+
+citation:        splunk-spec-files/web.conf.spec:16 ([settings]), :120
+                 (enableCertBasedUserAuth, default false), :133 (certBasedUserAuthMethod,
+                 values CommonName|EDIPI|PIV, no default), :151 (requireClientCert, default
+                 false); SPLK-CL-000490 check and fix text
+finding:         Splunk Web is not configured to accept a CAC/PIV certificate as a login
+                 credential - certificate-based user authentication is not enabled in
+                 web.conf [settings] (enableCertBasedUserAuth, requireClientCert,
+                 certBasedUserAuthMethod) and no approved PKI-terminating SSO proxy was
+                 presented as the implementation; this determination is from the
+                 perspective of the application layer alone.

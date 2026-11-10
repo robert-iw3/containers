@@ -1,0 +1,53 @@
+# SRG-APP-000224-WSR-000136  -  CAT II
+# The web server must generate unique session identifiers that cannot be
+# reliably reproduced.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000224-WSR-000136
+group:           V-206400
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-001188
+control_rev5:    SC-23
+
+contribution:    Splunk Enterprise generates session identifiers in its own session
+                 subsystem, and placing the instance in FIPS mode constrains the random
+                 number generator that subsystem draws on. Whether the generator can be
+                 made to repeat an identifier is a property of the product's
+                 implementation, not a setting.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+vendor:          web.conf [settings] tools.sessions.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] tools.sessions.on equals true
+                 reason: The spec states the setting as a literal rather than a type:
+                         "tools.sessions.on = true. Whether or not user session support is
+                         enabled. Always set this to true." No default is stated.
+# --- end vendor verification
+
+external:        Non-reproducibility of the generator, which the check verifies by
+                 generating two identifiers from the same input - a product implementation
+                 property, verified by vendor attestation or by observation, with no
+                 configuration surface
+external:        The kernel entropy source feeding the random number generator - operating
+                 system
+
+citation:        splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1], FIPS 140-2
+                 algorithms and restrictions); web.conf.spec:920-922 (tools.sessions.on =
+                 true, "Always set this to true")
+finding:         FIPS mode is not enabled or session support is not enabled, so the
+                 application does not constrain session identifier generation to a FIPS
+                 140-2 random source to the extent the product allows.

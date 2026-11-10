@@ -1,0 +1,45 @@
+# SRG-APP-000364-AU-000190  -  CAT II
+# The Central Log Server must be configured to perform audit reduction that
+# supports on-demand audit review and analysis.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000364-AU-000190
+group:           V-206497
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001875
+control_rev5:    AU-7
+
+contribution:    Splunk performs audit reduction with data model acceleration, report
+                 acceleration, summary indexing and metric rollups. The application's share
+                 is that the review and analysis artifacts exist over the audit data and
+                 that the acceleration decision for them is stated rather than left
+                 implicit.
+
+governs:         datamodels.conf - Data models and their acceleration.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<stanza name>] search non_empty
+check:           datamodels.conf [<data model name>] acceleration present
+# --- vendor verification: generated, do not edit by hand
+vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
+# --- end vendor verification
+
+external:        The organization's audit review and analysis procedure, who performs it
+                 and how often, which no product setting records
+external:        Disk capacity for the acceleration column stores, provisioned at the
+                 storage layer
+
+citation:        SRG-APP-000364-AU-000190 (V-206497) check text;
+                 savedsearches.conf.spec:44, 439-447, 767-790; datamodels.conf.spec:29-40,
+                 100-104; metric_rollups.conf.spec:38-48
+finding:         No saved search exists over the audit data and no acceleration or
+                 summarization decision is expressed, so the application carries no
+                 configured audit reduction to support on-demand review and analysis.

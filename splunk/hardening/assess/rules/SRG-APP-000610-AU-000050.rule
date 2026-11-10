@@ -1,0 +1,68 @@
+# SRG-APP-000610-AU-000050  -  CAT I
+# The Central Log Server must use FIPS-validated SHA-2 or higher hash
+# function for digital signature generation and verification (non-legacy
+# use).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000610-AU-000050
+group:           V-221929
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000803
+control_rev5:    IA-7
+
+contribution:    Splunk can be placed in FIPS mode (SPLUNK_FIPS in splunk-launch.conf),
+                 which confines the hash, HMAC, key-derivation, and random-bit operations
+                 the product performs to the validated module, and it can be told which
+                 hash function protects stored passwords (authentication.conf
+                 [authentication] passwordHashAlgorithm), where SHA512-crypt and
+                 SHA256-crypt are the SHA-2 choices and MD5-crypt is the non-compliant one
+                 the vocabulary still admits.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS in 1|true|True|TRUE -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        The FIPS-validated cryptographic module itself - carried by the host
+                 operating system's certified OpenSSL/FIPS module; the product consumes it
+                 and cannot validate it.
+external:        FIPS mode is an install-time, one-time setting per the spec: enabling it
+                 after first start requires a reinstall, so remediation is an installation
+                 or image change rather than a configuration change.
+external:        The TLS settings SPLK-CL-000430 names (server.conf sslVersions,
+                 sslVersionsForClient, cipherSuite, ecdhCurves) are observed but
+                 deliberately not asserted: that rule's own text states that if the lines
+                 do not exist the settings are compliant, because in FIPS mode the
+                 product's defaults are already confined to the validated module. Asserting
+                 a value would fail an instance the benchmark authority treats as
+                 compliant.
+external:        Signature generation and verification by peers (forwarders, LDAP servers,
+                 SAML identity providers) - carried by those peers' own cryptographic
+                 configurations.
+
+citation:        splunk-spec-files/splunk-launch.conf.spec:110 (SPLUNK_FIPS = [0|1],
+                 default 0, one-time setting);
+                 splunk-spec-files/authentication.conf.spec:58 (passwordHashAlgorithm
+                 vocabulary, default SHA512-crypt, rounds minimum 1000); SPLK-CL-000390 and
+                 SPLK-CL-000430 fix text
+finding:         Splunk is not confined to FIPS-validated SHA-2 hashing - the instance was
+                 not installed in FIPS mode (splunk-launch.conf SPLUNK_FIPS is not 1)
+                 and/or stored passwords use a non-SHA-2 algorithm (authentication.conf
+                 passwordHashAlgorithm is MD5-crypt); this determination is from the
+                 perspective of the application layer alone, the validated module being
+                 supplied by the host platform.

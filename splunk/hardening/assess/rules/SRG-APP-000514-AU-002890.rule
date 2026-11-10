@@ -1,0 +1,51 @@
+# SRG-APP-000514-AU-002890  -  CAT I
+# The Central Log Server must implement NIST FIPS-validated cryptography for
+# the following: to provision digital signatures; to generate cryptographic
+# hashes; and/or to protect unclassified information requiring
+# confidentiality and cryptographic protection.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000514-AU-002890
+group:           V-206510
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-002450
+control_rev5:    SC-13
+
+contribution:    Splunk can be placed in FIPS mode through splunk-launch.conf so that its
+                 digital signature, hashing and TLS functions use only FIPS-validated
+                 algorithms, which is the single switch the product exposes for this
+                 requirement.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        The FIPS 140 validated cryptographic module supplied by the host operating
+                 system, which Splunk calls into and which splunk-launch.conf.spec:114-116
+                 notes can itself place the instance in FIPS mode when the kernel runs in
+                 FIPS mode
+external:        The installation procedure, because the SPLK-CL-000390 fix text states
+                 FIPS mode must be set before the initial start and otherwise requires a
+                 reinstall or upgrade
+external:        SPLUNK_COMMON_CRITERIA=1, which the SPLK-CL-000390 fix text sets alongside
+                 SPLUNK_FIPS but which this release's splunk-launch.conf specification does
+                 not document
+
+citation:        SRG-APP-000514-AU-002890 check text; SPLK-CL-000390 check and fix text;
+                 splunk-launch.conf.spec:110-127
+finding:         splunk-launch.conf does not set SPLUNK_FIPS = 1, so the instance does not
+                 run in FIPS mode and its digital signature, hashing and confidentiality
+                 functions are not restricted to FIPS-validated algorithms.

@@ -1,0 +1,57 @@
+# SRG-APP-000915-AU-000400  -  CAT II
+# The Central Log Server must provide protected storage for cryptographic
+# keys with organization-defined safeguards and/or hardware protected key
+# store.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000915-AU-000400
+group:           V-263583
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-004910
+control_rev5:    SC-28
+
+contribution:    Splunk can hold its private keys in password-protected PEM files named
+                 from configuration and stores those passwords in its own encrypted form
+                 rather than in clear text, which is the key protection the product itself
+                 can express.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           inputs.conf [SSL] serverCert non_empty
+check:           inputs.conf [SSL] sslPassword matches ^\$
+check:           server.conf [sslConfig] serverCert not_equals $SPLUNK_HOME/etc/auth/server.pem
+check:           server.conf [sslConfig] sslPassword matches ^\$
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [sslConfig] serverCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslPassword https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        Organization-defined safeguards for key storage, such as file system
+                 permissions, disk encryption or a hardware protected key store, which the
+                 check text leaves to the organization
+external:        Any hardware security module or external key store, which this release's
+                 configuration files do not reference
+external:        The splunk.secret file and its operating system permissions, which protect
+                 the encryption of the stored passwords
+external:        Operating system ownership and permission bits on the certificate and
+                 private key files
+
+citation:        SRG-APP-000915-AU-000400 check text; SPLK-CL-000450 fix text;
+                 inputs.conf.spec:990-1006; server.conf.spec:971-1009
+finding:         Splunk's private key material is not protected to the extent the product
+                 allows: a certificate password is stored in clear text or left at the
+                 vendor default, or the instance still presents the certificate and key it
+                 auto-generated on first start.

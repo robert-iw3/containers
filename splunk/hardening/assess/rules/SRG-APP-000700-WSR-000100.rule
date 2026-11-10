@@ -1,0 +1,69 @@
+# SRG-APP-000700-WSR-000100  -  CAT II
+# The web server must disable accounts when the accounts have expired.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000700-WSR-000100
+group:           V-264337
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       manual
+confidence:      derived
+revised:         yes
+cci:             CCI-003627
+control_rev5:    AC-2
+
+contribution:    Splunk has no account expiration date for its native accounts - the one
+                 expiry mechanism it ships governs passwords, not accounts - so the
+                 application's contribution is limited to honoring, at the next
+                 authentication, the decision of whatever authority holds the account
+                 lifecycle.
+
+external:        The enterprise directory service or identity provider holds the account
+                 expiration date and must disable or deprovision the account on expiry;
+                 Splunk honors that decision only at the next authentication.
+external:        Where accounts are provisioned through SCIM, the provisioning authority
+                 sends the disable or delete; the receiving path exists in the product but
+                 the decision and the transmission are the authority's.
+external:        The organization's account review and offboarding procedure determines
+                 when an account has expired.
+external:        An assessor confirms the account lifecycle authority and its expiry
+                 handling, because the application exposes no expiration value to read.
+
+manual_reason:   Splunk native accounts carry no expiration date field, and nothing in the
+                 10.4.2 specification set expresses one, so no configuration value can
+                 decide whether expired accounts are disabled.
+
+citation:        All three conditions are invention, and two of them are also vacuous.
+                 web-features.conf [feature:identity_sidecar_scim] enabled controls only
+                 "whether or not Splunk Web displays Automated User Management (AUM)
+                 controls for System for Cross-Domain Identity Management (SCIM) in the
+                 SAML configuration dialog page" and defaults to true
+                 (web-features.conf.spec:400-410): it is a dialog visibility toggle that
+                 provisions nothing and cannot bear on account expiry at all. server.conf
+                 [teleport_supervisor] disabled launches the process that "handles
+                 authorization tokens for System for Cross-Domain Identity Management
+                 (SCIM) operations" and already defaults to false, meaning launched
+                 (server.conf.spec:6584-6591), so the condition is unfounded in any source
+                 text - this SRG carries no product STIG rule, so both check and fix text
+                 are the SRG's own abstract wording - and cannot fail a default
+                 installation. authType not_equals Splunk forces delegated authentication
+                 the check text never asks for, the same over-reach as in
+                 SRG-APP-000315-WSR-000003, and fails an instance whose account lifecycle
+                 is managed by an organizational procedure instead. The nearest native
+                 setting is expireUserAccounts, and the specification is explicit that it
+                 "Specifies whether password expiration is enabled", sitting beside
+                 expirePasswordDays and expireAlertDays (authentication.conf.spec:487-507):
+                 that is password expiry under the identification and authentication
+                 controls, not the account expiration date this requirement's CCI-003627
+                 asks about. The two keys the inventory carries for this requirement as
+                 undeclared, scimSupportedDomains and scsSyncUserDeletes, appear in no
+                 .conf.spec in the 10.4.2 set, so no criterion can be written over them.
+finding:         No application-layer finding is available: Splunk native accounts have no
+                 expiration date field, so the assessor records the authority that holds
+                 the account lifecycle and verifies expiry handling there; raise a finding
+                 only where no authority outside the application disables expired accounts.

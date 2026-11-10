@@ -1,0 +1,49 @@
+# SRG-APP-000750-AU-000130  -  CAT II
+# The Central Log Server must implement an audit reduction capability that
+# supports on-demand audit review and analysis.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000750-AU-000130
+group:           V-263559
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003822
+control_rev5:    AU-7
+
+contribution:    Audit reduction in Splunk is the search-time knowledge layer applied over
+                 indexed records - field extraction, field aliasing, lookups, macros and
+                 data models - all of which are application configuration and all of which
+                 are applied when an analyst runs a search on demand.
+
+governs:         macros.conf - Reusable fragments of search language.
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+governs:         transforms.conf - Rules that rewrite or route data as it is processed.
+
+check:           props.conf [<source type>] present
+check:           macros.conf [<STANZA_NAME>] definition non_empty
+check:           transforms.conf [<unique_transform_stanza_name>] present
+
+external:        Which fields and which events constitute the reduced view an analyst
+                 reviews is an organization-defined parameter recorded in the system
+                 security plan; the product can express any reduction but cannot supply the
+                 organization's definition.
+external:        Having an analyst available to invoke the reduction, and the review
+                 procedure that follows, are organizational.
+
+citation:        props.conf.spec:80 [<spec>] with <spec> = <sourcetype> | host::<host> |
+                 source::<source> | rule::<rulename>, :1085 REPORT-<class>, :1102
+                 EXTRACT-<class>, :1265 FIELDALIAS-<class>, :1313 EVAL-<fieldname>, :1329
+                 LOOKUP-<class>; macros.conf.spec:24 [<STANZA_NAME>], :52 definition =
+                 <string>; transforms.conf.spec:68 [<unique_transform_stanza_name>];
+                 datamodels.conf.spec:26 [<datamodel_name>].
+finding:         Assessed at the application layer alone: no props.conf stanza binds a
+                 search-time knowledge layer to the audit source types in scope, or a macro
+                 or transform defined for audit review carries no definition, so the
+                 application offers no audit reduction for an analyst to apply on demand.

@@ -1,0 +1,70 @@
+# SRG-APP-000516-AU-000410  -  CAT II
+# Analysis, viewing, and indexing functions, services, and applications used
+# as part of the Central Log Server must be configured to comply with
+# DoW-trusted path and access requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000516-AU-000410
+group:           V-206518
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000366
+control_rev5:    CM-6
+
+contribution:    Splunk can require TLS on every path through which its analysis, viewing,
+                 and indexing functions are reached - the web interface, the management
+                 port, and the receiving port - with a configured server certificate,
+                 private key, and trust anchor, and it governs access to those functions
+                 through declared roles.
+
+governs:         authorize.conf - Used to create roles.
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] enableSplunkWebSSL in true|1
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] privKeyPath non_empty
+check:           server.conf [sslConfig] enableSplunkdSSL in true|1
+check:           inputs.conf [SSL] serverCert non_empty
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+check:           authorize.conf [role_<roleName>] importRoles present
+# --- vendor verification: generated, do not edit by hand
+vendor:          authorize.conf [role_<roleName>] importRoles https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
+vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        The certificates themselves and their issuance by a certificate authority
+                 the organization approves, carried by the public key infrastructure; the
+                 product STIG fix text names an approved certificate without the
+                 application being able to judge one.
+external:        The trusted path from the analyst's workstation to the instance, carried
+                 by the network and by the workstation's own trust store.
+external:        Whether every sending device presents a certificate, which the product
+                 STIG verifies by reading the receiver's connection metrics rather than
+                 from configuration (SPLK-CL-000290 check text).
+
+citation:        SPLK-CL-000290 check and fix text; web.conf.spec:70 (enableSplunkWebSSL,
+                 default false), web.conf.spec:82 (serverCert), web.conf.spec:75
+                 (privKeyPath), server.conf.spec:724 (enableSplunkdSSL),
+                 server.conf.spec:996 (sslRootCAPath), inputs.conf.spec:986 ([SSL]),
+                 inputs.conf.spec:990 (serverCert), inputs.conf.spec:1015
+                 (requireClientCert), authorize.conf.spec:67 ([role_<roleName>]),
+                 authorize.conf.spec:79 (importRoles)
+finding:         The web interface, the management port, or the receiving port does not
+                 require TLS with a configured certificate, private key, and trust anchor,
+                 so the analysis, viewing, and indexing functions are reachable over a path
+                 the application does not protect.

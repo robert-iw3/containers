@@ -1,0 +1,59 @@
+# SRG-APP-000910-AU-000390  -  CAT II
+# The Central Log Server must include only approved trust anchors in trust
+# stores or certificate stores managed by the organization.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000910-AU-000390
+group:           V-263582
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004909
+control_rev5:    SC-17
+
+contribution:    Splunk can be pointed at a single organization-curated PEM trust store,
+                 restricted to that store rather than the operating system's anchors, made
+                 to validate the certificates it is presented, and made to check
+                 certificate revocation status.
+
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [sslConfig] sslRootCAPath non_empty
+check:           server.conf [sslConfig] caTrustStore equals splunk
+check:           server.conf [sslConfig] certificateStatusValidationMethod equals crl
+check:           server.conf [sslConfig] sslVerifyServerCert in 1|true
+check:           outputs.conf [tcpout:<group>] sslRootCAPath absent
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<group>] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+vendor:          server.conf [sslConfig] caTrustStore https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] certificateStatusValidationMethod https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslRootCAPath https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [sslConfig] sslVerifyServerCert https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        The content of the trust store file, which the organization populates with
+                 approved anchors and which the SPLK-CL-000450 check text verifies with
+                 openssl on the host operating system
+external:        Operating system file permissions on the trust store and certificate
+                 revocation list files
+external:        The certificate authority's revocation list distribution, which must be
+                 retrieved and placed on the host for crl validation to have data
+external:        The organization's determination of which trust anchors are approved
+
+citation:        SRG-APP-000910-AU-000390 check text; SPLK-CL-000450 check and fix text;
+                 server.conf.spec:798-824, 902-937, 996-1009, 1125-1145, 5392;
+                 outputs.conf.spec:691-699
+finding:         Splunk does not restrict certificate validation to the
+                 organization-managed trust store: server.conf [sslConfig] sslRootCAPath is
+                 unset, caTrustStore admits the operating system anchors, certificate
+                 status validation is off, server certificates are not verified, or a
+                 deprecated per-output trust store is still configured in outputs.conf.

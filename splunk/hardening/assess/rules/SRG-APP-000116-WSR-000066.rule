@@ -1,0 +1,46 @@
+# SRG-APP-000116-WSR-000066  -  CAT II
+# The web server must use the internal system clock to generate time stamps
+# for log records.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000116-WSR-000066
+group:           V-206367
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000159
+control_rev5:    AU-8
+
+contribution:    Splunk Web renders its own access log timestamps from the host clock and
+                 that rendering is not configurable; what the application does configure is
+                 whether splunkd stamps the indexed copy of those records itself rather
+                 than accepting a time chosen by the input layer.
+
+governs:         props.conf - How incoming data is recognized, parsed and timestamped.
+
+check:           props.conf [<source type>] DATETIME_CONFIG not_equals NONE
+
+external:        Accuracy and synchronization of the host clock that splunkd and Splunk Web
+                 read - the operating system time service (NTP or chrony), which no Splunk
+                 setting reaches
+external:        The check's alternative workaround - generate a log entry, then query the
+                 operating system clock and compare - which is a manual observation, not a
+                 configuration read
+
+citation:        web.conf [settings] log.access_file non_empty is removed. It names the
+                 access log file (web.conf.spec:871-874, default web_access.log) and bears
+                 on nothing in a timestamp requirement, and because the default supplies
+                 the value, btool reports it non-empty on every instance, so the condition
+                 cannot fail. A condition that cannot fail turns a requirement green
+                 without evidence, which is worse than leaving the key out of the
+                 criterion.
+finding:         Splunk is configured with DATETIME_CONFIG = NONE for one or more source
+                 types, so the application does not stamp those records from the system
+                 clock it reads.

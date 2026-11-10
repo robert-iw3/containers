@@ -1,0 +1,50 @@
+# SRG-APP-000141-WSR-000076  -  CAT II
+# The web server must not be a proxy server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000076
+group:           V-206376
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk Enterprise ships no forward- or reverse-proxy service for
+                 third-party traffic, so there is no proxy function to uninstall; the one
+                 relay it does offer is the app-browse channel to the remote applications
+                 repository, and the application can close it.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [applicationsManagement] allowInternetAccess in false|0
+# --- vendor verification: generated, do not edit by hand
+vendor:          server.conf [applicationsManagement] allowInternetAccess https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+# --- end vendor verification
+
+external:        Any reverse proxy, load balancer, or egress proxy placed in front of or
+                 beside the instance, carried by that network component rather than by the
+                 application; web.conf tools.proxy.on only tells Splunk that such a proxy
+                 is present so it can read the forwarded headers, and server.conf
+                 [proxyConfig] only tells splunkd to send its own outbound requests through
+                 one - neither makes Splunk a proxy for other hosts (web.conf.spec:1016,
+                 server.conf.spec:1201).
+external:        web.conf enable_proxy_write governs the /splunkd endpoint that Splunk
+                 Web's own interface uses to reach the daemon; it is internal to the
+                 product's user interface, not a proxy for third-party traffic, and setting
+                 it false breaks the interface and the client SDKs (web.conf.spec:371).
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000076 check and fix text;
+                 server.conf.spec:1734 (allowInternetAccess), server.conf.spec:1201
+                 ([proxyConfig] is an outbound client setting), web.conf.spec:1016
+                 (tools.proxy.on describes being behind a reverse proxy, default false)
+finding:         The instance is permitted to reach the remote applications repository, so
+                 the application still relays user-initiated requests to an outside service
+                 on the user's behalf.

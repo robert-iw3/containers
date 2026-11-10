@@ -1,0 +1,52 @@
+# SRG-APP-000080-AU-000010  -  CAT II
+# The Central Log Server must be configured to protect the data sent from
+# hosts and devices from being altered in a way that may prevent the
+# attribution of an action to an individual (or process acting on behalf of
+# an individual).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000080-AU-000010
+group:           V-206448
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000166
+control_rev5:    AU-10
+
+contribution:    Splunk can compute and store rawdata-slice hashes for every index
+                 (enableDataIntegrityControl), so later alteration of indexed records is
+                 detectable.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+
+check:           indexes.conf [<index name>] enableDataIntegrityControl in 1|true
+
+external:        Filesystem permissions on the index rawdata and hash files - the operating
+                 system, not Splunk, prevents direct tampering with bucket contents on
+                 disk.
+external:        Membership of the delete-capable role, and therefore who can actually
+                 remove indexed records, is account provisioning and directory
+                 administration, not a Splunk setting.
+
+citation:        INVENTION. Removed authorize.conf [role_<roleName>] delete_by_keyword
+                 absent: it cannot be satisfied. authorize.conf.spec gives a role
+                 capability as "<capability> = <enabled>" and notes "'enabled' is the only
+                 accepted value here, as capabilities are disabled by default", so a role
+                 stanza cannot express a denial; and the product ships [role_can_delete]
+                 with delete_by_keyword = enabled in system/default/authorize.conf, which
+                 assess.sh reads through btool's merged view. The condition therefore fails
+                 every stock installation. Restricting delete is real, but it is enforced
+                 by not placing anyone in that role, which authorize.conf does not record,
+                 so it moves to external_dependencies. The retained condition is the one
+                 the benchmark authority actually specifies.
+finding:         enableDataIntegrityControl is not set to 1 or true for the indexes in
+                 scope, so Splunk does not compute or store the rawdata hashes needed to
+                 detect later alteration of the records it received.

@@ -1,0 +1,80 @@
+# SRG-APP-000345-AU-000400  -  CAT II
+# The Central Log Server must automatically lock the account until the
+# locked account is released by an administrator when three unsuccessful
+# login attempts in 15 minutes are exceeded.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000345-AU-000400
+group:           V-221925
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002238
+control_rev5:    AC-7
+
+contribution:    For accounts held in Splunk's own authentication system, Splunk enforces
+                 the lockout itself: authentication.conf [splunk_auth] lockoutUsers turns
+                 lockout on, lockoutAttempts sets how many unsuccessful logins may occur
+                 before the account is locked, lockoutThresholdMins sets how long the
+                 failed-attempt counter runs before resetting, and lockoutMins sets how
+                 long the lockout is held.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] lockoutUsers matches ^(1|[Tt]rue)$
+check:           authentication.conf [splunk_auth] lockoutAttempts max 3
+check:           authentication.conf [splunk_auth] lockoutAttempts min 1
+check:           authentication.conf [splunk_auth] lockoutThresholdMins min 15
+check:           authentication.conf [splunk_auth] lockoutThresholdMins max 120
+check:           authentication.conf [splunk_auth] lockoutMins present
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] lockoutAttempts https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] lockoutMins https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] lockoutThresholdMins https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [splunk_auth] lockoutUsers https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Splunk's native lockout always expires on its own -
+                 authentication.conf.spec:526-528 caps lockoutMins at 1440 minutes - so the
+                 product cannot hold an account locked until an administrator releases it.
+                 The administrator-release portion of AC-7 b is carried by an
+                 organizational procedure in which an administrator unlocks the account
+                 through Splunk user management, and by the organization accepting the
+                 automatic expiry of the configured lockout period.
+external:        [splunk_auth] governs only accounts held in Splunk's native authentication
+                 system. Where authType is LDAP, SAML or ProxySSO, the failed-attempt
+                 counting and lockout are enforced by the directory service or identity
+                 provider and are assessed against that component.
+external:        authentication.conf.spec:517-519, 528-530, 539-541 and 550-552 state that
+                 on search head cluster members the lockout state applies per member rather
+                 than to the whole cluster, so cluster-wide enforcement depends on the
+                 deployment topology.
+
+citation:        SRG-APP-000345-AU-000400 check text ('lock out the account until released
+                 by an administrator when 3 consecutive invalid attempts during a 15 minute
+                 period is exceeded'); product STIG SPLK-CL-000070 fix ('Modify the
+                 following lines in the authentication.conf file under the [splunk_auth]:
+                 lockoutUsers = True or 1') and check ('If the lockoutUsers is missing or
+                 is configured to 0 or False, this is a finding');
+                 authentication.conf.spec:437 ([splunk_auth]),
+                 authentication.conf.spec:514-519 (lockoutUsers = <boolean>, default true),
+                 authentication.conf.spec:532-541 (lockoutAttempts = <positive integer>,
+                 unsuccessful attempts before lockout, must occur within
+                 lockoutThresholdMins, minimum 1, maximum 64, default 5),
+                 authentication.conf.spec:543-552 (lockoutThresholdMins = <positive
+                 integer>, minutes that must pass from the first failed login before the
+                 counter resets, minimum 1, maximum 120, default 5),
+                 authentication.conf.spec:521-530 (lockoutMins = <positive integer>,
+                 minutes a user is locked out, minimum 1, maximum 1440, default 30)
+finding:         Splunk Enterprise does not lock native accounts on three failed logins in
+                 15 minutes: authentication.conf [splunk_auth] lockoutUsers is missing or
+                 set to 0 or False, lockoutAttempts is absent or greater than 3,
+                 lockoutThresholdMins is absent or less than 15 so the failed-attempt
+                 counter resets inside the measured period, or lockoutMins is not
+                 explicitly configured.

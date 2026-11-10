@@ -1,0 +1,75 @@
+# SRG-APP-001035-AU-000430  -  CAT I
+# The Central Log Server must be a version supported by the vendor.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-001035-AU-000430
+group:           V-278989
+severity:        high
+cat:             CAT I
+determination:   ORGANIZATIONAL
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-003376
+control_rev5:    SA-22
+
+contribution:    Splunk Enterprise makes its own installed release identifiable through the
+                 product's own interfaces (the CLI version command and the server
+                 information REST endpoint), so the application supplies the release and
+                 build identifier an assessor compares against the vendor's published
+                 support policy, but it exposes no setting that sets, constrains, or
+                 attests the support status of that release.
+
+external:        Software deployment that fixes the installed release: the container image
+                 build or package installation pins the Splunk Enterprise release and
+                 build, and rebuilding or reinstalling is the only action that changes
+                 support status.
+external:        Splunk Enterprise software maintenance and support entitlement held for
+                 the installed release (vendor contract), which the application cannot
+                 record or enforce.
+external:        Organizational software lifecycle and patch management procedure
+                 establishing the supported-release baseline and the trigger to upgrade
+                 before vendor end of support.
+external:        The vendor's published Splunk Enterprise support policy and end-of-support
+                 dates for the installed release train, which the application does not
+                 carry and cannot evaluate.
+
+manual_reason:   Support status is a property of the installed release and of the
+                 maintenance entitlement held for it, not of configuration. checks.tsv
+                 assigns no conf, stanza, or key to this requirement, and an independent
+                 sweep of all 67 Splunk 10.4.2 *.conf.spec files found no key that governs,
+                 reports, or attests vendor support or release currency: the only
+                 version-adjacent keys are web.conf.spec:192-196 (updateCheckerBaseURL, a
+                 Splunk.com release-notification URL that may be set to 0),
+                 app.conf.spec:116-119 (show_upgrade_notification, a per-app Splunk Web
+                 notice, default false), and limits.conf.spec:3556-3559
+                 (version_upgrade_max_start_retries and the sibling version_upgrade_* keys,
+                 documented as internal KV Store migration and upgrade settings not to be
+                 changed except on vendor instruction). A phrase sweep of the same
+                 specification set for end-of-life, end-of-support, EOL, vendor support,
+                 and supported release returns zero hits. Deciding this requirement
+                 requires reading the installed package's release, which is not Splunk
+                 configuration, so no condition in the criterion vocabulary can be written
+                 over it.
+
+citation:        Central Log Server SRG V3R5, SRG-APP-001035-AU-000430 (V-278989), severity
+                 high, CCI-003376, SA-22 a: check text "Verify that the Central Log Server
+                 is a version supported by the vendor"; fix text "Upgrade or install a
+                 Central Log Server which is a version supported by the vendor." No product
+                 STIG rule shares CCI-003376; the sunset Splunk Enterprise 8.x for Linux
+                 STIG V2R3 states the same requirement under SPLK-CL-000510 (V-274465,
+                 CCI-002605) with fix text "Upgrade to a version supported by the vendor.",
+                 naming no configuration value. Specification basis for the absence of a
+                 setting: web.conf.spec:192-196, app.conf.spec:116-119,
+                 limits.conf.spec:3556-3559.
+finding:         This determination is made from the perspective of the application layer
+                 alone: Splunk Enterprise exposes no configuration setting that establishes
+                 or attests vendor support for its own release, so the application's share
+                 of this requirement is limited to reporting the installed release and
+                 build, and a finding is sustained only where the release the instance
+                 reports is at or past the vendor's published end of support, remedied by
+                 installing a supported release through the deployment rather than by any
+                 configuration change.

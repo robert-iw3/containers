@@ -1,0 +1,46 @@
+# SRG-APP-000358-WSR-000163  -  CAT II
+# The web server must be configurable to integrate with an organizations
+# security infrastructure.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000358-WSR-000163
+group:           V-206423
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001851
+control_rev5:    AU-4
+
+contribution:    Splunk integrates with surrounding security infrastructure in two
+                 configurable ways: it forwards its events onward through outputs.conf, and
+                 it fires alert actions from its own health reporter. The existence of the
+                 receiving security tool is not a Splunk setting.
+
+governs:         health.conf - Thresholds for Splunk reporting on its own health.
+governs:         outputs.conf - Where this instance forwards its data, and how that connection is
+                 protected.
+
+check:           outputs.conf [tcpout:<target_group>] server non_empty
+check:           health.conf [alert_action:<action name>] disabled equals 0
+# --- vendor verification: generated, do not edit by hand
+vendor:          outputs.conf [tcpout:<target_group>] server https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/outputs.conf
+# --- end vendor verification
+
+external:        The organization's security tool that offers review and alert capability,
+                 and its own ingestion configuration
+external:        Whether that tool is in place at all, which the check text asks the
+                 assessor to determine and no Splunk setting records
+external:        Network reachability and transport between Splunk and that tool
+
+citation:        SRG-APP-000358-WSR-000163 (V-206423) check text; SPLK-CL-000150 check and
+                 fix text; outputs.conf.spec:121-131; health.conf.spec:217-219
+finding:         No receiving system is configured in outputs.conf and the health
+                 reporter's alert action is disabled, so the application sends its logged
+                 events and alerts nowhere and is not integrated with the organization's
+                 security infrastructure.

@@ -1,0 +1,58 @@
+# SRG-APP-000068-AU-000035  -  CAT III
+# The Central Log Server must display the Standard Mandatory DoW Notice and
+# Consent Banner before granting access to the Central Log Server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000068-AU-000035
+group:           V-221905
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000048
+control_rev5:    AC-8
+
+contribution:    Splunk Web renders operator-supplied content on its login page before any
+                 credential is accepted, through web.conf login_content, which is the
+                 application's mechanism for presenting the Standard Mandatory Notice and
+                 Consent Banner ahead of access. Note that in this release the
+                 specification states the platform sanitizes the supplied HTML "by removing
+                 potentially dangerous tags and attributes", so the banner must be
+                 expressed in markup the sanitizer preserves rather than in the
+                 script-based dialog the product STIG fix text shows.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] login_content non_empty
+check:           web.conf [settings] login_content matches You are accessing a U\.S\. Government \(USG\) Information System \(IS\)
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] login_content https://help.splunk.com/en/splunk-enterprise/developing-views-and-apps-for-splunk-web/9.0/customize-splunk-web/customize-the-login-page
+# --- end vendor verification
+
+external:        The product STIG scopes this check to the instance used as a search head
+                 and marks it not applicable on an instance that is not a search head, so
+                 the role of the instance under review decides applicability.
+external:        Access paths that do not pass through the Splunk Web login page - the
+                 command line interface, the REST interface, and a single sign-on portal
+                 that authenticates the user before Splunk Web is reached - present their
+                 own banner or none; those are carried by the operating system logon banner
+                 and by the SSO portal respectively.
+external:        The exact approved banner text, including any short-form variant
+                 authorized for the system, is set by the organization.
+
+citation:        splunk-spec-files/web.conf.spec:16 ([settings]), 233-237 (login_content =
+                 <string>, no default, "Supports any text including HTML. The Splunk
+                 platform sanitizes HTML for security purposes by removing potentially
+                 dangerous tags and attributes"); product STIG SPLK-CL-000080 check and fix
+                 text (add/modify the login_content line carrying the banner wording).
+finding:         Splunk Web does not display the Standard Mandatory Notice and Consent
+                 Banner before granting access, because web.conf [settings] login_content
+                 is empty or does not carry the mandated notice text; this is assessed at
+                 the application layer alone, and banners for the command line interface,
+                 the REST interface, and any single sign-on portal ahead of Splunk Web are
+                 recorded as external dependencies.

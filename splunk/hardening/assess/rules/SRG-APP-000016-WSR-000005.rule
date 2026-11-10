@@ -1,0 +1,66 @@
+# SRG-APP-000016-WSR-000005  -  CAT II
+# The web server must generate information to be used by external
+# applications or entities to monitor and control remote access.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000016-WSR-000005
+group:           V-206354
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000067
+control_rev5:    AC-17
+
+contribution:    Splunk produces the remote-access records an external monitor consumes:
+                 Splunk Web writes an HTTP access log naming the client and request,
+                 splunkd writes authentication and session events to the audit trail, and
+                 audit.conf controls whether those audit events reach an index where an
+                 external monitoring application can retrieve them; outputs.conf [tcpout]
+                 is the application's means of pushing copies to a destination the
+                 organization names.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           audit.conf [auditTrail] queueing not_equals false
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] log.access_file https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] log.access_file non_empty
+                 reason: "log.access_file = <filename>. The HTTP access log filename. This
+                         file is written in the default $SPLUNK_HOME/var/log directory.
+                         Default: web_access.log" Related shipped settings:
+                         log.access_maxsize = 25000000 and log.access_maxfiles = 5.
+# --- end vendor verification
+
+external:        The external application or entity that monitors and controls remote
+                 access is a separate component; Splunk can generate and forward the
+                 records but cannot act on them, and the check text's "mechanism ... to
+                 monitor and control access" is completed by that consumer.
+external:        Where the organization directs copies to that consumer over the network,
+                 the destination addresses configured in outputs.conf [tcpout] and the
+                 reachability of the receiver are deployment facts the application cannot
+                 verify.
+external:        If audit queueing is deliberately set to false, an inputs.conf monitor
+                 stanza tailing the audit log carries the delivery instead, as the spec
+                 states.
+
+citation:        splunk-spec-files/web.conf.spec:871-874 (log.access_file, default
+                 web_access.log); splunk-spec-files/audit.conf.spec:23-29 ([auditTrail]
+                 queueing, default true; false requires an inputs.conf tail);
+                 splunk-spec-files/outputs.conf.spec:61-71 ([tcpout], defaultGroup);
+                 SRG-APP-000016-WSR-000005 check and fix text.
+finding:         Splunk does not generate the remote-access information an external
+                 monitoring application would consume, because web.conf [settings]
+                 log.access_file names no HTTP access log or audit.conf [auditTrail]
+                 queueing is set to false with no compensating monitor input, leaving audit
+                 events unindexed; this is assessed at the application layer alone, and the
+                 external monitoring and access-control application itself, together with
+                 its network delivery, is recorded as an external dependency rather than
+                 treated as a Splunk setting.

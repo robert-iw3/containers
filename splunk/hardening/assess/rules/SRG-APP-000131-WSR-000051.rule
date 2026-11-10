@@ -1,0 +1,48 @@
+# SRG-APP-000131-WSR-000051  -  CAT II
+# All web server files must be verified for their integrity (e.g., checksums
+# and hashes) before becoming part of the production web server.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000131-WSR-000051
+group:           V-206372
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003992
+control_rev5:    CM-14
+
+contribution:    Splunk verifies on every startup, and on a recurring interval thereafter,
+                 that the files installed with the running version still match the release
+                 manifest, and reports any file that was removed or altered.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+
+check:           limits.conf [system_checks] installed_files_integrity equals enabled
+check:           limits.conf [system_checks] installed_files_integrity_interval non_empty
+
+external:        Verification of installation media and app packages before they reach the
+                 installation directory, carried by the operating system package manager's
+                 signature checking and by the organization's software acceptance
+                 procedure.
+external:        app.conf [install] install_source_checksum records the checksum of the
+                 package a given app was installed from, but the platform populates it
+                 automatically and the specification directs that it not be set by hand, so
+                 it is evidence rather than a control the assessor can require
+                 (app.conf.spec:158).
+external:        indexes.conf enableDataIntegrityControl hashes indexed data, not the
+                 product's own installed files, so it does not bear on this objective
+                 (indexes.conf.spec:594).
+
+citation:        Web Server SRG SRG-APP-000131-WSR-000051 check text; limits.conf.spec:4450
+                 (installed_files_integrity = enabled | log_only | disabled, default
+                 enabled), limits.conf.spec:4468 (installed_files_integrity_interval,
+                 default 12h), limits.conf.spec:4475
+finding:         Splunk's installed-file integrity verification is not enabled, so the
+                 application does not verify that the files of the running installation
+                 still match the release manifest.

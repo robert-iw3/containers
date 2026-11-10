@@ -1,0 +1,75 @@
+# SRG-APP-000456-AU-000270  -  CAT I
+# The Central Log Server must install security-relevant software updates
+# within 30 days unless the time period is directed by an authoritative
+# source (e.g., IAVM, CTOs, DTMs, STIGs).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000456-AU-000270
+group:           V-278988
+severity:        high
+cat:             CAT I
+determination:   ORGANIZATIONAL
+grade:           C
+decidable:       manual
+confidence:      derived
+cci:             CCI-002605
+control_rev5:    SI-2
+
+contribution:    Nothing toward installation: the application can report its installed
+                 version and build, but it has no setting that acquires, schedules or
+                 applies a security-relevant update, so the 30-day installation objective
+                 cannot be reached by configuring Splunk.
+
+external:        The organization's flaw remediation procedure for Splunk Enterprise,
+                 naming the authoritative source monitored (IAVM, CTO, DTM, STIG) and the
+                 period within which security-relevant updates are installed.
+external:        The configuration management record of upgrades performed, which is the
+                 evidence of the installation period actually met.
+external:        The vendor's currently supported release list, against which the installed
+                 version and build are compared — the basis the attached product rule
+                 SPLK-CL-000510 directs.
+external:        The package or container image build and deployment pipeline that delivers
+                 the replacement installation, assessed against its own baseline.
+
+manual_reason:   Splunk Enterprise does not install its own software updates. An upgrade
+                 replaces the installation from a vendor-supplied package, which is an
+                 administrative act outside the product's configuration surface, and no key
+                 in the specification set acquires, schedules or applies an update to the
+                 instance; checks.tsv accordingly attaches no conf, stanza or key to this
+                 requirement. The only update-related keys the product exposes are
+                 notification or out of scope: web.conf.spec:192 updateCheckerBaseURL
+                 merely causes Splunk Web to contact the vendor for notice of new versions
+                 and can be set to 0 to stop that contact, app.conf.spec:116
+                 show_upgrade_notification is app scope, and serverclass.conf.spec:316
+                 updaterRunningFilter concerns deployment clients running a separately
+                 installed self-updater rather than the Central Log Server itself. The
+                 attached product rule SPLK-CL-000510 names no setting either — its fix
+                 text directs an upgrade to a vendor-supported version and its check text
+                 states that the STIG is sunset — so the determination rests on the
+                 installed version and build, read from the running application but a
+                 property of the installed software rather than a configurable value,
+                 compared against the vendor's supported release list and against the flaw
+                 remediation record.
+
+citation:        SRG-APP-000456-AU-000270 check and fix text (CCI-002605, SI-2 c), severity
+                 high; attached product rule SPLK-CL-000510, whose fix text directs an
+                 upgrade to a vendor-supported version and whose check text states the STIG
+                 is sunset — no configuration setting is named. No conf, stanza or key is
+                 attached to this requirement in the mechanism inventory. Splunk 10.x
+                 specification set (Version 10.0.0), keys enumerated and excluded as
+                 non-installing: web.conf.spec:192 updateCheckerBaseURL (vendor
+                 notification only, settable to 0); app.conf.spec:116
+                 show_upgrade_notification (app scope); serverclass.conf.spec:316
+                 updaterRunningFilter (deployment clients with a separately installed
+                 self-updater).
+finding:         Splunk Enterprise provides no setting that installs its own updates, so
+                 this requirement is not decided by application configuration: a finding is
+                 raised only where the installed version and build are no longer on the
+                 vendor's supported release list, or where the flaw remediation record does
+                 not show security-relevant updates installed within 30 days or within the
+                 period an authoritative source directs, and it is recorded against the
+                 organization's flaw remediation process and the installed software rather
+                 than against the Splunk application configuration assessed here.

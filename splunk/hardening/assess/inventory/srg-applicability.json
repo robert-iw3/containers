@@ -1,0 +1,502 @@
+{
+ "basis_for_in_use": "All 37 rules of the sunsetted Splunk Enterprise 8.x for Linux STIG V2R3 derive from Central Log Server SRG requirement ids; none derive from Web Server SRG. The Web Server SRG is this assessment's addition, on the basis that Splunk serves a web UI on 8000 and a REST interface on 8089.",
+ "candidates": [
+  {
+   "current_version": "Ver 1, Rel 1 (library upload 2025-11-25)",
+   "determination": "not applicable - governs API management platforms and gateways; splunkd REST is an application function on an HTTP listener already governed by the Web Server SRG.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Application Programming Interface (API) SRG",
+   "reason": "splunkd exposes a REST management API on 8089 that is part of the application configuration surface, so this SRG could bind to a real Splunk mechanism. It is new (V1R1, uploaded 2025-11-25) and postdates the sunsetted Splunk STIG; its applicability statement was not retrieved, so the document must be read before it is adopted or excluded.",
+   "scope_summary": "Application programming interfaces and their exposure, authentication and management (scope statement not retrieved).",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 5 (library upload 2026-10-06)",
+   "determination": "applies - assessed.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Central Log Server SRG",
+   "reason": "Splunk Enterprise is a central log server, and all 37 rules of the sunsetted Splunk Enterprise 8.x for Linux STIG derive from this SRG's requirement IDs. Confirmed locally as V3R5, benchmark date 30 Sep 2026.",
+   "scope_summary": "Centralized log and event collection, aggregation, retention, review and protection products.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "plausible"
+  },
+  {
+   "current_version": "V1R0.1 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "determination": "not applicable - a general application baseline is the fallback where no technology-specific SRG exists; the Central Log Server SRG is the specific one and supersedes it.",
+   "evidence_url": "https://cyber.trackr.live/stig/General_Application_%28GAPP%29_Security_Requirements_Guide/1/0.1",
+   "name": "General Application (GAPP) Security Requirements Guide",
+   "reason": "This is the largest gap in the current 253-requirement baseline: a general application SRG first released 05 Aug 2026, after the assumptions behind the current matrix were set. I could not retrieve a DISA statement of its scope, nor any DISA rule on precedence between a general application SRG and a more specific technology SRG, so whether it supersedes, supplements, or is subsumed by Central Log Server plus Web Server is open and must be settled with DISA rather than decided here.",
+   "scope_summary": "By its title, a general Application-core baseline for applications; 163 rules, identifiers of the form GAPP-00-000010 (no core-SRG lineage in the version ID).",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 4, Rel 5 (library upload 2026-07-10)",
+   "determination": "applies - assessed.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Web Server SRG",
+   "reason": "Splunk Web on 8000 and the splunkd HTTP management listener on 8089 are web servers configured through Splunk's own .conf files. Confirmed locally as V4R5, benchmark date 01 Jul 2026.",
+   "scope_summary": "Web server software serving content or application interfaces over HTTP/HTTPS.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "plausible"
+  },
+  {
+   "current_version": "V6R5",
+   "determination": "not applicable - governs applications the organization designs and develops; Splunk is commercial software. Carve-out: custom Splunk apps written in-house are developed code.",
+   "evidence_url": "https://dl.dod.cyber.mil/wp-content/uploads/SRG-STIG_Applicability_Guide-User_Guide_1_3.docx",
+   "name": "Application Security and Development Security Technical Implementation Guide",
+   "reason": "This is the one baseline the current 253-requirement union omits that DISA's own applicability tooling would return. In the SRG/STIG Applicability Guide data shipped inside STIG Viewer 3, the Application node carries Application_Security_Development_STIG, and central_log_server, web_server and both Splunk product nodes all inherit from it, so any application asset returns it. The Web Server SRG section 3.2 likewise directs hosted applications to \"the Application SRG or a more specific vendor STIG\". Weight is reduced by the deployment fact that Splunk apps here are installed configuration bundles rather than software this organization develops, and by the existence of a more specific (though sunsetted) vendor STIG - but it rises again precisely because that vendor STIG is sunsetted. Decide explicitly and record the decision rather than leaving it unstated.",
+   "scope_summary": "Base application requirements (bare SRG-APP-nnnnnn form) covering application design, development, configuration and maintenance; it is the parent Application SRG from which the technology SRGs are derived.",
+   "seen_by": [
+    "catalog:siem-precedent"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 4, Rel 6 (library upload 2026-10-05)",
+   "determination": "not applicable - governs middleware hosting independently deployed applications; Splunk apps are configuration bundles.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Application Server SRG",
+   "reason": "Splunk hosts installed app bundles and runs a web application framework, which invites the argument. It is not a general-purpose application-hosting platform, and DISA derived none of the 37 Splunk 8.x STIG rules from this SRG.",
+   "scope_summary": "Application server and middleware platforms that host and execute deployed applications.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2, Rel 3 (library upload 2026-10-05)",
+   "determination": "not applicable - governs AAA services (RADIUS, TACACS+, identity providers); Splunk authenticates its own users and consumes LDAP or SAML, providing AAA to nothing.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Authentication, Authorization, and Accounting Services (AAA) SRG",
+   "reason": "Splunk performs its own authentication and role-based authorization and can delegate to LDAP or SAML, so authentication requirements do have Splunk mechanisms. Splunk is not an AAA service product providing those services to other devices, which is what this SRG governs.",
+   "scope_summary": "Authentication, authorization and accounting service products such as RADIUS and TACACS+ servers.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 4, Rel 6 (library upload 2026-10-06)",
+   "determination": "not applicable - governs database management systems; the Splunk index is a proprietary time-series store with no relational engine and no SQL.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Database SRG",
+   "reason": "Splunk's index is a proprietary time-series store with no RDBMS and no SQL engine, so most DBMS requirements have no mechanism to bind to. The embedded KV store is the only data-store component that could support an argument for applicability.",
+   "scope_summary": "Database management system products.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 1, Rel 0.1, draft (library upload 2026-08-18)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "General Application Draft SRG",
+   "reason": "A general application SRG would, once published, plausibly govern Splunk Enterprise as an application. It is a draft at V1R0.1 and is not an authorization baseline, so it should be tracked as forthcoming rather than assessed.",
+   "scope_summary": "General applications (draft; scope statement not retrieved).",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "borderline"
+  },
+  {
+   "current_version": "Ver 3, Rel 4 (library upload 2026-01-08)",
+   "determination": "not applicable - Splunk inspects no traffic and blocks nothing; a SIEM consumes IDPS output rather than performing detection. Enterprise Security does not change this.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Intrusion Detection and Prevention System SRG",
+   "reason": "Splunk Enterprise core is not an IDPS and performs no traffic inspection or blocking. A site running Splunk Enterprise Security as its detection platform could attract review under this SRG, but that app is outside the stated assessment scope.",
+   "scope_summary": "Intrusion detection and intrusion prevention system products.",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V2R3 (confirmed by DISA package name)",
+   "evidence_url": "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_AAA_Services_V2R3_SRG.zip",
+   "name": "AAA Services Security Requirements Guide",
+   "reason": "Splunk consumes LDAP and SAML as a relying party; it does not provide AAA services over RADIUS, TACACS+, or Kerberos, which is what this SRG governs. The scope sentence quoted here is DISA's own, taken from the Applicability Guide's label description shipped inside STIG Viewer 3.x.",
+   "scope_summary": "DISA's own scope text: covers AAA services and the protocols used for AAA interaction, including RADIUS, TACACS+, Kerberos, and supporting protocols such as LDAPS.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2, Rel 4 (library upload 2026-07-10)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Application Layer Gateway SRG",
+   "reason": "Splunk Enterprise does not broker or inspect transiting network traffic as a gateway; it receives and indexes data sent to it.",
+   "scope_summary": "Network application-layer gateway and proxy devices that broker and inspect traffic between networks.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R2 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Cloud Computing Mission Owner Network Security Requirements Guide",
+   "reason": "The deployment facts state on-premises Splunk Enterprise, not Splunk Cloud, with no cloud services in use. DISA's Applicability Guide attaches this SRG to the 'Cloud Service' asset type, which this collection does not contain.",
+   "scope_summary": "Requirements for the network a mission owner builds inside a cloud service offering.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R3 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Cloud Computing Mission Owner Operating System Security Requirements Guide",
+   "reason": "No cloud services are in use, and OS settings are out of scope in any case. Same Cloud Service asset-type gate as above.",
+   "scope_summary": "Requirements for operating systems a mission owner runs inside a cloud service offering.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R0.1",
+   "name": "Cloud Computing Mission Owner Security Requirements Guide",
+   "reason": "Deployment fact: Splunk Enterprise on-premises, not Splunk Cloud, and no cloud services in use.",
+   "scope_summary": "Requirements for DoD mission owners deploying systems into commercial cloud service offerings.",
+   "seen_by": [
+    "catalog:siem-precedent"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "unknown (no version shown in the library listing; upload 2026-06-26)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Cloud Computing SRG",
+   "reason": "The deployment is on-premises Splunk Enterprise, not Splunk Cloud, and no cloud service is in use.",
+   "scope_summary": "DoD cloud service provider offerings and mission owner responsibilities for cloud deployments.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2, Rel 5 (library upload 2026-10-06)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Container Platform SRG",
+   "reason": "Governs the hosting container platform, not the product under assessment. The lab's podman runtime is a named dependency outside the application layer.",
+   "scope_summary": "Container platform products, including runtime, registry and orchestration components.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2 (library upload date not captured for this row)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "DoW Control Systems/Operational Technology Security Requirements Guide",
+   "reason": "The subject is an IT application, not a control system or OT asset. Recorded because this is a Security Requirements Guide whose title does not carry the SRG token, and DISA files it under Documents and Technical Guidance rather than with the SRGs.",
+   "scope_summary": "Industrial control systems and operational technology environments.",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 4, Rel 3 (library upload 2026-10-06)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Domain Name System (DNS) SRG",
+   "reason": "Splunk Enterprise provides no DNS service; it is a DNS client only.",
+   "scope_summary": "DNS server products and name resolution services.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R3 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Enterprise Voice, Video, and Messaging Endpoint Security Requirements Guide",
+   "reason": "No voice, video, or messaging endpoint function in this product.",
+   "scope_summary": "Requirements for voice, video, and messaging endpoint devices and clients.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R4 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Enterprise Voice, Video, and Messaging Policy Security Requirements Guide",
+   "reason": "Policy SRG for a capability this system does not provide; policy and physical requirements are out of scope for this application-layer assessment in any case.",
+   "scope_summary": "Policy-level requirements for an enterprise voice, video, and messaging capability.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "unknown (no version shown in the library listing; upload 2026-07-10)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Enterprise Voice, Video, and Messaging SRG",
+   "reason": "Splunk Enterprise provides no voice, video or messaging service.",
+   "scope_summary": "Enterprise voice, video and messaging services and their supporting infrastructure.",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V1R3 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Enterprise Voice, Video, and Messaging Session Management Security Requirements Guide",
+   "reason": "Splunk Enterprise provides no voice, video, or messaging session services. Successor to the former Voice Video Session Management SRG.",
+   "scope_summary": "Requirements for session management of enterprise voice, video, and messaging services.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 4 (library upload 2026-07-10)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Firewall SRG",
+   "reason": "Splunk Enterprise performs no network traffic filtering; host and network firewalling is out of scope.",
+   "scope_summary": "Firewall products that filter traffic between network enclaves.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 4 (library upload 2026-10-06)",
+   "determination": "not applicable to this product - it governs an operating system, a separate asset assessed under its own product STIG.",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "General Purpose Operating System SRG",
+   "reason": "Governs the host operating system, which is explicitly out of scope for this application-layer assessment. It is the named dependency for OS-level requirements referenced by Splunk's own rules.",
+   "scope_summary": "General purpose operating systems.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V3R4",
+   "determination": "not applicable - Splunk inspects no traffic and blocks nothing; a SIEM consumes IDPS output rather than performing detection. Enterprise Security does not change this.",
+   "name": "Intrusion Detection and Prevention Systems (IDPS) Security Requirements Guide",
+   "reason": "Splunk Enterprise core is a log aggregation and analysis platform, not an IDPS sensor or inline prevention device. Detection content layered on top (for example Enterprise Security) is a separate product and is not in this assessment's scope.",
+   "scope_summary": "Requirements for intrusion detection and prevention systems.",
+   "seen_by": [
+    "catalog:siem-precedent"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V3R4 (confirmed by DISA package name)",
+   "determination": "not applicable - Splunk inspects no traffic and blocks nothing; a SIEM consumes IDPS output rather than performing detection. Enterprise Security does not change this.",
+   "evidence_url": "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_IDPS_V3R4_SRG.zip",
+   "name": "Intrusion Detection and Prevention Systems Security Requirements Guide",
+   "reason": "Splunk correlates and alerts on records it is sent; it is not an inline or passive network sensor performing detection or prevention on traffic, which is what this SRG governs. Worth stating explicitly in the matrix, since a SIEM function can be mistaken for an IDPS function.",
+   "scope_summary": "Requirements for an IDPS sensor and its detection, blocking, and signature management.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 4 (library upload 2026-04-07)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Layer 2 Switch SRG",
+   "reason": "Splunk Enterprise provides no switching function.",
+   "scope_summary": "Layer 2 network switching devices.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 6 (library upload 2026-10-06)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Mainframe Product SRG",
+   "reason": "Splunk Enterprise runs as a Linux application, not a mainframe product.",
+   "scope_summary": "Mainframe products and z/OS security subsystems.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 5, Rel 5 (library upload 2026-07-10)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Network Device Management SRG",
+   "reason": "Splunk Enterprise is not a network device, so its management interface is not governed here. Noted because DISA's library files the Central Log Server SRG under the same Network Infrastructure category, which is a taxonomy artifact and not a scope statement.",
+   "scope_summary": "The management plane of network devices, covering administrative access to that equipment.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:siem-precedent",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 5, Rel 2 (library upload 2026-01-08)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Router SRG",
+   "reason": "Splunk Enterprise provides no routing function.",
+   "scope_summary": "Routers and their routing functions.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2, Rel 2, sunset (library upload 2025-11-26)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "SDN Controller SRG (sunset)",
+   "reason": "Splunk Enterprise is not an SDN controller, and the SRG is sunsetted, so it is no longer a current baseline for anything.",
+   "scope_summary": "Software-defined networking controllers.",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V2R2 (confirmed by DISA package name)",
+   "evidence_url": "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_SDN_Controller_V2R2_SRG.zip",
+   "name": "SDN Controller Security Requirements Guide",
+   "reason": "Splunk Enterprise exercises no network control plane. Network-core baseline.",
+   "scope_summary": "Requirements for a software-defined networking controller and its southbound control of forwarding elements.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V2R2 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Unified Endpoint Management Agent Security Requirements Guide",
+   "reason": "The Splunk universal forwarder is a data-collection agent, not a UEM policy-enforcement agent, which is what this SRG governs. Stated explicitly because forwarder-as-agent is a plausible-looking but incorrect mapping.",
+   "scope_summary": "Requirements for the agent installed on a managed endpoint under a UEM server.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "unknown (no version shown in the library listing; upload 2026-10-05)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Unified Endpoint Management SRG",
+   "reason": "Splunk Enterprise does not manage or enforce policy on endpoints; it only ingests data from them.",
+   "scope_summary": "Unified endpoint and mobile device management server products.",
+   "seen_by": [
+    "catalog:library-index"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "V2R6 (unverified; third-party mirror only, my DISA package-name probes 404'd)",
+   "evidence_url": "https://cyber.trackr.live/stig",
+   "name": "Unified Endpoint Management Server Security Requirements Guide",
+   "reason": "Splunk Enterprise enrolls and manages no endpoints; forwarders send data, they are not managed endpoints under a UEM policy regime. Named here because DISA pairs this SRG with the UEM Agent SRG on a single product asset, which is useful precedent for multi-SRG composition but not applicable to this product.",
+   "scope_summary": "Requirements for a server that manages and enforces policy on enrolled endpoints.",
+   "seen_by": [
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 2, Rel 5 (library upload 2026-10-05)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Virtual Machine Manager SRG",
+   "reason": "Splunk Enterprise is not a hypervisor or VM management platform; virtualization belongs to the hosting layer, which is out of scope.",
+   "scope_summary": "Hypervisors and virtual machine management platforms.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  },
+  {
+   "current_version": "Ver 3, Rel 5 (library upload 2026-07-10)",
+   "evidence_url": "https://www.cyber.mil/stigs/downloads/",
+   "name": "Virtual Private Network (VPN) SRG",
+   "reason": "Splunk Enterprise terminates no VPN tunnels; transport protection of its own listeners is governed by the Web Server and Central Log Server SRGs instead.",
+   "scope_summary": "VPN gateways and tunnel endpoints.",
+   "seen_by": [
+    "catalog:library-index",
+    "catalog:srg-hierarchy"
+   ],
+   "splunk_relevance": "not_applicable"
+  }
+ ],
+ "date": "2026-11-09",
+ "in_use": [
+  "Central Log Server SRG V3R5",
+  "Web Server SRG V4R5"
+ ],
+ "retrieval_notes": {
+  "catalog:library-index": "WHAT I REACHED. https://public.cyber.mil/stigs/downloads/ now 302-redirects to https://www.cyber.mil/stigs/downloads/, which is a Salesforce-rendered page; static fetching returns nothing, so I drove it in the browser pane. The whole library is delivered in one Apex call and paginated client-side at 15 rows per page. On 2026-11-09 I walked all 28 pages and captured all 417 entries, then filtered them locally. The library has no SRG facet, so SRGs were identified by name match and the match was cross-checked with a separate sweep for \"Requirements Guide\", which caught one SRG whose title omits the SRG token (DoW Control Systems/Operational Technology SRG). The 24 rows above are every SRG in that listing: 21 current SRGs carrying the SRG token, 1 SRG titled without it, 1 draft, 1 sunset. Three library artifacts that match \"SRG\" by name are not SRGs and are excluded: \"Compilation - SRG-STIG Library\", its READ ME, and \"How to Create and SRG-STIG ID Mapping Spreadsheet\"; so is the \"General Application Draft SRG Comment Matrix\".\n\nWHAT I COULD NOT REACH. The SRG-STIG Library Compilation index is distributed only as a .zip and I did not download it. The new site has no per-document overview or scope page, so with two exceptions the scope_summary values are derived from the official document title and DISA's own download-type category, NOT from the SRG text. The exceptions are the Central Log Server SRG and the Web Server SRG, whose titles and release metadata I read from the local XCCDF files at /home/shiftyroot/Documents/GitHub/containers/splunk/hardening/benchmarks/ (\"Central Log Server Security Requirements Guide\", Release 5, benchmark 30 Sep 2026; \"Web Server Security Requirements Guide\", Release 4 Rel 5, benchmark 01 Jul 2026). Both agree with the library listing. I found no DISA release note or scope statement for the API SRG V1R1 or the General Application Draft SRG; the only corroboration for the API SRG was a third-party vendor roundup (corsec.com), which is weak evidence and I did not rely on it. Three entries show no version in the listing at all (Cloud Computing SRG, Enterprise Voice/Video/Messaging SRG, Unified Endpoint Management SRG) because DISA has moved some files to date-based naming; those are recorded as unknown rather than guessed. I did not capture per-document download URLs: the rows render Download as buttons, not links, and the API response carrying the URLs fires once before any interceptor can be installed, so evidence_url is the library page where each entry was verified.\n\nANSWER TO THE GOVERNING QUESTION. Nothing in the current catalog displaces Central Log Server SRG + Web Server SRG as the baseline. Four candidates warrant a documented decision rather than silence: the API SRG (plausible, new since the Splunk STIG sunsetted, splunkd REST on 8089 is a real mechanism) and the Application Server, Database and AAA Services SRGs (borderline). The General Application Draft SRG should be tracked as forthcoming.\n\nFACT CORRECTION FOR THE PACKAGE. The task states the 8.x Linux STIG is the only product STIG DISA ever published for Splunk. The library lists two sunset Splunk STIGs: \"Sunset - Splunk Enterprise 8.x for Linux STIG - Ver 2, Rel 3\" and \"Sunset - Splunk Enterprise 7.x for Windows STIG - Ver 3, Rel 2\". The 8.x Linux STIG remains the only one relevant to a Linux deployment, but the \"only STIG ever published\" claim is wrong as written and should not go into the documentation in that form.",
+  "catalog:siem-precedent": "WHAT I REACHED. Primary DISA sources, downloaded and verified by HTTP 200 plus sha256: the Central Log Server SRG V3R5 package, Web Server SRG V4R5 package, API SRG V1R1 package, and the Dragos Platform 2.x V1R7, Xylok Security Suite 20.x V1R2 and Tanium 7.x V2R3 product STIGs, all from dl.dod.cyber.mil. I counted SRG-ID families directly in each XCCDF. I also recovered DISA's SRG/STIG Applicability Guide decision data (LabelStore.xml and StigCatalog.xml) from inside the locally vendored STIG Viewer 3 build 44.4.5, which is where DISA folded the standalone Applicability Guide; this is a primary DISA artifact and is what let me establish the asset-tree inheritance. Local XCCDF facts in the task were independently reconfirmed: the Splunk 8.x STIG carries 37 rules referencing 47 distinct SRG IDs, every one of the -AU- form, zero -WSR-, and all 37 rule IDs are SPLK-CL-nnnnnn.\n\nWHAT I COULD NOT REACH. public.cyber.mil and www.cyber.mil now serve the STIG downloads index and the STIG Update announcement pages as a JavaScript application (Salesforce \"LWC Communities\"); WebFetch returned only the shell with no content, so I could not read DISA announcement prose or the official download index. I worked around it with direct dl.dod.cyber.mil zip URLs. The standalone SRG/STIG Applicability Guide has been withdrawn from the Cyber Exchange and absorbed into STIG Viewer 3, so there is no current standalone document to cite; the 2019 user guide docx I retrieved documents the tool's method (\"the tool will determine the SRGs, STIGs, and other policy documents required by the user\") but contains no technology-specific applicability rules.\n\nWEAK EVIDENCE, LABELLED. Rule-level derivations for Splunk Enterprise 7.x for Windows, SCOM, Cisco Secure Network Analytics, Riverbed NetProfiler and the two Red Hat Ansible Automation Controller component STIGs came from cyber.trackr.live, a third-party mirror. I did not download those zips. I cross-checked the mirror against everything I verified locally - CLS V3R5, Web Server V4R5, Splunk 8.x V2R3, and the Dragos, Xylok and Tanium rule counts and ID families - and it agreed on every point, which is reason for confidence but not primary citation. Treat those six derivations as strongly corroborated rather than proven.\n\nTHE ONE QUESTION THAT STAYS UNKNOWN. I found no DISA document that states a rule for whether a product with a web management interface additionally takes the Web Server SRG. No such ruling appears to exist in published form. My answer on that point rests on scope language (Web Server SRG Overview sections 1.1, 3.1 and 3.2), on the identical section 1.5 stacking statement in both Overviews, on DISA's applicability asset tree, and on the consistent pattern across eight product STIGs - inference from authoritative evidence, not a direct DISA statement. Anyone relying on this should know the difference.\n\nCODEBASE DEFECT FOUND WHILE WORKING, NOT FIXED. stig-viewer.conf documents \"Everything here is overridable by an environment variable of the same name\", and lib.sh sv_load_config contains a loop whose comment claims \"An environment variable of the same name wins\" - but that loop reads each value into $cur and then immediately continues, never restoring it, while the sourced conf assigns SV_LIBRARY=\"./library\" unconditionally rather than ${SV_LIBRARY:-./library}. The documented override is therefore a no-op and the config file always wins. I invoked fetch-library.sh with SV_LIBRARY set to a scratchpad path; the three downloaded STIGs landed in /home/shiftyroot/Documents/GitHub/containers/stig_viewer/library instead, and catalog.tsv was rebuilt to six benchmarks. That directory is gitignored and SV_BENCHMARKS still globs only the CLS and Web Server SRGs, so nothing the viewer loads changed. Reporting rather than fixing, per the working rule.",
+  "catalog:srg-hierarchy": "WHAT DISA'S RULE ACTUALLY IS (the headline for the documentation)\n\n1. The fallback rule is permissive, not prescriptive. DoDI 8510.01 is quoted as: \"SRGs are developed by DISA to provide general security compliance guidelines and serve as source guidance documents for STIGs. When a STIG is not available for a product, an SRG may be used.\" Note \"may\", not \"must\". I could NOT retrieve DoDI 8510.01 itself - esd.whs.mil, dodcio.defense.gov, dau.edu and rmf.org all returned 403 to my fetcher, and a wbdg mirror returned 503. This quote is therefore WEAK EVIDENCE: a vendor reproduction (Broadcom/VMware STIG Program Overview PDF), not the primary issuance. Verify before citing it in an assessment document.\n\n2. DISA's FAQ states the selection rule in the SINGULAR and ends in a referral. Quoted verbatim from the same vendor PDF, attributed to https://public.cyber.mil/stigs/faqs/#toggle-id-11: \"What do I use if there is no STIG? Determine if a STIG has been published for an earlier version of the same product... New product features and configuration settings must also be accounted for based on the relevant SRG. If there is no related STIG, the most relevant SRG can be used to determine compliance with DoD policies. If assistance is needed in determining which SRG applies to the product, please open a ticket with the STIG Customer Support Helpdesk at disa.stig_spt@mail.mil. In fulfilling a requirement, be it from an SRG or an earlier version of a STIG, vendor documentation may be followed for configuration guidance.\" This is the closest thing to a DISA selection rule that exists, and it says \"the most relevant SRG\" (one), \"which SRG applies\" (one), and directs the assessor to a helpdesk when unclear. I could not retrieve the FAQ page directly: public.cyber.mil now 302s to www.cyber.mil, which serves a JavaScript shell (\"Welcome to LWC Communities!\") with no readable content, and its RSS feed is behind DoD SAML. The archived IASE FAQ snapshots returned empty, and web.archive.org is blocked from this environment.\n\n3. There is NO published DISA decision tree. DISA's mechanism is a TOOL, not a document: the SRG/STIG Applicability Guide, which DISA has folded into STIG Viewer 3.x. DISA's own current user guide (V1R7, 13 February 2026, section 1.2) states: \"The SRG/STIG Applicability Guide allows the user to build a collection of assets pertaining to an environment, such as an information system. Using the collection of assets built by the user, the tool will determine the SRGs, STIGs, and other policy documents the user needs to harden or assess their environment.\" The 2019 standalone user guide (DISA RME, V1.3) uses the same wording. Note the plural: SRGs, STIGs, AND other policy documents. Section 1 also confirms STIG Viewer 3.x replaced both STIG Viewer 2.x and the standalone Applicability Guide, so there is no separate applicability document to cite any more.\n\n4. One or several? DISA's own applicability DATA settles this better than its prose. I extracted DISA's shipped applicability dataset from the STIG Viewer 3.x bundle the lab already holds: /home/shiftyroot/Documents/GitHub/containers/stig_viewer/vendor/stig_viewer_3-linux-x64/resources/app.asar, members /src/resources/LabelStore.xml (141 KB, the asset-type hierarchy and its document attachments) and /src/resources/StigCatalog.xml (164 KB, 729 catalog entries). Extracted copies: /tmp/claude-1000/-home-shiftyroot-Documents-GitHub-containers/24787bea-2d8f-46fc-b0c4-2b4c1129304b/scratchpad/untrusted/agdata/LabelStore.xml and .../StigCatalog.xml. In that data, single product assets routinely carry SEVERAL baselines: Red Hat Ansible Automation Controller attaches both RH_Ansible_Automation_Controller_Web_Server_STIG and ..._App_Server_STIG; IBM MQ Appliance v9.0 attaches an Application Server STIG and an NDM STIG; Unified Endpoint Management Server attaches UEM_Server_SRG and UEM_Agent_SRG; Hypervisor attaches a Protection Profile plus its DoD Annex. So DISA's practice is that multiple baselines per product is normal, even though its FAQ prose is singular.\n\n5. THE FINDING THAT MATTERS MOST FOR THIS ASSESSMENT. In DISA's applicability data, Splunk sits at: Application > Server Application > \"Splunk Enterprise 8.x for Linux\", carrying status=\"sunset\" and attaching only Splunk_Enterprise_8.x_for_Linux_STIG. \"Central Log Server\" (attaching Central_Log_Server_SRG) and \"Web Server\" (attaching Web_Server_SRG) are SIBLINGS of that leaf, not ancestors of it. The parent \"Application\" node attaches Application_Security_Development_STIG. Consequence: DISA's own tool does not compose Central Log Server SRG + Web Server SRG for Splunk. Combined with the established fact that all 37 rules of the 8.x STIG derive from Central Log Server SRG and zero from Web Server SRG, the only DISA-observable precedent for this product is Central Log Server SRG ALONE. The 253-requirement union is the assessor's composition. That is defensible under \"the most relevant SRG\" plus DISA's multi-baseline practice, but it is a determination this assessment makes, not one DISA has published, and the documentation should say so in those words rather than presenting the union as DISA's instruction. I also checked the SRGs themselves: using Python counts (not grep - grep here is ugrep and counts matching lines, which gave 126 where the real occurrence count was 254), the Central Log Server SRG V3R5 XCCDF contains ZERO references to \"Web Server SRG\" or \"Application Server SRG\", and its single lowercase \"web server\" hit is boilerplate inside a PKI VulnDiscussion. Neither SRG delegates to the other, so the union is not supported by any cross-reference in the documents.\n\n6. ANSWER TO THE QUESTION ASKED, with its one real gap. Central Log Server SRG + Web Server SRG is a defensible baseline and no OTHER currently published SRG displaces it - except that a General Application (GAPP) Security Requirements Guide, V1R0.1, 163 rules, apparently released 05 August 2026, now exists and is not in the baseline. This post-dates the assumptions behind the current matrix. Its rule identifiers are of the form GAPP-00-000010 (short-form, no SRG-APP lineage in the version ID), consistent with MITRE's description of requirements added directly to an SRG rather than inherited from a core. I could NOT verify GAPP from any DISA source: twelve DISA package-name variants under dl.dod.cyber.mil/wp-content/uploads/stigs/zip/ all returned 404, and no DISA announcement was retrievable. Its existence, date and rule count rest on a third-party mirror only. Three further SRG determinations also deserve explicit rows rather than silence: Application Server SRG, API SRG (splunkd REST on 8089, HEC ingest), and the Application Security and Development STIG - which is not an SRG but which DISA's applicability data attaches to the generic \"Application\" asset type, and which the deployment facts argue against (Splunk apps are installed configuration bundles, not software this organization develops). RECOMMENDED ACTION, which is also DISA's own stated remedy: open a ticket with the STIG Customer Support Helpdesk at disa.stig_spt@mail.mil naming the product and version and asking which SRGs apply, and record the reply as the baseline's authority. That converts the composition from assessor judgment to cited determination.\n\n7. SRG HIERARCHY, as retrieved. The structure is three layers: core SRGs, then technology-scoped derived SRGs published on Cyber Exchange, then product STIGs. The cores are SRG-APP (Application), SRG-NET (Network) and SRG-OS (Operating System), described as non-public working catalogs; some secondary sources name Policy as a fourth core, which I could not confirm or refute. Crucially for this assessment, the authoring tool \"derives a new SRG (or its next release) from one or more core SRGs\", and a derived requirement's identifier carries both namespaces - the cited example is SRG-APP-000014-CTR-000035. That is the structural explanation for the two governing baselines: SRG-APP-xxxxxx-AU-xxxxxx (Central Log Server) and SRG-APP-xxxxxx-WSR-xxxxxx (Web Server) are both children of the SAME Application core, which is why their 253 requirements overlap heavily and why de-duplication by shared SRG-APP parent is the right way to present the union. This layer description comes from MITRE's Vulcan documentation (MITRE operates DISA's SRG authoring tool), which is near-primary but still SECONDARY - label it as such. DISA's own Vendor STIG Process Guide V4R3 (08 April 2025, retrieved from the MITRE mirror because DISA's copy is CAC-gated) says only \"DISA provides the vendor with a STIG template based on the applicable SRG\", singular, for authoring a new product STIG; it contains no rule for assessor-side baseline selection.\n\n8. CATALOG ENUMERATION AND HOW I VERIFIED VERSIONS. DISA's own Applicability Guide catalog (StigCatalog.xml) holds 729 entries of which only 25 are SRGs - it is incomplete as an SRG catalog, omitting Container Platform, GAPP and the Enterprise Voice/Video/Messaging SRGs, so do not treat it as the SRG list. I therefore cross-checked a third-party mirror's 27-entry SRG list against DISA's own download host by HEAD request, having first validated the naming pattern on the two SRGs whose XCCDF the lab already holds. Nineteen SRGs returned HTTP 200 at dl.dod.cyber.mil with the exact version in the filename, independently confirming both their existence and their current release; the mirror's versions matched DISA's filenames every time it resolved, including Central Log Server V3R5 and Web Server V4R5, which also match the local XCCDF metadata. Eight entries are marked unverified in the rows above: my filename guesses 404'd, which means the name pattern differs, NOT that the SRG does not exist - do not read those 404s as evidence of absence. Where a version is marked \"confirmed by DISA package name\", the evidence is that exact URL returning 200. Local primary evidence used throughout: /home/shiftyroot/Documents/GitHub/containers/stig_viewer/library/U_Central_Log_Server_SRG_V3R5_Manual-xccdf.xml (Release 5, benchmark date 30 Sep 2026, and note it now says \"Department of War (DoW)\"), .../U_Web_Server_SRG_V4R5_Manual-xccdf.xml (Release 5, 01 Jul 2026), and .../U_Splunk_Enterprise_8-x_for_Linux_STIG_V2R3_Manual-xccdf.xml.\n\nWHAT I COULD NOT REACH: DoDI 8510.01 (403 from every host tried), DISA's STIG FAQ page and the Cyber Exchange tools and announcements pages (JavaScript shell after the public.cyber.mil to www.cyber.mil migration; the feed is behind DoD SAML), NIST NCP checklist pages (also JavaScript-rendered), web.archive.org (blocked here), the archived IASE FAQ (empty), and any DISA-hosted artifact for the GAPP SRG. The cyber.mil migration is the practical obstacle: DISA's prose guidance is now effectively unretrievable by machine, while its PDF/DOCX/ZIP artifacts on dl.dod.cyber.mil remain directly fetchable. That is worth recording in the assessment method, because it explains why the applicability reasoning leans on DISA's tooling and shipped data rather than on DISA's web pages."
+ },
+ "schema": 1,
+ "source_urls": [
+  "https://cyber.trackr.live/api/stig",
+  "https://cyber.trackr.live/stig",
+  "https://cyber.trackr.live/stig/Cisco_Secure_Network_Analytics_%28SNA%29/1/1",
+  "https://cyber.trackr.live/stig/General_Application_%28GAPP%29_Security_Requirements_Guide/1/0.1",
+  "https://cyber.trackr.live/stig/Red_Hat_Ansible_Automation_Controller_Application_Server/2/4",
+  "https://cyber.trackr.live/stig/Red_Hat_Ansible_Automation_Controller_Web_Server/2/4",
+  "https://cyber.trackr.live/stig/Riverbed_NetProfiler/2/1",
+  "https://cyber.trackr.live/stig/SCOM/1/2",
+  "https://cyber.trackr.live/stig/Splunk_Enterprise_7.x_for_Windows/3/2",
+  "https://dl.dod.cyber.mil/wp-content/uploads/SRG-STIG_Applicability_Guide-User_Guide_1_3.docx",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/pdf/U_STIG_Viewer_3-x_User_Guide_V1R7.pdf",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_API_V1R1_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Application_Server_V4R6_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Central_Log_Server_V3R5_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Container_Platform_V2R5_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Dragos_Platform_2-x_V1R7_STIG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_GPOS_V3R4_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Tanium_7-x_V2R3_STIG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Web_Server_V4R5_SRG.zip",
+  "https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_Xylok_Security_Suite_20-x_V1R2_STIG.zip",
+  "https://public.cyber.mil/stigs/downloads/",
+  "https://public.cyber.mil/stigs/faqs/",
+  "https://public.cyber.mil/stigs/srg-stig-tools",
+  "https://vulcan.mitre.org/attachments/U_Vendor_STIG_Process_Guide_V4R3.docx",
+  "https://vulcan.mitre.org/disa-process/srg-authoring",
+  "https://www.cyber.mil/stigs/downloads/",
+  "https://www.cyber.mil/stigs/srg-stig-tools/",
+  "https://www.vmware.com/docs/vmw-stig-program-overview"
+ ],
+ "status": "DETERMINED - 2 baselines apply (Central Log Server V3R5, Web Server V4R5); 10 determined not applicable; 1 draft tracked",
+ "web_server_precedent": "Product STIGs for Dragos Platform 2.x, Tanium 7.x and Xylok Security Suite 20.x each cite requirements present only in the Web Server SRG (8, 15 and 16 respectively). The Splunk Enterprise 8.x STIG cites none. Comparable platforms administered through a web interface are held to Web Server requirements, so inclusion follows precedent."
+}

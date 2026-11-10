@@ -1,0 +1,48 @@
+# SRG-APP-000115-AU-000160  -  CAT III
+# The Central Log Server must be configured to perform on-demand filtering
+# of the log records for events of interest based on organization-defined
+# criteria.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000115-AU-000160
+group:           V-206456
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000158
+control_rev5:    AU-7
+
+contribution:    The Splunk search language performs on-demand filtering over the indexed
+                 records, and role configuration determines which indexes a filtering user
+                 may search.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [] srchIndexesAllowed non_empty
+
+external:        The criteria themselves - which events are of interest - are
+                 organization-defined and held in the site security plan, so the criterion
+                 tests only that the product can filter the records on demand.
+external:        On-demand filtering is performed by the search language, which is
+                 intrinsic to the product and has no configuration surface to assert.
+
+citation:        OVER-REACH, and two conditions nothing can satisfy. The original ANDed
+                 four independent features - event types, macros, saved searches and role
+                 index access - so an instance expressing its criteria through any one of
+                 them fails for lacking the other three. Two could never pass on a stock
+                 instance: the shipped eventtypes.conf and savedsearches.conf both declare
+                 "search =" empty in their default stanzas, and macros.conf is not shipped
+                 at all, so definition non_empty reads nothing. Where a site has expressed
+                 its criteria as event types, macros or saved searches, those are read as
+                 evidence of the organization-defined criteria rather than demanded as a
+                 conjunction.
+finding:         No role is permitted to search the indexes holding the records
+                 (srchIndexesAllowed is unset), so on-demand filtering for events of
+                 interest cannot be performed against them.

@@ -1,0 +1,50 @@
+# SRG-APP-000915-WSR-000310  -  CAT II
+# The web server must provide protected storage for cryptographic keys with
+# organization-defined safeguards and/or hardware protected key store.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000915-WSR-000310
+group:           V-264357
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-004910
+control_rev5:    SC-28
+
+contribution:    Splunk Web can name an organization-issued certificate and private key in
+                 place of the auto-generated pair and can hold a password on that private
+                 key, which is the key protection the web interface's configuration can
+                 express.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] privKeyPath not_equals $SPLUNK_HOME/etc/auth/splunkweb/privkey.pem
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
+check:           web.conf [settings] sslPassword non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] privKeyPath https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] serverCert https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        Organization-defined safeguards for key storage, such as file system
+                 permissions, disk encryption or a hardware protected key store, which the
+                 check text leaves to the organization
+external:        Any hardware security module or external key store, which web.conf does
+                 not reference
+external:        Operating system ownership and permission bits on the Splunk Web
+                 certificate and key files
+external:        The splunk.secret file and its permissions, which protect the stored
+                 password's encryption
+
+citation:        SRG-APP-000915-WSR-000310 check text; SPLK-CL-000330 fix text;
+                 web.conf.spec:75-98
+finding:         Splunk Web's private key is not protected to the extent the product
+                 allows: privKeyPath and serverCert still name the auto-generated default
+                 files, or sslPassword is unset so the private key is stored without a
+                 password.

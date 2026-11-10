@@ -1,0 +1,50 @@
+# SRG-APP-000122-AU-000140  -  CAT II
+# The Central Log Server must protect audit tools from unauthorized
+# modification.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000122-AU-000140
+group:           V-221918
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-001494
+control_rev5:    AU-9
+
+contribution:    The application gates modification of its audit tools and audit settings
+                 behind two capabilities it ships to the administrator role only, so its
+                 share is that neither reaches a general-purpose role.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] admin_all_objects absent
+check:           authorize.conf [role_power] admin_all_objects absent
+check:           authorize.conf [role_user] change_audit absent
+check:           authorize.conf [role_power] change_audit absent
+
+external:        Write permissions on the Splunk binaries and application directories -
+                 SPLK-CL-000190 implements this at the operating system layer
+external:        Object-level write access recorded in default.meta, which the btool-based
+                 collector does not read
+
+citation:        restmap.conf capability.post present and capability.put present are
+                 removed for the reason given on SRG-APP-000121-AU-000130: the keys are
+                 real (restmap.conf.spec:111-112, 303-312) but the stanza exists only where
+                 an app declares its own endpoint, so the conditions fail a conformant
+                 deployment that declares none. admin_all_objects absent read over
+                 [role_<roleName>] fails every install, because the shipped role_admin
+                 holds it and must (authorize.conf:290); pinning it to the general-purpose
+                 roles keeps the test and removes the false finding. change_audit is added
+                 because it is the product's own named gate on changing audit settings and,
+                 like admin_all_objects, ships to role_admin alone, so the condition passes
+                 stock and fails a genuine grant.
+finding:         A general-purpose role holds admin_all_objects or change_audit, so the
+                 audit tools or the audit configuration can be modified by an account that
+                 is not privileged.

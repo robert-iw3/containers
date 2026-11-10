@@ -1,0 +1,70 @@
+# SRG-APP-000001-WSR-000001  -  CAT II
+# The web server must limit the number of allowed simultaneous session
+# requests.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000001-WSR-000001
+group:           V-206350
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000054
+control_rev5:    AC-10
+
+contribution:    Splunk Web and the splunkd HTTP server each accept an explicit cap on
+                 simultaneous HTTP connections and on active HTTP transactions, so the
+                 application can bound concurrent session requests instead of leaving the
+                 ceiling to automatic sizing (value 0) or to no limit at all (a negative
+                 value); server.thread_pool and server.socket_timeout further bound how
+                 many worker threads are held and how long an accepted connection may hold
+                 a socket.
+
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] maxSockets min 0
+check:           web.conf [settings] maxThreads min 0
+check:           server.conf [httpServer] maxSockets min 0
+check:           server.conf [httpServer] maxThreads min 0
+# --- vendor verification: generated, do not edit by hand
+corrected:       web.conf [settings] maxSockets present -> web.conf [settings] maxSockets min 0
+corrected:       web.conf [settings] maxThreads present -> web.conf [settings] maxThreads min 0
+corrected:       server.conf [httpServer] maxSockets min 1 -> server.conf [httpServer] maxSockets min 0
+corrected:       server.conf [httpServer] maxThreads min 1 -> server.conf [httpServer] maxThreads min 0
+vendor:          server.conf [httpServer] maxSockets https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          server.conf [httpServer] maxThreads https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] maxSockets https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+vendor:          web.conf [settings] maxThreads https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        A per-user session cap, as distinct from a per-listener connection cap, is
+                 not expressible in Splunk configuration; where the organization requires
+                 one it is carried by the reverse proxy, load balancer, or web application
+                 firewall in front of Splunk Web.
+external:        The operating system's file descriptor and thread ceilings bound these
+                 values further and are set outside the application (the spec notes splunkd
+                 derives an automatic limit from the host's maximum allowable open files).
+external:        The numeric value of the cap is DoD- and organization-defined; the
+                 application's share is that a positive, explicit limit is expressed.
+
+citation:        splunk-spec-files/web.conf.spec:1098-1112 (maxThreads, maxSockets: default
+                 0 = automatic limit, negative = no limits enforced);
+                 splunk-spec-files/server.conf.spec:1291 ([httpServer]), 1379-1399
+                 (maxSockets, maxThreads, same semantics);
+                 splunk-spec-files/web.conf.spec:835-841 (server.thread_pool, default 50,
+                 maximum 200), 853-856 (server.socket_timeout, default 10);
+                 SRG-APP-000001-WSR-000001 check and fix text.
+finding:         Splunk Enterprise does not express an explicit positive limit on
+                 simultaneous session requests, because web.conf [settings]
+                 maxSockets/maxThreads or server.conf [httpServer] maxSockets/maxThreads
+                 are unset, left at the automatic value 0, or set to a negative value that
+                 enforces no limit; this is assessed at the application layer alone, and
+                 any per-user session cap enforced by a fronting proxy is a separate matter
+                 recorded as an external dependency.

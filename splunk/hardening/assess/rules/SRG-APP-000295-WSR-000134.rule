@@ -1,0 +1,64 @@
+# SRG-APP-000295-WSR-000134  -  CAT II
+# The web server must set an inactive timeout for sessions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000295-WSR-000134
+group:           V-206415
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-002361
+control_rev5:    AC-12
+
+contribution:    Splunk closes an idle session from its own settings: web.conf
+                 tools.sessions.timeout is the inactivity period after which the Splunk Web
+                 session expires, and ui_inactivity_timeout must not be set below 1, which
+                 would stop the inactivity notification firing at all.
+
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] tools.sessions.timeout present
+check:           web.conf [settings] tools.sessions.timeout max 15
+check:           web.conf [settings] tools.sessions.timeout min 2
+check:           web.conf [settings] ui_inactivity_timeout min 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] tools.sessions.timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+vendor:          web.conf [settings] ui_inactivity_timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts
+# --- end vendor verification
+
+external:        The organization's risk categorization of the hosted application decides
+                 which tier in the check text applies; the product STIG's 15 minutes
+                 satisfies the low- and medium-risk tiers and the application cannot
+                 determine its own categorization.
+external:        A fronting proxy or SSO gateway with its own idle timer must also close
+                 idle sessions, and that timer is not an application setting.
+external:        The product STIG scopes SPLK-CL-000010 to the search head.
+
+citation:        ui_inactivity_timeout max 15 and ui_inactivity_timeout present are
+                 removed. The number 15 is the product STIG's value for a different key -
+                 the fix for SPLK-CL-000010 sets tools.session.timeout = 15 and touches
+                 nothing else - while ui_inactivity_timeout's documented default is 60
+                 (web.conf.spec:403-410), so a max of 15 on that key reports a finding
+                 against an instance configured exactly as the benchmark authority
+                 prescribes, and present penalizes a default that does not defeat the
+                 requirement. The check text's own numbers (5, 10 and 20 minutes by
+                 application risk tier) are a bound on the idle close time, not on this
+                 notification interval, so transplanting any of them to
+                 ui_inactivity_timeout would be the same error with better provenance. min
+                 1 is kept because it is the one setting of this key that defeats the
+                 requirement outright: below 1 "Sessions stay alive for as long as the
+                 browser is open" (web.conf.spec:408-409). tools.sessions.timeout keeps
+                 present and max 15 from the product STIG check ("missing or ... 16 or
+                 more"), which is inside even the strictest 5-minute tier's parent
+                 requirement, plus the specification's floor of 2 (web.conf.spec:929-930).
+finding:         Splunk Web does not close idle sessions within the period the
+                 application's risk tier allows: web.conf [settings] tools.sessions.timeout
+                 is unset or 16 or more minutes, or ui_inactivity_timeout is below 1 so the
+                 inactivity notification never fires.

@@ -1,0 +1,54 @@
+# SRG-APP-000805-AU-000240  -  CAT II
+# The Central Log Server must automatically generate audit records of the
+# enforcement actions.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000805-AU-000240
+group:           V-263570
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-003938
+control_rev5:    CM-5
+
+contribution:    Splunk records its own enforcement actions in two places it controls: the
+                 configuration change log, which captures every change to a .conf file
+                 including the values that changed, and the audit trail, which it can queue
+                 to an index so the records are searchable and retained.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+
+check:           server.conf [config_change_tracker] disabled in false|0
+check:           server.conf [config_change_tracker] mode in auto|diff
+check:           audit.conf [auditTrail] queueing in true|1
+check:           server.conf [config_change_tracker] denylist absent
+check:           server.conf [config_change_tracker] exclude_fields absent
+check:           server.conf [config_change_tracker] log_throttling_disabled in true|1
+
+external:        Enforcement actions taken outside the application - operating system
+                 access control decisions, firewall denials, directory service lockouts -
+                 carried by those components and recorded by them.
+external:        Retention, protection, and off-host copy of the records once written,
+                 which the AU family assesses rather than this requirement.
+external:        Individual change logging requires a Linux host with the inotify file
+                 system event interface, which is a platform property.
+
+citation:        Central Log Server SRG SRG-APP-000805-AU-000240 check and fix text;
+                 server.conf.spec:599 (config_change_tracker disabled, default false),
+                 server.conf.spec:608 (mode = [auto|diff|track-only], default auto),
+                 server.conf.spec:636 (denylist, no default), server.conf.spec:641
+                 (log_throttling_disabled, default true), server.conf.spec:661
+                 (exclude_fields), audit.conf.spec:24 (queueing, default true)
+finding:         Configuration change tracking is switched off, set to track-only, narrowed
+                 by a denylist or excluded fields, or the audit trail is not queued to an
+                 index, so the application does not automatically generate a complete
+                 record of its own enforcement actions.

@@ -1,0 +1,45 @@
+# SRG-APP-000925-AU-000420  -  CAT II
+# The Central Log Server must compare the internal system clocks on an
+# organization-defined frequency with organization-defined authoritative
+# time source.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000925-AU-000420
+group:           V-263585
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-004923
+control_rev5:    SC-45
+
+contribution:    Splunk compares its own clock against each search peer's clock when the
+                 peer is registered and on distributed searches, and expresses the
+                 tolerated difference through addpeer_skew_limit and max_tolerable_skew;
+                 the comparison frequency and the authoritative source are not application
+                 settings.
+
+governs:         limits.conf - Limits on how much work searches and data processing may consume.
+
+check:           limits.conf [search] addpeer_skew_limit present
+check:           limits.conf [search] max_tolerable_skew present
+
+external:        The host operating system's time service, which performs the comparison
+                 against the authoritative time source and corrects the clock
+external:        The organization-defined comparison frequency and the identity of the
+                 authoritative time source, which are policy determinations the application
+                 cannot hold
+external:        Operating system STIG settings for the time service, such as the chrony or
+                 ntpd polling interval
+
+citation:        SRG-APP-000925-AU-000420 check text; limits.conf.spec:180, 493-502,
+                 529-536, 3676
+finding:         Splunk expresses no tolerated difference for the clock comparison it
+                 performs against its search peers (limits.conf [search] max_tolerable_skew
+                 or addpeer_skew_limit is not available in the assessed configuration), so
+                 a divergent peer clock is neither reported nor refused.

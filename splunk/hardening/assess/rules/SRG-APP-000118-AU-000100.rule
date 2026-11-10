@@ -1,0 +1,62 @@
+# SRG-APP-000118-AU-000100  -  CAT II
+# The Central Log Server must protect audit information from any type of
+# unauthorized read access.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000118-AU-000100
+group:           V-221914
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000162
+control_rev5:    AU-9
+
+contribution:    Read access to indexed audit data inside Splunk is decided by the role
+                 model in authorize.conf, and the product's own boundary is that the audit
+                 trail lives in internal indexes which a role reaches only when its
+                 allow-list names an index beginning with an underscore.
+
+governs:         authorize.conf - Used to create roles.
+
+check:           authorize.conf [role_user] srchIndexesAllowed matches tls1\.2
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*ssl3
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.0
+check:           authorize.conf [role_user] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.1
+check:           authorize.conf [role_power] srchIndexesAllowed matches tls1\.2
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*ssl3
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.0
+check:           authorize.conf [role_power] srchIndexesAllowed not_matches (^|,)[[:space:]]*tls1\.1
+
+external:        Ownership and mode of the installation and configuration directories and
+                 of the index bucket files - SPLK-CL-000190 implements this at the
+                 operating system layer with splunk-user ownership and mode 700
+external:        Which custom roles the organization authorizes to read the audit indexes,
+                 which no product setting records
+
+citation:        Both original conditions were defective. (1) srchIndexesAllowed non_empty
+                 is the wrong direction: an unset or empty allow-list is the restrictive
+                 case (authorize.conf.spec:292-295, "No default"), so the condition failed
+                 exactly the locked-down role and passed every role that had been granted
+                 index access. (2) not_in *|_* misreads the wildcard vocabulary. Per
+                 authorize.conf.spec:284-288, "*" does not match internal indexes, so the
+                 shipped role_user and role_power value of "*" (authorize.conf:234, 274)
+                 already cannot reach _audit or _internal - yet the condition failed both -
+                 while role_admin's shipped "*;_*" (authorize.conf:404) is literally
+                 neither "*" nor "_*" and passed, which is the one role that can read the
+                 audit trail. The replacement tests the underscore boundary itself. It is
+                 pinned to the two shipped general-purpose role stanzas rather than written
+                 over [role_<roleName>] because a wildcard stanza would fail role_admin on
+                 every install, and the admin role is an authorized reader; which other
+                 roles are authorized is organization-defined and is recorded as an
+                 external dependency.
+finding:         The role_user or role_power definition grants search of the internal
+                 indexes (an entry beginning with an underscore, such as _* or _audit), so
+                 the audit records are readable by every account holding a general-purpose
+                 role.

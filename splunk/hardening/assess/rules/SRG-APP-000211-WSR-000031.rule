@@ -1,0 +1,44 @@
+# SRG-APP-000211-WSR-000031  -  CAT II
+# Anonymous user access to the web server application directories must be
+# prohibited.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000211-WSR-000031
+group:           V-206394
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001082
+control_rev5:    SC-2
+
+contribution:    Splunk Enterprise requires an authenticated session on its REST endpoints
+                 and gates each custom endpoint on a named capability and, optionally, a
+                 source address list, so no anonymous write path to configuration or app
+                 content exists through the product's own interfaces.
+
+governs:         restmap.conf - The management interface endpoints, and which clients may reach them.
+
+check:           restmap.conf [<rest endpoint name>:<description>] requireAuthentication not_equals false
+
+external:        Anonymous access introduced by a fronting reverse proxy or load balancer
+                 that terminates or supplies authentication - network component
+                 configuration
+external:        File system permissions on app and configuration directories, which govern
+                 non-application access paths - operating system
+external:        Any anonymous access path exposed by a custom app's own endpoints outside
+                 restmap.conf control - application development
+
+citation:        restmap.conf.spec:81-84 (requireAuthentication = <boolean>, "Determines if
+                 this endpoint requires authentication", default true);
+                 restmap.conf.spec:111-118 and :303-310 (capability /
+                 capability.<post|delete|get|put>); restmap.conf.spec:121-127 (acceptFrom)
+finding:         A REST endpoint stanza sets requireAuthentication to false, allowing
+                 unauthenticated callers to reach an application endpoint, so the
+                 application does not prohibit anonymous access to the extent the product
+                 allows.

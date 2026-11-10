@@ -1,0 +1,48 @@
+# SRG-APP-000125-AU-000310  -  CAT III
+# The Central Log Server system backups must be retained for a minimum of 5
+# years for SAMI (Sources and Methods Information) and a minimum of 7 days
+# for non-SAMI on media capable of guaranteeing file integrity for the
+# minimum applicable information retention period.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000125-AU-000310
+group:           V-206459
+severity:        low
+cat:             CAT III
+determination:   ORGANIZATIONAL
+grade:           D
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000167 CCI-001348
+control_rev5:    AU-11 AU-9
+
+contribution:    The application expresses how long indexed records are held before they
+                 roll to frozen, which is the only part of this requirement a Splunk
+                 setting reaches, and it can be held to the seven-day floor the check text
+                 states.
+
+governs:         indexes.conf - The indexes data is stored in, how large they may grow and how long data
+                 is kept.
+
+check:           indexes.conf [<index name>] frozenTimePeriodInSecs min 604800
+
+external:        Selection of backup media capable of guaranteeing file integrity for a
+                 minimum of five years, which no Splunk setting expresses
+external:        Retention of the backups themselves and the five-year SAMI period,
+                 documented in the SSP and carried by the backup tool SPLK-CL-000250 names
+
+citation:        frozenTimePeriodInSecs present cannot fail: indexes.conf.spec:691 gives a
+                 default of 188697600, so btool reports the key on every index and the
+                 criterion returned a green status that was not evidence. The requirement
+                 does state one number the product can be held to - the seven-day non-SAMI
+                 floor - and that is not an organization-defined value being invented here
+                 but the check text's own words, so a lower bound is both derivable and
+                 falsifiable. The five-year figure applies to the backup medium rather than
+                 to the index and stays an external dependency.
+finding:         An index is configured to roll data to frozen in less than seven days, so
+                 the application does not hold the records for the minimum period the
+                 requirement states for non-SAMI.

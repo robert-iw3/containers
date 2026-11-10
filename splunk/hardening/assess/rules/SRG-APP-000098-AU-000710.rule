@@ -1,0 +1,50 @@
+# SRG-APP-000098-AU-000710  -  CAT III
+# The Central Log Server must produce audit records containing information
+# to establish the source of the events.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000098-AU-000710
+group:           V-221911
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000133
+control_rev5:    AU-3
+
+contribution:    For records that arrive without a host already set, Splunk derives the
+                 origin from the sending system: connection_host = ip uses the sender's
+                 address and dns uses its reverse DNS name.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+
+check:           inputs.conf [] connection_host not_equals none
+
+external:        Reverse DNS correctness where connection_host = dns rests on the DNS
+                 service; the specification requires the forward lookup to match the
+                 reverse lookup.
+external:        Hosts forwarding over the Splunk-to-Splunk protocol set the host on the
+                 sending side, and connection_host applies only where the sender leaves it
+                 unset.
+
+citation:        Unmatchable condition corrected. The original stanza [<network input
+                 stanza>] is prose, not a stanza name, and assess.sh compares stanza names
+                 literally, so the condition never matched and the row returned absent on
+                 every instance. The determined row carries no stanza, and connection_host
+                 occurs only in network input stanzas (tcp, udp, splunktcp and their token
+                 variants, and [http://name] for HEC), so the key scopes the condition
+                 without a stanza. Qualifier for the assessor: inputs.conf.spec says "none"
+                 leaves the host "as specified in inputs.conf", so where none is paired
+                 with an explicit per-input host the origin is still established; read
+                 inputs.conf host before citing this, as ANDed conditions cannot express
+                 that pairing.
+finding:         A network input is configured with connection_host = none and no explicit
+                 host, so records arriving on it are stamped with the log server's own
+                 hostname and the source of the event cannot be established.

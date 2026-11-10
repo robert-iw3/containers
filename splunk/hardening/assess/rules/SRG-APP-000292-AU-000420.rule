@@ -1,0 +1,74 @@
+# SRG-APP-000292-AU-000420  -  CAT III
+# For devices and hosts within its scope of coverage, the Central Log Server
+# must be configured to notify the system administrator (SA) and information
+# system security officer (ISSO) when account modification events are
+# received.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000292-AU-000420
+group:           V-206484
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000015
+control_rev5:    AC-2
+
+contribution:    For account modification records arriving from the devices and hosts it
+                 collects from, Splunk is the component that detects and notifies: a
+                 scheduled saved search over those records with the email alert action
+                 enabled and addressed to the system administrators and the ISSO, supported
+                 by the SMTP settings in alert_actions.conf [email], is the reporting and
+                 notification mechanism the product STIG fix text names.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           alert_actions.conf [email] mailserver not_equals localhost
+check:           savedsearches.conf [<search name>] enableSched equals 1
+check:           savedsearches.conf [<search name>] cron_schedule non_empty
+check:           savedsearches.conf [<search name>] action.email in 1|true
+check:           savedsearches.conf [<search name>] action.email.to non_empty
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] mailserver non_empty -> alert_actions.conf [email] mailserver not_equals localhost
+vendor:          alert_actions.conf [email] mailserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The requirement is not applicable where notifications are performed by
+                 another device, which the check text states explicitly; that determination
+                 is made from the system architecture, not from Splunk configuration.
+external:        Coverage depends on the devices and hosts in scope actually sending their
+                 account modification records to Splunk, which rests on those endpoints'
+                 own logging configuration and on the collection path to the indexers.
+external:        The SMTP relay is external to the product by the specification's own
+                 statement, and the recipient addresses and reporting frequency are
+                 organization-defined.
+external:        The product STIG establishes this by interviewing the administrator and
+                 the ISSO, so receipt of the report is confirmed procedurally.
+external:        Whether the saved search's query selects account modification records from
+                 the sources in scope is search language content for a reviewer to inspect,
+                 not a configuration value.
+
+citation:        splunk-spec-files/alert_actions.conf.spec:157-161 ([email]), 276-285
+                 (mailserver, SMTP server not included with the instance);
+                 splunk-spec-files/savedsearches.conf.spec:73-78 (enableSched = [0 | 1],
+                 default 0), 79-90 (cron_schedule), 270-274 (alert_condition), 300-303
+                 (action.email, default false), 304-307 (action.email.to, REQUIRED);
+                 SRG-APP-000292-AU-000420 check text, including its not-applicable clause
+                 where notifications are performed by another device; product STIG
+                 SPLK-CL-000020 check and fix text.
+finding:         Splunk is not configured to notify the SA and the ISSO when account
+                 modification events are received from the devices and hosts in its scope
+                 of coverage, because no scheduled saved search with the email action
+                 enabled and addressed to those recipients exists, or alert_actions.conf
+                 [email] names no SMTP relay; this is assessed at the application layer
+                 alone, and where another device performs these notifications the
+                 requirement is not applicable, with the mail relay, the sources' own
+                 logging, the recipient addresses, and confirmation of receipt recorded as
+                 external dependencies.

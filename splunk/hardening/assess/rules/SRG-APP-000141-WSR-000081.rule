@@ -1,0 +1,48 @@
+# SRG-APP-000141-WSR-000081  -  CAT II
+# The web server must have Multipurpose Internet Mail Extensions (MIME) that
+# invoke OS shell programs disabled.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000141-WSR-000081
+group:           V-206380
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000381
+control_rev5:    CM-7
+
+contribution:    Splunk's static file handler maps an extension to a MIME type and returns
+                 the file; it never hands content to a shell. The places where the product
+                 will run an operating system program are the script alert action and
+                 scripted search commands and REST handlers, and the application can leave
+                 the script action unconfigured and unused.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           alert_actions.conf [script] filename absent
+check:           savedsearches.conf [] action.script in 0|false
+
+external:        Whether a shell is reachable by the Splunk service account at all, carried
+                 by the operating system through the account's shell, the file modes on
+                 interpreters, and any mandatory access control policy.
+external:        Review of any app-supplied custom search command or scripted REST handler
+                 that legitimately invokes an interpreter, carried by the app review
+                 procedure; the MIME map itself only names content types for static files
+                 and cannot invoke a program (server.conf.spec:1656).
+
+citation:        Web Server SRG SRG-APP-000141-WSR-000081 check and fix text;
+                 alert_actions.conf.spec:517 ([script]), alert_actions.conf.spec:518
+                 (filename, default empty string), savedsearches.conf.spec:403
+                 (action.script, default false), server.conf.spec:1656
+                 ([mimetype-extension-map])
+finding:         A script is configured for the script alert action, or the script action
+                 is enabled on a saved search, so a user of the application can cause an
+                 operating system program to run.

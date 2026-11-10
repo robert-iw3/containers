@@ -1,0 +1,45 @@
+# SRG-APP-000503-AU-000280  -  CAT II
+# The Central Log Server must generate audit records when
+# successful/unsuccessful logon attempts occur.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000503-AU-000280
+group:           V-221928
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-000172
+control_rev5:    AU-12
+
+contribution:    Splunk writes its own authentication successes and failures to its audit
+                 trail; the application's configurable share is whether those events are
+                 routed to the index so that they become reviewable audit records rather
+                 than file-only output.
+
+governs:         audit.conf - The audit trail Splunk keeps of its own activity, and how those records
+                 are signed.
+
+check:           audit.conf [auditTrail] queueing in 1|true
+
+external:        Logon attempts resolved by an external directory service or SSO provider
+                 are recorded by that provider; Splunk generates records only for the
+                 attempts it processes itself, so the full logon record set depends on the
+                 identity provider's own auditing.
+external:        Retention and protection of the audit index files rest on the operating
+                 system and the storage platform.
+
+citation:        audit.conf.spec:23 [auditTrail], :24 queueing = <boolean>, :27-29 "If set
+                 to false, you must add an inputs.conf stanza to tail the audit log", :29
+                 "Default: true"; inputs.conf.spec:235 [monitor://<path>], :1495 index,
+                 :1501 signedaudit = <boolean>. No condition is written over audit.conf
+                 [auditTrail] logging_format: that key is not declared in the staged
+                 specification set, so its vocabulary cannot be confirmed.
+finding:         Assessed at the application layer alone: audit event queueing is disabled
+                 and no monitor input tails the audit log into an index, so the logon
+                 records Splunk generates never become searchable audit records.

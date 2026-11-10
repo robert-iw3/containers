@@ -1,0 +1,63 @@
+# SRG-APP-000206-WSR-000128  -  CAT II
+# A web server utilizing mobile code must meet DoD-defined mobile code
+# requirements.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000206-WSR-000128
+group:           V-206392
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+cci:             CCI-001166
+control_rev5:    SC-18
+
+contribution:    Splunk Web can restrict the browser-executed content its own pages carry:
+                 it sets a Content-Security-Policy that confines dashboard content to the
+                 Dashboards Trusted Domains List, warns on redirection to untrusted
+                 domains, refuses unsupported hotlinked JavaScript imports, and sends
+                 X-Frame-Options: SAMEORIGIN; role design further limits who may author
+                 HTML views through the edit_view_html capability.
+
+governs:         web-features.conf - Which features of the web interface are available.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web-features.conf [feature:dashboards_csp] enable_dashboards_external_content_restriction not_equals false
+check:           web-features.conf [feature:dashboards_csp] enable_dashboards_redirection_restriction not_equals false
+check:           web-features.conf [feature:quarantine_files] enable_unsupported_hotlinked_imports not_equals true
+# --- vendor verification: generated, do not edit by hand
+vendor:          web.conf [settings] x_frame_options_sameorigin https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+retired_check:   web.conf [settings] x_frame_options_sameorigin not_equals false
+                 reason: "adds a X-Frame-Options header set to 'SAMEORIGIN' to every
+                         response served by cherrypy. Default: true". The cookieSameSite
+                         entry adds that to embed a dashboard in a third-party iframe "You
+                         must also give the 'x_frame_options_sameorigin' setting a value of
+                         'false'".
+# --- end vendor verification
+
+external:        Determination of mobile code category and the acquisition, development and
+                 use policy itself - organizational policy, not a Splunk setting
+external:        Digital signing of applets with code-signing certificates - the issuing
+                 PKI and the application development process
+external:        Mobile code controls on client workstations that download and execute the
+                 code - workstation configuration
+external:        The contents of the Dashboards Trusted Domains List
+                 (dashboards_trusted_domain.<name>) - organization-defined
+
+citation:        web-features.conf.spec:38-46 (enable_unsupported_hotlinked_imports,
+                 default false, "CAUTION: Do not change this setting");
+                 web-features.conf.spec:50-64
+                 (enable_dashboards_external_content_restriction, default true);
+                 web-features.conf.spec:66-73 (enable_dashboards_redirection_restriction,
+                 default true); web.conf.spec:719-722 (x_frame_options_sameorigin, default
+                 true); authorize.conf.spec:730 ([capability::edit_view_html])
+finding:         Splunk Web is not configured to the extent the product allows toward the
+                 mobile code requirement: one or more of the dashboard external-content
+                 restriction, the dashboard redirection restriction, the unsupported
+                 hotlinked-import prohibition, or the SAMEORIGIN frame restriction has been
+                 set away from its restrictive value.

@@ -1,0 +1,81 @@
+# SRG-APP-000293-AU-000430  -  CAT III
+# For devices and hosts within its scope of coverage, the Central Log Server
+# must notify the system administrator (SA) and information system security
+# officer (ISSO) when events indicating account disabling actions are
+# received.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000293-AU-000430
+group:           V-206485
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      derived
+revised:         yes
+cci:             CCI-000015
+control_rev5:    AC-2
+
+contribution:    Splunk carries the whole detect-and-send path itself: a scheduled saved
+                 search that mails the SA and ISSO when account-disabling events are
+                 received, with the relay and sender for the email action held in
+                 alert_actions.conf.
+
+governs:         alert_actions.conf - What Splunk does when an alert fires, such as sending email or calling a
+                 webhook.
+governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
+
+check:           savedsearches.conf [<search_name>] enableSched equals 1
+check:           savedsearches.conf [<search_name>] cron_schedule non_empty
+check:           savedsearches.conf [<search_name>] action.email matches ^(1|true)$
+check:           savedsearches.conf [<search_name>] action.email.to non_empty
+check:           alert_actions.conf [email] mailserver not_equals localhost
+check:           alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+# --- vendor verification: generated, do not edit by hand
+corrected:       alert_actions.conf [email] mailserver non_empty -> alert_actions.conf [email] mailserver not_equals localhost
+corrected:       alert_actions.conf [email] from non_empty -> alert_actions.conf [email] from matches ^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$
+vendor:          alert_actions.conf [email] from https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+vendor:          alert_actions.conf [email] mailserver https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/alert_actions.conf
+# --- end vendor verification
+
+external:        The SMTP relay or mail gateway named in alert_actions.conf [email]
+                 mailserver is a separate service and must accept and deliver the message;
+                 the specification states Splunk does not include one.
+external:        The SA and ISSO mailbox addresses are organization-defined; the
+                 application holds whatever addresses it is given and cannot judge them.
+external:        Whether received events actually represent account-disabling actions
+                 depends on the sending hosts' own audit configuration and on the source
+                 types parsing them, neither of which is a Splunk setting.
+external:        The SRG's own NA clause moves this requirement off the application
+                 entirely where notifications are performed by another device.
+
+citation:        Two of the reviewed conditions fail configurations the benchmark accepts.
+                 savedsearches.conf alert_condition defaults to an empty string
+                 (savedsearches.conf.spec:270-274) and is only one of the ways a saved
+                 search triggers; counttype defaults to "always" and is used with relation
+                 and quantity instead (savedsearches.conf.spec:249-253), so alert_condition
+                 non_empty reports a finding against a working alert, and against a plain
+                 scheduled report, which is exactly what the product STIG check asks for
+                 (SPLK-CL-000020: "verify that a report exists to notify the SA and ISSO").
+                 alert_actions.conf [email] subject defaults to "Splunk Alert: $name$"
+                 (alert_actions.conf.spec:199-201), so requiring it present tests a
+                 cosmetic field whose default is already populated and whose absence
+                 weakens nothing. What survives is the send path the fix text names: Splunk
+                 ships no mail server of its own ("You must have a Simple Mail Transfer
+                 Protocol (SMTP) server available to send email. This is not included with
+                 the Splunk instance", alert_actions.conf.spec:276-285, default localhost),
+                 from defaults to the bare word "splunk" (alert_actions.conf.spec:163-165),
+                 action.email defaults to false (savedsearches.conf.spec:300-302),
+                 action.email.to is documented REQUIRED and is not defaulted in
+                 alert_actions.conf (savedsearches.conf.spec:304-306), and enableSched
+                 accepts only 0 or 1 with 0 the default (savedsearches.conf.spec:73-77).
+                 Note this SRG carries its own NA clause, so an assessor may mark it Not
+                 Applicable where another device performs the notification.
+finding:         Splunk Enterprise has no scheduled saved search that mails the SA and ISSO
+                 when account-disabling events are received: the search is not scheduled,
+                 the email action or its recipient list is unset, or alert_actions.conf
+                 [email] names no SMTP relay and no sender.

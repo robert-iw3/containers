@@ -1,0 +1,40 @@
+# SRG-APP-000167-AU-002500  -  CAT III
+# The Central Log Server must be configured to enforce password complexity
+# by requiring that at least one lowercase character be used.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000167-AU-002500
+group:           V-206470
+severity:        low
+cat:             CAT III
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-004066
+control_rev5:    IA-5
+
+contribution:    Splunk's native authentication can require a minimum number of lowercase
+                 characters in every password it accepts.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [splunk_auth] minPasswordLowercase min 1
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [splunk_auth] minPasswordLowercase https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        Where authType is LDAP or SAML, password complexity for federated accounts
+                 is enforced by the directory service or identity provider; [splunk_auth]
+                 governs the remaining native accounts
+external:        Operating system account passwords on the host
+
+citation:        SPLK-CL-000350 check text ("If the minPasswordLowercase is missing or is
+                 configured to 0, this is a finding") and fix text ("minPasswordLowercase =
+                 1"); authentication.conf.spec:459-467 (positive integer, default 0)
+finding:         authentication.conf [splunk_auth] minPasswordLowercase is absent or 0, so
+                 the application accepts native account passwords with no lowercase
+                 character.

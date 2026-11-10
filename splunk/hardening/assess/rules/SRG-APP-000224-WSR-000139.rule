@@ -1,0 +1,46 @@
+# SRG-APP-000224-WSR-000139  -  CAT II
+# The web server must generate unique session identifiers with definable
+# entropy.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000224-WSR-000139
+group:           V-206403
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      tested
+cci:             CCI-001188
+control_rev5:    SC-23
+
+contribution:    The entropy of a generated session identifier is not itself a configurable
+                 quantity in Splunk Enterprise. What the application can do is select the
+                 random source: in FIPS mode the instance is constrained to FIPS 140-2
+                 algorithms and restrictions, which governs the generator the session
+                 subsystem draws on.
+
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        The ratio of entropy to identifier length in a generated session ID - a
+                 fixed property of Splunk Enterprise's session subsystem, with no setting
+                 to define it; establish it by vendor attestation from Splunk
+external:        The kernel entropy source available to the instance - operating system
+
+citation:        splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1], whether the instance
+                 operates in FIPS mode and uses the algorithms and restrictions that apply
+                 to FIPS Publication 140-2)
+finding:         FIPS mode is not enabled, so the application does not constrain session
+                 identifier generation to a FIPS 140-2 random source, which is its only
+                 contribution to the entropy requirement; the entropy-to-length ratio
+                 itself is not configurable and rests on vendor attestation.

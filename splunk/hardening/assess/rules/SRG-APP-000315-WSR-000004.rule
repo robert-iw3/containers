@@ -1,0 +1,67 @@
+# SRG-APP-000315-WSR-000004  -  CAT II
+# The web server must restrict inbound connections from nonsecure zones.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000315-WSR-000004
+group:           V-206417
+severity:        medium
+cat:             CAT II
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+revised:         yes
+cci:             CCI-002314
+control_rev5:    AC-17
+
+contribution:    Splunk holds a network access control list on every listener it owns -
+                 web.conf acceptFrom for Splunk Web, server.conf [httpServer] acceptFrom
+                 for the management interface, and acceptFrom on the receiving input stanza
+                 - each of which defaults to accepting connections from anywhere until the
+                 organization's rules are written into it.
+
+governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
+                 monitoring.
+governs:         server.conf - Core server settings, including the certificates and protocols used to
+                 protect management and replication traffic.
+governs:         web.conf - Configures the Splunk Web interface.
+
+check:           web.conf [settings] acceptFrom non_empty
+check:           web.conf [settings] acceptFrom not_equals *
+check:           server.conf [httpServer] acceptFrom non_empty
+check:           server.conf [httpServer] acceptFrom not_equals *
+check:           inputs.conf [splunktcp-ssl:<port>] acceptFrom non_empty
+check:           inputs.conf [splunktcp-ssl:<port>] acceptFrom not_equals *
+# --- vendor verification: generated, do not edit by hand
+vendor:          inputs.conf [splunktcp-ssl:<port>] acceptFrom https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
+vendor:          server.conf [httpServer] acceptFrom https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
+vendor:          web.conf [settings] acceptFrom https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
+# --- end vendor verification
+
+external:        The organization, and for this benchmark the DoD, defines which zones are
+                 nonsecure; the application stores the resulting ACL but does not determine
+                 it.
+external:        Perimeter protection devices in front of the instance carry the rest of
+                 this restriction and are not application settings.
+external:        An input that is not declared in inputs.conf cannot be constrained by this
+                 criterion, and forwarder-side configuration lives on a separate host.
+
+citation:        Only the inputs.conf stanza changes, and it has to. acceptFrom is not a
+                 global inputs.conf setting: the specification defines it per input stanza,
+                 and the receiving stanza the product STIG's own fix configures is
+                 [splunktcp-ssl:<port>] (SPLK-CL-000290; inputs.conf.spec:876, 908-910,
+                 with the rule syntax and "Default: * (accept from anywhere)" at 577-591).
+                 A condition attached to an empty stanza name cannot be looked up in any
+                 file, so it would report a finding for a key that was never read - a
+                 confident status that is not evidence. The not_equals "*" direction is
+                 correct on all three listeners: "*" is the documented default and "matches
+                 anything", while a real restriction such as "!192.0.2/24, *" is not equal
+                 to "*" and passes, which is the behavior the specification's own example
+                 describes (web.conf.spec:1090-1096, inputs.conf.spec:587-591).
+finding:         Splunk accepts inbound connections without a zone restriction on at least
+                 one listener it owns: web.conf [settings] acceptFrom, server.conf
+                 [httpServer] acceptFrom, or acceptFrom on the receiving input stanza is
+                 unset or left at "*", which accepts connections from anywhere.

@@ -1,0 +1,64 @@
+# SRG-APP-000429-WSR-000113  -  CAT I
+# The web server must encrypt user identifiers and passwords.
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000429-WSR-000113
+group:           V-206431
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-002476
+control_rev5:    SC-28
+
+contribution:    Where Splunk Enterprise is itself the user authenticator, it stores
+                 passwords for its native authentication only as salted hashes, and the
+                 hash algorithm is selectable; running the instance in FIPS mode constrains
+                 that and every other cryptographic operation to FIPS Publication 140-2
+                 algorithms. Where authentication is delegated, the credentials are not
+                 Splunk's to store.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
+                 starts in FIPS mode.
+
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA512-crypt(-[0-9]+)?$
+check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+# --- vendor verification: generated, do not edit by hand
+corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
+vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
+# --- end vendor verification
+
+external:        Where authType is LDAP, SAML, Scripted or ProxySSO, credential storage
+                 belongs to the directory service or identity provider and Splunk holds no
+                 password to protect - that component's configuration; the SRG's own
+                 not-applicable clause governs where Splunk is not the user authenticator
+                 and manager
+external:        File system ownership and permissions on the password file under the
+                 instance's etc directory - operating system
+external:        Encryption of the file system holding that file - operating system or
+                 storage layer
+external:        Protection of credentials held for the instance's own outbound connections
+                 in its secret store - assessed separately against the credential storage
+                 requirements
+
+citation:        authentication.conf.spec:58-79 (passwordHashAlgorithm =
+                 [SHA512-crypt|SHA256-crypt|SHA512-crypt-<num_rounds>|SHA256-crypt-<num_rounds>|MD5-crypt];
+                 "This controls how hashed passwords are stored in the
+                 $SPLUNK_HOME/etc/passwd file for the default 'Splunk' authType"; MD5-crypt
+                 runs 1000 MD5 operations; the SHA algorithms use 5000 rounds and the
+                 rounds count must be at least 1000; default SHA512-crypt);
+                 authentication.conf.spec:30-33 (authType =
+                 [Splunk|LDAP|Scripted|SAML|ProxySSO], default Splunk);
+                 splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1]);
+                 authorize.conf.spec:67-72 ([role_<roleName>])
+finding:         Stored credentials are not protected to the extent the product allows: the
+                 native password hash algorithm is set to MD5-crypt or a SHA-256 variant
+                 rather than SHA-512, or FIPS mode is not enabled to constrain the
+                 algorithms used.

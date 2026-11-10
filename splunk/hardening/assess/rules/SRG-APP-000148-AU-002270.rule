@@ -1,0 +1,55 @@
+# SRG-APP-000148-AU-002270  -  CAT I
+# The Central Log Server must be configured to uniquely identify and
+# authenticate organizational users (or processes acting on behalf of
+# organizational users).
+#
+# Generated from the benchmark and the assessment determinations. Edit this
+# file to change how this requirement is assessed here; it is read at run
+# time. Regenerating overwrites it.
+
+id:              SRG-APP-000148-AU-002270
+group:           V-206460
+severity:        high
+cat:             CAT I
+determination:   APPLICABLE
+grade:           C
+decidable:       machine
+confidence:      documented
+cci:             CCI-000764
+control_rev5:    IA-2
+
+contribution:    Splunk's authentication.conf selects which authentication system the
+                 application uses and names the strategy stanza that carries it, so
+                 interactive logons resolve through a directory service or SAML identity
+                 provider that issues one identifier per person rather than through a
+                 shared native account.
+
+governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+
+check:           authentication.conf [authentication] authType in LDAP|SAML
+check:           authentication.conf [authentication] authSettings non_empty
+# --- vendor verification: generated, do not edit by hand
+vendor:          authentication.conf [authentication] authSettings https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+vendor:          authentication.conf [authentication] authType https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
+# --- end vendor verification
+
+external:        The LDAP directory service or SAML identity provider issues the unique
+                 user identifiers and enforces uniqueness in its own account store
+external:        Absence of shared or group logon accounts, and retention of a single
+                 emergency account of last resort, is evidenced in the Splunk user store
+                 ($SPLUNK_HOME/etc/system user database) and in the identity provider, not
+                 in a configuration file
+external:        The ldap.conf TLS settings named in SPLK-CL-000320 belong to the OpenLDAP
+                 client configuration shipped with the operating system layer, outside
+                 Splunk's own conf layer
+external:        Operating system accounts used for shell or CLI access to the host
+
+citation:        SPLK-CL-000320 check and fix text; authentication.conf.spec:26-55
+                 (authType vocabulary and default Splunk, authSettings as the strategy
+                 key), authentication.conf.spec:351-360 (role map per strategy);
+                 authorize.conf.spec:67-78 (roles are named per role stanza)
+finding:         Splunk authentication.conf does not select an external authentication
+                 system with a named strategy ([authentication] authType is not LDAP or
+                 SAML, or authSettings is empty), so the application does not bind logons
+                 to uniquely identified organizational users to the extent the product
+                 allows.
