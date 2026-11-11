@@ -1,0 +1,278 @@
+<form version="1.1" theme="dark">
+  <label>Case Work</label>
+  <description>Open a case on a detection, record what you found, and close it with a resolution. Nothing is overwritten: every note and decision stays as its own entry, so the reasoning survives the person who wrote it.</description>
+
+  <!-- Writing requires Splunk to allow the collect command from a
+       dashboard. It is blocked by default. See docs/case-workflow.md for
+       the one setting, and why it is the operator's decision rather than
+       something this app turns on for them. -->
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Time range</label>
+      <default><earliest>-30d@d</earliest><latest>now</latest></default>
+    </input>
+    <input type="dropdown" token="status_tok" searchWhenChanged="true">
+      <label>Show</label>
+      <choice value="open">open cases</choice>
+      <choice value="resolved">resolved</choice>
+      <choice value="*">everything</choice>
+      <default>open</default>
+      <prefix>case_status="</prefix><suffix>"</suffix>
+    </input>
+    <input type="text" token="analyst_tok" searchWhenChanged="true">
+      <label>Your name (recorded on anything you write)</label>
+      <default>unattributed</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Open</title>
+      <single>
+        <search><query>`sigma_case_state` | search case_status="open" | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest></search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xfab219"]</option>
+        <option name="rangeValues">[0]</option><option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Resolved false positive</title>
+      <single>
+        <search><query>`sigma_case_state` | search case_resolution="false positive" | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest></search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x19C1EB","0x19C1EB"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Confirmed true positive</title>
+      <single>
+        <search><query>`sigma_case_state` | search case_resolution="true positive" | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest></search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0xd03b3b","0xd03b3b"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Detections with no case yet</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts
+| eval case_id=substr(md5(sigma_rule_id."|".sigma_src_host."|".tostring(round(sigma_first_seen,0))),1,12)
+| stats count by case_id
+| join type=left case_id [ search index=sigma_cases | stats count as touched by case_id ]
+| where isnull(touched) | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">untriaged</option>
+      </single>
+    </panel>
+  </row>
+
+  <!-- ========= 1. Pick something to work on ========= -->
+  <row>
+    <panel>
+      <title>Detections — select one to open or continue a case</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts
+| lookup sigma_rules sigma_rule_id OUTPUT sigma_technique_name
+| eval case_id = substr(md5(sigma_rule_id."|".sigma_src_host."|".tostring(round(sigma_first_seen,0))),1,12),
+       when = strftime(sigma_first_seen,"%F %T"),
+       technique = if(sigma_technique_name="","no technique mapped",sigma_technique_name)
+| join type=left case_id
+    [ search index=sigma_cases
+    | stats latest(case_status) as case_status, latest(case_resolution) as case_resolution by case_id ]
+| eval triage = case(isnull(case_status), "untriaged",
+                     case_status="resolved", "resolved: ".case_resolution,
+                     1==1, "case open")
+| table when, sigma_src_host, sigma_rule, technique, sigma_level, triage, case_id, sigma_rule_id
+| rename when as "When", sigma_src_host as "Host", sigma_rule as "Rule",
+         technique as "Technique", sigma_level as "Severity", triage as "Triage"
+| sort - "When"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <drilldown>
+          <set token="c_id">$row.case_id$</set>
+          <set token="c_rule">$row.Rule$</set>
+          <set token="c_ruleid">$row.sigma_rule_id$</set>
+          <set token="c_host">$row.Host$</set>
+          <set token="c_when">$row.When$</set>
+          <set token="c_sev">$row.Severity$</set>
+          <unset token="wrote"></unset>
+        </drilldown>
+        <format type="color" field="Triage">
+          <colorPalette type="map">{"untriaged":#fab219,"case open":#19C1EB,"resolved: false positive":#8A8A93,"resolved: true positive":#d03b3b,"resolved: benign expected":#0ca30c,"resolved: duplicate":#8A8A93}</colorPalette>
+        </format>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <!-- ========= 2. Work the case ========= -->
+  <row depends="$c_id$">
+    <panel>
+      <title>Case $c_id$ — "$c_rule$" on $c_host$</title>
+      <input type="dropdown" token="act_tok" searchWhenChanged="true">
+        <label>What are you recording</label>
+        <choice value="note">a note on what you found</choice>
+        <choice value="evidence">evidence worth keeping</choice>
+        <choice value="resolve">a resolution, closing the case</choice>
+        <default>note</default>
+        <change>
+          <condition value="resolve"><set token="show_res">yes</set></condition>
+          <condition><unset token="show_res"></unset></condition>
+        </change>
+      </input>
+      <input type="dropdown" token="res_tok" searchWhenChanged="true" depends="$show_res$">
+        <label>Resolution</label>
+        <choice value="false positive">false positive — the activity was legitimate</choice>
+        <choice value="true positive">true positive — this was real</choice>
+        <choice value="benign expected">benign expected — known and accepted here</choice>
+        <choice value="duplicate">duplicate of another case</choice>
+        <choice value="inconclusive">inconclusive — could not determine</choice>
+        <default>false positive</default>
+      </input>
+      <input type="text" token="text_tok" searchWhenChanged="false">
+        <label>Say why, in your own words</label>
+        <default></default>
+      </input>
+      <input type="link" token="go_tok" searchWhenChanged="true">
+        <label></label>
+        <choice value="record">Record it</choice>
+        <change>
+          <set token="wrote">yes</set>
+        </change>
+      </input>
+      <html>
+        <div style="padding:6px 2px;color:#8A8A93;font-size:12px;font-family:Roboto,Helvetica,Arial,sans-serif">
+          Recorded as <b>$analyst_tok$</b>. Entries are appended, never replaced —
+          correcting something means adding the correction, and both stay readable.
+        </div>
+      </html>
+    </panel>
+    <panel>
+      <title>This case so far</title>
+      <table>
+        <search>
+          <query>index=sigma_cases case_id="$c_id$"
+| eval when=strftime(_time,"%F %T"),
+       entry=case(case_action="open","opened the case",
+                  case_action="resolve","resolved as ".case_resolution,
+                  1==1, case_action)
+| table when, case_analyst, entry, case_text
+| rename when as "When", case_analyst as "Who", entry as "What",
+         case_text as "Said"
+| sort - "When"</query>
+          <earliest>-2y</earliest><latest>now</latest>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- The write. It runs only once the analyst has clicked, because the
+       panel does not exist until the token is set. -->
+  <row depends="$wrote$">
+    <panel>
+      <title>Recorded</title>
+      <table>
+        <search>
+          <query>| makeresults
+| eval case_id="$c_id$", case_action="$act_tok$",
+       case_analyst="$analyst_tok$",
+       case_text="$text_tok$",
+       case_resolution=if("$act_tok$"=="resolve","$res_tok$",null()),
+       case_status=if("$act_tok$"=="resolve","resolved","open"),
+       case_title="$c_rule$ on $c_host$",
+       case_severity="$c_sev$",
+       sigma_rule="$c_rule$", sigma_rule_id="$c_ruleid$",
+       sigma_src_host="$c_host$", detection_time="$c_when$"
+| fields - _raw
+| collect index=sigma_cases sourcetype=sigma:case
+| eval result="written"
+| table result</query>
+          <earliest>-1m</earliest><latest>now</latest>
+        </search>
+        <option name="count">2</option>
+        <option name="drilldown">none</option>
+      </table>
+      <html>
+        <div style="padding:8px 2px;color:#8A8A93;font-size:12px;font-family:Roboto,Helvetica,Arial,sans-serif">
+          If this panel reports that a risky command was not dispatched, Splunk is
+          blocking <code>collect</code> from dashboards. That is the default and it is
+          deliberate. docs/case-workflow.md has the single setting that changes it.
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <!-- ========= 3. What the case record is telling you ========= -->
+  <row>
+    <panel>
+      <title>Rules repeatedly resolved as false positive — allowlist these</title>
+      <!-- One false positive is triage. The same rule called a false
+           positive on the same host three times is a tuning job that
+           nobody has done, and it is costing an analyst every time. -->
+      <table>
+        <search>
+          <query>index=sigma_cases case_action=resolve case_resolution="false positive"
+| stats count as times, dc(sigma_src_host) as hosts,
+        values(sigma_src_host) as on_hosts, latest(case_text) as last_reason
+  by sigma_rule, sigma_rule_id
+| where times &gt;= 2
+| sort - times
+| table sigma_rule, times, hosts, on_hosts, last_reason, sigma_rule_id
+| rename sigma_rule as "Rule", times as "Called a false positive",
+         hosts as "Hosts", on_hosts as "On", last_reason as "Most recent reason",
+         sigma_rule_id as "Add this id to sigma_allowlist.csv"</query>
+          <earliest>-2y</earliest><latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Cases — $status_tok$</title>
+      <table>
+        <search>
+          <query>`sigma_case_state`
+| search $status_tok$
+| eval opened=strftime(opened,"%F %T"),
+       last_touched=strftime(last_touched,"%F %T"),
+       outcome=coalesce(case_resolution,"not yet resolved")
+| table case_id, case_title, case_status, outcome, case_analyst, actions, opened, last_touched
+| rename case_id as "Case", case_title as "About", case_status as "Status",
+         outcome as "Outcome", case_analyst as "Last touched by",
+         actions as "Entries", opened as "Opened", last_touched as "Last entry"
+| sort - "Last entry"</query>
+          <earliest>-2y</earliest><latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <set token="c_id">$row.Case$</set>
+        </drilldown>
+        <format type="color" field="Outcome">
+          <colorPalette type="map">{"true positive":#d03b3b,"false positive":#8A8A93,"benign expected":#0ca30c,"inconclusive":#fab219,"not yet resolved":#19C1EB}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

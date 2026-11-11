@@ -25,7 +25,17 @@
 | rex field=sigma_sample "Name='Image'&gt;(?&lt;evt_image&gt;[^&lt;]*)"
 | rex field=sigma_sample "Name='ParentImage'&gt;(?&lt;evt_parent&gt;[^&lt;]*)"
 | rex field=sigma_sample "Name='User'&gt;(?&lt;evt_user&gt;[^&lt;]*)"
-| rex field=sigma_sample "Name='ParentCommandLine'&gt;(?&lt;evt_parentcmd&gt;[^&lt;]*)"</query>
+| rex field=sigma_sample "Name='ParentCommandLine'&gt;(?&lt;evt_parentcmd&gt;[^&lt;]*)"
+| rex field=sigma_sample "\\bexe=\"(?&lt;aud_exe&gt;[^\"]+)\""
+| rex field=sigma_sample "\\bcomm=\"(?&lt;aud_comm&gt;[^\"]+)\""
+| rex field=sigma_sample "\\bauid=(?&lt;aud_user&gt;\\S+)"
+| rex field=sigma_sample "\\ba0=\"(?&lt;aud_a0&gt;[^\"]*)\""
+| rex field=sigma_sample "\\ba1=\"(?&lt;aud_a1&gt;[^\"]*)\""
+| rex field=sigma_sample "\\ba2=\"(?&lt;aud_a2&gt;[^\"]*)\""
+| eval evt_image = coalesce(evt_image, aud_exe, aud_comm),
+       evt_user = coalesce(evt_user, aud_user),
+       evt_cmdline = coalesce(evt_cmdline,
+         trim(coalesce(aud_a0,"")." ".coalesce(aud_a1,"")." ".coalesce(aud_a2,"")))</query>
     <earliest>$tr.earliest$</earliest>
     <latest>$tr.latest$</latest>
   </search>
@@ -116,30 +126,32 @@
       <title>Detections — select one to read the evidence</title>
       <table>
         <search base="det">
-          <query>| table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
-        sigma_confidence, urgency, sigma_match_count, seen_for, sigma_src_sourcetype,
-        sigma_rule_id, sigma_src_index, evt_cmdline, evt_image, evt_parent, evt_user, evt_parentcmd
-| rename when as "When", sigma_src_host as "Host", sigma_rule as "Rule",
-         technique as "ATT&amp;CK technique", tactic as "Tactic", sigma_level as "Severity",
-         sigma_confidence as "Confidence", urgency as "Handling",
-         sigma_match_count as "Events", seen_for as "Over",
-         sigma_src_sourcetype as "Source type"
-| fields - sigma_rule_id, sigma_src_index, evt_*
-| sort - "When"</query>
+          <query>| eval st = mvindex(sigma_src_sourcetype, 0),
+       idx = mvindex(sigma_src_index, 0),
+       from_t = sigma_first_seen - 1800,
+       to_t = sigma_last_seen + 1800
+| table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
+        sigma_confidence, urgency, sigma_match_count, seen_for, st,
+        sigma_rule_id, idx, from_t, to_t, sigma_rule_id as rid
+| sort - when</query>
         </search>
         <option name="count">15</option>
         <option name="drilldown">row</option>
         <option name="wrap">false</option>
         <drilldown>
-          <set token="sel_rule">$row.Rule$</set>
-          <set token="sel_host">$row.Host$</set>
-          <set token="sel_when">$row.When$</set>
-          <set token="sel_st">$row.Source type$</set>
+          <set token="sel_rule">$row.sigma_rule$</set>
+          <set token="sel_host">$row.sigma_src_host$</set>
+          <set token="sel_when">$row.when$</set>
+          <set token="sel_st">$row.st$</set>
+          <set token="sel_idx">$row.idx$</set>
+          <set token="sel_from">$row.from_t$</set>
+          <set token="sel_to">$row.to_t$</set>
+          <set token="sel_ruleid">$row.sigma_rule_id$</set>
         </drilldown>
-        <format type="color" field="Severity">
+        <format type="color" field="sigma_level">
           <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
         </format>
-        <format type="color" field="Handling">
+        <format type="color" field="urgency">
           <colorPalette type="map">{"act now":#d03b3b,"trend":#19C1EB}</colorPalette>
         </format>
       </table>
@@ -154,16 +166,17 @@
         <search base="det">
           <query>| search sigma_rule="$sel_rule$" sigma_src_host="$sel_host$"
 | head 1
-| eval "Process"=coalesce(evt_image,"not in the sample"),
-       "Command line"=coalesce(evt_cmdline,"not in the sample"),
-       "Parent process"=coalesce(evt_parent,"not in the sample"),
-       "Parent command line"=coalesce(evt_parentcmd,"not in the sample"),
-       "User"=coalesce(evt_user,"not in the sample"),
+| eval "Process"=coalesce(evt_image,"not captured for this source type"),
+       "Command line"=coalesce(evt_cmdline,"not captured for this source type"),
+       "Parent process"=coalesce(evt_parent,"not captured for this source type"),
+       "Parent command line"=coalesce(evt_parentcmd,"not captured for this source type"),
+       "User"=coalesce(evt_user,"not captured for this source type"),
        "Host"=sigma_src_host,
        "When"=when,
        "Matching events"=sigma_match_count." over ".seen_for,
        "Source type"=sigma_src_sourcetype,
        "Index"=sigma_src_index
+| fields - _*
 | fields "When","Host","User","Process","Command line","Parent process",
          "Parent command line","Matching events","Source type","Index"
 | transpose column_name="Field" | rename "row 1" as "Value"</query>
@@ -191,6 +204,7 @@
        "Known false positives"=if(sigma_falsepositives="",
          "The author declared none. That is not the same as there being none.",
          sigma_falsepositives)
+| fields - _*
 | fields "What it looks for","Sigma condition","ATT&amp;CK technique","Tactic",
          "Confidence","Handling","Known false positives"
 | transpose column_name="Field" | rename "row 1" as "Value"</query>
@@ -204,19 +218,29 @@
 
   <row depends="$sel_rule$">
     <panel>
-      <title>The events behind it — on $sel_host$, around $sel_when$</title>
+      <title>Every event that matched — "$sel_rule$" on $sel_host$</title>
       <!-- Back to the raw log. The detection kept its origin index and
            source type precisely so this pivot does not have to guess. -->
+      <!-- The rule's own condition, pulled from the lookup and injected as
+           a subsearch. A subsearch that returns a field called "search" has
+           its value spliced into the outer search, so this shows exactly the
+           events the rule matched rather than everything on the host. -->
       <event>
         <search>
-          <query>`sigma_lab_index` host="$sel_host$" sourcetype="$sel_st$"</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+          <query>index="$sel_idx|s$" host="$sel_host|s$"
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+     | eval search=if(sigma_spl="", "*", sigma_spl)
+     | fields search]</query>
+          <earliest>$sel_from$</earliest>
+          <latest>$sel_to$</latest>
         </search>
-        <option name="count">10</option>
-        <option name="list.drilldown">none</option>
-        <option name="maxLines">8</option>
-        <option name="raw.drilldown">none</option>
+        <option name="count">20</option>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">true</option>
+        <option name="maxLines">20</option>
+        <option name="raw.drilldown">full</option>
+        <option name="type">list</option>
+        <option name="showPager">true</option>
       </event>
     </panel>
     <panel>
@@ -239,6 +263,60 @@
         <format type="color" field="Severity">
           <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
         </format>
+      </table>
+    </panel>
+  </row>
+
+
+  <row depends="$sel_rule$">
+    <panel>
+      <title>Those events, field by field</title>
+      <table>
+        <search>
+          <query>index="$sel_idx|s$" host="$sel_host|s$"
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+     | eval search=if(sigma_spl="", "*", sigma_spl)
+     | fields search]
+| eval when=strftime(_time,"%F %T.%3N")
+| rex field=_raw "Name='(?&lt;_k&gt;[^']+)'&gt;(?&lt;_v&gt;[^&lt;]*)" max_match=60
+| table when, host, sourcetype, EventCode, Image, CommandLine, ParentImage,
+        ParentCommandLine, User, IntegrityLevel, CurrentDirectory,
+        OriginalFileName, Hashes, exe, comm, auid, a0, a1, a2, a3
+| sort - when</query>
+          <earliest>$sel_from$</earliest>
+          <latest>$sel_to$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <row depends="$sel_rule$">
+    <panel>
+      <title>Which fields those events carry — what the rule had to work with</title>
+      <!-- If a field the rule keys on is absent here, the detection came
+           from something else in the condition, and that is worth knowing
+           before acting on it. -->
+      <table>
+        <search>
+          <query>index="$sel_idx|s$" host="$sel_host|s$"
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+     | eval search=if(sigma_spl="", "*", sigma_spl)
+     | fields search]
+| fieldsummary maxvals=3
+| eval coverage=round(count/max(count)*100,0)
+| table field, count, distinct_count, values
+| rename field as "Field", count as "Events with it",
+         distinct_count as "Distinct values", values as "Sample values"
+| sort - "Events with it"</query>
+          <earliest>$sel_from$</earliest>
+          <latest>$sel_to$</latest>
+        </search>
+        <option name="count">25</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
       </table>
     </panel>
   </row>
