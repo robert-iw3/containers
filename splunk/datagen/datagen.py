@@ -37,6 +37,36 @@ TIERS = {"tiny": 200, "small": 2_000, "medium": 150_000, "large": 600_000}
 
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)((?:\|[a-z_0-9]+)*)\}")
 
+# Authoritative for both the generator and the validator, which imports
+# them. Two copies of these lists drift, and a validator that has drifted
+# approves templates that fail at emit time.
+GENERATORS = frozenset({
+    "const", "choice", "int", "float", "hex", "ipv4", "uuid", "guid_braced",
+    "sequence", "timestamp", "sha256_of", "compose",
+})
+
+TIMESTAMP_FORMATS = frozenset({
+    "epoch", "epoch_ms3", "iso8601", "iso8601_z", "syslog_rfc3164",
+    "win_xml", "strftime",
+})
+
+# Parameters each generator reads. Used to flag a key that will be ignored,
+# which is how a typo in a template silently changes the output.
+GENERATOR_PARAMS = {
+    "const": {"value"},
+    "choice": {"values", "weights"},
+    "int": {"min", "max"},
+    "float": {"min", "max", "places"},
+    "hex": {"width"},
+    "ipv4": {"prefix"},
+    "uuid": set(),
+    "guid_braced": set(),
+    "sequence": {"start", "step", "jitter"},
+    "timestamp": {"format", "pattern"},
+    "sha256_of": {"of", "length"},
+    "compose": {"value"},
+}
+
 
 # ------------------------------------------------------------- generators
 
@@ -250,7 +280,23 @@ def main(argv):
                     help="Report projected volume and exit without writing")
     ap.add_argument("--list", action="store_true",
                     help="List templates and exit")
+    ap.add_argument("--skip-validate", action="store_true",
+                    help="Emit without validating the templates first. "
+                         "Off by default: a typo in a template produces "
+                         "plausible, wrong data rather than an error.")
     args = ap.parse_args(argv[1:])
+
+    if not args.skip_validate and not args.list:
+        import subprocess
+        validator = HERE / "validate-templates.py"
+        if validator.exists():
+            rc = subprocess.run([sys.executable, str(validator),
+                                 "--templates", args.templates]).returncode
+            if rc != 0:
+                print("\nRefusing to emit while a template has errors. "
+                      "Fix them, or pass --skip-validate.", file=sys.stderr)
+                return rc
+            print()
 
     templates = load_templates(Path(args.templates))
     if args.only:

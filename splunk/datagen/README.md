@@ -91,6 +91,25 @@ settings worth knowing before you write a search:
 python3 datagen.py --tier small --out ./out --index my_test_index
 ```
 
+Templates are validated first, and nothing is emitted while an error
+stands. A typo in a template does not fail loudly on its own: an unknown
+transform, or a placeholder naming a variable that was renamed, produces
+output that looks plausible and is wrong, and the cost of finding out later
+is a reindex. Validation reports the file, the location, and a likely
+correction:
+
+```
+ERROR   win_security.json [variables.ts]
+        unknown generator 'timestmap'
+        hint: did you mean 'timestamp'?
+```
+
+Run it on its own while authoring a template:
+
+```bash
+python3 validate-templates.py --templates ./templates
+```
+
 On Windows, with no Python, from the same templates:
 
 ```powershell
