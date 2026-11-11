@@ -173,8 +173,12 @@ def main(argv=None):
     for (platform, lvl, skey), members in groups.items():
         # Rules that cannot be a search clause are deployed on their own, so
         # they do not take part in a batch and are not checked as one.
-        batchable = [x for x in members
-                     if be.search_clause_check(be.rule_condition(x.splunk_search))[0]]
+        def _batchable(x):
+            c = be.rule_condition(x.splunk_search)
+            return (be.search_clause_check(c)[0]
+                    and not be.has_trailing_stages(x.splunk_search)
+                    and be.selective(c))
+        batchable = [x for x in members if _batchable(x)]
         singles += len(members) - len(batchable)
         if not batchable:
             continue
@@ -201,6 +205,10 @@ def main(argv=None):
     for x in rules:
         cond = be.rule_condition(x.splunk_search)
         ok, why = be.search_clause_check(cond)
+        if ok and be.has_trailing_stages(x.splunk_search):
+            ok, why = False, "its matching continues past a pipeline stage"
+        if ok and not be.selective(cond):
+            ok, why = False, "the condition selects nothing — it would match every event"
         if not ok:
             if not cond and x.splunk_search.lstrip().startswith("|"):
                 why = "starts with a pipeline stage"

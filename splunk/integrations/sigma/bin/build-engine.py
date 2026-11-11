@@ -196,6 +196,20 @@ def search_clause_check(expr: str):
     return True, ""
 
 
+def selective(condition: str) -> bool:
+    """Does this condition actually narrow anything?
+
+    A rule whose matching logic lives entirely in a trailing pipeline stage
+    converts to a bare "*". Batched, its prefilter disjunct matches every
+    event in scope and its searchmatch test is true for all of them, so the
+    batch attributes every event to that rule. The detection index then
+    fills with high severity findings for ordinary activity, which is worse
+    than missing the rule.
+    """
+    stripped = condition.replace("*", "").replace("(", "").replace(")", "").strip()
+    return bool(stripped)
+
+
 def balanced(expr: str) -> bool:
     """Back-compatible wrapper. Prefer search_clause_check for the reason."""
     return search_clause_check(expr)[0]
@@ -420,6 +434,10 @@ def main(argv=None):
         uc._source_path = f
         cond = rule_condition(uc.splunk_search)
         ok, why = search_clause_check(cond)
+        if ok and has_trailing_stages(uc.splunk_search):
+            ok, why = False, "its matching continues past a pipeline stage"
+        if ok and not selective(cond):
+            ok, why = False, "the condition selects nothing — it would match every event"
         if not ok:
             if not cond and uc.splunk_search.lstrip().startswith("|"):
                 why = "starts with a pipeline stage"
