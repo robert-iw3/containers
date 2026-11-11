@@ -1,29 +1,43 @@
+# Sigma2SplunkAlert configuration.
+#
+# Defaults are deliberately conservative. The email action, summary
+# indexing and the whitelist transformation are all off, because each
+# costs something on every scheduled run and none of them is safe to
+# enable before the referenced index, lookup and mail server exist.
+
 alert_action:
   email:
-    enabled: 1
+    # Off by default: one email per rule per firing, on every cron tick.
+    enabled: 0
     to: 'ticketing@example.com'
-    subject: 'Splunk Alert: $name$'
-    message: 'Use Case $name$ triggered | List of interesting fields: %fields% | MITRE Techniques: %mitre_techniques%'
-    result_link: 1
-    view_link: 1
+
 summary_index:
-  enabled: true
+  # Off by default: "| collect" writes to the index on every run, and the
+  # index must already exist or the write is silently discarded.
+  enabled: false
   index: 'threat-hunting'
-datamodel_acceleration:
-  enabled: true
-  name: 'Threat_Detection'
+
 search_transformations:
+  # Requires sigma_whitelist.csv to exist as a lookup, or every search
+  # errors at dispatch.
   - type: whitelist
+    enabled: false
     lookup: 'sigma_whitelist.csv'
+  # "level" is Sigma rule metadata, not an event field, so this evaluates
+  # to 0 for every event unless the search puts a level field in scope.
   - type: custom_command
+    enabled: false
     command: 'eval threat_level=case(level=="high", 3, level=="medium", 2, level=="low", 1, true(), 0)'
   - type: cim_tags
     enabled: true
+
+# Alert severity is taken from each rule's Sigma level, not set globally.
 cron_schedule: '*/10 * * * *'
 earliest_time: '-10m'
 latest_time: 'now'
 app: 'sigma_hunting_app'
-alert_severity: 1
+
+# Local rule paths. Network sources need --allow-network, which the
+# air-gapped target cannot use.
 sigma_sources:
-  - 'https://github.com/robert-iw3/detection-rules.git'
-  - 'https://github.com/SigmaHQ/sigma.git'
+  - './rules'

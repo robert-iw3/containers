@@ -1,38 +1,47 @@
+{# Emits one savedsearches.conf stanza per converted Sigma rule.
+
+   savedsearches.conf takes conf keys, not REST API names: counttype,
+   relation and quantity. alert_type / alert_comparator / alert_threshold
+   are rejected, and because the default is "counttype = always" a wrong
+   key makes every alert fire on every run instead of failing loudly.
+
+   Every emitted line must be "key = value". Continuation lines end with a
+   backslash and must not be followed by a blank line, or the value ends
+   early and the remainder is parsed as its own malformed line. #}
 {% for rule in detection_rules %}
 # Generated with Sigma2SplunkAlert
-[{{ rule.title }}]
-action.email = {{ config.alert_action.email.enabled | default(1) }}
-action.email.subject.alert = Splunk Alert: $name$
-action.email.to = {{ config.alert_action.email.to | default('ticketing@example.com') }}
-action.email.message.alert = Splunk Alert $name$ triggered \
-List of interesting fields: \
-{% for field in rule.fields %}
-{{ field }}: $result.{{ field }}$ \
-{% endfor %}
-MITRE Techniques: {{ rule.mitre_techniques | join(', ') }} \
-MITRE Tactics: {{ rule.mitre_tactics | join(', ') }}
-title: {{ rule.title }}
-description: {{ rule.description }}
-tags: {{ rule.tags | join(', ') }}
-level: {{ rule.level }}
-action.email.useNSSubject = 1
-alert.severity = {{ config.alert_severity | default(1) }}
-alert.suppress = 0
-alert.track = 1
-alert.expires = 24h
+{% if rule.rule_id %}
+# Sigma rule id: {{ rule.rule_id }}
+{% endif %}
+{% if rule.datamodel %}
+# Candidate CIM data model: {{ rule.datamodel }} (annotation only; use --pipeline cim for data model queries)
+{% endif %}
+[{{ rule.stanza }}]
+{% if rule.description %}
+description = {{ rule.description }}{% if rule.tags %} | tags: {{ rule.tags | join(', ') }}{% endif %} | level: {{ rule.level }}
+{% endif %}
+search = {{ rule.splunk_search }}
 counttype = number of events
+relation = greater than
+quantity = 0
+enableSched = 1
 cron_schedule = {{ config.cron_schedule | default('*/10 * * * *') }}
 dispatch.earliest_time = {{ config.earliest_time | default('-10m') }}
 dispatch.latest_time = {{ config.latest_time | default('now') }}
-enableSched = 1
-quantity = 0
-relation = greater than
+alert.severity = {{ rule.severity }}
+alert.suppress = 0
+alert.track = 1
+alert.expires = 24h
 request.ui_dispatch_app = {{ config.app | default('sigma_hunting_app') }}
 request.ui_dispatch_view = search
-search = {{ rule.splunk_search }}
-{% if rule.datamodel %}
-# CIM Data Model
-action.datamodel = 1
-action.datamodel.name = {{ rule.datamodel }}
+{% if config.alert_action and config.alert_action.email and config.alert_action.email.enabled %}
+action.email = 1
+action.email.to = {{ config.alert_action.email.to | default('ticketing@example.com') }}
+action.email.subject.alert = Splunk Alert: $name$
+action.email.useNSSubject = 1
+action.email.message.alert = Use case $name$ triggered. MITRE techniques: {{ rule.mitre_techniques | join(', ') | default('none', true) }}. MITRE tactics: {{ rule.mitre_tactics | join(', ') | default('none', true) }}.{% if rule.fields %} Interesting fields: {% for field in rule.fields %}{{ field }}=$result.{{ field }}${% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+
+{% else %}
+action.email = 0
 {% endif %}
 {% endfor %}

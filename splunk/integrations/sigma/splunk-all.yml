@@ -1,4 +1,19 @@
 ---
+# Log source and CIM reference for the Sigma integration.
+#
+# FORMAT NOTE. The logsources, fieldmappings, indexmappings and
+# sourcetypemappings sections below are legacy sigmac configuration.
+# pySigma cannot read them: it takes processing pipelines instead, which
+# live in pipelines/. Those sections are retained as a written record of
+# intended log source mapping, not as executable configuration.
+#
+# Only the datamodels section is read by sigma2splunkalert.py, and only to
+# annotate each generated stanza. Authoritative CIM data model targeting is
+# done by pySigma: --pipeline cim --output-format data_model.
+#
+# logsources keys below are the sigmac names. The datamodels logsources
+# keys are Sigma "product-service" or "product-category" names, which is
+# what the converter matches on.
 title: Splunk CIM-compliant Sigma Configuration
 backends:
   - splunk
@@ -196,7 +211,8 @@ datamodels:
     logsources:
       - windows-security
       - windows-ntlm
-      - linux
+      - linux-auditd
+      - linux-sshd
   Endpoint:
     fields:
       - process_name
@@ -213,10 +229,11 @@ datamodels:
     tags:
       - endpoint
     logsources:
+      - windows-process_creation
       - windows-sysmon
-      - windows-process-creation
       - windows-driver-framework
-      - linux
+      - linux-process_creation
+      - linux-file_event
   Network_Traffic:
     fields:
       - src
@@ -232,7 +249,7 @@ datamodels:
       - network_traffic
     logsources:
       - windows-dhcp
-      - linux
+      - linux-network_connection
   DNS:
     fields:
       - query
@@ -257,4 +274,4 @@ datamodels:
     logsources:
       - windows-taskscheduler
       - windows-wmi
-      - linux
+      - linux-cron

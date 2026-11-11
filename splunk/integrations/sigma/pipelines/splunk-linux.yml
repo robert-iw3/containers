@@ -1,0 +1,75 @@
+name: Splunk Linux log source conditions
+priority: 20
+
+# Maps Sigma Linux log sources onto the source types that Splunk add-ons
+# actually produce. Source type only: index scoping is left to the caller,
+# because a hardcoded index that does not exist on the target instance makes
+# every search return zero results without erroring.
+#
+# sysmon:linux comes from the Splunk Add-on for Sysmon for Linux, which
+# requires Sysmon for Linux on the endpoint. Splunk lists that add-on as not
+# supported, so the process_creation mapping below is the riskiest one here.
+
+transformations:
+  - id: linux_auditd
+    type: add_condition
+    conditions:
+      sourcetype: linux_audit
+    rule_conditions:
+      - type: logsource
+        product: linux
+        service: auditd
+
+  - id: linux_process_creation
+    type: add_condition
+    conditions:
+      sourcetype: 'sysmon:linux'
+    rule_conditions:
+      - type: logsource
+        product: linux
+        category: process_creation
+
+  - id: linux_file_event
+    type: add_condition
+    conditions:
+      sourcetype: 'sysmon:linux'
+    rule_conditions:
+      - type: logsource
+        product: linux
+        category: file_event
+
+  - id: linux_network_connection
+    type: add_condition
+    conditions:
+      sourcetype: 'sysmon:linux'
+    rule_conditions:
+      - type: logsource
+        product: linux
+        category: network_connection
+
+  - id: linux_sshd
+    type: add_condition
+    conditions:
+      sourcetype: linux_secure
+    rule_conditions:
+      - type: logsource
+        product: linux
+        service: sshd
+
+  - id: linux_syslog
+    type: add_condition
+    conditions:
+      sourcetype: syslog
+    rule_conditions:
+      - type: logsource
+        product: linux
+        service: syslog
+
+  - id: linux_cron
+    type: add_condition
+    conditions:
+      sourcetype: cron
+    rule_conditions:
+      - type: logsource
+        product: linux
+        service: cron
