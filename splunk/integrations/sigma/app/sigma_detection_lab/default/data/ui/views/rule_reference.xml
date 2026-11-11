@@ -151,11 +151,12 @@
   <row>
     <panel>
       <title>Sources</title>
+      <!-- This panel drives the base search. A base search is only
+           dispatched when a panel references it, so without this the
+           <done> handler never fires and the page renders raw tokens. -->
       <table>
-        <search>
-          <query>| makeresults
-| eval refs="$d_refs$", author="$d_author$", modified="$d_date$", rid="$rule_id$"
-| eval ref=split(refs,", ")
+        <search base="rule">
+          <query>| eval ref=split(sigma_references,", ")
 | mvexpand ref
 | where ref!=""
 | table ref

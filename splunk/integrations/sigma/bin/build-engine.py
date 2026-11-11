@@ -66,7 +66,33 @@ LOOKUP_COLUMNS = [
     "sigma_attack", "sigma_tactic", "sigma_technique", "sigma_technique_name",
     "sigma_tactic_name", "sigma_status", "sigma_author", "sigma_references",
     "sigma_falsepositives", "sigma_rule_date", "sigma_batch",
+    "sigma_source_path", "sigma_source_url",
 ]
+
+
+def _split_stage(splunk_search: str) -> int:
+    """Offset of the first pipeline separator that is not inside a string.
+
+    Rules that hunt for shell pipelines carry a literal pipe in their match
+    text -- "* | iex;*", "/bin/sh | nc". Splitting on the first " | " found
+    anywhere cuts through the middle of that string literal, and the
+    resulting fragment has unbalanced quotes and parentheses. Splunk then
+    rejects the whole batched search, so one such rule silently disables
+    every rule batched with it.
+    """
+    in_quote = False
+    i = 0
+    while i < len(splunk_search):
+        c = splunk_search[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c == '"':
+            in_quote = not in_quote
+        elif not in_quote and splunk_search[i:i + 3] == " | ":
+            return i
+        i += 1
+    return -1
 
 
 def rule_condition(splunk_search: str) -> str:
@@ -74,14 +100,43 @@ def rule_condition(splunk_search: str) -> str:
 
     pySigma appends pipeline stages for some rules, and the converter adds
     its own. Only the leading expression can be tested with searchmatch, so
-    anything from the first pipe onward is dropped and the rule is reported
-    as partially batched.
+    anything from the first real pipeline stage onward is dropped and the
+    rule is reported as partially batched.
     """
-    return splunk_search.split(" | ", 1)[0].strip()
+    cut = _split_stage(splunk_search)
+    return (splunk_search if cut == -1 else splunk_search[:cut]).strip()
 
 
 def has_trailing_stages(splunk_search: str) -> bool:
-    return " | " in splunk_search
+    return _split_stage(splunk_search) != -1
+
+
+def balanced(expr: str) -> bool:
+    """Parentheses and quotes balance outside of string literals.
+
+    Generated searches are long enough that a malformed one is not obvious
+    on inspection, and Splunk only reports it at run time, in a log nobody
+    is watching.
+    """
+    depth = 0
+    in_quote = False
+    i = 0
+    while i < len(expr):
+        c = expr[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c == '"':
+            in_quote = not in_quote
+        elif not in_quote:
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+                if depth < 0:
+                    return False
+        i += 1
+    return depth == 0 and not in_quote
 
 
 def spl_quote(condition: str) -> str:
@@ -112,6 +167,21 @@ def resolve_scope(rule, scopes: Dict[str, str]) -> tuple:
         if key and key in scopes:
             return key, scopes[key]
     return "unscoped", scopes.get("default", "")
+
+
+def source_url(path: str, repo_branch: str) -> tuple:
+    """The rule's path within SigmaHQ, and a link to the file.
+
+    The fetched tree nests the rules under a package directory, so the part
+    that matches the repository starts at the first "rules" segment.
+    """
+    parts = Path(path).parts
+    for i, seg in enumerate(parts):
+        if seg in ("rules", "rules-emerging-threats", "rules-threat-hunting",
+                   "rules-compliance", "rules-dfir", "rules-placeholder"):
+            rel = "/".join(parts[i:])
+            return rel, f"https://github.com/SigmaHQ/sigma/blob/{repo_branch}/{rel}"
+    return "", ""
 
 
 def load_technique_names(path: Path) -> Dict[str, Dict[str, str]]:
@@ -159,16 +229,22 @@ def build_search(batch: List, scope: str, alert_index: str,
     scope = f"{scope} {logsource_scope}".strip() if logsource_scope else scope
 
     # searchmatch re-tests each condition against the events the scan
-    # returned, which is what lets one search name which rule fired.
-    tests = ", ".join(
-        f'if(searchmatch("{spl_quote(c)}"),"{r.rule_id}",null())'
+    # returned, which is what lets one search name which rule fired. A miss
+    # contributes an empty string rather than a null: mvappend returns null
+    # as soon as any argument is null, and in a batch of fifty rules nearly
+    # every test is a miss, so an mvappend of the results was null on every
+    # event and the engine reported nothing at all. Concatenating has no
+    # multivalue null semantics to get wrong.
+    tests = " . ".join(
+        f'if(searchmatch("{spl_quote(c)}"),"{r.rule_id},","")'
         for c, r in zip(conditions, batch)
     )
 
     return (
         f"{scope} ({prefilter})"
-        f" | eval sigma_rule_id=mvappend({tests})"
-        f" | where isnotnull(sigma_rule_id)"
+        f" | eval sigma_hits={tests}"
+        f' | where sigma_hits!=""'
+        f" | eval sigma_rule_id=split(substr(sigma_hits,1,len(sigma_hits)-1),\",\")"
         f" | mvexpand sigma_rule_id"
         # Aggregate per rule and host: a rule matching eighty events on one
         # host is one finding that says eighty, not eighty findings.
@@ -199,6 +275,8 @@ def main(argv=None):
     ap.add_argument("--out-conf", default=str(HERE / "app/sigma_detection_lab/default/savedsearches.conf"))
     ap.add_argument("--out-lookup", default=str(HERE / "app/sigma_detection_lab/lookups/sigma_rules.csv"))
     ap.add_argument("--mitre", default=str(HERE / "app/sigma_detection_lab/lookups/mitre_techniques.csv"))
+    ap.add_argument("--branch", default="master",
+                    help="SigmaHQ branch the reference links point at")
     ap.add_argument("--scopes", default=str(HERE / "logsource-scope.yml"),
                     help="maps a Sigma log source to where it is indexed")
     ap.add_argument("--out-logic", default=str(HERE / "app/sigma_detection_lab/lookups/sigma_rule_logic.csv"),
@@ -255,6 +333,7 @@ def main(argv=None):
             key = err.split(":")[0][:60]
             reasons[key] = reasons.get(key, 0) + 1
             continue
+        uc._source_path = f
         rules.append(uc)
     print(f"  {len(rules)} converted, {failed} could not be converted")
     for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])[:5]:
@@ -286,6 +365,7 @@ def main(argv=None):
     lookup_rows: List[Dict] = []
     total_batches = 0
     partial = 0
+    bad_batches: List[str] = []
 
     conf_parts.append(
         "# Generated by bin/build-engine.py -- do not edit.\n"
@@ -310,6 +390,10 @@ def main(argv=None):
                         f"{i:02d} of {len(batches):02d}")
                 search = build_search(batch, scope, alert_index,
                                       scope_spl.get(skey, ""))
+                # A search that does not parse takes its whole batch down
+                # with it, and says so only in scheduler.log. Catch it here.
+                if not balanced(search):
+                    bad_batches.append(name)
 
                 conf_parts.append(f"""
 # {len(batch)} rule(s), {platform} / {ls_label} / {lvl}.
@@ -372,6 +456,8 @@ request.ui_dispatch_view = search
                         "sigma_falsepositives": r.falsepositives,
                         "sigma_rule_date": r.modified or r.rule_date,
                         "sigma_batch": name,
+                        "sigma_source_path": source_url(getattr(r, "_source_path", ""), args.branch)[0],
+                        "sigma_source_url": source_url(getattr(r, "_source_path", ""), args.branch)[1],
                     })
 
     Path(args.out_conf).parent.mkdir(parents=True, exist_ok=True)
@@ -418,6 +504,12 @@ request.ui_dispatch_view = search
     if partial:
         print(f"  {partial} rule(s) have stages after the condition; only the "
               f"condition is batched")
+    if bad_batches:
+        print(f"\n  REFUSED: {len(bad_batches)} batch(es) do not parse:")
+        for b in bad_batches[:5]:
+            print(f"      {b}")
+        raise SystemExit("a malformed batch disables every rule in it; "
+                         "not writing the engine")
     longest = max((len(p) for p in conf_parts), default=0)
     print(f"  longest stanza: {longest} characters")
     print(f"\n  {args.out_conf}")

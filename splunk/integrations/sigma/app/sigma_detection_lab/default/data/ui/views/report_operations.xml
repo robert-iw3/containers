@@ -1,0 +1,191 @@
+<form version="1.1" theme="light" isVisible="true">
+  <label>Report — Shift Handover</label>
+  <description>What fired, what is new, and what needs tuning. Intended to be read at a shift change or exported as a PDF for a handover record.</description>
+
+  <!-- Print layout: light theme, fixed heights, no drilldowns. A handover
+       record is read once and filed, so it has to stand on its own without
+       anything to click. -->
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Shift</label>
+      <default>
+        <earliest>-12h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="plat" searchWhenChanged="true">
+      <label>Platform</label>
+      <choice value="*">Both</choice>
+      <choice value="Windows">Windows</choice>
+      <choice value="Linux">Linux</choice>
+      <default>*</default>
+      <prefix>sigma_platform="</prefix>
+      <suffix>"</suffix>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Needs action</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts $plat$ sigma_disposition=immediate | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Recorded for trend</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts $plat$ sigma_disposition=trend | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x19C1EB","0x19C1EB"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Hosts</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts $plat$ | stats dc(sigma_src_host)</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Distinct rules fired</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts $plat$ | stats dc(sigma_rule)</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Engine failures</title>
+      <single>
+        <search>
+          <query>index=_internal sourcetype=scheduler log_level=ERROR savedsearch_name="Sigma*"
+| stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Act on these first — severe, specific, and not yet seen before this shift</title>
+      <!-- A rule that has fired on this host before is a known quantity. The
+           same rule on a host it has never touched is the one to open. -->
+      <table>
+        <search>
+          <query>index=sigma_alerts $plat$ sigma_disposition=immediate
+| stats min(sigma_first_seen) as first, sum(sigma_match_count) as events,
+        values(sigma_src_sourcetype) as source
+  by sigma_rule, sigma_src_host, sigma_level, sigma_technique_name
+| eval first=strftime(first,"%F %T")
+| sort - "sigma_level", first
+| head 20
+| table first, sigma_src_host, sigma_rule, sigma_technique_name, sigma_level, events, source
+| rename first as "First seen", sigma_src_host as "Host", sigma_rule as "Rule",
+         sigma_technique_name as "Technique", sigma_level as "Severity",
+         events as "Events", source as "Source type"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Hosts by activity</title>
+      <chart>
+        <search>
+          <query>index=sigma_alerts $plat$
+| stats count by sigma_src_host, sigma_level
+| sort - count | head 20</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c}</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="height">300</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Candidates for tuning — high volume, low confidence</title>
+      <!-- A rule whose own author declared false positives, firing a lot, is
+           the one to allowlist rather than to keep triaging. -->
+      <table>
+        <search>
+          <query>index=sigma_alerts $plat$
+| stats count as detections, dc(sigma_src_host) as hosts by sigma_rule, sigma_confidence, sigma_rule_id
+| where detections &gt;= 3
+| lookup sigma_rules sigma_rule_id OUTPUT sigma_falsepositives
+| eval author_note=if(sigma_falsepositives="","none declared",sigma_falsepositives)
+| sort - detections | head 12
+| table sigma_rule, detections, hosts, sigma_confidence, author_note
+| rename sigma_rule as "Rule", detections as "Detections", hosts as "Hosts",
+         sigma_confidence as "Confidence",
+         author_note as "False positives the author declared"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Collection health — what would make this report wrong</title>
+      <!-- A quiet shift and a broken collector look identical on a
+           detection count. This panel separates them. -->
+      <table>
+        <search>
+          <query>index=linux_lab
+| eval lag=_indextime-_time
+| stats count as events, max(_time) as newest, median(lag) as lag by sourcetype
+| eval newest=strftime(newest,"%F %T"), lag=round(lag,0),
+       state=case(lag&gt;3600,"timestamps suspect", events=0,"no data", 1==1,"ok")
+| table sourcetype, events, newest, lag, state
+| rename sourcetype as "Source type", events as "Events this shift",
+         newest as "Newest event", lag as "Median lag (s)", state as "State"
+| sort - "Events this shift"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="State">
+          <colorPalette type="map">{"ok":#0ca30c,"timestamps suspect":#fab219,"no data":#d03b3b}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

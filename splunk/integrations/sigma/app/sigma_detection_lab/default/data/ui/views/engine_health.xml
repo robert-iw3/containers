@@ -89,6 +89,56 @@
     </panel>
   </row>
 
+  <row>
+    <panel>
+      <title>Searches that failed to run</title>
+      <!-- A batch that does not parse takes every rule in it down, produces
+           no results, and reports it only here. Without this panel the
+           symptom is indistinguishable from "nothing matched". -->
+      <table>
+        <search>
+          <query>index=_internal sourcetype=scheduler log_level=ERROR savedsearch_name="Sigma*"
+| rex field=_raw "message=\"(?&lt;reason&gt;[^\"]+)\""
+| stats count as failures, latest(_time) as last by savedsearch_name, reason
+| eval last=strftime(last,"%F %T")
+| sort - failures
+| rename savedsearch_name as "Search", reason as "Why it failed",
+         failures as "Failures", last as "Last seen"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Rules reachable right now</title>
+      <!-- Deployed is not the same as working. A rule only counts if its
+           batch parses, is enabled, and ran inside the time range. -->
+      <table>
+        <search>
+          <query>| inputlookup sigma_rules.csv
+| stats count as rules by sigma_batch, sigma_platform, sigma_level
+| join type=left sigma_batch
+    [ search index=_internal sourcetype=scheduler savedsearch_name="Sigma Engine*"
+    | eval sigma_batch=savedsearch_name
+    | stats count as runs,
+            sum(eval(if(log_level=="ERROR",1,0))) as errors by sigma_batch ]
+| eval runs=coalesce(runs,0), errors=coalesce(errors,0),
+       state=case(errors&gt;0,"failing", runs=0,"has not run", 1==1,"running")
+| stats sum(rules) as rules by state
+| rename state as "State", rules as "Rules"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="State">
+          <colorPalette type="map">{"running":#0ca30c,"has not run":#fab219,"failing":#d03b3b}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
   <!-- ===================== 2. Event processing ===================== -->
   <row>
     <panel>

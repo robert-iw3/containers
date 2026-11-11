@@ -1,0 +1,216 @@
+<form version="1.1" theme="light" isVisible="true">
+  <label>Report — Detection Summary</label>
+  <description>A plain-language summary of what the detection system looked for and what it found. Written to be read by someone who does not work in security. Export with Export &gt; Export PDF, or schedule it for delivery.</description>
+
+  <!-- Built for print. Light theme because it is exported to PDF on white;
+       fixed panel heights because a PDF cannot scroll; no drilldowns,
+       because a printed page cannot be clicked. -->
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Reporting period</label>
+      <default>
+        <earliest>-7d@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <html>
+        <div style="padding:16px 18px;border-left:4px solid #19C1EB;background:#f4fbfe;
+                    font-family:Roboto,Helvetica,Arial,sans-serif;color:#2a2a30;line-height:1.65">
+          <div style="font-size:19px;font-weight:600;margin-bottom:8px">What this report covers</div>
+          <div style="font-size:14px;max-width:110ch">
+            Every program that starts on a monitored computer is written down in a log.
+            This system reads those logs continuously and compares them against a public
+            library of known attacker behaviour, maintained by the Sigma project. When
+            something in the logs matches a described behaviour, it is recorded here as a
+            <em>detection</em>.
+            <br/><br/>
+            A detection is not proof of an attack. It is a statement that something
+            happened which looks like a pattern attackers are known to use, and that a
+            person should decide whether it was legitimate. The counts below are grouped
+            so that one piece of activity on one machine counts once, however many log
+            lines it produced.
+          </div>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Things worth a look</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">detections recorded</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0x19C1EB"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Needing prompt attention</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sigma_disposition=immediate | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">severe and specific</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Computers involved</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts | stats dc(sigma_src_host)</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">out of those monitored</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Behaviours watched for</title>
+      <single>
+        <search>
+          <query>| inputlookup sigma_rules.csv | stats count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">rules in service</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Attacker techniques covered</title>
+      <single>
+        <search>
+          <query>| inputlookup sigma_rules.csv
+| where sigma_technique!="" | stats dc(sigma_technique)</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">distinct techniques</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Detections over the period</title>
+      <chart>
+        <search>
+          <query>index=sigma_alerts
+| eval urgency=if(sigma_disposition="immediate","Needs prompt attention","Recorded and watched")
+| timechart span=1d count by urgency useother=f</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"Needs prompt attention":0xd03b3b,"Recorded and watched":0x19C1EB}</option>
+        <option name="charting.axisTitleY.text">detections</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="height">260</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>What was seen, in plain terms</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts
+| stats count as detections, dc(sigma_src_host) as computers by sigma_technique_name, sigma_level
+| eval meaning=case(
+    sigma_level="critical", "Strongly associated with an active intrusion.",
+    sigma_level="high",     "Commonly used by attackers; sometimes used legitimately.",
+    sigma_level="medium",   "Can be ordinary activity; worth knowing about in context.",
+    1==1,                   "Informational.")
+| sort - detections
+| head 12
+| table sigma_technique_name, detections, computers, meaning
+| rename sigma_technique_name as "Attacker technique",
+         detections as "Times seen", computers as "Computers",
+         meaning as "What that means"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Where the monitoring stands</title>
+      <table>
+        <search>
+          <query>| inputlookup sigma_rules.csv
+| stats count as rules by sigma_platform, sigma_level
+| eval posture=case(
+    sigma_level="critical","Alerts a person immediately",
+    sigma_level="high","Alerts when the match is specific enough to trust",
+    1==1,"Recorded and reviewed as a trend")
+| table sigma_platform, sigma_level, rules, posture
+| rename sigma_platform as "Operating system", sigma_level as "Seriousness",
+         rules as "Rules in service", posture as "How it is handled"
+| sort "Operating system", "Seriousness"</query>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Is the system actually running</title>
+      <table>
+        <search>
+          <query>index=_internal sourcetype=scheduler savedsearch_name="Sigma Engine*"
+| stats count as runs,
+        sum(eval(if(status="success",1,0))) as completed,
+        sum(eval(if(log_level="ERROR",1,0))) as failed,
+        latest(_time) as last
+| eval last=strftime(last,"%F %T"),
+       verdict=case(failed&gt;0,"Some checks are failing — see Engine Health",
+                    completed=0,"No checks have run in this period",
+                    1==1,"Running normally")
+| table verdict, completed, failed, last
+| rename verdict as "Status", completed as "Checks completed",
+         failed as "Checks failed", last as "Most recent check"
+| transpose column_name="" | rename "row 1" as " "</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">6</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <div style="padding:14px 18px;font-family:Roboto,Helvetica,Arial,sans-serif;
+                    color:#5a5a64;font-size:12px;line-height:1.6;border-top:1px solid #d6d6dc">
+          Detections are produced by comparing logs against the Sigma rule library
+          (sigmahq.io) and are labelled with techniques from the MITRE ATT&amp;CK
+          framework (attack.mitre.org). Neither is specific to this organisation; both
+          are public descriptions of how intrusions tend to work. A count of zero means
+          nothing matched during the period, which is a normal and good result — not
+          that the system was idle. The "Is the system actually running" panel is what
+          distinguishes the two.
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>
