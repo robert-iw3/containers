@@ -181,6 +181,7 @@ it cannot fit and names the window each would need.
 | path | what it is |
 |---|---|
 | `run-all.sh` | the whole sequence, with a verdict |
+| `check-dataset.py` | checks a labelled dataset against its own ground truth |
 | `synthesize.py` | builds events a named rule must match, and proves it offline |
 | `validate-round.py` | puts a batch through a live instance and scores it |
 | `qa-dashboards.py` | runs every dashboard panel search |
