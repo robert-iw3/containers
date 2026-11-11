@@ -4,6 +4,7 @@
 # Install the app, point this at the instance, and it answers the questions
 # that decide whether the deployment is trustworthy:
 #
+#   does the labelled data agree with its own ground truth
 #   does every rule convert, parse and fit the schedule the instance allows
 #   is the instance configured so detections can actually be written
 #   does a planted attack get detected, at four levels of camouflage
@@ -27,7 +28,7 @@ CONTAINER="epo-uat-indexer"
 UF="epo-uat-uf"
 RULES="$HERE/rules-core/SigmaHQ_sigma/core/rules/windows/process_creation"
 LINUX_RULES="$HERE/rules-core/SigmaHQ_sigma/core/rules/linux"
-PHASES="preflight,instance,detection,dashboards"
+PHASES="dataset,preflight,instance,detection,dashboards"
 TIERS="t1,t2,t3,t4"
 SLOTS=7
 COUNT=8
@@ -61,6 +62,34 @@ export PYTHONPATH="$HERE/pylib:${PYTHONPATH:-}"
 has() { case ",$PHASES," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 rule() { printf '\n%s\n  %s\n%s\n' "$(printf '═%.0s' $(seq 1 72))" "$1" "$(printf '═%.0s' $(seq 1 72))"; }
 note() { SUMMARY+=("$1"); }
+
+# ── 0. the labelled data itself, offline ────────────────────────────────
+# Every number the later phases report is measured against labels. If the
+# data disagrees with its own ground truth, those numbers are unsafe to read
+# whatever they say, so the generator is checked before anything relies on it.
+if has dataset; then
+    rule "0. THE LABELLED DATA — does it agree with its own ground truth"
+    DS="$OUT/dataset-check"
+    mkdir -p "$DS"
+    echo
+    echo "  generating a dataset whose scenarios all fit the window"
+    if python3 "$HERE/../datagen/scenario.py" \
+            --dataset "$HERE/../datagen/datasets/detection-validation.json" \
+            --baseline-records 2000 --window-hours 4 --seed 7 \
+            --out "$DS" --index linux_lab >"$OUT/dataset-gen.log" 2>&1; then
+        sed -n '/NOT PLANTED/,/different problem/p' "$OUT/dataset-gen.log" | sed 's/^/  /'
+        if python3 "$HERE/test/check-dataset.py" --dataset "$DS"; then
+            note "labelled data        PASS"
+        else
+            note "labelled data        FAIL  the dataset disagrees with its labels"
+            FAILED=1
+        fi
+    else
+        tail -5 "$OUT/dataset-gen.log" | sed 's/^/  /'
+        note "labelled data        FAIL  the generator did not run"
+        FAILED=1
+    fi
+fi
 
 # ── 1. the rule set, offline ────────────────────────────────────────────
 if has preflight; then

@@ -54,6 +54,16 @@ python3 "$DATAGEN/scenario.py" \
     --seed "$SEED" --out "$OUT" --index "$INDEX" 2>&1 | tail -6
 
 echo
+echo "== Check the dataset against its own ground truth =="
+# Staging data whose labels do not describe it makes every number measured
+# afterwards unsafe to read, so this gates the staging rather than reporting
+# after it.
+if ! python3 "$HERE/test/check-dataset.py" --dataset "$OUT"; then
+    echo "FAIL: the dataset disagrees with its ground truth; nothing was staged" >&2
+    exit 1
+fi
+
+echo
 echo "== One set of inputs, replacing whatever accumulated =="
 # Keep the previous inputs; this rewrites them and the old one is the only
 # record of what was being read before.

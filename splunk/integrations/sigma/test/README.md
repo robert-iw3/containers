@@ -21,6 +21,28 @@ reports as skipped, never as passed.
 
 ## What each phase proves
 
+### 0. The labelled data — `test/check-dataset.py`
+
+Every number the later phases report is measured against labels. If the data
+disagrees with its own record of what was planted, those numbers are unsafe
+to read whatever they say.
+
+Four checks, offline, on a dataset `scenario.py` has just written:
+
+| Check | Why it matters |
+|---|---|
+| no event dated ahead of the run | Splunk re-times anything past `MAX_DAYS_HENCE` to its ingest time, so a future-dated event lands in the engine's live window whatever its recorded timestamp — and a round can score a detection the engine would not have made on correctly dated data |
+| every event inside the declared window | an event outside it is one no search aimed at that window will see |
+| each instance's window covers its own events | a scorer matches a detection to the instance whose window contains it, so a window stopping short of its own campaign turns a real detection into a miss |
+| the counts agree | if `planted_records` does not match the instances, the ground truth has lost track of what it planted |
+
+Attribution is exact rather than by time: the ground truth records a sha1
+prefix per planted event, so each line is matched to the instance that
+produced it.
+
+All three of the first kinds of fault have been found in practice, and the
+checker exists because each was invisible in the result it corrupted.
+
 ### 1. The rule set — `bin/preflight.py`
 
 Runs without Splunk. Answers the questions that have each cost a

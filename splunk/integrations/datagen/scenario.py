@@ -203,6 +203,7 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
     events = []
     identifiers = defaultdict(set)
     digests = []
+    emitted_at = []
     steps = scenario["steps"]
     for i, st in enumerate(steps):
         tpl = templates_by_name[st["template"]]
@@ -224,6 +225,7 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
             overrides = st.get("set") or {}
             lines, ctx = render_step(tpl, ridx, overrides, shared,
                                      rng, seq_state, at)
+            emitted_at.extend([at] * len(lines))
             for line in lines:
                 events.append((tpl["sourcetype"], line))
                 digests.append(hashlib.sha1(line.encode()).hexdigest()[:16])
@@ -250,8 +252,12 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
         "why_hard": scenario.get("why_hard", ""),
         "events": len(events),
         "sourcetypes": sorted({st for st, _ in events}),
-        "window_start": base.isoformat(),
-        "window_end": (base + timedelta(seconds=spread)).isoformat(),
+        # Observed, not predicted. Drift moves each event either side of its
+        # nominal step and a repeating step runs past the spread, so a window
+        # computed from the cadence excludes events this instance emitted --
+        # which a scorer reads as a detection belonging to no instance.
+        "window_start": (min(emitted_at) if emitted_at else base).isoformat(),
+        "window_end": (max(emitted_at) if emitted_at else base).isoformat(),
         "identifiers": {k: sorted(v) for k, v in identifiers.items()},
         # Exact attribution. A scorer matches an event to this instance by
         # the digest of its line, so a hit is never credited to the wrong
