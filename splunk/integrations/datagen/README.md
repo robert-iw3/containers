@@ -195,6 +195,51 @@ the terminal hop.
 Each finding is printed with what to do about it. None of it requires a
 login, because it is read from configuration rather than searched.
 
+## Scoring a detection product
+
+Field-complete data tells you an app parses. It does not tell you whether a
+detection works. For that the data has to contain known activity, labelled,
+mixed into enough ordinary traffic that finding it is not trivial.
+
+```bash
+python3 scenario.py --list
+python3 scenario.py --dataset datasets/detection-validation.json --out ./out --window-hours 720
+```
+
+Three kinds of content. The middle one is what most test data leaves out:
+
+| Content | What it is |
+|---|---|
+| `baseline` | ordinary activity drawn from the templates |
+| `false_positive` | legitimate activity that looks malicious: an administrator using remote execution, a backup agent reading everything, an authenticated vulnerability scan |
+| `true_positive` | real attack behavior, graded by how much effort went into not being caught |
+
+Tiers, because catching tier 1 and catching tier 4 are not the same product:
+
+| Tier | Adversary | Example |
+|---|---|---|
+| 1 | script kiddie | tooling under its original filename, documented arguments |
+| 2 | commodity crimeware | a known kill chain run end to end in under an hour |
+| 3 | skilled operator | only signed system binaries, renamed payload, logs cleared |
+| 4 | patient intrusion | valid accounts, low volume, weeks of dwell, no signatures |
+
+Each scenario states what it should be detectable on and why it is hard, so
+a gap is readable rather than a mystery.
+
+`ground-truth.json` carries every instance with its label, tier, severity,
+ATT&CK techniques, time window, and the field values the scenario
+controlled. A scorer counts `true_positive` instances covered by an alert
+for recall, and alerts on `false_positive` or baseline activity against
+precision. Only scenario-controlled values are recorded as identifiers: a
+per-event random value differs every time and would not identify anything.
+
+Events carry no marker by default, because a detection that keys on one is
+not being tested. `--mark-events` adds one when convenience matters more.
+
+Watch the planted share, which the run prints. The shipped dataset lands
+near half a percent, and it warns above twenty: a detection tuned against a
+dataset dense with attacks will be noisy in production.
+
 ## Volume and licensing
 
 A download-trial or Free license indexes **500 MB/day**, and repeatedly

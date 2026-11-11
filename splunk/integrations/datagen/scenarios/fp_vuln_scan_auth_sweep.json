@@ -1,0 +1,22 @@
+{
+ "name": "fp_vuln_scan_auth_sweep",
+ "label": "false_positive",
+ "tier": 0,
+ "level": "low",
+ "attack": ["T1110"],
+ "description": "An authenticated vulnerability scan from the scanning appliance: a burst of failed logons where credentials do not apply, then successful ones where they do, across many hosts in minutes.",
+ "detectable_as": "Textbook password spraying. Same shape, same rate, same spread of targets.",
+ "why_hard": "The only reliable separator is the source address being a known scanner, which is site knowledge a detection cannot infer from the events.",
+ "cadence": {"spread_seconds": 600, "jitter": 0.15},
+ "variables": {
+   "src":  {"gen": "const", "value": "10.20.250.5"},
+   "user": {"gen": "choice", "values": ["svc_scan", "administrator", "guest"]},
+   "wks":  {"gen": "const", "value": "LAB-SCANNER"}
+ },
+ "steps": [
+   {"template": "win_security", "record": 2, "repeat": 14, "repeat_gap_seconds": 8,
+    "set": {"logon": 3}},
+   {"template": "win_security", "record": 0, "repeat": 4, "repeat_gap_seconds": 20,
+    "set": {"logon": 3, "user": "svc_scan"}}
+ ]
+}

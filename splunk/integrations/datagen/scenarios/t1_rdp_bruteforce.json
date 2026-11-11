@@ -1,0 +1,23 @@
+{
+ "name": "t1_rdp_bruteforce",
+ "label": "true_positive",
+ "tier": 1,
+ "level": "high",
+ "attack": ["T1110.001", "T1021.001"],
+ "description": "Remote desktop password guessing from a single external address: a long burst of failures against one account, then one success, with no attempt to slow down or vary the source.",
+ "detectable_as": "Failure count per source per account over a short window, followed by a success from the same source.",
+ "why_hard": "It is not. Any product that misses this is not a detection product. Included as the floor.",
+ "cadence": {"spread_seconds": 420, "jitter": 0.1},
+ "variables": {
+   "src":  {"gen": "const", "value": "203.0.113.47"},
+   "user": {"gen": "const", "value": "administrator"},
+   "host": {"gen": "const", "value": "LAB-WIN-01"},
+   "wks":  {"gen": "const", "value": "-"}
+ },
+ "steps": [
+   {"template": "win_security", "record": 2, "repeat": 40, "repeat_gap_seconds": 9,
+    "set": {"logon": 10}},
+   {"template": "win_security", "record": 0, "offset_seconds": 400,
+    "set": {"logon": 10}}
+ ]
+}

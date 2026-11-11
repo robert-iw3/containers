@@ -1,0 +1,30 @@
+{
+ "name": "t4_patient_dns_c2",
+ "label": "true_positive",
+ "tier": 4,
+ "level": "critical",
+ "attack": ["T1071.004", "T1574.002", "T1078.002", "T1029"],
+ "description": "A patient intrusion using a valid service account, a payload side-loaded into a signed process, and command and control over DNS at a low rate with jitter, sustained across weeks rather than hours.",
+ "detectable_as": "The beacon's regularity over a long window, and a signed process resolving names it has no business resolving. Neither is visible in a day of data.",
+ "why_hard": "Volume is indistinguishable from noise at any single point. A search window of thirty days floors a campaign that ran longer, and rarity scoring reads a valid account on its usual host as normal. This is the case that breaks products tuned on tiers 1 and 2.",
+ "cadence": {"spread_seconds": 2592000, "jitter": 0.4},
+ "variables": {
+   "user":  {"gen": "const", "value": "LAB\\svc_sql"},
+   "host":  {"gen": "const", "value": "LAB-WIN-02"},
+   "dhost": {"gen": "choice", "values": ["a7f3.cdn-metrics.example.net",
+                                          "b1c9.cdn-metrics.example.net",
+                                          "e4d2.cdn-metrics.example.net"]}
+ },
+ "steps": [
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 0,
+    "set": {"image": "C:\\Program Files\\Common\\agent.exe",
+            "args": "--service",
+            "parent": "C:\\Windows\\System32\\services.exe"}},
+   {"template": "sysmon_linux", "record": 1, "repeat": 10,
+    "repeat_gap_seconds": 259200,
+    "set": {"image": "/opt/agent/agentd", "dport": 53}},
+   {"template": "win_security", "record": 0, "repeat": 4,
+    "repeat_gap_seconds": 604800,
+    "set": {"logon": 3}}
+ ]
+}

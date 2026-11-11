@@ -1,0 +1,36 @@
+{
+ "name": "t2_macro_to_ransomware",
+ "label": "true_positive",
+ "tier": 2,
+ "level": "critical",
+ "attack": ["T1566.001", "T1059.001", "T1053.005", "T1490", "T1486"],
+ "description": "A commodity chain run end to end in under an hour: a document spawns a script interpreter, which fetches a payload, persists as a scheduled task, deletes shadow copies, then encrypts across many hosts at once.",
+ "detectable_as": "Office spawning an interpreter, shadow copy deletion, and a burst of file writes. Any one of the three should fire.",
+ "why_hard": "The late stages are loud but they are also too late. The useful detection is the document spawning an interpreter, which also has benign variants. The fleet-wide spread also inverts rarity scoring: when every host does it, an environment-baseline model reads it as normal.",
+ "cadence": {"spread_seconds": 2700, "jitter": 0.3},
+ "variables": {
+   "user": {"gen": "const", "value": "LAB\\jsmith"},
+   "host": {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WIN-03"]}
+ },
+ "steps": [
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 0,
+    "set": {"image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "args": "-NoP -W Hidden -Enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA",
+            "parent": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"}},
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 300,
+    "set": {"image": "C:\\Windows\\System32\\schtasks.exe",
+            "args": "/create /sc minute /mo 15 /tn UpdateCheck /tr C:\\ProgramData\\svc.exe /ru SYSTEM",
+            "parent": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"}},
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 1800,
+    "set": {"image": "C:\\Windows\\System32\\vssadmin.exe",
+            "args": "delete shadows /all /quiet",
+            "parent": "C:\\ProgramData\\svc.exe"}},
+   {"template": "win_sysmon", "record": 0, "offset_seconds": 2100, "repeat": 6,
+    "repeat_gap_seconds": 45,
+    "set": {"image": "C:\\ProgramData\\svc.exe",
+            "args": "-enc -path C:\\Users",
+            "parent": "C:\\Windows\\System32\\services.exe"}},
+   {"template": "win_security", "record": 1, "offset_seconds": 2400,
+    "set": {"image": "C:\\Windows\\System32\\cipher.exe"}}
+ ]
+}

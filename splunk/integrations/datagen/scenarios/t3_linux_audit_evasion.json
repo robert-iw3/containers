@@ -1,0 +1,27 @@
+{
+ "name": "t3_linux_audit_evasion",
+ "label": "true_positive",
+ "tier": 3,
+ "level": "high",
+ "attack": ["T1562.001", "T1070.003", "T1222.002"],
+ "description": "An operator on a Linux host disabling the audit subsystem, clearing shell history, and making a dropped file immutable, all with standard system tools.",
+ "detectable_as": "The audit rules being flushed, which auditd itself records before it stops recording. After that the host is dark.",
+ "why_hard": "The detection window closes with the first command. Everything after it is unlogged, so a product that only correlates across several events never gets the chance.",
+ "cadence": {"spread_seconds": 900, "jitter": 0.3},
+ "variables": {
+   "host": {"gen": "const", "value": "lab-host-02"},
+   "uid":  {"gen": "const", "value": 0}
+ },
+ "steps": [
+   {"template": "linux_audit", "record": 0, "offset_seconds": 0,
+    "set": {"argv": ["/usr/sbin/auditctl", "-D"], "exe": "/usr/sbin/auditctl"}},
+   {"template": "linux_audit", "record": 0, "offset_seconds": 60,
+    "set": {"argv": ["/usr/bin/chattr", "+i", "/usr/local/bin/sysmond"],
+            "exe": "/usr/bin/chattr"}},
+   {"template": "bash_history", "record": 0, "offset_seconds": 120,
+    "set": {"cmd": "history -c; unset HISTFILE"}},
+   {"template": "linux_audit", "record": 0, "offset_seconds": 300,
+    "set": {"argv": ["/usr/bin/truncate", "-s", "0", "/root/.bash_history"],
+            "exe": "/usr/bin/truncate"}}
+ ]
+}

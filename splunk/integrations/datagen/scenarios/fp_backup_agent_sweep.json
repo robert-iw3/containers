@@ -1,0 +1,25 @@
+{
+ "name": "fp_backup_agent_sweep",
+ "label": "false_positive",
+ "tier": 0,
+ "level": "informational",
+ "attack": ["T1005"],
+ "description": "A backup agent reading across the filesystem on schedule, including paths that hold credentials, under its own service account.",
+ "detectable_as": "Looks like collection and staging. The volume and breadth of file access match exfiltration preparation.",
+ "why_hard": "File access breadth is the signal most collection detections use, and a backup agent maximises it by design. Suppressing it by account name is what most sites end up doing.",
+ "cadence": {"spread_seconds": 3600, "jitter": 0.2},
+ "variables": {
+   "user": {"gen": "const", "value": "svc_backup"},
+   "host": {"gen": "choice", "values": ["lab-host-01", "lab-host-02"]}
+ },
+ "steps": [
+   {"template": "linux_audit", "record": 0, "repeat": 4, "repeat_gap_seconds": 400,
+    "set": {"argv": ["/usr/bin/tar", "-czf", "/backup/etc.tgz", "/etc"],
+            "exe": "/usr/bin/tar", "uid": 1101}},
+   {"template": "linux_audit", "record": 0, "repeat": 2, "repeat_gap_seconds": 600,
+    "set": {"argv": ["/usr/bin/rsync", "-a", "/home/", "/backup/home/"],
+            "exe": "/usr/bin/rsync", "uid": 1101}},
+   {"template": "linux_secure", "record": 0,
+    "set": {"user": "svc_backup"}}
+ ]
+}

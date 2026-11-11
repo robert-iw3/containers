@@ -1,0 +1,28 @@
+{
+ "name": "fp_admin_remote_exec",
+ "label": "false_positive",
+ "tier": 0,
+ "level": "informational",
+ "attack": ["T1021.002"],
+ "description": "A systems administrator running remote execution against servers during a maintenance window, from a management workstation, with a named admin account.",
+ "detectable_as": "Indistinguishable from lateral movement on process and logon evidence alone. Separating it needs the account's role, the source host, and whether a change window was open.",
+ "why_hard": "A detection keyed on remote execution tooling alone fires on this every maintenance window, and gets muted.",
+ "cadence": {"spread_seconds": 1800, "jitter": 0.4},
+ "variables": {
+   "user":  {"gen": "const", "value": "svc_admin"},
+   "wks":   {"gen": "const", "value": "LAB-MGMT-01"},
+   "host":  {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WIN-03"]},
+   "src":   {"gen": "const", "value": "10.20.9.14"}
+ },
+ "steps": [
+   {"template": "win_security", "record": 0, "repeat": 3, "repeat_gap_seconds": 120,
+    "set": {"logon": 3}},
+   {"template": "win_sysmon", "record": 0, "repeat": 2, "repeat_gap_seconds": 90,
+    "set": {"image": "C:\\Windows\\System32\\wbem\\WMIC.exe",
+            "args": "/node:LAB-WIN-02 process call create \"cmd /c gpupdate /force\"",
+            "parent": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"}},
+   {"template": "win_security", "record": 1,
+    "set": {"image": "C:\\Windows\\System32\\services.exe",
+            "parent": "C:\\Windows\\System32\\wininit.exe"}}
+ ]
+}

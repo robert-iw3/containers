@@ -1,0 +1,19 @@
+{
+ "name": "detection-validation",
+ "description": "Scores a detection product across the sophistication range. False positives outnumber true positives, and the attack instances are a fraction of a percent of the data, because that is the ratio a product meets in production. A dataset dense with attacks flatters anything.",
+ "baseline": {
+   "records": 120000,
+   "templates": ["linux_audit", "linux_secure", "bash_history", "win_security", "win_sysmon", "sysmon_linux"]
+ },
+ "scenarios": [
+   {"scenario": "fp_admin_remote_exec",       "instances": 14},
+   {"scenario": "fp_backup_agent_sweep",      "instances": 10},
+   {"scenario": "fp_vuln_scan_auth_sweep",    "instances": 6},
+   {"scenario": "t1_rdp_bruteforce",          "instances": 2},
+   {"scenario": "t1_literal_credential_dump", "instances": 2},
+   {"scenario": "t2_macro_to_ransomware",     "instances": 1},
+   {"scenario": "t3_lolbin_proxy_exec",       "instances": 1},
+   {"scenario": "t3_linux_audit_evasion",     "instances": 1},
+   {"scenario": "t4_patient_dns_c2",          "instances": 1}
+ ]
+}
