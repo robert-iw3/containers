@@ -85,8 +85,12 @@ def install_readout(container: str) -> None:
            "/opt/splunk/bin/splunk restart >/dev/null 2>&1")
 
 
-def stage(uf: str, batch: Path, tag: str) -> None:
-    """Put the batch where the forwarder will read it as new data."""
+def stage(uf: str, batch: Path, tag: str, host: str) -> None:
+    """Put the batch where the forwarder will read it as new data.
+
+    The input sets host explicitly so every event, and therefore every
+    detection, carries this round's label.
+    """
     lab = "/opt/splunkforwarder/etc/apps/sigma_lab_inputs/lab-logs"
     d = f"{lab}/validate/{tag}"
     sh(["podman", "exec", "-u", "root", uf, "sh", "-c",
@@ -99,7 +103,8 @@ def stage(uf: str, batch: Path, tag: str) -> None:
             continue
         sh(["podman", "cp", str(src), f"{uf}:{d}/{src.name}"])
         inputs += (f"\n[monitor://{d}/{src.name}]\nsourcetype = {st}\n"
-                   f"index = linux_lab\ndisabled = 0\ncrcSalt = <SOURCE>\n")
+                   f"index = linux_lab\nhost = {host}\n"
+                   f"disabled = 0\ncrcSalt = <SOURCE>\n")
     tmp = Path("/tmp/_validate_inputs.conf")
     tmp.write_text(inputs)
     sh(["podman", "cp", str(tmp), f"{uf}:/tmp/_v.conf"])
@@ -138,29 +143,24 @@ def main(argv=None):
     spec = json.loads(batch.read_text())
     planted = {p["rule_id"]: p for p in spec["planted"] if p["rule_id"]}
     tag = f"{spec['tier']}-{spec['seed']}"
+    # The label every event in this round carries.
+    host_tag = f"lab-{tag}"
 
     print(f"\n  Round {tag}: {len(planted)} planted rule(s), "
           f"{spec['windows_events']} Windows and {spec['linux_events']} Linux events")
+    print(f"  events labelled host={host_tag}, so nothing from another round counts")
 
     install_readout(args.container)
 
     # A detection belongs to this batch if it was first seen inside the
     # window the batch was generated for, with a little slack either side
     # for scheduling.
-    from datetime import datetime, timedelta
-    gen = datetime.fromisoformat(spec["generated"])
-    lo = (gen - timedelta(minutes=spec["window_minutes"] + 10)).timestamp()
-    hi = (gen + timedelta(minutes=30)).timestamp()
-
     def in_window(row) -> bool:
-        try:
-            return lo <= float(row.get("first_seen") or 0) <= hi
-        except (TypeError, ValueError):
-            return False
+        return (row.get("sigma_src_host") or "") == host_tag
 
     if not args.no_stage:
         print("  staging the batch")
-        stage(args.uf, batch, tag)
+        stage(args.uf, batch, tag, host_tag)
 
     deadline = time.time() + args.wait
     found: Dict[str, Dict] = {}
