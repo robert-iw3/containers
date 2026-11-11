@@ -136,7 +136,7 @@ Nothing back, after the schedule has run, usually means one of:
 | no detections at all | the source types the rules need are not in your data — step 3 |
 | searches error on dispatch | the macro points at an index that does not exist — step 6 |
 | detections but no drilldown | an older package without the `sigma_src_*` fields |
-| scheduler skipping | 558 searches on one schedule is too many for the instance; stagger the cron or deploy fewer rules |
+| scheduler deferring runs | more scheduled searches than the instance's concurrency allows. `bin/preflight.py` reports this before deploying; `bin/check-instance.sh` reports it on the instance. Rules are batched precisely so this does not happen, so a recurrence usually means the cadence was tightened |
 
 ## Tuning
 
