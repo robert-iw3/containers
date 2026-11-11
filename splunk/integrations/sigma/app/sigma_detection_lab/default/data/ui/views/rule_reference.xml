@@ -42,7 +42,7 @@
       <title>The rule</title>
       <table>
         <search>
-          <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
 | lookup sigma_rule_logic sigma_rule_id OUTPUT sigma_description
 | eval "Rule"=sigma_rule,
        "What it is for"=if(sigma_description="","no description in the rule",sigma_description),
@@ -57,6 +57,7 @@
        "Sigma status"=if(sigma_status="","not stated",sigma_status)
 | fields "Rule","What it is for","Platform","Log source","Severity",
          "Confidence","Handling","Matches needed before it records","Sigma status"
+| fields - _*
 | transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">10</option>
@@ -68,7 +69,7 @@
       <title>The ATT&amp;CK technique it maps to</title>
       <table>
         <search>
-          <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
 | lookup mitre_techniques technique_id as sigma_technique
     OUTPUT display_name, url, description, detection, data_sources, tactic_names
 | eval "Technique"=if(isnull(display_name),"This rule carries no ATT&amp;CK mapping.",
@@ -80,6 +81,7 @@
        "Read more"=coalesce(url,"https://attack.mitre.org/techniques/enterprise/")
 | fields "Technique","Tactic","What the technique is","Telemetry ATT&amp;CK expects",
          "How ATT&amp;CK suggests detecting it","Read more"
+| fields - _*
 | transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">8</option>
@@ -97,7 +99,7 @@
            added after seeing a false positive. -->
       <table>
         <search>
-          <query>| inputlookup sigma_rule_logic.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rule_logic.csv where sigma_rule_id=$rule_id|s$
 | eval line=split(sigma_detection_yaml,"
 ")
 | mvexpand line
@@ -115,13 +117,14 @@
       <title>How it runs here</title>
       <table>
         <search>
-          <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
 | lookup sigma_rule_logic sigma_rule_id OUTPUT sigma_condition, sigma_spl, sigma_scope
 | eval "Sigma condition"=coalesce(sigma_condition,"unavailable"),
        "Scope it searches"=if(sigma_scope="","the whole index — no log source mapping",sigma_scope),
        "As SPL"=coalesce(sigma_spl,"unavailable"),
        "Evaluated by"=sigma_batch
 | fields "Sigma condition","Scope it searches","As SPL","Evaluated by"
+| fields - _*
 | transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">6</option>
@@ -140,7 +143,7 @@
            anyone on one event. -->
       <table>
         <search>
-          <query>| inputlookup sigma_rule_logic.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rule_logic.csv where sigma_rule_id=$rule_id|s$
 | eval reason=split(sigma_confidence_why," | ")
 | mvexpand reason
 | where reason!=""
@@ -156,7 +159,7 @@
       <title>What the author says gets this wrong</title>
       <table>
         <search>
-          <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
 | eval fp=if(sigma_falsepositives="" OR sigma_falsepositives="Unknown",
              "The author declared none, or stated them as unknown. That is not the same as there being none.",
              sigma_falsepositives)
@@ -177,17 +180,17 @@
       <title>Sources — where this rule came from</title>
       <table>
         <search>
-          <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+          <query>| inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
 | eval ref=split(sigma_references,", ")
 | mvexpand ref
 | eval ref=if(ref="","the rule cites no references",ref)
 | table ref
 | rename ref as "Reference"
 | append
-    [ | inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+    [ | inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
     | eval "Reference"="The rule file: ".sigma_source_url | fields "Reference" ]
 | append
-    [ | inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+    [ | inputlookup sigma_rules.csv where sigma_rule_id=$rule_id|s$
     | eval "Reference"="Author: ".if(sigma_author="","not stated",sigma_author)
             ."  ·  last modified ".if(sigma_rule_date="","unknown",sigma_rule_date)
             ."  ·  id ".sigma_rule_id
@@ -202,7 +205,7 @@
       <title>What this rule has detected</title>
       <table>
         <search>
-          <query>index=sigma_alerts sigma_rule_id="$rule_id|s$"
+          <query>index=sigma_alerts sigma_rule_id=$rule_id|s$
 | eval when=strftime(sigma_first_seen,"%F %T")
 | table when, sigma_src_host, sigma_match_count, sigma_src_sourcetype
 | rename when as "First seen", sigma_src_host as "Host",

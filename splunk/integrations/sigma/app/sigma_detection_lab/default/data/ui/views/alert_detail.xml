@@ -234,8 +234,8 @@
            events the rule matched rather than everything on the host. -->
       <event>
         <search>
-          <query>index="$sel_idx|s$" host="$sel_host|s$"
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+          <query>index=$sel_idx|s$ host=$sel_host|s$
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
      | eval search=if(sigma_spl="", "*", sigma_spl)
      | fields search]</query>
           <earliest>$sel_from$</earliest>
@@ -280,8 +280,8 @@
       <title>Those events, field by field</title>
       <table>
         <search>
-          <query>index="$sel_idx|s$" host="$sel_host|s$"
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+          <query>index=$sel_idx|s$ host=$sel_host|s$
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
      | eval search=if(sigma_spl="", "*", sigma_spl)
      | fields search]
 | eval when=strftime(_time,"%F %T.%3N")
@@ -308,8 +308,8 @@
            before acting on it. -->
       <table>
         <search>
-          <query>index="$sel_idx|s$" host="$sel_host|s$"
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id="$sel_ruleid|s$"
+          <query>index=$sel_idx|s$ host=$sel_host|s$
+    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
      | eval search=if(sigma_spl="", "*", sigma_spl)
      | fields search]
 | fieldsummary maxvals=3
