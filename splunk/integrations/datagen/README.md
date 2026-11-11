@@ -24,7 +24,7 @@ nothing to download first. Nothing about it is specific to one environment:
 you describe what you want in a template, and it emits that.
 
 This is a standalone tool. The Sigma detection work in
-`../integrations/sigma/` happens to use it, but the generator knows nothing
+`../sigma/` happens to use it, but the generator knows nothing
 about Sigma or any other consumer.
 
 ## Where the templates come from
@@ -140,7 +140,7 @@ stat -c '%U' /opt/splunkforwarder/var
 
 The Splunk CLI chowns all of `SPLUNK_HOME` to whoever invokes it, so running
 it as the wrong account leaves splunkd unable to write its pid file. This
-cost us a forwarder outage; `../integrations/sigma/deploy/discover.sh`
+cost us a forwarder outage; `../sigma/deploy/discover.sh`
 reports the account for a given endpoint.
 
 ## Volume and licensing
