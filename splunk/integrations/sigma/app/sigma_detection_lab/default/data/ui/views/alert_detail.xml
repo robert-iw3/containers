@@ -1,0 +1,186 @@
+<form version="1.1" theme="dark">
+  <label>Alert Detail</label>
+  <description>One detection at a time, with the Windows or Linux events that triggered it. Select a detection in the upper table and the lower panels load the source events around it.</description>
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Time range</label>
+      <default>
+        <earliest>-7d@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="rule_tok" searchWhenChanged="true">
+      <label>Rule</label>
+      <choice value="*">Any rule</choice>
+      <default>*</default>
+      <fieldForLabel>sigma_rule</fieldForLabel>
+      <fieldForValue>sigma_rule</fieldForValue>
+      <search>
+        <query>index=sigma_alerts sourcetype=sigma:alert | stats count by sigma_rule | sort - count</query>
+        <earliest>$tr.earliest$</earliest>
+        <latest>$tr.latest$</latest>
+      </search>
+      <prefix>sigma_rule="</prefix>
+      <suffix>"</suffix>
+    </input>
+    <input type="dropdown" token="hostsel" searchWhenChanged="true">
+      <label>Host</label>
+      <choice value="*">Any host</choice>
+      <default>*</default>
+      <fieldForLabel>sigma_src_host</fieldForLabel>
+      <fieldForValue>sigma_src_host</fieldForValue>
+      <search>
+        <query>index=sigma_alerts sourcetype=sigma:alert | stats count by sigma_src_host | sort - count</query>
+        <earliest>$tr.earliest$</earliest>
+        <latest>$tr.latest$</latest>
+      </search>
+      <prefix>sigma_src_host="</prefix>
+      <suffix>"</suffix>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Matching detections</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$ | stats count</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
+        <option name="rangeValues">[1,25]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Highest severity seen</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$
+| stats max(sigma_severity) as s
+| eval severity=case(s=5,"critical",s=4,"high",s=3,"medium",s=2,"low",s=1,"informational",true(),"none")
+| fields severity</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Source types involved</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$ | stats dc(sigma_src_sourcetype)</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Detections — select one to load its source events</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$
+| eval when=strftime(_time,"%F %T"),
+       attack=replace(sigma_attack,"attack\.",""),
+       src_epoch=coalesce(sigma_src_time,_time)
+| table when, sigma_level, sigma_rule, sigma_src_host, sigma_src_sourcetype, sigma_src_index, attack, src_epoch
+| sort - when</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">row</option>
+        <format type="color" field="sigma_level">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        </format>
+        <!-- Selecting a row sets the tokens the panels below search on.
+             The source index, source type and host come from the detection
+             event itself, recorded before collect rewrote them. -->
+        <drilldown>
+          <set token="sel_index">$row.sigma_src_index$</set>
+          <set token="sel_sourcetype">$row.sigma_src_sourcetype$</set>
+          <set token="sel_host">$row.sigma_src_host$</set>
+          <set token="sel_rule">$row.sigma_rule$</set>
+          <set token="sel_epoch">$row.src_epoch$</set>
+          <set token="sel_when">$row.when$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <row depends="$sel_index$">
+    <panel>
+      <title>Source events on $sel_host$ around $sel_when$ — triggered "$sel_rule$"</title>
+      <event>
+        <!-- A two minute window either side of the matching event. Wider
+             than needed on purpose: the surrounding activity is usually
+             what makes the detection interpretable. -->
+        <search>
+          <query>index=$sel_index$ sourcetype="$sel_sourcetype$" host="$sel_host$"</query>
+          <earliest>$sel_epoch$</earliest>
+          <latest>$sel_epoch$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="list.drilldown">full</option>
+        <option name="maxLines">12</option>
+        <option name="raw.drilldown">full</option>
+        <option name="type">list</option>
+      </event>
+    </panel>
+  </row>
+
+  <row depends="$sel_index$">
+    <panel>
+      <title>What else happened on $sel_host$ in the same window</title>
+      <table>
+        <search>
+          <query>index=$sel_index$ host="$sel_host$"
+| stats count as events, values(sourcetype) as sourcetypes by host
+| fields host, events, sourcetypes</query>
+          <earliest>$sel_epoch$</earliest>
+          <latest>$sel_epoch$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Other detections on $sel_host$</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert sigma_src_host="$sel_host$"
+| stats count as detections, values(sigma_level) as level, max(_time) as last by sigma_rule
+| eval last=strftime(last,"%F %T")
+| sort - detections</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="level">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row rejects="$sel_index$">
+    <panel>
+      <html>
+        <div style="padding:16px;color:#9aa0a6;font-family:Roboto,Helvetica,Arial,sans-serif">
+          Select a detection above to load the Windows or Linux events behind it.
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>

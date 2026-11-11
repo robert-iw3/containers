@@ -1,0 +1,185 @@
+<form version="1.1" theme="dark">
+  <label>Detection Coverage</label>
+  <description>What the Sigma rules caught, and on which hosts. Every table drills through to the Windows or Linux events that triggered the detection.</description>
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Time range</label>
+      <default>
+        <earliest>-7d@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="multiselect" token="sev_tok" searchWhenChanged="true">
+      <label>Severity</label>
+      <choice value="*">Any</choice>
+      <choice value="critical">critical</choice>
+      <choice value="high">high</choice>
+      <choice value="medium">medium</choice>
+      <choice value="low">low</choice>
+      <default>*</default>
+      <valuePrefix>sigma_level="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+    <input type="text" token="host_tok" searchWhenChanged="true">
+      <label>Host (wildcards allowed)</label>
+      <default>*</default>
+      <prefix>sigma_src_host="</prefix>
+      <suffix>"</suffix>
+    </input>
+  </fieldset>
+
+  <!-- Tiles first: the question "is anything wrong" should be answerable
+       without reading a table. -->
+  <row>
+    <panel>
+      <title>Detections</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats count</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
+        <option name="rangeValues">[1,25]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Critical and high</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $host_tok$ sigma_level IN ("critical","high") | stats count</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
+        <option name="rangeValues">[1,10]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Rules that fired</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats dc(sigma_rule)</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Hosts affected</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats dc(sigma_src_host)</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>ATT&amp;CK techniques</title>
+      <single>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | eval t=split(sigma_attack,",") | mvexpand t | where t!="" | stats dc(t)</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Detections over time, by severity</title>
+      <chart>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | timechart count by sigma_level</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c,"informational":0x19C1EB}</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.axisTitleY.text">detections</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Rules by volume</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
+| stats count as detections, dc(sigma_src_host) as hosts, values(sigma_level) as level, min(_time) as first, max(_time) as last by sigma_rule, sigma_rule_id
+| eval first=strftime(first,"%F %T"), last=strftime(last,"%F %T")
+| sort - detections</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="drilldown">row</option>
+        <!-- A rule name is only useful if it leads to the events. -->
+        <drilldown>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.rule_tok=$row.sigma_rule$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
+        </drilldown>
+        <format type="color" field="level">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <title>By MITRE tactic</title>
+      <chart>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
+| eval tactic=split(sigma_tactic,",") | mvexpand tactic | where tactic!=""
+| eval tactic=replace(tactic,"^attack\.","")
+| stats count by tactic | sort - count</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"count":0x19C1EB}</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Most recent detections — click a row for the events behind it</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
+| eval when=strftime(_time,"%F %T")
+| table when, sigma_level, sigma_rule, sigma_src_host, sigma_src_sourcetype, Image, CommandLine, sigma_src_index, sigma_rule_id
+| sort - when</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="count">25</option>
+        <option name="drilldown">row</option>
+        <!-- Straight to the source events: the alert's own index, source
+             type and host, in a window around the matching event. -->
+        <drilldown>
+          <link target="_blank">/app/sigma_detection_lab/search?q=search index%3D$row.sigma_src_index$ sourcetype%3D"$row.sigma_src_sourcetype$" host%3D"$row.sigma_src_host$"&amp;earliest=$row.when$&amp;latest=$row.when$</link>
+        </drilldown>
+        <format type="color" field="sigma_level">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

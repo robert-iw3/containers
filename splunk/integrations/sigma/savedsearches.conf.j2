@@ -1,5 +1,13 @@
 {# Emits one savedsearches.conf stanza per converted Sigma rule.
 
+   Each rule writes a correlated detection event into its own index rather
+   than only raising an alert action. The written event carries the rule's
+   identity and severity next to the fields of the log that matched, which
+   makes the detection result searchable on its own: retention can differ
+   from the raw data, a dashboard reads a small index instead of scanning
+   everything, and the rule's metadata travels with the evidence rather
+   than living only in the rule file.
+
    savedsearches.conf takes conf keys, not REST API names: counttype,
    relation and quantity. alert_type / alert_comparator / alert_threshold
    are rejected, and because the default is "counttype = always" a wrong
@@ -20,7 +28,25 @@
 {% if rule.description %}
 description = {{ rule.description }}{% if rule.tags %} | tags: {{ rule.tags | join(', ') }}{% endif %} | level: {{ rule.level }}
 {% endif %}
-search = {{ rule.splunk_search }}
+{#- The detection, then enrichment naming which rule fired, then a write
+    into the detection index. The eval fields are what make the written
+    event useful without the rule file beside it, and collect sets its own
+    source type so detection results stay separable from raw data.
+
+    Built with set rather than an inline if: this environment has
+    trim_blocks on, so a block tag at the end of the search line eats the
+    newline after it and the next key runs into the value. -#}
+{% set ai = config.alert_index %}
+{% if ai and ai.enabled %}
+{#- The origin fields are what make the detection pivotable. collect
+    rewrites index and sourcetype to the destination, so where the event
+    came from has to be captured before the write or the trail back to the
+    log that matched is lost. -#}
+{% set collect_clause = ' | eval sigma_rule="' ~ rule.title ~ '", sigma_rule_id="' ~ rule.rule_id ~ '", sigma_level="' ~ rule.level ~ '", sigma_severity=' ~ rule.severity ~ ', sigma_attack="' ~ (rule.mitre_techniques | join(',')) ~ '", sigma_tactic="' ~ (rule.mitre_tactics | join(',')) ~ '", sigma_src_index=index, sigma_src_sourcetype=sourcetype, sigma_src_host=host, sigma_src_time=_time | collect index=' ~ (ai.index | default('sigma_alerts')) ~ ' sourcetype=' ~ (ai.sourcetype | default('sigma:alert')) %}
+{% else %}
+{% set collect_clause = '' %}
+{% endif %}
+search = {{ rule.splunk_search }}{{ collect_clause }}
 counttype = number of events
 relation = greater than
 quantity = 0
@@ -32,7 +58,7 @@ alert.severity = {{ rule.severity }}
 alert.suppress = 0
 alert.track = 1
 alert.expires = 24h
-request.ui_dispatch_app = {{ config.app | default('sigma_hunting_app') }}
+request.ui_dispatch_app = {{ config.app | default('sigma_detection_lab') }}
 request.ui_dispatch_view = search
 {% if config.alert_action and config.alert_action.email and config.alert_action.email.enabled %}
 action.email = 1

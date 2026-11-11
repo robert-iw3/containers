@@ -41,6 +41,7 @@ Standard library only.
 """
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import random
@@ -184,6 +185,7 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
 
     events = []
     identifiers = defaultdict(set)
+    digests = []
     steps = scenario["steps"]
     for i, st in enumerate(steps):
         tpl = templates_by_name[st["template"]]
@@ -203,6 +205,7 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
                                      rng, seq_state, at)
             for line in lines:
                 events.append((tpl["sourcetype"], line))
+                digests.append(hashlib.sha1(line.encode()).hexdigest()[:16])
             # Only values the scenario set, from its shared variables or the
             # step's overrides. A per-step random value differs on every
             # event, so recording it as an identifier would send a scorer
@@ -229,6 +232,10 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
         "window_start": base.isoformat(),
         "window_end": (base + timedelta(seconds=spread)).isoformat(),
         "identifiers": {k: sorted(v) for k, v in identifiers.items()},
+        # Exact attribution. A scorer matches an event to this instance by
+        # the digest of its line, so a hit is never credited to the wrong
+        # instance and never missed because identifiers span steps.
+        "event_sha1": digests,
     }
     return events, truth
 

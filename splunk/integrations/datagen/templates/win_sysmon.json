@@ -4,26 +4,69 @@
  "origin": "Splunk Add-on for Sysmon (Windows)",
  "output_file": "XmlWinEventLog_Sysmon.log",
  "weight": 5,
- "notes": "The source most Windows process_creation Sigma rules target. Maps to Endpoint in CIM via the add-on.",
+ "notes": "The source most Windows process_creation detection content targets. Parent and child are paired per record rather than chosen independently: picking them separately produces combinations such as userinit.exe spawning powershell.exe, which is genuinely suspicious and makes ordinary baseline traffic trip high-severity rules. Each record below is a process lineage that really occurs on a workstation.",
  "variables": {
   "ts":     {"gen": "timestamp", "format": "win_xml"},
   "host":   {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WIN-03"]},
   "user":   {"gen": "choice", "values": ["LAB\\jsmith", "LAB\\svc_sql", "NT AUTHORITY\\SYSTEM"]},
   "pid":    {"gen": "int", "min": 500, "max": 65000},
+  "ppid":   {"gen": "int", "min": 400, "max": 4000},
   "rec":    {"gen": "int", "min": 1, "max": 99999999},
   "pguid":  {"gen": "guid_braced"},
-  "image":  {"gen": "choice", "values": [
-    "C:\\Windows\\System32\\cmd.exe",
-    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
-    "C:\\Windows\\System32\\svchost.exe",
-    "C:\\Windows\\System32\\rundll32.exe"
-  ]},
-  "args":   {"gen": "choice", "values": ["/c dir", "-NoProfile -Command Get-Process", "-k netsvcs", "shell32.dll,Control_RunDLL"]},
-  "parent": {"gen": "choice", "values": ["C:\\Windows\\explorer.exe", "C:\\Windows\\System32\\services.exe", "C:\\Windows\\System32\\userinit.exe"]},
+  "image":  {"gen": "const", "value": "C:\\Windows\\System32\\svchost.exe"},
+  "args":   {"gen": "const", "value": "-k netsvcs"},
+  "parent": {"gen": "const", "value": "C:\\Windows\\System32\\services.exe"},
   "md5":    {"gen": "sha256_of", "of": "image", "length": 32}
  },
  "records": [
-  {"weight": 100, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{pid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]}
+  {
+   "weight": 34,
+   "variables": {
+    "image":  {"gen": "const", "value": "C:\\Windows\\System32\\svchost.exe"},
+    "args":   {"gen": "choice", "values": ["-k netsvcs -p", "-k LocalService", "-k DcomLaunch -p"]},
+    "parent": {"gen": "const", "value": "C:\\Windows\\System32\\services.exe"},
+    "user":   {"gen": "const", "value": "NT AUTHORITY\\SYSTEM"}
+   },
+   "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{ppid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]
+  },
+  {
+   "weight": 20,
+   "variables": {
+    "image":  {"gen": "choice", "values": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE", "C:\\Windows\\System32\\notepad.exe"]},
+    "args":   {"gen": "const", "value": ""},
+    "parent": {"gen": "const", "value": "C:\\Windows\\explorer.exe"}
+   },
+   "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">C:\\Users\\jsmith\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{ppid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]
+  },
+  {
+   "weight": 14,
+   "variables": {
+    "image":  {"gen": "const", "value": "C:\\Windows\\explorer.exe"},
+    "args":   {"gen": "const", "value": ""},
+    "parent": {"gen": "const", "value": "C:\\Windows\\System32\\userinit.exe"}
+   },
+   "notes": "explorer.exe is effectively the only child userinit.exe has at logon, which is why anything else is worth alerting on.",
+   "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{ppid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]
+  },
+  {
+   "weight": 18,
+   "variables": {
+    "image":  {"gen": "choice", "values": ["C:\\Windows\\System32\\taskhostw.exe", "C:\\Windows\\System32\\RuntimeBroker.exe", "C:\\Windows\\System32\\SearchIndexer.exe"]},
+    "args":   {"gen": "const", "value": ""},
+    "parent": {"gen": "const", "value": "C:\\Windows\\System32\\svchost.exe"},
+    "user":   {"gen": "const", "value": "NT AUTHORITY\\SYSTEM"}
+   },
+   "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{ppid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]
+  },
+  {
+   "weight": 14,
+   "variables": {
+    "image":  {"gen": "const", "value": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"},
+    "args":   {"gen": "choice", "values": ["-NoProfile -Command Get-Service", "-File C:\\ProgramData\\config\\inventory.ps1", "-Command Get-EventLog -LogName System -Newest 10"]},
+    "parent": {"gen": "choice", "values": ["C:\\Windows\\System32\\cmd.exe", "C:\\Windows\\explorer.exe"]}
+   },
+   "notes": "PowerShell run by an operator or a scheduled job. Its parent is a shell or the desktop, not a browser or an Office process, which is what makes those parents worth alerting on.",
+   "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{ppid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]
+  }
  ]
 }

@@ -11,11 +11,14 @@ alert_action:
     enabled: 0
     to: 'ticketing@example.com'
 
-summary_index:
-  # Off by default: "| collect" writes to the index on every run, and the
-  # index must already exist or the write is silently discarded.
-  enabled: false
-  index: 'threat-hunting'
+# Detection results go to their own index. This is the integration's primary
+# output: an alert action notifies a person, while a written event is
+# searchable, reportable, and retained on its own schedule. The index must
+# exist before the first run, or the write is discarded without an error.
+alert_index:
+  enabled: true
+  index: 'sigma_alerts'
+  sourcetype: 'sigma:alert'
 
 search_transformations:
   # Requires sigma_whitelist.csv to exist as a lookup, or every search
@@ -35,7 +38,7 @@ search_transformations:
 cron_schedule: '*/10 * * * *'
 earliest_time: '-10m'
 latest_time: 'now'
-app: 'sigma_hunting_app'
+app: 'sigma_detection_lab'
 
 # Local rule paths. Network sources need --allow-network, which the
 # air-gapped target cannot use.
