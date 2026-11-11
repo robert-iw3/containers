@@ -23,6 +23,7 @@ collecting, the data needed is already arriving.
 | **What it installs on endpoints** | nothing |
 
 Set it up in six steps: [docs/setup-guide.md](docs/setup-guide.md).
+Every setting it writes, and why: [docs/configuration-spec.md](docs/configuration-spec.md).
 Build an installable package with [`bin/package-app.sh`](bin/package-app.sh).
 
 ## How it works

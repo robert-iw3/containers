@@ -10,6 +10,7 @@
 
 import sys
 import argparse
+import hashlib
 import os
 import re
 import yaml
@@ -56,6 +57,95 @@ def configure_logging(logfile: Optional[str]) -> None:
     )
 
 
+# How far a rule can be trusted on a single match, scored from what the rule
+# itself declares. Criticality alone is a blunt instrument: a critical rule
+# whose author has written down that it fires on legitimate work should not
+# page anyone on one event, and a specific rule for a named tool should.
+#
+# Every signal below is read from the rule, not guessed at:
+#
+#   falsepositives   the strongest signal there is. The author is stating
+#                    that legitimate activity matches this. 652 of SigmaHQ's
+#                    1377 core rules declare at least one.
+#   a NOT filter     the author found those false positives and excluded
+#                    them, which earns some of the confidence back.
+#   status           stable has survived review; test has not.
+#   constraint count more fields ANDed together is a narrower claim.
+#   match breadth    "contains" on a short string matches a great deal;
+#                    endswith on a full path matches one thing.
+CONFIDENCE_HIGH = 60
+CONFIDENCE_MEDIUM = 35
+
+
+def score_confidence(rule: Dict) -> Tuple[int, List[str]]:
+    """Return a 0-100 confidence score and the reasons for it."""
+    score = 50
+    why = []
+
+    status = str(rule.get("status", "")).lower()
+    if status == "stable":
+        score += 15; why.append("status stable (+15)")
+    elif status in ("deprecated", "unsupported"):
+        score -= 25; why.append(f"status {status} (-25)")
+    elif status:
+        score -= 5; why.append(f"status {status} (-5)")
+
+    fps = rule.get("falsepositives")
+    if isinstance(fps, list):
+        real = [f for f in fps
+                if str(f).strip().lower() not in ("unknown", "none", "")]
+        if real:
+            penalty = min(24, 8 * len(real))
+            score -= penalty
+            why.append(f"author declares {len(real)} known false positive(s) (-{penalty})")
+
+    det = rule.get("detection", {}) or {}
+    condition = str(det.get("condition", "")).lower()
+    if " not " in condition:
+        score += 10; why.append("condition excludes known false positives (+10)")
+
+    # Count the field constraints the rule actually requires, and judge how
+    # broad each match is.
+    constraints = 0
+    broad = 0
+    narrow = 0
+
+    def walk(node):
+        nonlocal constraints, broad, narrow
+        if isinstance(node, dict):
+            for key, val in node.items():
+                if key == "condition":
+                    continue
+                if "|" in key or not isinstance(val, (dict, list)):
+                    constraints += 1
+                    mods = key.split("|")[1:]
+                    values = val if isinstance(val, list) else [val]
+                    for v in values:
+                        text = str(v)
+                        if "contains" in mods and len(text) < 6:
+                            broad += 1
+                        elif ("endswith" in mods or not mods) and len(text) >= 12:
+                            narrow += 1
+                walk(val)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(det)
+    if constraints >= 3:
+        bump = min(20, 5 * constraints)
+        score += bump; why.append(f"{constraints} field constraints (+{bump})")
+    elif constraints == 1:
+        score -= 10; why.append("a single field constraint (-10)")
+    if broad:
+        pen = min(15, 5 * broad)
+        score -= pen; why.append(f"{broad} very broad substring match(es) (-{pen})")
+    if narrow:
+        score += min(10, 3 * narrow); why.append(f"{narrow} specific value match(es)")
+
+    return max(0, min(100, score)), why
+
+
 class SigmaRuleValidator:
     @staticmethod
     def validate_rule(rule_data: Dict) -> bool:
@@ -85,6 +175,56 @@ class UseCase:
             t for t in self.tags if t.startswith("attack.") and not t.startswith("attack.t")
         ]
         self.severity = SEVERITY_MAP.get(str(self.level).lower(), 3)
+        self._stagger_slots = 0
+        self.confidence_score, self.confidence_why = score_confidence(sigma_rule)
+        self.confidence = ("high" if self.confidence_score >= CONFIDENCE_HIGH
+                           else "medium" if self.confidence_score >= CONFIDENCE_MEDIUM
+                           else "low")
+
+    @property
+    def confidence_comment(self):
+        """The scoring, as conf comment lines, so a stanza carries its own
+        justification and can be audited without re-running the converter."""
+        head = (f"# confidence {self.confidence} "
+                f"({self.confidence_score}/100) -> {self.disposition}")
+        return "\n".join([head] + [f"#   {r}" for r in self.confidence_why])
+
+    @property
+    def disposition(self):
+        """Alert now, or aggregate and watch the trend.
+
+        Immediate is reserved for a severe rule that is also specific. A
+        severe rule the author has flagged as noisy is exactly the one that
+        should not wake anyone on a single event; it still records a
+        detection, and the trend is what makes it meaningful.
+        """
+        severe = str(self.level).lower() in ("critical", "high")
+        return "immediate" if (severe and self.confidence == "high") else "trend"
+
+    @property
+    def cron_schedule(self):
+        """The rule's own slot in the schedule.
+
+        Derived from the rule id so it is stable across regenerations: a
+        rule keeps its slot, and re-converting does not reshuffle the whole
+        deployment into a different pattern.
+        """
+        base = (self.config.get("cron_schedule") or "*/10 * * * *").strip()
+        slots = int(self._stagger_slots or 0)
+        if slots < 2:
+            return base
+        key = self.rule_id or self.title
+        offset = int(hashlib.sha1(str(key).encode()).hexdigest(), 16) % slots
+        parts = base.split()
+        if len(parts) != 5 or not parts[0].startswith("*/"):
+            return base
+        try:
+            step = int(parts[0][2:])
+        except ValueError:
+            return base
+        # Keep the interval, move the phase: */10 becomes 3,13,23,33,43,53.
+        minutes = sorted(set((offset + m) % 60 for m in range(0, 60, step)))
+        return ",".join(str(m) for m in minutes) + " " + " ".join(parts[1:])
 
     @property
     def stanza(self) -> str:
@@ -302,7 +442,9 @@ def process_rule(file: str, pipeline_spec: Optional[str], config: Dict,
         splunk_search, config, sigma_rule
     )
     datamodel = DetectionRuleConverter.mapToCIMDatamodel(sigma_rule, sigma_config)
-    return UseCase(sigma_rule, config, splunk_search, datamodel), ""
+    uc = UseCase(sigma_rule, config, splunk_search, datamodel)
+    uc._stagger_slots = int(config.get("cron_stagger_slots", 0) or 0)
+    return uc, ""
 
 
 def main(argv):

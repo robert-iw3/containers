@@ -163,8 +163,9 @@
       <table>
         <search>
           <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
-| eval when=strftime(_time,"%F %T")
-| table when, sigma_level, sigma_rule, sigma_src_host, sigma_src_sourcetype, Image, CommandLine, sigma_src_index, sigma_rule_id
+| eval when=strftime(sigma_first_seen,"%F %T"),
+       span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event")
+| table when, sigma_level, sigma_rule, sigma_match_count, span, sigma_src_host, sigma_src_sourcetype, sigma_src_index
 | sort - when</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
@@ -174,7 +175,7 @@
         <!-- Straight to the source events: the alert's own index, source
              type and host, in a window around the matching event. -->
         <drilldown>
-          <link target="_blank">/app/sigma_detection_lab/search?q=search index%3D$row.sigma_src_index$ sourcetype%3D"$row.sigma_src_sourcetype$" host%3D"$row.sigma_src_host$"&amp;earliest=$row.when$&amp;latest=$row.when$</link>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.rule_tok=$row.sigma_rule$&amp;form.hostsel=$row.sigma_src_host$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
         </drilldown>
         <format type="color" field="sigma_level">
           <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>

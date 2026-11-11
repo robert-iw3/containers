@@ -24,6 +24,7 @@
 {% if rule.datamodel %}
 # Candidate CIM data model: {{ rule.datamodel }} (annotation only; use --pipeline cim for data model queries)
 {% endif %}
+{{ rule.confidence_comment }}
 [{{ rule.stanza }}]
 {% if rule.description %}
 description = {{ rule.description }}{% if rule.tags %} | tags: {{ rule.tags | join(', ') }}{% endif %} | level: {{ rule.level }}
@@ -37,12 +38,49 @@ description = {{ rule.description }}{% if rule.tags %} | tags: {{ rule.tags | jo
     trim_blocks on, so a block tag at the end of the search line eats the
     newline after it and the next key runs into the value. -#}
 {% set ai = config.alert_index %}
+{% set al = config.alerting | default({}) %}
 {% if ai and ai.enabled %}
-{#- The origin fields are what make the detection pivotable. collect
-    rewrites index and sourcetype to the destination, so where the event
-    came from has to be captured before the write or the trail back to the
-    log that matched is lost. -#}
-{% set collect_clause = ' | eval sigma_rule="' ~ rule.title ~ '", sigma_rule_id="' ~ rule.rule_id ~ '", sigma_level="' ~ rule.level ~ '", sigma_severity=' ~ rule.severity ~ ', sigma_attack="' ~ (rule.mitre_techniques | join(',')) ~ '", sigma_tactic="' ~ (rule.mitre_tactics | join(',')) ~ '", sigma_src_index=index, sigma_src_sourcetype=sourcetype, sigma_src_host=host, sigma_src_time=_time | collect index=' ~ (ai.index | default('sigma_alerts')) ~ ' sourcetype=' ~ (ai.sourcetype | default('sigma:alert')) %}
+{#- One detection per group, not per matching event.
+
+    Without the stats, a rule that matches eighty failed logons writes
+    eighty detection events, and the index fills with repetitions of one
+    fact. Aggregating by the entity the detection is about turns that into
+    a single finding carrying how many times it happened and over what
+    span, which is what an analyst needs to triage it.
+
+    The origin fields are collected inside the aggregation because collect
+    rewrites index and sourcetype to the destination; captured after the
+    write, the trail back to the log that matched is gone.
+
+    _time is set to first seen so the detection lands at the start of the
+    activity rather than at the end of the search window. -#}
+{% set keys = al.correlation_fields | default('host') %}
+{#- An immediate rule is severe and specific, so one match is a finding and
+    it raises an alert. A trend rule records the detection either way, but
+    needs more than one match before it claims anything, and leans on the
+    dashboard's baseline rather than on a notification. -#}
+{% if rule.disposition == 'immediate' %}
+{% set min_matches = 1 %}
+{% else %}
+{% set min_matches = al.trend_min_matches | default(2) %}
+{% endif %}
+{% set collect_clause =
+     ' | stats count as sigma_match_count, min(_time) as sigma_first_seen,'
+     ~ ' max(_time) as sigma_last_seen, earliest(_raw) as sigma_sample,'
+     ~ ' values(index) as sigma_src_index, values(sourcetype) as sigma_src_sourcetype,'
+     ~ ' dc(host) as sigma_host_count by ' ~ keys
+     ~ ' | where sigma_match_count >= ' ~ min_matches
+     ~ ' | eval _time=sigma_first_seen, sigma_src_host=host,'
+     ~ ' sigma_span_seconds=sigma_last_seen-sigma_first_seen,'
+     ~ ' sigma_rule="' ~ rule.title ~ '", sigma_rule_id="' ~ rule.rule_id ~ '",'
+     ~ ' sigma_level="' ~ rule.level ~ '", sigma_severity=' ~ rule.severity ~ ','
+     ~ ' sigma_attack="' ~ (rule.mitre_techniques | join(',')) ~ '",'
+     ~ ' sigma_tactic="' ~ (rule.mitre_tactics | join(',')) ~ '",'
+     ~ ' sigma_confidence="' ~ rule.confidence ~ '",'
+     ~ ' sigma_confidence_score=' ~ rule.confidence_score ~ ','
+     ~ ' sigma_disposition="' ~ rule.disposition ~ '"'
+     ~ ' | collect index=' ~ (ai.index | default('sigma_alerts'))
+     ~ ' sourcetype=' ~ (ai.sourcetype | default('sigma:alert')) %}
 {% else %}
 {% set collect_clause = '' %}
 {% endif %}
@@ -51,16 +89,41 @@ counttype = number of events
 relation = greater than
 quantity = 0
 enableSched = 1
+{# Continuous scheduling. The default, realtime_schedule = true, lets the
+   scheduler skip execution periods under load, and the spec is explicit
+   that continuous scheduling is required whenever a search writes to a
+   summary index -- which every one of these does, via collect. A skipped
+   period loses the detection silently and leaves a hole in the index. #}
+realtime_schedule = 0
+{# Let the scheduler distribute start times rather than every rule asking
+   for the same minute. allow_skew only applies to */M crons, which is why
+   the cron is left in that form. #}
+allow_skew = {{ config.allow_skew | default('100%') }}
+{% if rule.disposition == 'immediate' %}
+{# A severe, specific detection should not queue behind the trend rules. #}
+schedule_priority = higher
+{% else %}
+{# A trend rule has no precise start time, so the scheduler may place it. #}
+schedule_window = auto
+{% endif %}
+{# Alert actions apply to the result set, not to each result: an aggregated
+   search produces one finding, and per-result actions are what turn one
+   burst into eighty notifications. #}
+alert.digest_mode = 1
 cron_schedule = {{ config.cron_schedule | default('*/10 * * * *') }}
 dispatch.earliest_time = {{ config.earliest_time | default('-10m') }}
 dispatch.latest_time = {{ config.latest_time | default('now') }}
 alert.severity = {{ rule.severity }}
-alert.suppress = 0
+alert.suppress = {{ config.suppress.enabled | default(0) }}
+{% if config.suppress and config.suppress.enabled %}
+alert.suppress.period = {{ config.suppress.period | default('1h') if rule.disposition == 'immediate' else (config.suppress.trend_period | default('24h')) }}
+alert.suppress.fields = {{ config.suppress.fields | default('host') }}
+{% endif %}
 alert.track = 1
 alert.expires = 24h
 request.ui_dispatch_app = {{ config.app | default('sigma_detection_lab') }}
 request.ui_dispatch_view = search
-{% if config.alert_action and config.alert_action.email and config.alert_action.email.enabled %}
+{% if rule.disposition == 'immediate' and config.alert_action and config.alert_action.email and config.alert_action.email.enabled %}
 action.email = 1
 action.email.to = {{ config.alert_action.email.to | default('ticketing@example.com') }}
 action.email.subject.alert = Splunk Alert: $name$

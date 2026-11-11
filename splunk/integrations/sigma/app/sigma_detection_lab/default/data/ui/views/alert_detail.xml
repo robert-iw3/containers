@@ -89,10 +89,11 @@
       <table>
         <search>
           <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$
-| eval when=strftime(_time,"%F %T"),
+| eval when=strftime(sigma_first_seen,"%F %T"),
        attack=replace(sigma_attack,"attack\.",""),
-       src_epoch=coalesce(sigma_src_time,_time)
-| table when, sigma_level, sigma_rule, sigma_src_host, sigma_src_sourcetype, sigma_src_index, attack, src_epoch
+       span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event"),
+       win_start=sigma_first_seen-120, win_end=sigma_last_seen+120
+| table when, sigma_level, sigma_rule, sigma_match_count, span, sigma_src_host, sigma_src_sourcetype, sigma_src_index, attack, win_start, win_end
 | sort - when</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
@@ -110,7 +111,9 @@
           <set token="sel_sourcetype">$row.sigma_src_sourcetype$</set>
           <set token="sel_host">$row.sigma_src_host$</set>
           <set token="sel_rule">$row.sigma_rule$</set>
-          <set token="sel_epoch">$row.src_epoch$</set>
+          <set token="sel_start">$row.win_start$</set>
+          <set token="sel_end">$row.win_end$</set>
+          <set token="sel_count">$row.sigma_match_count$</set>
           <set token="sel_when">$row.when$</set>
         </drilldown>
       </table>
@@ -119,15 +122,15 @@
 
   <row depends="$sel_index$">
     <panel>
-      <title>Source events on $sel_host$ around $sel_when$ — triggered "$sel_rule$"</title>
+      <title>The $sel_count$ matching event(s) on $sel_host$ — triggered "$sel_rule$"</title>
       <event>
         <!-- A two minute window either side of the matching event. Wider
              than needed on purpose: the surrounding activity is usually
              what makes the detection interpretable. -->
         <search>
           <query>index=$sel_index$ sourcetype="$sel_sourcetype$" host="$sel_host$"</query>
-          <earliest>$sel_epoch$</earliest>
-          <latest>$sel_epoch$</latest>
+          <earliest>$sel_start$</earliest>
+          <latest>$sel_end$</latest>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="count">20</option>
@@ -147,8 +150,8 @@
           <query>index=$sel_index$ host="$sel_host$"
 | stats count as events, values(sourcetype) as sourcetypes by host
 | fields host, events, sourcetypes</query>
-          <earliest>$sel_epoch$</earliest>
-          <latest>$sel_epoch$</latest>
+          <earliest>$sel_start$</earliest>
+          <latest>$sel_end$</latest>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>

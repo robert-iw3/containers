@@ -34,8 +34,37 @@ search_transformations:
   - type: cim_tags
     enabled: true
 
+# One detection per group, not one per matching event. A rule that matches
+# eighty failed logons should produce one finding that says eighty, not
+# eighty findings. correlation_fields names the entity a detection is about:
+# the same rule firing on another host is a separate finding worth seeing.
+#
+# min_matches is a floor on how many matches make a finding. Left at 1,
+# because a Sigma rule carries no threshold of its own and raising it here
+# would silently drop single-event detections, which for something like a
+# credential dumper is the only event there will be.
+alerting:
+  correlation_fields: 'host'
+  # A trend rule needs more than one match before it claims anything. An
+  # immediate rule is always 1: for a severe, specific detection the single
+  # event is often the only one there will be.
+  trend_min_matches: 2
+
 # Alert severity is taken from each rule's Sigma level, not set globally.
 cron_schedule: '*/10 * * * *'
+
+# The scheduler distributes the start times itself. allow_skew only applies
+# to */M crons, so computing per-rule cron minutes would defeat it.
+allow_skew: '100%'
+
+# A condition that persists should not re-alert every cycle. Suppression is
+# per host by default: the same rule firing on a different host is a
+# different thing worth knowing about.
+suppress:
+  enabled: 1
+  period: '1h'
+  trend_period: '24h'
+  fields: 'host'
 earliest_time: '-10m'
 latest_time: 'now'
 app: 'sigma_detection_lab'
