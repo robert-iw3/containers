@@ -13,10 +13,24 @@
 # Transports match discover.sh: local:<SPLUNK_HOME>, ssh:<user@host>,
 # podman:<container>, docker:<container>.
 #
-# --paths selects which receivers to bring up. Enabling HEC segfaulted Splunk
-# Enterprise 10.4.2 (build 33c3bf42cd73) in CallbackRunnerThread, twice, on an
-# instance with no prior crash history. Selecting paths lets an operator bring
-# up only the ones a build tolerates, and isolate one that misbehaves.
+# --paths selects which receivers to bring up, which is also how a
+# misbehaving one gets isolated.
+#
+# HEC is enabled in splunk_httpinput, the app that owns it, rather than by
+# declaring [http] here. That app ships a substantial [http] stanza --
+# pipeline routing, dedicatedIoThreads, sslVersions -- and a partial stanza
+# from another app overrides parts of it for no benefit.
+#
+# A caution recorded because it cost real time: on Splunk Enterprise 10.4.2
+# build 33c3bf42cd73, splunkd segfaulted in CallbackRunnerThread about
+# eighteen seconds after start, on three of six consecutive restarts. Two of
+# those restarts had HEC enabled and one had no test inputs at all, so these
+# inputs are not the cause. It appeared only during a run of rapid restarts,
+# in the window where agent-management packages were still registering.
+#
+# So: after a restart, treat a missing listener as possibly this. Check for a
+# crash log before concluding the configuration is wrong, and leave time
+# between restarts.
 #
 # Security notes, because this opens listeners:
 #
@@ -197,11 +211,9 @@ trap 'rm -rf -- "$WORK"' EXIT
   echo "# Paths configured: $PATHS"
   if want hec; then
     echo ""
-    echo "[http]"
-    echo "disabled = 0"
-    echo "port = $HEC_PORT"
-    echo "enableSSL = 1"
-    echo ""
+    echo "# The token stanza only. [http] itself is enabled in"
+    echo "# splunk_httpinput, the app that owns it, so its routing, thread"
+    echo "# and TLS settings are not partially overridden from here."
     echo "[http://datagen]"
     echo "disabled = 0"
     echo "token = $TOKEN"
@@ -221,11 +233,15 @@ trap 'rm -rf -- "$WORK"' EXIT
   fi
   if want udp; then
     echo ""
+    echo "# A datagram over maxEventSize is truncated on arrival. XML event"
+    echo "# sources exceed the 1024 byte default, so this is raised to keep"
+    echo "# a Windows event log or Sysmon event intact over UDP."
     echo "[udp://$UDP_PORT]"
     echo "disabled = 0"
     echo "index = $INDEX"
     echo "sourcetype = datagen:udp"
     echo "connection_host = ip"
+    echo "maxEventSize = 8192"
   fi
 } > "$WORK/inputs.conf"
 
@@ -247,6 +263,27 @@ run cpin "$WORK/inputs.conf" "$APPDIR/local/inputs.conf"
 run cpin "$WORK/app.conf" "$APPDIR/local/app.conf"
 run x chmod 600 "$APPDIR/local/inputs.conf"
 
+if want hec; then
+    # HEC is turned on in the app that owns it. splunk_httpinput ships a
+    # substantial [http] stanza; setting only disabled and the port here
+    # leaves its routing, thread and TLS settings intact.
+    say "Enable HEC in splunk_httpinput (the app that owns [http])"
+    HEC_APPDIR="$T_SPLUNK_HOME/etc/apps/splunk_httpinput"
+    if ! x test -d "$HEC_APPDIR" 2>/dev/null; then
+        echo "  WARNING: splunk_httpinput is not present on this instance."
+        echo "           Enable HEC through the UI or the REST API instead;"
+        echo "           declaring [http] from another app is what crashed"
+        echo "           splunkd on 10.4.2."
+    else
+        printf '# Enabled for datagen testing. Revert by removing this file.\n[http]\ndisabled = 0\nport = %s\n' \
+            "$HEC_PORT" > "$WORK/httpinput.conf"
+        run x mkdir -p "$HEC_APPDIR/local"
+        # Recorded so teardown knows this file is ours to remove.
+        run cpin "$WORK/httpinput.conf" "$HEC_APPDIR/local/inputs.conf"
+        echo "  wrote $HEC_APPDIR/local/inputs.conf"
+    fi
+fi
+
 if [ "$RESTART" = "1" ]; then
     say "Restart splunkd so the listeners open"
     run x "$T_SPLUNK_HOME/bin/splunk" restart --answer-yes
@@ -257,8 +294,9 @@ fi
 say "Verify"
 if [ "$APPLY" = "1" ]; then
     report_ports
-    # A listener that is configured but absent means splunkd did not come
-    # back, which is the symptom the HEC crash produced.
+    # A listener that is configured but absent usually means splunkd did not
+    # come back. Report the crash count so that is distinguishable from the
+    # configuration being wrong.
     running=$(x "$T_SPLUNK_HOME/bin/splunk" status 2>/dev/null \
         | grep -c 'splunkd is running' || true)
     printf '  splunkd running after restart: %s\n' \
