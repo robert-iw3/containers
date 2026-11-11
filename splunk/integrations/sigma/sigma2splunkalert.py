@@ -146,6 +146,19 @@ def score_confidence(rule: Dict) -> Tuple[int, List[str]]:
     return max(0, min(100, score)), why
 
 
+def _flat(value) -> str:
+    """One line, safe for a conf value. A newline inside a conf value ends
+    it, and the remainder is parsed as a malformed key."""
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple)):
+        parts = [str(v) for v in value if str(v).strip()]
+        text = " | ".join(parts)
+    else:
+        text = str(value)
+    return " ".join(text.split())
+
+
 class SigmaRuleValidator:
     @staticmethod
     def validate_rule(rule_data: Dict) -> bool:
@@ -176,6 +189,24 @@ class UseCase:
         ]
         self.severity = SEVERITY_MAP.get(str(self.level).lower(), 3)
         self._stagger_slots = 0
+        # Everything else the rule declares about itself. A detection is far
+        # easier to act on when the author's own references and stated false
+        # positives travel with it, instead of living in a file nobody opens.
+        ls = sigma_rule.get("logsource", {}) or {}
+        self.product = ls.get("product") or "unspecified"
+        self.category = ls.get("category") or ""
+        self.service = ls.get("service") or ""
+        self.platform = {"windows": "Windows", "linux": "Linux",
+                         "macos": "macOS"}.get(self.product, self.product.title())
+        self.log_source = " / ".join(x for x in (self.category, self.service) if x) or "any"
+        self.author = _flat(sigma_rule.get("author"))
+        self.status = str(sigma_rule.get("status", "") or "")
+        self.rule_date = str(sigma_rule.get("date", "") or "")
+        self.modified = str(sigma_rule.get("modified", "") or "")
+        refs = sigma_rule.get("references") or []
+        self.references = _flat(refs if isinstance(refs, list) else [refs])
+        fps = sigma_rule.get("falsepositives") or []
+        self.falsepositives = _flat(fps if isinstance(fps, list) else [fps])
         self.confidence_score, self.confidence_why = score_confidence(sigma_rule)
         self.confidence = ("high" if self.confidence_score >= CONFIDENCE_HIGH
                            else "medium" if self.confidence_score >= CONFIDENCE_MEDIUM

@@ -39,52 +39,34 @@ description = {{ rule.description }}{% if rule.tags %} | tags: {{ rule.tags | jo
     newline after it and the next key runs into the value. -#}
 {% set ai = config.alert_index %}
 {% set al = config.alerting | default({}) %}
-{% if ai and ai.enabled %}
-{#- One detection per group, not per matching event.
-
-    Without the stats, a rule that matches eighty failed logons writes
-    eighty detection events, and the index fills with repetitions of one
-    fact. Aggregating by the entity the detection is about turns that into
-    a single finding carrying how many times it happened and over what
-    span, which is what an analyst needs to triage it.
-
-    The origin fields are collected inside the aggregation because collect
-    rewrites index and sourcetype to the destination; captured after the
-    write, the trail back to the log that matched is gone.
-
-    _time is set to first seen so the detection lands at the start of the
-    activity rather than at the end of the search window. -#}
-{% set keys = al.correlation_fields | default('host') %}
-{#- An immediate rule is severe and specific, so one match is a finding and
-    it raises an alert. A trend rule records the detection either way, but
-    needs more than one match before it claims anything, and leans on the
-    dashboard's baseline rather than on a notification. -#}
 {% if rule.disposition == 'immediate' %}
 {% set min_matches = 1 %}
 {% else %}
 {% set min_matches = al.trend_min_matches | default(2) %}
 {% endif %}
-{% set collect_clause =
-     ' | stats count as sigma_match_count, min(_time) as sigma_first_seen,'
+{% set keys = al.correlation_fields | default('host') %}
+{# One detection per group, not per matching event. Without the stats a rule
+   matching eighty failed logons writes eighty detection events, which is
+   eighty repetitions of one fact.
+
+   The origin fields are captured here because summary indexing rewrites
+   index and sourcetype on the way out; captured afterwards, the trail back
+   to the log that matched would be gone.
+
+   _time is set to first seen so the detection lands when the activity
+   started rather than when the search noticed it. #}
+{% set agg = ' | stats count as sigma_match_count, min(_time) as sigma_first_seen,'
      ~ ' max(_time) as sigma_last_seen, earliest(_raw) as sigma_sample,'
      ~ ' values(index) as sigma_src_index, values(sourcetype) as sigma_src_sourcetype,'
      ~ ' dc(host) as sigma_host_count by ' ~ keys
      ~ ' | where sigma_match_count >= ' ~ min_matches
      ~ ' | eval _time=sigma_first_seen, sigma_src_host=host,'
-     ~ ' sigma_span_seconds=sigma_last_seen-sigma_first_seen,'
-     ~ ' sigma_rule="' ~ rule.title ~ '", sigma_rule_id="' ~ rule.rule_id ~ '",'
-     ~ ' sigma_level="' ~ rule.level ~ '", sigma_severity=' ~ rule.severity ~ ','
-     ~ ' sigma_attack="' ~ (rule.mitre_techniques | join(',')) ~ '",'
-     ~ ' sigma_tactic="' ~ (rule.mitre_tactics | join(',')) ~ '",'
-     ~ ' sigma_confidence="' ~ rule.confidence ~ '",'
-     ~ ' sigma_confidence_score=' ~ rule.confidence_score ~ ','
-     ~ ' sigma_disposition="' ~ rule.disposition ~ '"'
-     ~ ' | collect index=' ~ (ai.index | default('sigma_alerts'))
-     ~ ' sourcetype=' ~ (ai.sourcetype | default('sigma:alert')) %}
-{% else %}
-{% set collect_clause = '' %}
-{% endif %}
-search = {{ rule.splunk_search }}{{ collect_clause }}
+     ~ ' sigma_span_seconds=sigma_last_seen-sigma_first_seen' %}
+{# The search must say which indexes to look in. A saved search with no
+   index scope searches only the role's default indexes, which is how 558
+   correctly scheduled rules found nothing at all. The macro lets an
+   operator point every rule at their data in one place. #}
+search = {{ config.index_scope | default('`sigma_lab_index`') }} {{ rule.splunk_search }}{% if ai and ai.enabled %}{{ agg }}{% endif %}
 counttype = number of events
 relation = greater than
 quantity = 0
@@ -110,6 +92,39 @@ schedule_window = auto
    search produces one finding, and per-result actions are what turn one
    burst into eighty notifications. #}
 alert.digest_mode = 1
+{% if ai and ai.enabled %}
+{# Native summary indexing rather than a collect in the search. collect is
+   flagged by Splunk as a risky command, so opening the search from the UI
+   prompts a warning; the action does the same write without it, and the
+   rule's static metadata rides on the action instead of being recomputed
+   per result. #}
+action.summary_index = 1
+action.summary_index._name = {{ ai.index | default('sigma_alerts') }}
+action.summary_index.sigma_rule = {{ rule.title }}
+action.summary_index.sigma_rule_id = {{ rule.rule_id }}
+action.summary_index.sigma_level = {{ rule.level }}
+action.summary_index.sigma_severity = {{ rule.severity }}
+action.summary_index.sigma_confidence = {{ rule.confidence }}
+action.summary_index.sigma_confidence_score = {{ rule.confidence_score }}
+action.summary_index.sigma_disposition = {{ rule.disposition }}
+action.summary_index.sigma_attack = {{ rule.mitre_techniques | join(',') }}
+action.summary_index.sigma_tactic = {{ rule.mitre_tactics | join(',') }}
+action.summary_index.sigma_platform = {{ rule.platform }}
+action.summary_index.sigma_log_source = {{ rule.log_source }}
+action.summary_index.sigma_status = {{ rule.status }}
+{% if rule.author %}
+action.summary_index.sigma_author = {{ rule.author }}
+{% endif %}
+{% if rule.references %}
+action.summary_index.sigma_references = {{ rule.references }}
+{% endif %}
+{% if rule.falsepositives %}
+action.summary_index.sigma_falsepositives = {{ rule.falsepositives }}
+{% endif %}
+{% if rule.modified or rule.rule_date %}
+action.summary_index.sigma_rule_date = {{ rule.modified or rule.rule_date }}
+{% endif %}
+{% endif %}
 cron_schedule = {{ config.cron_schedule | default('*/10 * * * *') }}
 dispatch.earliest_time = {{ config.earliest_time | default('-10m') }}
 dispatch.latest_time = {{ config.latest_time | default('now') }}

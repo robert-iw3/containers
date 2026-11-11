@@ -17,7 +17,7 @@
       <fieldForLabel>sigma_rule</fieldForLabel>
       <fieldForValue>sigma_rule</fieldForValue>
       <search>
-        <query>index=sigma_alerts sourcetype=sigma:alert | stats count by sigma_rule | sort - count</query>
+        <query>index=sigma_alerts | stats count by sigma_rule | sort - count</query>
         <earliest>$tr.earliest$</earliest>
         <latest>$tr.latest$</latest>
       </search>
@@ -31,7 +31,7 @@
       <fieldForLabel>sigma_src_host</fieldForLabel>
       <fieldForValue>sigma_src_host</fieldForValue>
       <search>
-        <query>index=sigma_alerts sourcetype=sigma:alert | stats count by sigma_src_host | sort - count</query>
+        <query>index=sigma_alerts | stats count by sigma_src_host | sort - count</query>
         <earliest>$tr.earliest$</earliest>
         <latest>$tr.latest$</latest>
       </search>
@@ -45,7 +45,7 @@
       <title>Matching detections</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$ | stats count</query>
+          <query>index=sigma_alerts $rule_tok$ $hostsel$ | stats count</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -60,7 +60,7 @@
       <title>Highest severity seen</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$
+          <query>index=sigma_alerts $rule_tok$ $hostsel$
 | stats max(sigma_severity) as s
 | eval severity=case(s=5,"critical",s=4,"high",s=3,"medium",s=2,"low",s=1,"informational",true(),"none")
 | fields severity</query>
@@ -74,7 +74,7 @@
       <title>Source types involved</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$ | stats dc(sigma_src_sourcetype)</query>
+          <query>index=sigma_alerts $rule_tok$ $hostsel$ | stats dc(sigma_src_sourcetype)</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -88,7 +88,7 @@
       <title>Detections — select one to load its source events</title>
       <table>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $rule_tok$ $hostsel$
+          <query>index=sigma_alerts $rule_tok$ $hostsel$
 | eval when=strftime(sigma_first_seen,"%F %T"),
        attack=replace(sigma_attack,"attack\.",""),
        span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event"),
@@ -161,7 +161,7 @@
       <title>Other detections on $sel_host$</title>
       <table>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert sigma_src_host="$sel_host$"
+          <query>index=sigma_alerts sigma_src_host="$sel_host$"
 | stats count as detections, values(sigma_level) as level, max(_time) as last by sigma_rule
 | eval last=strftime(last,"%F %T")
 | sort - detections</query>

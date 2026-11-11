@@ -22,6 +22,16 @@
       <valueSuffix>"</valueSuffix>
       <delimiter> OR </delimiter>
     </input>
+    <input type="multiselect" token="plat_tok" searchWhenChanged="true">
+      <label>Platform</label>
+      <choice value="*">All</choice>
+      <choice value="Windows">Windows</choice>
+      <choice value="Linux">Linux</choice>
+      <default>*</default>
+      <valuePrefix>sigma_platform="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
     <input type="text" token="host_tok" searchWhenChanged="true">
       <label>Host (wildcards allowed)</label>
       <default>*</default>
@@ -37,7 +47,7 @@
       <title>Detections</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats count</query>
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats count</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -52,7 +62,7 @@
       <title>Critical and high</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $host_tok$ sigma_level IN ("critical","high") | stats count</query>
+          <query>index=sigma_alerts $plat_tok$ $host_tok$ sigma_level IN ("critical","high") | stats count</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -67,7 +77,7 @@
       <title>Rules that fired</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats dc(sigma_rule)</query>
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats dc(sigma_rule)</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -78,7 +88,7 @@
       <title>Hosts affected</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | stats dc(sigma_src_host)</query>
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats dc(sigma_src_host)</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -89,7 +99,7 @@
       <title>ATT&amp;CK techniques</title>
       <single>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | eval t=split(sigma_attack,",") | mvexpand t | where t!="" | stats dc(t)</query>
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | where sigma_technique_name!="" AND sigma_technique_name!="unmapped" | stats dc(sigma_technique_name)</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -103,7 +113,7 @@
       <title>Detections over time, by severity</title>
       <chart>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$ | timechart count by sigma_level</query>
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | timechart count by sigma_level</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
@@ -121,7 +131,7 @@
       <title>Rules by volume</title>
       <table>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
 | stats count as detections, dc(sigma_src_host) as hosts, values(sigma_level) as level, min(_time) as first, max(_time) as last by sigma_rule, sigma_rule_id
 | eval first=strftime(first,"%F %T"), last=strftime(last,"%F %T")
 | sort - detections</query>
@@ -143,8 +153,8 @@
       <title>By MITRE tactic</title>
       <chart>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
-| eval tactic=split(sigma_tactic,",") | mvexpand tactic | where tactic!=""
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
+| eval tactic=if(sigma_tactic_name="" OR isnull(sigma_tactic_name),"Unmapped",trim(mvindex(split(sigma_tactic_name,","),0)))
 | eval tactic=replace(tactic,"^attack\.","")
 | stats count by tactic | sort - count</query>
           <earliest>$tr.earliest$</earliest>
@@ -162,7 +172,7 @@
       <title>Most recent detections — click a row for the events behind it</title>
       <table>
         <search>
-          <query>index=sigma_alerts sourcetype=sigma:alert $sev_tok$ $host_tok$
+          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
 | eval when=strftime(sigma_first_seen,"%F %T"),
        span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event")
 | table when, sigma_level, sigma_rule, sigma_match_count, span, sigma_src_host, sigma_src_sourcetype, sigma_src_index

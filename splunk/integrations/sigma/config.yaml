@@ -15,6 +15,12 @@ alert_action:
 # output: an alert action notifies a person, while a written event is
 # searchable, reportable, and retained on its own schedule. The index must
 # exist before the first run, or the write is discarded without an error.
+# Where the rules look. A saved search with no index scope searches only
+# the role's default indexes, which on a stock instance is 'main'. Point
+# this at your Windows and Linux data; the macro is defined in the app so an
+# operator changes it in one place.
+index_scope: '`sigma_lab_index`'
+
 alert_index:
   enabled: true
   index: 'sigma_alerts'

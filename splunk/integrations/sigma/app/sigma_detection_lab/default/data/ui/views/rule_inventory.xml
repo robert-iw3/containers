@@ -1,0 +1,253 @@
+<form version="1.1" theme="dark">
+  <label>Rule Inventory</label>
+  <description>Every deployed rule in one filterable table. Narrow with the filters or the charts, then open a rule for its detail — one step, not five.</description>
+
+  <!-- Read from the rules lookup the converter writes, not from the saved
+       searches. Rules are batched many-to-a-search, so a saved search is no
+       longer one rule; the lookup is the per-rule record, and reading a
+       small CSV is far cheaper than a REST call per page load. -->
+  <search id="inv">
+    <query>| inputlookup sigma_rules.csv
+| eval technique = if(sigma_technique_name="" OR sigma_technique_name="unmapped" OR isnull(sigma_technique_name),
+                      "No technique mapped", sigma_technique_name),
+       technique_id = if(sigma_technique="", "—", sigma_technique),
+       tactic = if(sigma_tactic_name="" OR sigma_tactic_name="unmapped" OR isnull(sigma_tactic_name),
+                   "Unmapped", trim(mvindex(split(sigma_tactic_name,","),0))),
+       platform = sigma_platform,
+       severity = sigma_level,
+       confidence = sigma_confidence,
+       score = tonumber(sigma_confidence_score),
+       disposition = sigma_disposition,
+       log_source = sigma_log_source,
+       rule = sigma_rule
+| eval searchblob = rule." ".technique." ".tactic." ".log_source." ".sigma_rule_id</query>
+  </search>
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="multiselect" token="plat" searchWhenChanged="true">
+      <label>Platform</label>
+      <search base="inv"><query>| stats count by platform | sort platform</query></search>
+      <fieldForLabel>platform</fieldForLabel>
+      <fieldForValue>platform</fieldForValue>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <valuePrefix>platform="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+    <input type="multiselect" token="sev" searchWhenChanged="true">
+      <label>Severity</label>
+      <choice value="*">All</choice>
+      <choice value="critical">critical</choice>
+      <choice value="high">high</choice>
+      <choice value="medium">medium</choice>
+      <choice value="low">low</choice>
+      <choice value="informational">informational</choice>
+      <default>*</default>
+      <valuePrefix>severity="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+    <input type="dropdown" token="tac" searchWhenChanged="true">
+      <label>ATT&amp;CK tactic</label>
+      <search base="inv"><query>| stats count by tactic | sort tactic</query></search>
+      <fieldForLabel>tactic</fieldForLabel>
+      <fieldForValue>tactic</fieldForValue>
+      <choice value="*">Any tactic</choice>
+      <default>*</default>
+      <prefix>tactic="</prefix>
+      <suffix>"</suffix>
+    </input>
+    <input type="dropdown" token="disp" searchWhenChanged="true">
+      <label>Handling</label>
+      <choice value="*">Any</choice>
+      <choice value="immediate">immediate — alerts on one match</choice>
+      <choice value="trend">trend — recorded and baselined</choice>
+      <default>*</default>
+      <prefix>disposition="</prefix>
+      <suffix>"</suffix>
+    </input>
+    <input type="text" token="find" searchWhenChanged="true">
+      <label>Search rule, technique, tactic or id</label>
+      <default>*</default>
+      <prefix>searchblob="*</prefix>
+      <suffix>*"</suffix>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Rules shown</title>
+      <single>
+        <search base="inv"><query>| search $plat$ $sev$ $tac$ $disp$ $find$ | stats count</query></search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Alert on one match</title>
+      <single>
+        <search base="inv"><query>| search $plat$ $sev$ $tac$ $find$ disposition="immediate" | stats count</query></search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0xd03b3b","0xd03b3b"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Recorded and trended</title>
+      <single>
+        <search base="inv"><query>| search $plat$ $sev$ $tac$ $find$ disposition="trend" | stats count</query></search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x19C1EB","0x19C1EB"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Techniques covered</title>
+      <single>
+        <search base="inv"><query>| search $plat$ $sev$ $tac$ $disp$ $find$ technique!="No technique mapped" | stats dc(technique)</query></search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Tactics covered</title>
+      <single>
+        <search base="inv"><query>| search $plat$ $sev$ $tac$ $disp$ $find$ tactic!="Unmapped" | stats dc(tactic)</query></search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <!-- The charts are filters, not another level to descend into. Clicking a
+       bar sets the matching filter above and the table below narrows. -->
+  <row>
+    <panel>
+      <title>By ATT&amp;CK tactic — click a bar to filter</title>
+      <chart>
+        <search base="inv">
+          <query>| search $plat$ $sev$ $disp$ $find$ | stats count by tactic | sort - count</query>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"count":0x19C1EB}</option>
+        <option name="charting.axisTitleX.text">rules</option>
+        <option name="height">320</option>
+        <drilldown>
+          <set token="tac">tactic="$click.value$"</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <title>By platform and severity</title>
+      <chart>
+        <search base="inv">
+          <query>| search $plat$ $sev$ $tac$ $disp$ $find$
+| stats count by platform, severity | sort platform</query>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c,"informational":0x19C1EB}</option>
+        <option name="charting.axisTitleX.text">rules</option>
+        <option name="height">320</option>
+        <drilldown>
+          <set token="plat">platform="$click.value2$"</set>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Rules — click one for its detail</title>
+      <table>
+        <search base="inv">
+          <query>| search $plat$ $sev$ $tac$ $disp$ $find$
+| eval confidence = confidence." (".score.")"
+| table rule, platform, technique, technique_id, tactic, severity, confidence, disposition, log_source
+| rename rule as "Rule", platform as "Platform", technique as "ATT&amp;CK technique",
+         technique_id as "ID", tactic as "Tactic", severity as "Severity",
+         confidence as "Confidence", disposition as "Handling", log_source as "Log source"
+| sort "Severity", "Rule"</query>
+        </search>
+        <option name="count">25</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <drilldown>
+          <set token="rule_sel">$row.Rule$</set>
+        </drilldown>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        </format>
+        <format type="color" field="Handling">
+          <colorPalette type="map">{"immediate":#d03b3b,"trend":#19C1EB}</colorPalette>
+        </format>
+        <format type="color" field="Platform">
+          <colorPalette type="map">{"Windows":#19C1EB,"Linux":#8e7cc3}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <!-- One rule, everything it declares about itself, and what it has caught. -->
+  <row depends="$rule_sel$">
+    <panel>
+      <title>$rule_sel$</title>
+      <table>
+        <search base="inv">
+          <query>| search rule="$rule_sel$"
+| eval "Platform"=platform, "Log source"=log_source, "Severity"=severity,
+       "Confidence"=confidence." (".score."/100)", "Handling"=disposition,
+       "Matches needed to record"=sigma_min_matches,
+       "ATT&amp;CK technique"=technique." (".technique_id.")",
+       "ATT&amp;CK tactic"=sigma_tactic_name,
+       "Sigma status"=sigma_status, "Rule author"=sigma_author,
+       "Known false positives"=if(sigma_falsepositives="","none declared",sigma_falsepositives),
+       "References"=if(sigma_references="","none",sigma_references),
+       "Rule last modified"=if(sigma_rule_date="","unknown",sigma_rule_date),
+       "Evaluated by"=sigma_batch, "Sigma rule id"=sigma_rule_id
+| fields "Platform","Log source","Severity","Confidence","Handling",
+         "Matches needed to record","ATT&amp;CK technique","ATT&amp;CK tactic",
+         "Sigma status","Rule author","Known false positives","References",
+         "Rule last modified","Evaluated by","Sigma rule id"
+| transpose column_name="Attribute" | rename "row 1" as "Value"</query>
+        </search>
+        <option name="count">16</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>What this rule has detected</title>
+      <chart>
+        <search>
+          <query>index=sigma_alerts sigma_rule="$rule_sel$" | timechart span=1h count as detections</query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"detections":0x19C1EB}</option>
+        <option name="height">200</option>
+      </chart>
+      <table>
+        <title>Click a detection for the events behind it</title>
+        <search>
+          <query>index=sigma_alerts sigma_rule="$rule_sel$"
+| eval when=strftime(sigma_first_seen,"%F %T")
+| table when, sigma_src_host, sigma_match_count, sigma_src_sourcetype
+| rename when as "First seen", sigma_src_host as "Host",
+         sigma_match_count as "Events", sigma_src_sourcetype as "Source type"
+| sort - "First seen"</query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">8</option>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.rule_tok=$rule_sel$&amp;form.hostsel=$row.Host$&amp;form.tr.earliest=-7d@d&amp;form.tr.latest=now</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>
