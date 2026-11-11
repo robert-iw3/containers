@@ -81,7 +81,12 @@ def parse_winevent(line):
         m = re.search(rf"<{tag}>([^<]*)</{tag}>", line)
         if m:
             fields[key] = m.group(1)
-    for k, v in re.findall(r'<Data Name="([^"]+)">([^<]*)</Data>', line):
+    # Windows renders EventData attributes single quoted; XML written by
+    # anything else is likely to use double quotes, and both are valid. A
+    # parser that accepts only one silently reads nothing from the other,
+    # which makes every rule look like it did not match and makes this tool
+    # report a broken engine as a clean one.
+    for k, v in re.findall(r"<Data Name=['\"]([^'\"]+)['\"]>([^<]*)</Data>", line):
         fields[k] = v
     # Sysmon's own field names are what most rules use; the Security channel
     # calls the same things something else, so both are offered.
