@@ -128,8 +128,8 @@
         <search base="det">
           <query>| eval st = mvindex(sigma_src_sourcetype, 0),
        idx = mvindex(sigma_src_index, 0),
-       from_t = sigma_first_seen - 1800,
-       to_t = sigma_last_seen + 1800
+       from_t = tostring(floor(coalesce(sigma_first_seen, 0) - 1800)),
+       to_t = tostring(ceiling(coalesce(sigma_last_seen, sigma_first_seen, 0) + 1800))
 | table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
         sigma_confidence, urgency, sigma_match_count, seen_for, st,
         sigma_rule_id, idx, from_t, to_t, sigma_rule_id as rid

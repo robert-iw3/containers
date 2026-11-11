@@ -143,7 +143,20 @@ def main(argv=None):
           f"{spec['windows_events']} Windows and {spec['linux_events']} Linux events")
 
     install_readout(args.container)
-    before = {d["sigma_rule_id"] for d in read_detections(args.container)}
+
+    # A detection belongs to this batch if it was first seen inside the
+    # window the batch was generated for, with a little slack either side
+    # for scheduling.
+    from datetime import datetime, timedelta
+    gen = datetime.fromisoformat(spec["generated"])
+    lo = (gen - timedelta(minutes=spec["window_minutes"] + 10)).timestamp()
+    hi = (gen + timedelta(minutes=30)).timestamp()
+
+    def in_window(row) -> bool:
+        try:
+            return lo <= float(row.get("first_seen") or 0) <= hi
+        except (TypeError, ValueError):
+            return False
 
     if not args.no_stage:
         print("  staging the batch")
@@ -153,8 +166,7 @@ def main(argv=None):
     found: Dict[str, Dict] = {}
     while time.time() < deadline:
         rows = read_detections(args.container)
-        found = {d["sigma_rule_id"]: d for d in rows
-                 if d["sigma_rule_id"] not in before}
+        found = {d["sigma_rule_id"]: d for d in rows if in_window(d)}
         hit = set(found) & set(planted)
         if len(hit) >= len(planted):
             break

@@ -57,7 +57,7 @@
        "Sigma status"=if(sigma_status="","not stated",sigma_status)
 | fields "Rule","What it is for","Platform","Log source","Severity",
          "Confidence","Handling","Matches needed before it records","Sigma status"
-| transpose column_name="." | rename "row 1" as " "</query>
+| transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>
@@ -80,7 +80,7 @@
        "Read more"=coalesce(url,"https://attack.mitre.org/techniques/enterprise/")
 | fields "Technique","Tactic","What the technique is","Telemetry ATT&amp;CK expects",
          "How ATT&amp;CK suggests detecting it","Read more"
-| transpose column_name="." | rename "row 1" as " "</query>
+| transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">8</option>
         <option name="drilldown">none</option>
@@ -122,7 +122,7 @@
        "As SPL"=coalesce(sigma_spl,"unavailable"),
        "Evaluated by"=sigma_batch
 | fields "Sigma condition","Scope it searches","As SPL","Evaluated by"
-| transpose column_name="." | rename "row 1" as " "</query>
+| transpose column_name="Attribute" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">6</option>
         <option name="drilldown">none</option>

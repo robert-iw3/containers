@@ -53,8 +53,8 @@ _spec.loader.exec_module(scorer)
 # Values used to pad a "contains" match. Chosen to look like ordinary path
 # and argument text so the synthesised event does not stand out by being
 # obviously synthetic, which would make a detection meaningless.
-PAD_LEFT = ["C:\\Windows\\System32\\", "C:\\Program Files\\", "/usr/bin/", ""]
-PAD_RIGHT = [".exe", " -q", "", " /c"]
+PAD_LEFT = ["C:\\Windows\\System32\\", "C:\\Program Files\\Contoso\\", "/usr/bin/", ""]
+PAD_RIGHT = ["", "", ""]
 
 BENIGN_PARENTS = [
     "C:\\Windows\\explorer.exe",
@@ -111,7 +111,7 @@ def fields_from_selection(sel, rnd: random.Random) -> Optional[Dict[str, str]]:
             return None
         if "all" in modifiers and isinstance(value, list):
             # Every listed value must appear, so concatenate them.
-            joined = " ".join(str(v) for v in value)
+            joined = " ".join(str(v).strip() for v in value if str(v).strip())
             got = satisfy(joined, [m for m in modifiers if m != "all"] or ["contains"], rnd)
         else:
             got = satisfy(value, modifiers, rnd)
