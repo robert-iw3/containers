@@ -45,11 +45,11 @@ TOKENS: Dict[str, str] = {
     "scale_tok": "10", "sev": "*", "plat": "*", "disp": "*", "find": "*",
     "tac": "*", "act_tok": "note", "res_tok": "false positive",
     "text_tok": "qa", "go_tok": "record", "wrote": "",
-    "rule_id": "", "c_id": "qa", "c_rule": "qa", "c_ruleid": "qa",
+    "rule_id": "071d5e5a-9cef-47ec-bc4e-a42e34d8d0ed", "c_id": "qa", "c_rule": "qa", "c_ruleid": "qa",
     "c_host": "qa", "c_when": "qa", "c_sev": "high", "prior_status": "open",
-    "sel_rule": "qa", "sel_host": "qa", "sel_when": "qa", "sel_st": "qa",
+    "sel_rule": "Possible Coin Miner CPU Priority Param", "sel_host": "lab-t1-11", "sel_when": "qa", "sel_st": "qa",
     "sel_idx": "linux_lab", "sel_from": "-7d@d", "sel_to": "now",
-    "sel_ruleid": "qa", "hostsel": "*", "rule_sel": "qa", "never": "",
+    "sel_ruleid": "071d5e5a-9cef-47ec-bc4e-a42e34d8d0ed", "hostsel": "*", "rule_sel": "qa", "never": "",
 }
 
 # Panels whose purpose is to write. Running them would append to the case

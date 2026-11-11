@@ -39,7 +39,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-HERE = Path(__file__).resolve().parent.parent  # the integration root
+HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "pylib"))
 
@@ -61,8 +61,32 @@ PAD_RIGHT = ["", "", ""]
 BENIGN_PARENTS = [
     "C:\\Windows\\explorer.exe",
     "C:\\Windows\\System32\\svchost.exe",
-    "C:\\Windows\\System32\\userinit.exe",
+    "C:\\Windows\\System32\\services.exe",
 ]
+
+# What each parent plausibly starts on a Windows host. userinit.exe starts
+# the shell and stops; services.exe starts service hosts; explorer.exe
+# starts what a person clicks. Pairing outside this is the kind of thing a
+# rule is written to notice.
+BENIGN_TREE = {
+    "C:\\Windows\\System32\\userinit.exe": [
+        "C:\\Windows\\explorer.exe",
+    ],
+    "C:\\Windows\\explorer.exe": [
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Windows\\System32\\notepad.exe",
+        "C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE",
+    ],
+    "C:\\Windows\\System32\\services.exe": [
+        "C:\\Windows\\System32\\svchost.exe",
+        "C:\\Windows\\System32\\spoolsv.exe",
+        "C:\\Windows\\System32\\SearchIndexer.exe",
+    ],
+    "C:\\Windows\\System32\\svchost.exe": [
+        "C:\\Windows\\System32\\RuntimeBroker.exe",
+        "C:\\Windows\\System32\\taskhostw.exe",
+    ],
+}
 SUSPECT_PARENTS = [
     "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
     "C:\\Windows\\System32\\wbem\\WmiPrvSE.exe",
@@ -380,17 +404,23 @@ def main(argv=None):
 
     # Background: ordinary activity, and bait that looks interesting but is
     # not. Precision is only measurable against something.
+    tree_parents = list(BENIGN_TREE)
     for i in range(tier["background"]):
         t = start + timedelta(seconds=rnd.randint(0, args.window_minutes * 60))
-        img = rnd.choice([
-            "C:\\Windows\\System32\\svchost.exe", "C:\\Windows\\explorer.exe",
-            "C:\\Windows\\System32\\RuntimeBroker.exe",
-            "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-            "C:\\Windows\\System32\\taskhostw.exe",
-        ])
+        parent = rnd.choice(tree_parents)
+        img = rnd.choice(BENIGN_TREE[parent])
+        # Arguments that suit the process, rather than one service command
+        # line pasted onto everything.
+        if img.endswith("svchost.exe"):
+            cl = f"{img} -k netsvcs -p"
+        elif img.endswith("chrome.exe"):
+            cl = f'"{img}" --type=renderer --no-sandbox'
+        elif img.endswith("explorer.exe"):
+            cl = img
+        else:
+            cl = f"{img}"
         win_lines.append(render_sysmon(
-            {"Image": img, "CommandLine": f"{img} -k netsvcs -p -s Schedule"},
-            t, args.host, rnd.choice(BENIGN_PARENTS), rec))
+            {"Image": img, "CommandLine": cl}, t, args.host, parent, rec))
         rec += 1
         if i % 3 == 0:
             nix_lines.extend(render_auditd(
