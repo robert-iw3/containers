@@ -1,0 +1,200 @@
+<form version="1.1" theme="dark" stylesheet="sigma_reference.css">
+  <label>Rule Reference</label>
+  <description>What a rule looks for, how it runs here, and why it is trusted as much as it is. Pick a rule to read it.</description>
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="dropdown" token="rule_id" searchWhenChanged="true">
+      <label>Rule</label>
+      <search>
+        <query>| inputlookup sigma_rules.csv
+| eval label = sigma_platform." — ".sigma_rule." (".sigma_level.")"
+| sort label
+| table label, sigma_rule_id</query>
+      </search>
+      <fieldForLabel>label</fieldForLabel>
+      <fieldForValue>sigma_rule_id</fieldForValue>
+      <default>071d5e5a-9cef-47ec-bc4e-a42e34d8d0ed</default>
+    </input>
+  </fieldset>
+
+  <!-- One row per rule, so the whole page can be driven from tokens and
+       rendered as prose rather than as a dozen one-cell tables. -->
+  <search id="rule">
+    <query>| inputlookup sigma_rules.csv where sigma_rule_id="$rule_id|s$"
+| lookup sigma_rule_logic sigma_rule_id OUTPUT sigma_description, sigma_detection_yaml,
+         sigma_condition, sigma_spl, sigma_scope, sigma_confidence_why, sigma_tags
+| lookup mitre_techniques technique_id as sigma_technique
+         OUTPUT display_name as tech_name, url as tech_url, description as tech_desc,
+                detection as tech_detect, data_sources as tech_sources, tactic_names as tech_tactic
+| eval tech_name = coalesce(tech_name, "No ATT&amp;CK technique mapped"),
+       tech_url = coalesce(tech_url, "https://attack.mitre.org/techniques/enterprise/"),
+       tech_desc = coalesce(tech_desc, "This rule carries no ATT&amp;CK mapping, so there is no technique page to read."),
+       tech_detect = coalesce(tech_detect, ""),
+       tech_sources = coalesce(tech_sources, "not stated"),
+       sigma_falsepositives = if(sigma_falsepositives="", "The author declared none. That is not the same as there being none.", sigma_falsepositives),
+       sigma_references = if(sigma_references="", "", sigma_references),
+       sigma_author = if(sigma_author="", "not stated", sigma_author),
+       handling_note = if(sigma_disposition="immediate",
+         "Alerts on a single match. Reserved for rules that are both severe and specific.",
+         "Recorded and baselined rather than alerted. Its value is in the pattern, not in one occurrence."),
+       sigma_rule_url = "https://github.com/SigmaHQ/sigma/search?q=".sigma_rule_id</query>
+    <done>
+      <set token="d_title">$result.sigma_rule$</set>
+      <set token="d_desc">$result.sigma_description$</set>
+      <set token="d_level">$result.sigma_level$</set>
+      <set token="d_conf">$result.sigma_confidence$</set>
+      <set token="d_score">$result.sigma_confidence_score$</set>
+      <set token="d_disp">$result.sigma_disposition$</set>
+      <set token="d_handling">$result.handling_note$</set>
+      <set token="d_platform">$result.sigma_platform$</set>
+      <set token="d_logsource">$result.sigma_log_source$</set>
+      <set token="d_scope">$result.sigma_scope$</set>
+      <set token="d_yaml">$result.sigma_detection_yaml$</set>
+      <set token="d_cond">$result.sigma_condition$</set>
+      <set token="d_spl">$result.sigma_spl$</set>
+      <set token="d_why">$result.sigma_confidence_why$</set>
+      <set token="d_fp">$result.sigma_falsepositives$</set>
+      <set token="d_refs">$result.sigma_references$</set>
+      <set token="d_author">$result.sigma_author$</set>
+      <set token="d_status">$result.sigma_status$</set>
+      <set token="d_date">$result.sigma_rule_date$</set>
+      <set token="d_tech">$result.tech_name$</set>
+      <set token="d_tech_url">$result.tech_url$</set>
+      <set token="d_tech_desc">$result.tech_desc$</set>
+      <set token="d_tech_detect">$result.tech_detect$</set>
+      <set token="d_tech_sources">$result.tech_sources$</set>
+      <set token="d_tactic">$result.tech_tactic$</set>
+      <set token="d_batch">$result.sigma_batch$</set>
+      <set token="d_ruleurl">$result.sigma_rule_url$</set>
+    </done>
+  </search>
+
+  <row>
+    <panel>
+      <html>
+        <div class="sg-head">
+          <div class="sg-title">$d_title$</div>
+          <div class="sg-sub">$d_desc$</div>
+          <div class="sg-chips">
+            <span class="sg-chip sg-$d_level$">$d_level$</span>
+            <span class="sg-chip sg-conf">confidence $d_conf$ · $d_score$/100</span>
+            <span class="sg-chip sg-$d_disp$">$d_disp$</span>
+            <span class="sg-chip">$d_platform$</span>
+            <span class="sg-chip">$d_logsource$</span>
+            <span class="sg-chip">Sigma status: $d_status$</span>
+          </div>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <div class="sg-card">
+          <h3>What it looks for</h3>
+          <p class="sg-note">This is the author's own detection block, unchanged. Each
+             named selection is a set of conditions; the <em>condition</em> line at the
+             end states how they combine. A <code>not</code> in that line is an
+             exclusion the author added after seeing a false positive.</p>
+          <pre class="sg-code">$d_yaml$</pre>
+          <p class="sg-kv"><span>Condition</span><code>$d_cond$</code></p>
+        </div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div class="sg-card">
+          <h3>How it runs here</h3>
+          <p class="sg-note">The rule is converted to SPL and evaluated inside a batched
+             search rather than as a search of its own. The scope ahead of it is what
+             the log source maps to in this installation, and is what keeps the engine
+             affordable: without it every rule would read the whole index.</p>
+          <p class="sg-kv"><span>Scope</span><code>$d_scope$</code></p>
+          <p class="sg-kv"><span>Match</span><code>$d_spl$</code></p>
+          <p class="sg-kv"><span>Evaluated by</span><code>$d_batch$</code></p>
+          <p class="sg-kv"><span>Handling</span><span class="sg-plain">$d_handling$</span></p>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <div class="sg-card">
+          <h3>The technique — $d_tech$</h3>
+          <p class="sg-note">$d_tech_desc$</p>
+          <p class="sg-kv"><span>Tactic</span><span class="sg-plain">$d_tactic$</span></p>
+          <p class="sg-kv"><span>Telemetry ATT&amp;CK expects</span><span class="sg-plain">$d_tech_sources$</span></p>
+          <p class="sg-kv"><span>How ATT&amp;CK suggests detecting it</span><span class="sg-plain">$d_tech_detect$</span></p>
+          <p><a class="sg-link" href="$d_tech_url$" target="_blank">Read the full technique page at attack.mitre.org →</a></p>
+        </div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div class="sg-card">
+          <h3>Why it is trusted this much</h3>
+          <p class="sg-note">Confidence is scored from what the rule says about itself,
+             not from how often it fires. A severe rule whose author has written down
+             that it matches legitimate work should not wake anyone on one event; a
+             specific rule for a named tool should.</p>
+          <pre class="sg-code">$d_why$</pre>
+          <h3>What the author says gets this wrong</h3>
+          <p class="sg-plain">$d_fp$</p>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Sources</title>
+      <table>
+        <search>
+          <query>| makeresults
+| eval refs="$d_refs$", author="$d_author$", modified="$d_date$", rid="$rule_id$"
+| eval ref=split(refs,", ")
+| mvexpand ref
+| where ref!=""
+| table ref
+| rename ref as "Reference — the writing this rule came from"</query>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+      <html>
+        <p class="sg-kv"><span>Rule author</span><span class="sg-plain">$d_author$</span></p>
+        <p class="sg-kv"><span>Last modified</span><span class="sg-plain">$d_date$</span></p>
+        <p class="sg-kv"><span>Sigma id</span><code>$rule_id$</code></p>
+        <p>
+          <a class="sg-link" href="$d_ruleurl$" target="_blank">Find this rule in the SigmaHQ repository →</a><br/>
+          <a class="sg-link" href="https://sigmahq.io/docs/basics/rules.html" target="_blank">How a Sigma rule is written →</a><br/>
+          <a class="sg-link" href="https://sigmahq.io/docs/basics/conditions.html" target="_blank">How Sigma conditions combine →</a>
+        </p>
+      </html>
+    </panel>
+    <panel>
+      <title>What this rule has detected</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts sigma_rule_id="$rule_id|s$"
+| eval when=strftime(sigma_first_seen,"%F %T")
+| table when, sigma_src_host, sigma_match_count, sigma_src_sourcetype
+| rename when as "First seen", sigma_src_host as "Host",
+         sigma_match_count as "Events", sigma_src_sourcetype as "Source type"
+| sort - "First seen"</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.hostsel=$row.Host$&amp;form.tr.earliest=-30d@d&amp;form.tr.latest=now</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

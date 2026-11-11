@@ -89,6 +89,31 @@ def spl_quote(condition: str) -> str:
     return condition.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def load_scopes(path: Path) -> Dict[str, str]:
+    if not path.exists():
+        return {}
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return doc.get("scopes", {}) or {}
+
+
+def resolve_scope(rule, scopes: Dict[str, str]) -> tuple:
+    """Where this rule's telemetry lives, most specific match first.
+
+    Returns (key, spl). The key also groups the batches, so every rule in a
+    batch shares one scope and the scope can be hoisted into the search.
+    """
+    product = (rule.product or "").lower()
+    category = (rule.category or "").lower()
+    service = (rule.service or "").lower()
+    for key in (f"{product}/{category}/{service}" if service and category else None,
+                f"{product}/{category}" if category else None,
+                f"{product}/{service}" if service else None,
+                product or None):
+        if key and key in scopes:
+            return key, scopes[key]
+    return "unscoped", scopes.get("default", "")
+
+
 def load_technique_names(path: Path) -> Dict[str, Dict[str, str]]:
     if not path.exists():
         return {}
@@ -120,10 +145,18 @@ def chunk_by_size(rules: List, budget: int) -> List[List]:
     return batches
 
 
-def build_search(batch: List, scope: str, alert_index: str) -> str:
-    """One scan, then per-rule attribution over what survived the scan."""
+def build_search(batch: List, scope: str, alert_index: str,
+                 logsource_scope: str = "") -> str:
+    """One scan, then per-rule attribution over what survived the scan.
+
+    The log source scope sits ahead of the rule conditions so the term index
+    can reject whole buckets before any event is read. Every rule in the
+    batch declared this log source, so the scope cannot exclude anything the
+    batch could have matched.
+    """
     conditions = [rule_condition(r.splunk_search) for r in batch]
     prefilter = " OR ".join(f"({c})" for c in conditions)
+    scope = f"{scope} {logsource_scope}".strip() if logsource_scope else scope
 
     # searchmatch re-tests each condition against the events the scan
     # returned, which is what lets one search name which rule fired.
@@ -166,10 +199,22 @@ def main(argv=None):
     ap.add_argument("--out-conf", default=str(HERE / "app/sigma_detection_lab/default/savedsearches.conf"))
     ap.add_argument("--out-lookup", default=str(HERE / "app/sigma_detection_lab/lookups/sigma_rules.csv"))
     ap.add_argument("--mitre", default=str(HERE / "app/sigma_detection_lab/lookups/mitre_techniques.csv"))
+    ap.add_argument("--scopes", default=str(HERE / "logsource-scope.yml"),
+                    help="maps a Sigma log source to where it is indexed")
+    ap.add_argument("--out-logic", default=str(HERE / "app/sigma_detection_lab/lookups/sigma_rule_logic.csv"),
+                    help="per-rule detection logic, for the rule reference page")
     ap.add_argument("--budget", type=int, default=20000,
                     help="max characters of rule conditions per batch")
     ap.add_argument("--scope", default=None,
                     help="index scope prepended to every search")
+    ap.add_argument("--window", default=None,
+                    help="override every tier's search window, e.g. -7d. For "
+                         "backfilling detections over data that is already "
+                         "indexed. A window wider than the interval re-reads "
+                         "the same events every run and writes the same "
+                         "detection again, so this is not a production setting")
+    ap.add_argument("--cron", default=None,
+                    help="override every tier's cron, e.g. '0 3 * * *'")
     args = ap.parse_args(argv)
 
     config = s2s.openSigma2SplunkConfiguration(args.config)
@@ -215,14 +260,27 @@ def main(argv=None):
     for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])[:5]:
         print(f"      {n:4}  {k}")
 
-    # Group by platform and severity: these are what decide how a rule is
-    # scheduled and who reads it.
+    # Group by platform, severity and log source. Severity decides the
+    # cadence; the log source decides what the search is allowed to skip,
+    # and a batch can only hoist a scope its rules all share.
+    scopes = load_scopes(Path(args.scopes))
     groups: Dict[tuple, List] = {}
+    scope_spl: Dict[str, str] = {}
+    unscoped = 0
     for r in rules:
         lvl = str(r.level).lower()
         if lvl not in TIERS:
             lvl = "medium"
-        groups.setdefault((r.platform, lvl), []).append(r)
+        key, spl = resolve_scope(r, scopes)
+        if not spl:
+            unscoped += 1
+        scope_spl[key] = spl
+        r._scope_key, r._scope_spl = key, spl
+        groups.setdefault((r.platform, lvl, key), []).append(r)
+    print(f"  {len(groups)} group(s) by platform / severity / log source")
+    if unscoped:
+        print(f"  {unscoped} rule(s) have no log source mapping and will scan "
+              f"the whole index -- add them to {Path(args.scopes).name}")
 
     conf_parts: List[str] = []
     lookup_rows: List[Dict] = []
@@ -237,21 +295,25 @@ def main(argv=None):
         "# live in lookups/sigma_rules.csv, keyed on sigma_rule_id.\n"
     )
 
-    for platform in sorted({p for p, _ in groups}):
-        for lvl in TIER_ORDER:
-            batch_rules = groups.get((platform, lvl))
-            if not batch_rules:
-                continue
-            tier = TIERS[lvl]
+    for platform, lvl, skey in sorted(groups, key=lambda k: (k[0], TIER_ORDER.index(k[1]), k[2])):
+            batch_rules = groups[(platform, lvl, skey)]
+            ls_label = skey.split("/", 1)[1] if "/" in skey else skey
+            tier = dict(TIERS[lvl])
+            if args.window:
+                tier["window"] = args.window
+            if args.cron:
+                tier["cron"] = args.cron
             batches = chunk_by_size(batch_rules, args.budget)
             for i, batch in enumerate(batches, 1):
                 total_batches += 1
-                name = (f"Sigma Engine - {platform} {lvl} "
+                name = (f"Sigma Engine - {platform} {ls_label} {lvl} "
                         f"{i:02d} of {len(batches):02d}")
-                search = build_search(batch, scope, alert_index)
+                search = build_search(batch, scope, alert_index,
+                                      scope_spl.get(skey, ""))
 
                 conf_parts.append(f"""
-# {len(batch)} rule(s), {platform} / {lvl}.
+# {len(batch)} rule(s), {platform} / {ls_label} / {lvl}.
+# Scope: {scope_spl.get(skey, '(none -- scans the whole index)')}
 [{name}]
 search = {search}
 description = {len(batch)} {lvl} {platform} Sigma rules, evaluated in one pass.
@@ -320,6 +382,35 @@ request.ui_dispatch_view = search
         w = csv.DictWriter(fh, fieldnames=LOOKUP_COLUMNS)
         w.writeheader()
         w.writerows(lookup_rows)
+
+    # The detection logic itself, for the rule reference page. An operator
+    # asked to act on a detection needs to see what the rule looks for and
+    # why it was trusted, not just that it fired.
+    logic_cols = ["sigma_rule_id", "sigma_rule", "sigma_description",
+                  "sigma_detection_yaml", "sigma_condition", "sigma_spl",
+                  "sigma_scope", "sigma_scope_key", "sigma_confidence_why",
+                  "sigma_fields", "sigma_tags"]
+    with open(args.out_logic, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=logic_cols)
+        w.writeheader()
+        for r in rules:
+            det = (r.sigma_rule or {}).get("detection", {}) or {}
+            w.writerow({
+                "sigma_rule_id": r.rule_id,
+                "sigma_rule": r.title,
+                "sigma_description": r.description,
+                # The author's own detection block, kept verbatim so the
+                # page shows the rule rather than a paraphrase of it.
+                "sigma_detection_yaml": yaml.safe_dump(
+                    det, default_flow_style=False, sort_keys=False, width=100),
+                "sigma_condition": str(det.get("condition", "")),
+                "sigma_spl": rule_condition(r.splunk_search),
+                "sigma_scope": getattr(r, "_scope_spl", ""),
+                "sigma_scope_key": getattr(r, "_scope_key", ""),
+                "sigma_confidence_why": " | ".join(r.confidence_why),
+                "sigma_fields": ", ".join(r.fields),
+                "sigma_tags": ", ".join(r.tags),
+            })
 
     enabled = sum(1 for p in conf_parts if "\ndisabled = 0\n" in p)
     print(f"\n  {total_batches} batched search(es), {enabled} enabled by default")

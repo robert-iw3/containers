@@ -1,0 +1,76 @@
+# Where each Sigma log source lives in this Splunk installation.
+#
+# This is the single highest-value tuning file in the integration, and the
+# one that has to be edited for a new environment.
+#
+# A Sigma rule declares the telemetry it needs -- "windows / process_creation"
+# -- but not where that telemetry is indexed, because that is a property of
+# the installation rather than of the rule. Without this mapping a detection
+# search can only say "look in the index", and every batch reads the whole
+# time window: all the DNS, all the firewall, all the application logs, to
+# find process creation events.
+#
+# At laboratory volume that waste is invisible. On a 10 TB index it is the
+# entire cost. A scope of `sourcetype=XmlWinEventLog EventCode=1` lets the
+# search reject whole buckets on the term index before reading a single
+# event, which is the difference between a search that finishes and one that
+# does not.
+#
+# Scoping on the rule's own declared log source cannot cause a missed
+# detection: a rule that needs Sysmon process creation has nothing to say
+# about data that is not Sysmon process creation. It can cause a missed
+# detection if this file is wrong for the environment, so a source type
+# named here that does not exist is reported by bin/build-engine.py rather
+# than failing quietly.
+#
+# Keys are matched most specific first:
+#     <product>/<category>/<service>
+#     <product>/<category>
+#     <product>
+#     default
+
+scopes:
+  # ---- Windows -------------------------------------------------------
+  # Sysmon event 1 and Security 4688 both describe a process starting.
+  # Keeping both means a rule still fires where only one is collected.
+  windows/process_creation: 'sourcetype=XmlWinEventLog (EventCode=1 OR EventCode=4688)'
+  windows/network_connection: 'sourcetype=XmlWinEventLog EventCode=3'
+  windows/image_load: 'sourcetype=XmlWinEventLog EventCode=7'
+  windows/file_event: 'sourcetype=XmlWinEventLog (EventCode=11 OR EventCode=23)'
+  windows/registry_event: 'sourcetype=XmlWinEventLog (EventCode=12 OR EventCode=13 OR EventCode=14)'
+  windows/registry_set: 'sourcetype=XmlWinEventLog EventCode=13'
+  windows/registry_add: 'sourcetype=XmlWinEventLog EventCode=12'
+  windows/registry_delete: 'sourcetype=XmlWinEventLog EventCode=12'
+  windows/pipe_created: 'sourcetype=XmlWinEventLog (EventCode=17 OR EventCode=18)'
+  windows/dns_query: 'sourcetype=XmlWinEventLog EventCode=22'
+  windows/wmi_event: 'sourcetype=XmlWinEventLog (EventCode=19 OR EventCode=20 OR EventCode=21)'
+  windows/process_access: 'sourcetype=XmlWinEventLog EventCode=10'
+  windows/driver_load: 'sourcetype=XmlWinEventLog EventCode=6'
+  windows/create_remote_thread: 'sourcetype=XmlWinEventLog EventCode=8'
+  windows/raw_access_thread: 'sourcetype=XmlWinEventLog EventCode=9'
+  windows/ps_script: 'sourcetype=XmlWinEventLog EventCode=4104'
+  windows/ps_module: 'sourcetype=XmlWinEventLog EventCode=4103'
+  windows/ps_classic_start: 'sourcetype=XmlWinEventLog EventCode=400'
+  windows/security: 'sourcetype=XmlWinEventLog Channel=Security'
+  windows/system: 'sourcetype=XmlWinEventLog Channel=System'
+  windows/application: 'sourcetype=XmlWinEventLog Channel=Application'
+  windows: 'sourcetype=XmlWinEventLog'
+
+  # ---- Linux ---------------------------------------------------------
+  # Process creation reaches Splunk either through Sysmon for Linux or
+  # through auditd execve records, and which one an environment has is not
+  # something the rule can know.
+  linux/process_creation: '(sourcetype="sysmon:linux" OR sourcetype=linux_audit)'
+  linux/network_connection: '(sourcetype="sysmon:linux" OR sourcetype=linux_audit)'
+  linux/file_event: '(sourcetype="sysmon:linux" OR sourcetype=linux_audit)'
+  linux/auditd: 'sourcetype=linux_audit'
+  linux/syslog: 'sourcetype IN (syslog, linux_secure)'
+  linux/sshd: 'sourcetype=linux_secure'
+  linux/auth: 'sourcetype=linux_secure'
+  linux/cron: 'sourcetype IN (syslog, linux_secure)'
+  linux: 'sourcetype IN ("sysmon:linux", linux_audit, linux_secure, syslog, bash_history)'
+
+  # Anything unmapped falls back to the index scope alone. That is correct
+  # but slow, and build-engine.py reports how many rules land here so the
+  # gap is visible rather than assumed.
+  default: ''

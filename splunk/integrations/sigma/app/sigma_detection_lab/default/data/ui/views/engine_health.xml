@@ -1,0 +1,315 @@
+<form version="1.1" theme="dark">
+  <label>Engine Health</label>
+  <description>Is the lab working, is data arriving and parsing, and what does each detection cost to find. The search cost panels are the ones that decide whether this engine survives a larger index.</description>
+
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="tr">
+      <label>Time range</label>
+      <default>
+        <earliest>-4h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="scale_tok" searchWhenChanged="true">
+      <label>Project cost at</label>
+      <choice value="1">this index size</choice>
+      <choice value="10">10x this index</choice>
+      <choice value="100">100x this index</choice>
+      <choice value="1000">1000x this index</choice>
+      <default>10</default>
+    </input>
+  </fieldset>
+
+  <!-- ===================== 1. Is the lab up ===================== -->
+  <row>
+    <panel>
+      <title>Events indexed</title>
+      <single>
+        <search>
+          <query>| tstats count where index=linux_lab</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Detections written</title>
+      <single>
+        <search>
+          <query>| tstats count where index=sigma_alerts</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0xfab219","0x19C1EB"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Engine searches run</title>
+      <single>
+        <search>
+          <query>index=_internal sourcetype=scheduler savedsearch_name="Sigma Engine*" status=success
+| stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Runs deferred or skipped</title>
+      <!-- Anything above zero means the instance cannot carry the schedule
+           it has been given, and detections are being lost. -->
+      <single>
+        <search>
+          <query>index=_internal sourcetype=scheduler savedsearch_name="Sigma*"
+(status=continued OR status=skipped) | stats count</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Concurrency ceiling</title>
+      <single>
+        <search>
+          <query>index=_internal sourcetype=scheduler concurrency_limit=*
+| rex "concurrency_limit=(?&lt;lim&gt;\d+)" | stats max(lim) as lim | fields lim</query>
+          <earliest>-24h</earliest><latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="underLabel">concurrent scheduled searches</option>
+      </single>
+    </panel>
+  </row>
+
+  <!-- ===================== 2. Event processing ===================== -->
+  <row>
+    <panel>
+      <title>Ingest throughput by source type</title>
+      <chart>
+        <search>
+          <query>index=_internal source=*metrics.log group=per_sourcetype_thruput
+| timechart span=5m sum(kb) as KB by series useother=f</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisTitleY.text">KB</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Indexing lag — event time to index time</title>
+      <!-- A lag that climbs means the forwarder is behind. A lag equal to
+           the age of the data means timestamp extraction failed and events
+           are being stamped on arrival, which silently breaks every
+           time-bounded detection. -->
+      <table>
+        <search>
+          <query>index=linux_lab
+| eval lag = _indextime - _time
+| stats count as events, median(lag) as median_lag, perc95(lag) as p95_lag, max(lag) as max_lag by sourcetype
+| eval median_lag=round(median_lag,0), p95_lag=round(p95_lag,0), max_lag=round(max_lag,0)
+| eval verdict=case(median_lag &lt; 300, "healthy",
+                    median_lag &lt; 3600, "lagging",
+                    1==1, "timestamps not extracted")
+| sort - events
+| rename sourcetype as "Source type", events as "Events",
+         median_lag as "Median lag (s)", p95_lag as "p95 (s)",
+         max_lag as "Max (s)", verdict as "Verdict"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="Verdict">
+          <colorPalette type="map">{"healthy":#0ca30c,"lagging":#fab219,"timestamps not extracted":#d03b3b}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Field extraction coverage — the fields the rules depend on</title>
+      <!-- A rule keyed on Image matches nothing if Image was never
+           extracted, and the failure looks like a rule problem rather than
+           a parsing one. This is the panel that would have caught it. -->
+      <table>
+        <search>
+          <query>index=linux_lab sourcetype IN ("XmlWinEventLog","sysmon:linux")
+| stats count as events,
+        count(Image) as Image, count(CommandLine) as CommandLine,
+        count(ParentImage) as ParentImage, count(User) as User,
+        count(EventCode) as EventCode
+  by sourcetype, Channel
+| eval "Image %"=round(Image/events*100,1),
+       "CommandLine %"=round(CommandLine/events*100,1),
+       "ParentImage %"=round(ParentImage/events*100,1),
+       "EventCode %"=round(EventCode/events*100,1)
+| table sourcetype, Channel, events, "Image %", "CommandLine %", "ParentImage %", "EventCode %"
+| sort - events</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Parsing faults</title>
+      <table>
+        <search>
+          <query>index=_internal (component=AggregatorMiningProcessor OR component=DateParserVerbose OR component=LineBreakingProcessor)
+(log_level=WARN OR log_level=ERROR)
+| rex "data_sourcetype=(?&lt;st&gt;[^,\s]+)"
+| eval fault=case(match(_raw,"MAX_EVENTS"), "events glued together (no line breaker)",
+                  match(_raw,"outside of the acceptable time window"), "timestamp out of range",
+                  match(_raw,"Failed to parse timestamp"), "timestamp not parsed",
+                  1==1, component)
+| stats count by fault, st
+| sort - count
+| rename fault as "Fault", st as "Source type", count as "Occurrences"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- ===================== 3. Search cost ===================== -->
+  <row>
+    <panel>
+      <title>What each batch costs — the panel that decides whether this scales</title>
+      <!-- scan_count is what came off disk; event_count is what the rule
+           conditions kept. The gap between them is wasted read. At this
+           index size a poor ratio is invisible; multiply the index by a
+           hundred and it is the whole bill. -->
+      <table>
+        <search>
+          <query>index=_audit action=search info=completed savedsearch_name="Sigma Engine*"
+| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;severity&gt;\S+) (?&lt;batch&gt;\d+ of \d+)"
+| stats count as runs, sum(scan_count) as scanned, sum(event_count) as matched,
+        sum(result_count) as detections, avg(total_run_time) as avg_s, max(total_run_time) as max_s
+  by savedsearch_name, platform, severity
+| eval selectivity = round(matched/(scanned+1)*100, 4),
+       scan_rate = round(scanned/(runs*avg_s+0.001), 0),
+       per_detection = if(detections&gt;0, round(scanned/detections,0), null()),
+       projected_s = round(avg_s * $scale_tok$, 1),
+       verdict = case(projected_s &gt; 900, "will not finish",
+                      projected_s &gt; 300, "too slow",
+                      selectivity &lt; 0.01, "reading for nothing",
+                      1==1, "ok")
+| eval avg_s=round(avg_s,2), max_s=round(max_s,2)
+| table savedsearch_name, platform, severity, runs, scanned, matched, detections,
+        selectivity, scan_rate, per_detection, avg_s, projected_s, verdict
+| rename savedsearch_name as "Batch", runs as "Runs", scanned as "Events read",
+         matched as "Matched", detections as "Detections",
+         selectivity as "Selectivity %", scan_rate as "Events/sec",
+         per_detection as "Read per detection", avg_s as "Avg run (s)",
+         projected_s as "Projected (s)", verdict as "Verdict"
+| sort - "Events read"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="Verdict">
+          <colorPalette type="map">{"ok":#0ca30c,"reading for nothing":#fab219,"too slow":#ec835a,"will not finish":#d03b3b}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Events read, by severity tier</title>
+      <chart>
+        <search>
+          <query>index=_audit action=search info=completed savedsearch_name="Sigma Engine*"
+| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;severity&gt;\S+) "
+| timechart span=15m sum(scan_count) by severity useother=f</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c}</option>
+        <option name="charting.axisTitleY.text">events read</option>
+        <option name="height">260</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Scheduler lag — how late a run starts</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=scheduler savedsearch_name="Sigma*" status=success
+| eval lag = dispatch_time - scheduled_time
+| timechart span=15m avg(lag) as "average", max(lag) as "worst"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.fieldColors">{"average":0x19C1EB,"worst":0xec835a}</option>
+        <option name="charting.axisTitleY.text">seconds late</option>
+        <option name="height">260</option>
+      </chart>
+    </panel>
+  </row>
+
+  <!-- ===================== 4. Rule value ===================== -->
+  <row>
+    <panel>
+      <title>Rule yield — what the deployed set is actually earning</title>
+      <!-- Rules that never fire still cost a condition in the scan filter
+           and a test on every surviving event. Knowing which they are is
+           what lets a rule set be trimmed deliberately. -->
+      <table>
+        <search>
+          <query>| inputlookup sigma_rules.csv
+| fields sigma_rule_id, sigma_platform, sigma_level, sigma_disposition
+| join type=left sigma_rule_id
+    [ search index=sigma_alerts earliest=-7d latest=now
+    | stats count as detections by sigma_rule_id ]
+| eval detections = coalesce(detections, 0),
+       fired = if(detections &gt; 0, 1, 0)
+| stats count as rules, sum(fired) as firing, sum(detections) as detections
+  by sigma_platform, sigma_level
+| eval "Never fired" = rules - firing,
+       "Firing %" = round(firing/rules*100, 1)
+| table sigma_platform, sigma_level, rules, firing, "Never fired", "Firing %", detections
+| rename sigma_platform as "Platform", sigma_level as "Severity",
+         rules as "Rules deployed", firing as "Fired", detections as "Detections"
+| sort "Platform", "Severity"</query>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Noisiest rules — candidates for tuning or allowlisting</title>
+      <table>
+        <search>
+          <query>index=sigma_alerts
+| stats sum(sigma_match_count) as events, count as detections,
+        dc(sigma_src_host) as hosts by sigma_rule, sigma_level
+| eval "Events per detection" = round(events/detections, 1)
+| sort - detections
+| head 15
+| rename sigma_rule as "Rule", sigma_level as "Severity",
+         detections as "Detections", hosts as "Hosts", events as "Events matched"</query>
+          <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

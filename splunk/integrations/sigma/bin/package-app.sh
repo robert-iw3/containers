@@ -6,12 +6,13 @@
 # app` both accept.
 #
 #   ./bin/package-app.sh                      # app as it stands
-#   ./bin/package-app.sh --rules ./rules-core/SigmaHQ_sigma/core/rules/windows/process_creation
+#   ./bin/package-app.sh --rules "./rules-core/SigmaHQ_sigma/core/rules/windows/process_creation \
+#                                 ./rules-core/SigmaHQ_sigma/core/rules/linux"
 #
-# With --rules the converted saved searches are built into the package, so
-# the app arrives with its detections already in it. Without it the package
-# ships the dashboards and index definition only, and savedsearches.conf is
-# added later.
+# With --rules the detection engine is built into the package, so the app
+# arrives ready to detect. Several rule directories can be given in one
+# quoted argument. Without --rules the package ships the dashboards and the
+# index definition only.
 #
 # The package carries no local/ directory. Anything written there on an
 # instance is operator configuration and must survive a reinstall, so it is
@@ -22,7 +23,7 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 APP_SRC="$HERE/app/sigma_detection_lab"
 APP_NAME="sigma_detection_lab"
 RULES=""
-PIPELINE="windows"
+PIPELINE="auto"
 OUT_DIR="$HERE/dist"
 CONFIG="$HERE/config.yaml"
 
@@ -55,15 +56,22 @@ tar -C "$APP_SRC" --exclude='local' --exclude='local.meta' --exclude='*.pyc' \
 printf '  %s files\n' "$(find "$STAGE" -type f | wc -l)"
 
 if [ -n "$RULES" ]; then
-    [ -d "$RULES" ] || { echo "FAIL: --rules is not a directory: $RULES" >&2; exit 1; }
-    echo "== Convert rules into the package"
-    if ! PYTHONPATH="$HERE/pylib:${PYTHONPATH:-}" python3 "$HERE/sigma2splunkalert.py" \
-            "$RULES" --config "$CONFIG" --pipeline "$PIPELINE" \
-            -o "$STAGE/default/savedsearches.conf" 2>&1 | tail -3; then
-        echo "FAIL: conversion failed" >&2; exit 1
+    for d in $RULES; do
+        [ -d "$d" ] || { echo "FAIL: --rules is not a directory: $d" >&2; exit 1; }
+    done
+    echo "== Build the detection engine into the package"
+    # One search per rule does not survive the scheduler's concurrency cap,
+    # so rules are batched by platform and severity and their metadata is
+    # written to a lookup the searches and dashboards both read.
+    if ! PYTHONPATH="$HERE/pylib:${PYTHONPATH:-}" python3 "$HERE/bin/build-engine.py" \
+            $RULES --config "$CONFIG" --pipeline "$PIPELINE" \
+            --out-conf "$STAGE/default/savedsearches.conf" \
+            --out-lookup "$STAGE/lookups/sigma_rules.csv" \
+            --mitre "$STAGE/lookups/mitre_techniques.csv" 2>&1 | sed -n '2,8p' | sed 's/^/  /'; then
+        echo "FAIL: engine build failed" >&2; exit 1
     fi
     n=$(grep -c '^\[' "$STAGE/default/savedsearches.conf" || true)
-    printf '  %s saved search(es)\n' "${n:-0}"
+    printf '  %s batched search(es)\n' "${n:-0}"
 
     # Splunk reads savedsearches.conf and nothing else, so the engine
     # searches that ship with the app are appended rather than left in a
