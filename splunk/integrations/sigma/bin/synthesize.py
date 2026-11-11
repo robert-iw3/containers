@@ -53,7 +53,9 @@ _spec.loader.exec_module(scorer)
 # Values used to pad a "contains" match. Chosen to look like ordinary path
 # and argument text so the synthesised event does not stand out by being
 # obviously synthetic, which would make a detection meaningless.
-PAD_LEFT = ["C:\\Windows\\System32\\", "C:\\Program Files\\Contoso\\", "/usr/bin/", ""]
+PAD_LEFT_WIN = ["C:\\Windows\\System32\\", "C:\\Program Files\\Contoso\\", ""]
+PAD_LEFT_NIX = ["/usr/bin/", "/usr/local/bin/", ""]
+PAD_LEFT = PAD_LEFT_WIN
 PAD_RIGHT = ["", "", ""]
 
 BENIGN_PARENTS = [
@@ -67,8 +69,10 @@ SUSPECT_PARENTS = [
 ]
 
 
-def satisfy(value, modifiers: List[str], rnd: random.Random) -> Optional[str]:
+def satisfy(value, modifiers: List[str], rnd: random.Random,
+            pads: Optional[List[str]] = None) -> Optional[str]:
     """A concrete string that satisfies one field's expectation."""
+    pads = pads if pads is not None else PAD_LEFT
     if isinstance(value, list):
         value = value[0] if value else None
     if value is None:
@@ -82,21 +86,22 @@ def satisfy(value, modifiers: List[str], rnd: random.Random) -> Optional[str]:
             return None
 
     if "contains" in modifiers:
-        return f"{rnd.choice(PAD_LEFT)}{v}{rnd.choice(PAD_RIGHT)}"
+        return f"{rnd.choice(pads)}{v}{rnd.choice(PAD_RIGHT)}"
     if "startswith" in modifiers:
         return f"{v}{rnd.choice(PAD_RIGHT)}"
     if "endswith" in modifiers:
-        return f"{rnd.choice(PAD_LEFT)}{v}"
+        return f"{rnd.choice(pads)}{v}"
     # An exact match, or a wildcard the rule wrote itself.
     return v.replace("*", "x") if "*" in v else v
 
 
-def fields_from_selection(sel, rnd: random.Random) -> Optional[Dict[str, str]]:
+def fields_from_selection(sel, rnd: random.Random,
+                          pads: Optional[List[str]] = None) -> Optional[Dict[str, str]]:
     """Field values that satisfy one selection block."""
     if isinstance(sel, list):
         # A list of maps: satisfying any one of them satisfies the selection.
         for item in sel:
-            got = fields_from_selection(item, rnd)
+            got = fields_from_selection(item, rnd, pads)
             if got:
                 return got
         return None
@@ -112,9 +117,9 @@ def fields_from_selection(sel, rnd: random.Random) -> Optional[Dict[str, str]]:
         if "all" in modifiers and isinstance(value, list):
             # Every listed value must appear, so concatenate them.
             joined = " ".join(str(v).strip() for v in value if str(v).strip())
-            got = satisfy(joined, [m for m in modifiers if m != "all"] or ["contains"], rnd)
+            got = satisfy(joined, [m for m in modifiers if m != "all"] or ["contains"], rnd, pads)
         else:
-            got = satisfy(value, modifiers, rnd)
+            got = satisfy(value, modifiers, rnd, pads)
         if got is None:
             return None
         out[name] = got
@@ -153,13 +158,14 @@ def positive_selections(detection: Dict) -> List[str]:
     return wanted
 
 
-def build_fields(rule: Dict, rnd: random.Random) -> Optional[Dict[str, str]]:
+def build_fields(rule: Dict, rnd: random.Random,
+                 pads: Optional[List[str]] = None) -> Optional[Dict[str, str]]:
     detection = rule.get("detection") or {}
     if not detection.get("condition"):
         return None
     fields: Dict[str, str] = {}
     for name in positive_selections(detection):
-        got = fields_from_selection(detection[name], rnd)
+        got = fields_from_selection(detection[name], rnd, pads)
         if got is None:
             return None
         fields.update(got)
@@ -333,7 +339,8 @@ def main(argv=None):
             skipped["log source not exercised here"] = skipped.get("log source not exercised here", 0) + 1
             continue
 
-        fields = build_fields(rule, rnd)
+        pads = PAD_LEFT_WIN if kind == "windows" else PAD_LEFT_NIX
+        fields = build_fields(rule, rnd, pads)
         if not fields:
             skipped["cannot construct a matching value"] = skipped.get("cannot construct a matching value", 0) + 1
             continue
