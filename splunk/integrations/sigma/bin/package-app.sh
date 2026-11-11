@@ -65,6 +65,18 @@ if [ -n "$RULES" ]; then
     n=$(grep -c '^\[' "$STAGE/default/savedsearches.conf" || true)
     printf '  %s saved search(es)\n' "${n:-0}"
 
+    # Splunk reads savedsearches.conf and nothing else, so the engine
+    # searches that ship with the app are appended rather than left in a
+    # file of their own.
+    if [ -f "$STAGE/default/savedsearches_engine.conf" ]; then
+        printf '\n' >> "$STAGE/default/savedsearches.conf"
+        cat "$STAGE/default/savedsearches_engine.conf" >> "$STAGE/default/savedsearches.conf"
+        rm -f "$STAGE/default/savedsearches_engine.conf"
+        e=$(grep -c '^\[Sigma - ' "$STAGE/default/savedsearches.conf" || true)
+        printf '  engine searches merged, %s stanza(s) total\n' \
+            "$(grep -c '^\[' "$STAGE/default/savedsearches.conf")"
+    fi
+
     # A malformed stanza is worth catching here rather than on the instance.
     if [ -f "$HERE/planning/savedsearches.conf.spec" ]; then
         echo "== Validate the generated conf"
