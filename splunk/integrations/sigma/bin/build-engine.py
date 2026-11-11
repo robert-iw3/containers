@@ -80,6 +80,15 @@ def _split_stage(splunk_search: str) -> int:
     rejects the whole batched search, so one such rule silently disables
     every rule batched with it.
     """
+    # A rule can convert to SPL that *starts* with a pipeline stage, when its
+    # detection needs a rex before anything can be matched. There is no
+    # leading space in front of that pipe, so looking only for " | " misses
+    # it, and the whole rule is then treated as a search clause. Embedded in
+    # a batch that produces "(| rex ...)", which is never valid and takes
+    # every rule in the batch down with it.
+    if splunk_search.lstrip().startswith("|"):
+        return 0
+
     in_quote = False
     i = 0
     while i < len(splunk_search):
@@ -111,37 +120,85 @@ def has_trailing_stages(splunk_search: str) -> bool:
     return _split_stage(splunk_search) != -1
 
 
-def balanced(expr: str) -> bool:
-    """Parentheses and quotes balance outside of string literals.
-
-    Generated searches are long enough that a malformed one is not obvious
-    on inspection, and Splunk only reports it at run time, in a log nobody
-    is watching.
-    """
-    depth = 0
-    in_quote = False
-    i = 0
-    while i < len(expr):
-        c = expr[i]
-        if c == "\\":
-            i += 2
-            continue
-        if c == '"':
-            in_quote = not in_quote
-        elif not in_quote:
-            if c == "(":
-                depth += 1
-            elif c == ")":
-                depth -= 1
-                if depth < 0:
-                    return False
-        i += 1
-    return depth == 0 and not in_quote
-
-
 def spl_quote(condition: str) -> str:
     """Embed a search expression inside an SPL string literal."""
     return condition.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def search_clause_check(expr: str):
+    """Is this text safe to embed as a search clause, and inside searchmatch?
+
+    This is deliberately an allowlist. An earlier version asked the opposite
+    question -- "can I find something wrong with it" -- and passed two
+    searches that Splunk then rejected at run time, each taking a whole
+    batch of rules down with it. A checker that approximates another
+    parser must fail closed: anything it cannot positively account for is
+    rejected and the rule is deployed on its own, where Splunk parses the
+    whole pipeline itself.
+
+    Returns (ok, reason). reason is empty when ok.
+    """
+    if not expr or not expr.strip():
+        return False, "empty condition"
+
+    depth = 0
+    i = 0
+    n = len(expr)
+    while i < n:
+        c = expr[i]
+
+        # A double-quoted string. Inside it, only \" and \\ are escapes;
+        # everything else, parentheses included, is literal text.
+        if c == '"':
+            i += 1
+            closed = False
+            while i < n:
+                if expr[i] == "\\":
+                    if i + 1 >= n:
+                        return False, "a backslash ends the condition inside a string"
+                    i += 2
+                    continue
+                if expr[i] == '"':
+                    closed = True
+                    i += 1
+                    break
+                i += 1
+            if not closed:
+                return False, "an unterminated quoted string"
+            continue
+
+        # Anything that turns a clause into a pipeline, a macro expansion or
+        # a subsearch cannot be embedded, and cannot be tested by
+        # searchmatch either.
+        if c == "|":
+            return False, "contains a pipeline stage"
+        if c == "`":
+            return False, "contains a macro expansion"
+        if c == "[":
+            return False, "contains a subsearch"
+        if c == "]":
+            return False, "contains a stray subsearch bracket"
+
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth < 0:
+                return False, "a closing parenthesis with nothing open"
+        elif c == "\\":
+            # Outside a string a backslash is not meaningful to the parser,
+            # and pySigma should not emit one. Reject rather than guess.
+            return False, "a backslash outside a quoted string"
+        i += 1
+
+    if depth != 0:
+        return False, f"{depth} unclosed parenthesis/es"
+    return True, ""
+
+
+def balanced(expr: str) -> bool:
+    """Back-compatible wrapper. Prefer search_clause_check for the reason."""
+    return search_clause_check(expr)[0]
 
 
 def load_scopes(path: Path) -> Dict[str, str]:
@@ -263,6 +320,32 @@ def build_search(batch: List, scope: str, alert_index: str,
     )
 
 
+def build_single_search(rule, scope: str, logsource_scope: str) -> str:
+    """One rule that has to keep its own pipeline.
+
+    The scope supplies the events the rule's first stage needs, then the
+    rule's own SPL runs unchanged, then the same aggregation every batch
+    uses so the detection it writes is identical in shape.
+    """
+    full_scope = f"{scope} {logsource_scope}".strip() if logsource_scope else scope
+    spl = rule.splunk_search.strip()
+    joiner = " " if spl.startswith("|") else " "
+    return (
+        f"{full_scope}{joiner}{spl}"
+        f' | eval sigma_rule_id="{rule.rule_id}"'
+        f" | stats count as sigma_match_count, min(_time) as sigma_first_seen,"
+        f" max(_time) as sigma_last_seen, earliest(_raw) as sigma_sample,"
+        f" values(index) as sigma_src_index,"
+        f" values(sourcetype) as sigma_src_sourcetype,"
+        f" dc(host) as sigma_host_count"
+        f" by sigma_rule_id, host"
+        f" | lookup sigma_rules sigma_rule_id"
+        f" | where sigma_match_count >= coalesce(sigma_min_matches, 1)"
+        f" | eval _time=sigma_first_seen, sigma_src_host=host,"
+        f" sigma_span_seconds=sigma_last_seen-sigma_first_seen"
+    )
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -314,6 +397,7 @@ def main(argv=None):
     print(f"  {len(files)} rule file(s)")
 
     rules, failed = [], 0
+    unbatchable: List = []
     reasons: Dict[str, int] = {}
     for f in files:
         pipeline = args.pipeline
@@ -334,8 +418,20 @@ def main(argv=None):
             reasons[key] = reasons.get(key, 0) + 1
             continue
         uc._source_path = f
+        cond = rule_condition(uc.splunk_search)
+        ok, why = search_clause_check(cond)
+        if not ok:
+            if not cond and uc.splunk_search.lstrip().startswith("|"):
+                why = "starts with a pipeline stage"
+            unbatchable.append((uc, why))
+            continue
         rules.append(uc)
     print(f"  {len(rules)} converted, {failed} could not be converted")
+    if unbatchable:
+        print(f"  {len(unbatchable)} rule(s) need a pipeline stage before they "
+              f"can match; deployed individually:")
+        for u, why in unbatchable[:8]:
+            print(f"      {u.title[:52]:54} {why}")
     for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])[:5]:
         print(f"      {n:4}  {k}")
 
@@ -392,8 +488,17 @@ def main(argv=None):
                                       scope_spl.get(skey, ""))
                 # A search that does not parse takes its whole batch down
                 # with it, and says so only in scheduler.log. Catch it here.
-                if not balanced(search):
-                    bad_batches.append(name)
+                # Only the scan clause is checked against the clause grammar:
+                # everything from the first eval onward is a pipeline, which
+                # that grammar rejects by design.
+                # The scope legitimately contains an index macro, so the
+                # clause grammar is applied to the rule conditions only --
+                # the part this builder assembles and is responsible for.
+                prefilter = " OR ".join(
+                    f"({rule_condition(x.splunk_search)})" for x in batch)
+                ok_b, why_b = search_clause_check(prefilter)
+                if not ok_b:
+                    bad_batches.append(f"{name}: {why_b}")
 
                 conf_parts.append(f"""
 # {len(batch)} rule(s), {platform} / {ls_label} / {lvl}.
@@ -459,6 +564,69 @@ request.ui_dispatch_view = search
                         "sigma_source_path": source_url(getattr(r, "_source_path", ""), args.branch)[0],
                         "sigma_source_url": source_url(getattr(r, "_source_path", ""), args.branch)[1],
                     })
+
+    for uc, why in unbatchable:
+        lvl = str(uc.level).lower()
+        if lvl not in TIERS:
+            lvl = "medium"
+        tier = dict(TIERS[lvl])
+        if args.window:
+            tier["window"] = args.window
+        if args.cron:
+            tier["cron"] = args.cron
+        key, ls_spl = resolve_scope(uc, scopes)
+        name = f"Sigma Rule - {uc.title[:70]}"
+        total_batches += 1
+        conf_parts.append(f"""
+# One rule, on its own: {why}.
+[{name}]
+search = {build_single_search(uc, scope, ls_spl)}
+description = {uc.title} ({uc.level}). Runs alone because it {why}.
+counttype = number of events
+relation = greater than
+quantity = 0
+enableSched = 1
+disabled = {0 if tier["enabled"] else 1}
+realtime_schedule = 0
+cron_schedule = {tier["cron"]}
+dispatch.earliest_time = {tier["window"]}
+dispatch.latest_time = now
+allow_skew = 100%
+schedule_priority = {tier["priority"]}
+alert.digest_mode = 1
+alert.track = 0
+action.summary_index = 1
+action.summary_index._name = {alert_index}
+action.summary_index.sigma_batch = {name}
+request.ui_dispatch_app = {config.get('app', 'sigma_detection_lab')}
+request.ui_dispatch_view = search
+""")
+        techs = [t.replace("attack.", "").upper() for t in uc.mitre_techniques]
+        primary = techs[0] if techs else ""
+        meta = techniques.get(primary, {})
+        tactics = [t.replace("attack.", "") for t in uc.mitre_tactics]
+        lookup_rows.append({
+            "sigma_rule_id": uc.rule_id, "sigma_rule": uc.title,
+            "sigma_level": uc.level, "sigma_severity": uc.severity,
+            "sigma_confidence": uc.confidence,
+            "sigma_confidence_score": uc.confidence_score,
+            "sigma_disposition": uc.disposition,
+            "sigma_min_matches": 1 if uc.disposition == "immediate" else 2,
+            "sigma_platform": uc.platform, "sigma_log_source": uc.log_source,
+            "sigma_attack": ",".join(techs), "sigma_tactic": ",".join(tactics),
+            "sigma_technique": primary,
+            "sigma_technique_name": meta.get("display_name", "") or ("unmapped" if not primary else primary),
+            "sigma_tactic_name": meta.get("tactic_names", "") or "unmapped",
+            "sigma_status": uc.status, "sigma_author": uc.author,
+            "sigma_references": uc.references,
+            "sigma_falsepositives": uc.falsepositives,
+            "sigma_rule_date": uc.modified or uc.rule_date,
+            "sigma_batch": name,
+            "sigma_source_path": source_url(getattr(uc, "_source_path", ""), args.branch)[0],
+            "sigma_source_url": source_url(getattr(uc, "_source_path", ""), args.branch)[1],
+        })
+        uc._scope_key, uc._scope_spl = key, ls_spl
+        rules.append(uc)
 
     Path(args.out_conf).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out_conf).write_text("".join(conf_parts), encoding="utf-8")

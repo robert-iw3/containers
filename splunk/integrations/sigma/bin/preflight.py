@@ -169,30 +169,50 @@ def main(argv=None):
         x._scope_key, x._scope_spl = key, spl
         groups.setdefault((x.platform, lvl, key), []).append(x)
 
-    scope_of = {k[2]: v._scope_spl for k, vs in groups.items() for v in vs[:1]}
-    bad, batches_total = [], 0
+    bad, batches_total, singles = [], 0, 0
     for (platform, lvl, skey), members in groups.items():
-        for i, batch in enumerate(be.chunk_by_size(members, args.budget), 1):
+        # Rules that cannot be a search clause are deployed on their own, so
+        # they do not take part in a batch and are not checked as one.
+        batchable = [x for x in members
+                     if be.search_clause_check(be.rule_condition(x.splunk_search))[0]]
+        singles += len(members) - len(batchable)
+        if not batchable:
+            continue
+        for i, batch in enumerate(be.chunk_by_size(batchable, args.budget), 1):
             batches_total += 1
-            search = be.build_search(batch, "`sigma_index`", "sigma_alerts",
-                                     scope_of.get(skey, ""))
-            if not be.balanced(search):
-                bad.append(f"{platform}/{lvl}/{skey} batch {i}")
+            # The clause grammar applies to the conditions this builder
+            # assembles, not to the scope or the pipeline around them.
+            prefilter = " OR ".join(
+                f"({be.rule_condition(x.splunk_search)})" for x in batch)
+            ok_b, why_b = be.search_clause_check(prefilter)
+            if not ok_b:
+                bad.append(f"{platform}/{lvl}/{skey} batch {i}: {why_b}")
 
-    print(f"  [3] search syntax   {batches_total} batch(es), {len(bad)} malformed")
+    print(f"  [3] search syntax   {batches_total} batch(es) + {singles} standalone, "
+          f"{len(bad)} malformed")
     if bad:
         for b in bad[:5]:
             print(f"                      {b}")
         r.fail(f"{len(bad)} batch(es) produce a search Splunk cannot parse; "
                f"each one disables every rule in it")
 
-    # Individually, so one bad rule is named rather than a whole batch.
-    per_rule_bad = [x for x in rules if not be.balanced(be.rule_condition(x.splunk_search))]
+    # Individually, with the reason, so a rule is named rather than a batch.
+    per_rule_bad = []
+    for x in rules:
+        cond = be.rule_condition(x.splunk_search)
+        ok, why = be.search_clause_check(cond)
+        if not ok:
+            if not cond and x.splunk_search.lstrip().startswith("|"):
+                why = "starts with a pipeline stage"
+            per_rule_bad.append((x, why))
     if per_rule_bad:
-        print(f"                      {len(per_rule_bad)} individual rule(s) unbalanced:")
-        for x in per_rule_bad[:5]:
-            print(f"                      {x.title[:60]}")
-        r.fail(f"{len(per_rule_bad)} rule(s) convert to an unparseable condition")
+        print(f"                      {len(per_rule_bad)} rule(s) cannot be a search clause:")
+        for x, why in per_rule_bad[:6]:
+            print(f"                      {x.title[:48]:50} {why}")
+        # Not a failure: build-engine deploys these on their own, where
+        # Splunk parses the whole pipeline itself.
+        r.warn(f"{len(per_rule_bad)} rule(s) are deployed individually rather "
+               f"than batched")
 
     # ---- 4. log source mapping --------------------------------------
     print(f"  [4] log source      {len(groups)} group(s), "
