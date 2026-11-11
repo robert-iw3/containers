@@ -96,7 +96,7 @@ if has detection; then
     python3 "$HERE/test/synthesize.py" --rules "$RULES" --count 0 --tier t3 \
         --window-minutes 8 --seed 909 --out "$HERE/test/batches/control.json" 2>&1 | sed -n '2,4p'
     if python3 "$HERE/test/validate-round.py" --batch "$HERE/test/batches/control.json" \
-            --container "$CONTAINER" --uf "$UF" --wait "$WAIT" \
+            --container "$CONTAINER" --uf "$UF" --wait "$WAIT" --keep-readout \
             --out "$OUT/control.json" 2>&1 | sed -n '/KPI/,/precision/p;/fired on background/,$p'; then
         FP=$(python3 -c "import json;print(json.load(open('$OUT/control.json'))['unplanted'])" 2>/dev/null || echo "?")
         if [ "$FP" = "0" ]; then
@@ -111,8 +111,10 @@ if has detection; then
         echo; echo "  ── $t ──"
         python3 "$HERE/test/synthesize.py" --rules "$RULES" --count "$COUNT" --tier "$t" \
             --window-minutes 8 --seed 101 --out "$HERE/test/batches/$t.json" 2>&1 | sed -n '2,4p'
+        keep="--keep-readout"
+        [ "$t" = "${TS[-1]}" ] && keep=""
         python3 "$HERE/test/validate-round.py" --batch "$HERE/test/batches/$t.json" \
-            --container "$CONTAINER" --uf "$UF" --wait "$WAIT" \
+            --container "$CONTAINER" --uf "$UF" --wait "$WAIT" $keep \
             --out "$OUT/$t.json" 2>&1 | sed -n '/KPI/,/precision/p;/MISSED/,/^$/p'
         R=$(python3 -c "import json;print(json.load(open('$OUT/$t.json'))['recall_pct'])" 2>/dev/null || echo 0)
         M=$(python3 -c "import json;print(json.load(open('$OUT/$t.json'))['missed'])" 2>/dev/null || echo "?")

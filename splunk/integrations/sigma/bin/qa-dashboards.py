@@ -122,6 +122,9 @@ def main(argv=None):
     ap.add_argument("--views", nargs="*", default=[])
     ap.add_argument("--app", default="sigma_detection_lab")
     ap.add_argument("--wait", type=int, default=480)
+    ap.add_argument("--keep", action="store_true",
+                    help="leave the QA app installed for inspection; it "
+                         "schedules 93 searches and will compete with the engine")
     args = ap.parse_args(argv)
 
     views = HERE / "app" / args.app / "default/data/ui/views"
@@ -186,6 +189,12 @@ def main(argv=None):
             rows = podman(args.container, "sh", "-c",
                           "cat /opt/splunk/var/run/splunk/csv/%s.csv 2>/dev/null | wc -l" % nm)
             (empty if (rows or "0").strip() in ("0", "1") else ok).append((view, title))
+
+    if not args.keep:
+        podman(args.container, "sh", "-c", "rm -rf %s" % base)
+        podman(args.container, "sh", "-c",
+               "/opt/splunk/bin/splunk restart >/dev/null 2>&1")
+        print("  removed the QA app; it is scaffolding, not part of the install")
 
     print("\n  %-34s %6s" % ("result", "count"))
     print("  " + "-" * 42)

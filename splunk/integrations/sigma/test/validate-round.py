@@ -174,6 +174,8 @@ def main(argv=None):
     ap.add_argument("--no-stage", action="store_true",
                     help="read results for a batch already ingested")
     ap.add_argument("--out", default=None, help="write the result as JSON")
+    ap.add_argument("--keep-readout", action="store_true",
+                    help="leave the readout search installed between rounds")
     args = ap.parse_args(argv)
 
     batch = Path(args.batch)
@@ -274,6 +276,9 @@ def main(argv=None):
     if args.out:
         Path(args.out).write_text(json.dumps(result, indent=2))
         print(f"\n  {args.out}")
+    if not args.keep_readout:
+        podman(args.container, "splunk", "sh", "-c",
+               "rm -rf /opt/splunk/etc/apps/%s" % READOUT_APP)
     print()
     return 0 if not missed else 1
 

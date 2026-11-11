@@ -35,7 +35,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --container) CONTAINER="${2:-}"; shift 2 ;;
         --uf)        UF="${2:-}"; shift 2 ;;
-        --index)     INDEX="${2:-}"; shift 2 ;;
+        --index)     INDEX="${INDEX:+$INDEX,}${2:-}"; shift 2 ;;
         --restage)   RESTAGE=1; shift ;;
         --yes)       ASSUME_YES=1; shift ;;
         -h|--help)   usage 0 ;;
@@ -53,11 +53,13 @@ run() { podman exec -u "$acct" "$CONTAINER" sh -c "$1"; }
 echo
 echo "  index:     $INDEX"
 echo "  instance:  $CONTAINER (service account $acct)"
-run "du -sh /opt/splunk/var/lib/splunk/$INDEX 2>/dev/null || true" | sed 's/^/  size:      /'
+for ix in $(echo "$INDEX" | tr ',' ' '); do
+    run "du -sh /opt/splunk/var/lib/splunk/$ix 2>/dev/null || true" | sed "s/^/  size:      /"
+done
 echo
 
 if [ "$ASSUME_YES" -ne 1 ]; then
-    printf '  This empties %s permanently. Type the index name to continue: ' "$INDEX"
+    printf '  This empties %s permanently. Type the index name(s) to continue: ' "$INDEX"
     read -r reply
     [ "$reply" = "$INDEX" ] || { echo "  not confirmed; nothing was changed"; exit 1; }
 fi
@@ -65,16 +67,23 @@ fi
 echo "  stopping splunkd"
 run "/opt/splunk/bin/splunk stop" >/dev/null 2>&1 || true
 
-echo "  emptying the index"
-run "/opt/splunk/bin/splunk clean eventdata -index $INDEX -f" 2>&1 | sed 's/^/    /' || {
-    echo "  FAIL: clean eventdata did not succeed; splunkd is being restarted" >&2
-    run "/opt/splunk/bin/splunk start" >/dev/null 2>&1 || true
-    exit 1
-}
+echo "  emptying the index(es)"
+IFS=',' read -ra IDXS <<< "$INDEX"
+for ix in "${IDXS[@]}"; do
+    [ -n "$ix" ] || continue
+    echo "    $ix"
+    run "/opt/splunk/bin/splunk clean eventdata -index $ix -f" 2>&1 | sed 's/^/      /' || {
+        echo "  FAIL: clean eventdata did not succeed for $ix; restarting splunkd" >&2
+        run "/opt/splunk/bin/splunk start" >/dev/null 2>&1 || true
+        exit 1
+    }
+done
 
 echo "  starting splunkd"
 run "/opt/splunk/bin/splunk start" >/dev/null 2>&1 || true
-run "du -sh /opt/splunk/var/lib/splunk/$INDEX 2>/dev/null || true" | sed 's/^/  size now:  /'
+for ix in $(echo "$INDEX" | tr ',' ' '); do
+    run "du -sh /opt/splunk/var/lib/splunk/$ix 2>/dev/null || true" | sed "s/^/  size now:  /"
+done
 
 if [ -n "$UF" ]; then
     echo
