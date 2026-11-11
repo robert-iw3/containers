@@ -89,18 +89,33 @@ else
 fi
 
 # --- 3. Scheduled search concurrency ---------------------------------
+# Splunk reports the number it is actually enforcing, every time it defers
+# a search. That is worth more than computing it: nproc reports the host's
+# CPUs, and a container capped with --cpus sees fewer, so the computed
+# figure can be double the real one and the capacity check then passes a
+# schedule the instance cannot carry.
+observed=$(run "grep -ho 'concurrency_limit=[0-9]\+' $SPLUNK_HOME/var/log/splunk/scheduler.log 2>/dev/null | tail -1 | cut -d= -f2")
 cpus=$(run "nproc")
 percpu=$(run "$SPLUNK_HOME/bin/splunk btool limits list search | sed -nE 's/^max_searches_per_cpu *= *([0-9]+)/\1/p' | tail -1")
 base=$(run "$SPLUNK_HOME/bin/splunk btool limits list search | sed -nE 's/^base_max_searches *= *([0-9]+)/\1/p' | tail -1")
-total=$(( ${percpu:-1} * ${cpus:-1} + ${base:-6} ))
-slots=$(( total / 2 ))
-sched=$(run "$SPLUNK_HOME/bin/splunk btool savedsearches list | grep -c '^\[Sigma Engine'")
-printf '  ok       concurrency: %s per cpu x %s cpu + %s base = %s total, about %s for scheduled searches\n' \
-    "${percpu:-1}" "${cpus:-1}" "${base:-6}" "$total" "$slots"
-if [ "${sched:-0}" -gt "$slots" ]; then
-    warn "$sched engine search(es) against about $slots slot(s): they must be spread across their interval, not fired together"
+computed=$(( (${percpu:-1} * ${cpus:-1} + ${base:-6}) / 2 ))
+
+if [ -n "$observed" ]; then
+    slots="$observed"
+    printf '  ok       concurrency: %s scheduled searches, as Splunk reports it\n' "$slots"
+    if [ "$computed" -gt "$((slots * 3 / 2))" ]; then
+        warn "nproc suggests $computed but Splunk enforces $slots — this host's CPU count is not what the instance sees. Pass --slots $slots to preflight"
+    fi
 else
-    ok "$sched engine search(es) fit the available slots"
+    slots="$computed"
+    warn "no concurrency_limit seen in scheduler.log yet; using the computed $slots, which assumes nproc reflects what Splunk sees"
+fi
+
+sched=$(run "$SPLUNK_HOME/bin/splunk btool savedsearches list | grep -c '^\[Sigma '")
+if [ "${sched:-0}" -gt "$slots" ]; then
+    warn "$sched Sigma search(es) against $slots slot(s): they must be spread across their interval, not fired together"
+else
+    ok "$sched Sigma search(es) fit the available slots"
 fi
 
 # --- 4. Destination indexes ------------------------------------------
