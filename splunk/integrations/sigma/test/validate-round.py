@@ -24,6 +24,7 @@ planted ones. Anything detected that was not planted is counted against it.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -178,8 +179,13 @@ def main(argv=None):
     batch = Path(args.batch)
     spec = json.loads(batch.read_text())
     planted = {p["rule_id"]: p for p in spec["planted"] if p["rule_id"]}
-    tag = f"{spec['tier']}-{spec['seed']}"
-    # The label every event in this round carries.
+    # Derived from when the batch was generated, so no two stagings ever
+    # share a label: not the control and the tier whose profile it borrows,
+    # and not two runs that happened to use the same seed.
+    run_id = hashlib.sha1(
+        f"{spec['generated']}|{spec['tier']}|{spec['seed']}".encode()
+    ).hexdigest()[:6]
+    tag = f"{spec['tier']}-{spec['seed']}-{run_id}"
     host_tag = f"lab-{tag}"
 
     print(f"\n  Round {tag}: {len(planted)} planted rule(s), "
