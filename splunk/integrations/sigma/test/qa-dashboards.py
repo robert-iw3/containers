@@ -115,6 +115,36 @@ def collect_queries(views: Path, only: List[str]):
     return found
 
 
+def check_links(views: Path) -> List[str]:
+    """A drilldown that sets a token the target view does not have.
+
+    The link is accepted, the token is ignored, and the target opens
+    unfiltered or with a token rendered as the literal "null". Nothing
+    errors, so it survives until someone follows the pivot and finds the
+    wrong thing.
+    """
+    inputs: Dict[str, set] = {}
+    for f in views.glob("*.xml"):
+        root = ET.parse(f).getroot()
+        inputs[f.stem] = {i.get("token") for i in root.iter("input") if i.get("token")}
+    problems = []
+    for f in sorted(views.glob("*.xml")):
+        body = f.read_text()
+        for m in re.finditer(r'/app/[\w_]+/([\w_]+)\?([^<"]+)', body):
+            target, qs = m.group(1), m.group(2).replace("&amp;", "&")
+            if target not in inputs:
+                problems.append("%s -> %s (no such view)" % (f.stem, target))
+                continue
+            for part in qs.split("&"):
+                if not part.startswith("form."):
+                    continue
+                tok = part.split("=")[0][5:].split(".")[0]
+                if tok not in inputs[target] and tok != "tr":
+                    problems.append("%s -> %s sets form.%s, which %s does not have"
+                                    % (f.stem, target, tok, target))
+    return problems
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -125,6 +155,13 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     views = HERE / "app" / args.app / "default/data/ui/views"
+    link_problems = check_links(views)
+    if link_problems:
+        print("\n  DRILLDOWN LINKS that cannot work:")
+        for pb in link_problems:
+            print("    " + pb)
+    else:
+        print("\n  drilldown links: every form token exists on its target view")
     queries = collect_queries(views, args.views)
     print("\n  %d panel search(es) across %d view(s)\n"
           % (len(queries), len({v for v, _, _ in queries})))
@@ -203,7 +240,7 @@ def main(argv=None):
         for view, title in empty[:24]:
             print("    %-22s %s" % (view, title[:52]))
     print()
-    return 1 if errors else 0
+    return 1 if (errors or link_problems) else 0
 
 
 if __name__ == "__main__":
