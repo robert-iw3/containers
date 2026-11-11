@@ -91,7 +91,7 @@ done
 
 # ------------------------------------------------------------- discovery
 
-DISCOVER="$(dirname "$0")/../../sigma/deploy/discover.sh"
+DISCOVER="$(dirname "$0")/../../lib/discover.sh"
 if [ ! -x "$DISCOVER" ]; then
     echo "FAIL: discover.sh not found at $DISCOVER" >&2; exit 1
 fi

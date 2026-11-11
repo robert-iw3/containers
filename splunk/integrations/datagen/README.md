@@ -140,8 +140,41 @@ stat -c '%U' /opt/splunkforwarder/var
 
 The Splunk CLI chowns all of `SPLUNK_HOME` to whoever invokes it, so running
 it as the wrong account leaves splunkd unable to write its pid file. This
-cost us a forwarder outage; `../sigma/deploy/discover.sh`
+cost us a forwarder outage; `../lib/discover.sh`
 reports the account for a given endpoint.
+
+## Knowing where the data will go
+
+Data has to cross every hop between the generator and the index, and it can
+stop at any of them. `../lib/discover.sh` reports the chain and what would
+stop it:
+
+```bash
+../lib/discover.sh --target podman:splunk-uf --trace \
+  --map 'hf01=podman:splunk-hf,idx01=podman:splunk-idx'
+```
+
+```
+# Forwarding path, 3 hop(s). Data can stop at any of them.
+#   1. podman:splunk-uf [forwarder] -> hf01:9997 indexAndForward=false
+#   2. podman:splunk-hf [full] -> idx01:9997 indexAndForward=false
+#   3. podman:splunk-idx [full] terminal, indexes locally
+```
+
+A hostname in `outputs.conf` is not a transport target and nothing on the
+instance says how to reach it, so `--map` is where the operator supplies
+that. Without it the trace stops at the first unmapped hop and says so.
+
+`--inputs` reports what an instance can receive, and names anything that
+would misfile or drop data: a receiver with no source type set, a `udp`
+stanza still on the 1024-byte `maxEventSize` default, HEC enabled with no
+token, a forwarder with no output server, and an input writing to an index
+that does not exist on the indexer at the end of the path. That last one
+cannot be seen from the forwarder alone, which is why the check runs against
+the terminal hop.
+
+Each finding is printed with what to do about it. None of it requires a
+login, because it is read from configuration rather than searched.
 
 ## Volume and licensing
 
