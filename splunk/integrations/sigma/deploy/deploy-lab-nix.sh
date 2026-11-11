@@ -31,6 +31,13 @@ TA_SPL="${TA_SPL:-$HOME/Downloads/splunk-add-on-for-unix-and-linux_1034.spl}"
 TA_SHA256="${TA_SHA256:-9bfb2061b55961841d5babba04ead35509730dc73a7b6bfbc676a7216e7f1ca2}"
 INDEXER="${INDEXER:-epo-uat-indexer}"
 UF="${UF:-epo-uat-uf}"
+# Each container runs splunkd as its own account, and the CLI chowns all of
+# SPLUNK_HOME to whoever invokes it. Running the forwarder CLI as splunk
+# rewrites ownership out from under the ansible-owned var/ directory, after
+# which splunkd cannot write its pid file and will not start.
+INDEXER_USER="${INDEXER_USER:-splunk}"
+UF_USER="${UF_USER:-$(podman inspect "${UF:-epo-uat-uf}" --format '{{.Config.User}}' 2>/dev/null)}"
+UF_USER="${UF_USER:-splunk}"
 INDEX_NAME="${INDEX_NAME:-linux_lab}"
 # Staged under the app rather than var/: on this image var/ is owned by
 # another account, and keeping the data inside the app means removing
@@ -57,6 +64,8 @@ for c in "$INDEXER" "$UF"; do
     fi
     printf '  %s: %s\n' "$c" "$(podman ps --filter "name=^${c}$" --format '{{.Status}}')"
 done
+printf '  service accounts: %s=%s  %s=%s\n' \
+    "$INDEXER" "$INDEXER_USER" "$UF" "$UF_USER"
 
 if [ ! -f "$TA_SPL" ]; then
     echo "FAIL: add-on package not found: $TA_SPL" >&2
@@ -79,12 +88,12 @@ if tar -tzf "$TA_SPL" | grep -qE '^/|\.\.'; then
 fi
 
 say "Baseline (record this: the assessment effort re-runs against the result)"
-podman exec -u splunk "$INDEXER" /opt/splunk/bin/splunk btool check \
+podman exec -u "$INDEXER_USER" "$INDEXER" /opt/splunk/bin/splunk btool check \
     > "$WORK/btool-check.before.txt" 2>&1 || true
 printf '  indexer btool check: %s line(s)\n' "$(wc -l < "$WORK/btool-check.before.txt")"
-podman exec -u splunk "$INDEXER" sh -c 'ls -1 /opt/splunk/etc/apps' \
+podman exec -u "$INDEXER_USER" "$INDEXER" sh -c 'ls -1 /opt/splunk/etc/apps' \
     > "$WORK/apps-indexer.before.txt"
-podman exec -u splunk "$INDEXER" /opt/splunk/bin/splunk btool indexes list 2>/dev/null \
+podman exec -u "$INDEXER_USER" "$INDEXER" /opt/splunk/bin/splunk btool indexes list 2>/dev/null \
     | grep '^\[' | sort > "$WORK/indexes.before.txt"
 printf '  indexer apps: %s  indexes: %s\n' \
     "$(wc -l < "$WORK/apps-indexer.before.txt")" "$(wc -l < "$WORK/indexes.before.txt")"
@@ -104,13 +113,13 @@ printf '  version: %s\n' "$(sed -n 1p "$WORK/ta/Splunk_TA_nix/VERSION" 2>/dev/nu
 
 say "Indexer: install the add-on for parsing"
 run podman cp "$WORK/ta/Splunk_TA_nix" "$INDEXER:/opt/splunk/etc/apps/Splunk_TA_nix"
-run podman exec -u root "$INDEXER" chown -R splunk:splunk /opt/splunk/etc/apps/Splunk_TA_nix
+run podman exec -u root "$INDEXER" chown -R "$INDEXER_USER:$INDEXER_USER" /opt/splunk/etc/apps/Splunk_TA_nix
 
 # The indexer parses; it must not run the add-on's scripted inputs.
 say "Indexer: create the directories that follow"
 # podman cp will not create a missing parent, so every destination
 # directory is made before anything is copied into it.
-run podman exec -u splunk "$INDEXER" mkdir -p \
+run podman exec -u "$INDEXER_USER" "$INDEXER" mkdir -p \
     /opt/splunk/etc/apps/Splunk_TA_nix/local \
     /opt/splunk/etc/apps/sigma_lab_indexes/local \
     /opt/splunk/etc/apps/sigma_lab_indexes/metadata
@@ -151,17 +160,17 @@ META
 run podman cp "$WORK/indexes.conf"     "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/local/indexes.conf"
 run podman cp "$WORK/index-app.conf"   "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/local/app.conf"
 run podman cp "$WORK/index-local.meta" "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/metadata/local.meta"
-run podman exec -u root "$INDEXER" chown -R splunk:splunk \
+run podman exec -u root "$INDEXER" chown -R "$INDEXER_USER:$INDEXER_USER" \
     /opt/splunk/etc/apps/sigma_lab_indexes /opt/splunk/etc/apps/Splunk_TA_nix
 
 # -------------------------------------------------- forwarder: collection
 
 say "Forwarder: install the add-on for collection"
 run podman cp "$WORK/ta/Splunk_TA_nix" "$UF:/opt/splunkforwarder/etc/apps/Splunk_TA_nix"
-run podman exec -u root "$UF" chown -R splunk:splunk /opt/splunkforwarder/etc/apps/Splunk_TA_nix
+run podman exec -u root "$UF" chown -R "$UF_USER:$UF_USER" /opt/splunkforwarder/etc/apps/Splunk_TA_nix
 
 say "Forwarder: stage this host's real log data under $STAGE_DIR"
-run podman exec -u splunk "$UF" mkdir -p \
+run podman exec -u "$UF_USER" "$UF" mkdir -p \
     /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local "$STAGE_DIR"
 
 staged=0
@@ -180,7 +189,7 @@ done
 if [ "$staged" -eq 0 ]; then
     echo "FAIL: no host log readable; nothing to ingest" >&2; exit 1
 fi
-run podman exec -u root "$UF" chown -R splunk:splunk "$STAGE_DIR"
+run podman exec -u root "$UF" chown -R "$UF_USER:$UF_USER" "$STAGE_DIR"
 
 say "Forwarder: monitor inputs"
 # sourcetype is explicit on every stanza. The add-on assigns linux_secure by
@@ -219,15 +228,15 @@ state = enabled
 is_visible = 0
 label = Sigma Lab Linux Inputs
 CONF
-run podman exec -u splunk "$UF" mkdir -p \
+run podman exec -u "$UF_USER" "$UF" mkdir -p \
     /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local
-run podman exec -u splunk "$UF" mkdir -p \
+run podman exec -u "$UF_USER" "$UF" mkdir -p \
     /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local
 run podman cp "$WORK/uf-inputs.conf" \
     "$UF:/opt/splunkforwarder/etc/apps/sigma_lab_inputs/local/inputs.conf"
 run podman cp "$WORK/uf-app.conf" \
     "$UF:/opt/splunkforwarder/etc/apps/sigma_lab_inputs/local/app.conf"
-run podman exec -u root "$UF" chown -R splunk:splunk \
+run podman exec -u root "$UF" chown -R "$UF_USER:$UF_USER" \
     /opt/splunkforwarder/etc/apps/sigma_lab_inputs
 
 # ----------------------------------------------------------- restart
@@ -235,14 +244,14 @@ run podman exec -u root "$UF" chown -R splunk:splunk \
 say "Restart splunkd"
 # The indexer needs a restart for a new index and new parsing config. The
 # forwarder needs one to pick up a new app's inputs.
-run podman exec -u splunk "$INDEXER" /opt/splunk/bin/splunk restart --answer-yes
-run podman exec -u splunk "$UF" /opt/splunkforwarder/bin/splunk restart --answer-yes
+run podman exec -u "$INDEXER_USER" "$INDEXER" /opt/splunk/bin/splunk restart --answer-yes
+run podman exec -u "$UF_USER" "$UF" /opt/splunkforwarder/bin/splunk restart --answer-yes
 
 # ----------------------------------------------------------- verify
 
 say "Verify"
 if [ "$APPLY" = "1" ]; then
-    podman exec -u splunk "$INDEXER" /opt/splunk/bin/splunk btool check \
+    podman exec -u "$INDEXER_USER" "$INDEXER" /opt/splunk/bin/splunk btool check \
         > "$WORK/btool-check.after.txt" 2>&1 || true
     before=$(wc -l < "$WORK/btool-check.before.txt")
     after=$(wc -l < "$WORK/btool-check.after.txt")
@@ -251,10 +260,10 @@ if [ "$APPLY" = "1" ]; then
         echo "  --- new btool output (declare these, they are not failures) ---"
         diff "$WORK/btool-check.before.txt" "$WORK/btool-check.after.txt" || true
     fi
-    podman exec -u splunk "$INDEXER" /opt/splunk/bin/splunk btool indexes list 2>/dev/null \
+    podman exec -u "$INDEXER_USER" "$INDEXER" /opt/splunk/bin/splunk btool indexes list 2>/dev/null \
         | grep '^\[' | sort > "$WORK/indexes.after.txt"
     echo "  --- indexes added ---"
-    comm -13 "$WORK/indexes.before.txt" "$WORK/indexes.after.txt" | sed 's/^/    /'
+    comm -13 <(sort "$WORK/indexes.before.txt") <(sort "$WORK/indexes.after.txt") | sed 's/^/    /'
     echo
     echo "  Changes made:"
     echo "    $INDEXER  apps: Splunk_TA_nix (parsing), sigma_lab_indexes"
