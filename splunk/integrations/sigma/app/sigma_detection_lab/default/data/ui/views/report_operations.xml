@@ -102,7 +102,9 @@
         values(sigma_src_sourcetype) as source
   by sigma_rule, sigma_src_host, sigma_level, sigma_technique_name
 | eval first=strftime(first,"%F %T")
-| sort - "sigma_level", first
+| eval _rank = case(sigma_level="critical",1, sigma_level="high",2, sigma_level="medium",3, 1==1,4)
+| sort _rank, first
+| fields - _rank
 | head 20
 | table first, sigma_src_host, sigma_rule, sigma_technique_name, sigma_level, events, source
 | rename first as "First seen", sigma_src_host as "Host", sigma_rule as "Rule",

@@ -32,7 +32,14 @@
 | rex field=sigma_sample "\\ba0=\"(?&lt;aud_a0&gt;[^\"]*)\""
 | rex field=sigma_sample "\\ba1=\"(?&lt;aud_a1&gt;[^\"]*)\""
 | rex field=sigma_sample "\\ba2=\"(?&lt;aud_a2&gt;[^\"]*)\""
-| eval evt_image = coalesce(evt_image, aud_exe, aud_comm),
+| rex field=sigma_sample "Name='NewProcessName'&gt;(?&lt;sec_image&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='ParentProcessName'&gt;(?&lt;sec_parent&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='SubjectUserName'&gt;(?&lt;sec_user&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='ProcessCommandLine'&gt;(?&lt;sec_cmd&gt;[^&lt;]*)"
+| eval evt_image = coalesce(evt_image, sec_image, aud_exe, aud_comm),
+       evt_parent = coalesce(evt_parent, sec_parent),
+       evt_cmdline = coalesce(evt_cmdline, sec_cmd),
+       evt_user = coalesce(evt_user, sec_user),
        evt_user = coalesce(evt_user, aud_user),
        evt_cmdline = coalesce(evt_cmdline,
          trim(coalesce(aud_a0,"")." ".coalesce(aud_a1,"")." ".coalesce(aud_a2,"")))</query>

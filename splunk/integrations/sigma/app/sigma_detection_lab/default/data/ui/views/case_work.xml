@@ -133,8 +133,14 @@
         <choice value="resolve">a resolution, closing the case</choice>
         <default>note</default>
         <change>
-          <condition value="resolve"><set token="show_res">yes</set></condition>
-          <condition><unset token="show_res"></unset></condition>
+          <condition value="resolve">
+            <set token="show_res">yes</set>
+            <unset token="wrote"></unset>
+          </condition>
+          <condition>
+            <unset token="show_res"></unset>
+            <unset token="wrote"></unset>
+          </condition>
         </change>
       </input>
       <input type="dropdown" token="res_tok" searchWhenChanged="true" depends="$show_res$">
@@ -149,12 +155,13 @@
       <input type="text" token="text_tok" searchWhenChanged="false">
         <label>Say why, in your own words</label>
         <default></default>
+        <change><unset token="wrote"></unset></change>
       </input>
       <input type="link" token="go_tok" searchWhenChanged="true">
         <label></label>
         <choice value="record">Record it</choice>
         <change>
-          <set token="wrote">yes</set>
+          <set token="wrote">$value$</set>
         </change>
       </input>
       <html>
@@ -168,7 +175,11 @@
       <title>This case so far</title>
       <table>
         <search>
+          <done>
+            <set token="prior_status">$result.latest_status$</set>
+          </done>
           <query>index=sigma_cases case_id="$c_id$"
+| eventstats latest(case_status) as latest_status
 | eval when=strftime(_time,"%F %T"),
        entry=case(case_action="open","opened the case",
                   case_action="resolve","resolved as ".case_resolution,
@@ -198,7 +209,8 @@
        case_analyst="$analyst_tok$",
        case_text="$text_tok$",
        case_resolution=if("$act_tok$"=="resolve","$res_tok$",null()),
-       case_status=if("$act_tok$"=="resolve","resolved","open"),
+       case_status=if("$act_tok$"=="resolve","resolved",
+                      if("$prior_status$"=="resolved","resolved","open")),
        case_title="$c_rule$ on $c_host$",
        case_severity="$c_sev$",
        sigma_rule="$c_rule$", sigma_rule_id="$c_ruleid$",

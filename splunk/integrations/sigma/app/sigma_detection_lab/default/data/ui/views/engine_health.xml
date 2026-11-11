@@ -168,9 +168,12 @@
 | eval lag = _indextime - _time
 | stats count as events, median(lag) as median_lag, perc95(lag) as p95_lag, max(lag) as max_lag by sourcetype
 | eval median_lag=round(median_lag,0), p95_lag=round(p95_lag,0), max_lag=round(max_lag,0)
-| eval verdict=case(median_lag &lt; 300, "healthy",
-                    median_lag &lt; 3600, "lagging",
-                    1==1, "timestamps not extracted")
+| eval spread = max_lag - median_lag,
+       verdict = case(
+         median_lag &lt; 300, "healthy — arriving promptly",
+         spread &lt; 60 AND median_lag &gt; 3600, "timestamps not extracted — every event shares one lag",
+         median_lag &lt; 3600, "lagging",
+         1==1, "historical or replayed data — lag is the age of the data, not a fault")
 | sort - events
 | rename sourcetype as "Source type", events as "Events",
          median_lag as "Median lag (s)", p95_lag as "p95 (s)",
@@ -180,7 +183,7 @@
         <option name="count">10</option>
         <option name="drilldown">none</option>
         <format type="color" field="Verdict">
-          <colorPalette type="map">{"healthy":#0ca30c,"lagging":#fab219,"timestamps not extracted":#d03b3b}</colorPalette>
+          <colorPalette type="map">{"healthy — arriving promptly":#0ca30c,"lagging":#fab219,"timestamps not extracted — every event shares one lag":#d03b3b,"historical or replayed data — lag is the age of the data, not a fault":#19C1EB}</colorPalette>
         </format>
       </table>
     </panel>
@@ -245,10 +248,10 @@
       <table>
         <search>
           <query>index=_audit action=search info=completed savedsearch_name="Sigma Engine*"
-| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;severity&gt;\S+) (?&lt;batch&gt;\d+ of \d+)"
+| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;logsource&gt;\S+) (?&lt;severity&gt;\S+) (?&lt;batch&gt;\d+ of \d+)"
 | stats count as runs, sum(scan_count) as scanned, sum(event_count) as matched,
         sum(result_count) as detections, avg(total_run_time) as avg_s, max(total_run_time) as max_s
-  by savedsearch_name, platform, severity
+  by savedsearch_name, platform, logsource, severity
 | eval selectivity = round(matched/(scanned+1)*100, 4),
        scan_rate = round(scanned/(runs*avg_s+0.001), 0),
        per_detection = if(detections&gt;0, round(scanned/detections,0), null()),
@@ -258,7 +261,7 @@
                       selectivity &lt; 0.01, "reading for nothing",
                       1==1, "ok")
 | eval avg_s=round(avg_s,2), max_s=round(max_s,2)
-| table savedsearch_name, platform, severity, runs, scanned, matched, detections,
+| table savedsearch_name, platform, logsource, severity, runs, scanned, matched, detections,
         selectivity, scan_rate, per_detection, avg_s, projected_s, verdict
 | rename savedsearch_name as "Batch", runs as "Runs", scanned as "Events read",
          matched as "Matched", detections as "Detections",
@@ -283,7 +286,7 @@
       <chart>
         <search>
           <query>index=_audit action=search info=completed savedsearch_name="Sigma Engine*"
-| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;severity&gt;\S+) "
+| rex field=savedsearch_name "Sigma Engine - (?&lt;platform&gt;\S+) (?&lt;logsource&gt;\S+) (?&lt;severity&gt;\S+) "
 | timechart span=15m sum(scan_count) by severity useother=f</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>

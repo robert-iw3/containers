@@ -182,8 +182,8 @@
         sum(eval(if(log_level="ERROR",1,0))) as failed,
         latest(_time) as last
 | eval last=strftime(last,"%F %T"),
-       verdict=case(failed&gt;0,"Some checks are failing — see Engine Health",
-                    completed=0,"No checks have run in this period",
+       verdict=case(isnull(completed) OR completed=0,"NOT RUNNING — no checks completed in this period",
+                    failed&gt;0,"Some checks are failing — see Engine Health",
                     1==1,"Running normally")
 | table verdict, completed, failed, last
 | rename verdict as "Status", completed as "Checks completed",

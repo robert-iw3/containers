@@ -328,9 +328,10 @@ def build_search(batch: List, scope: str, alert_index: str,
         # Identity and severity come from the lookup, so adding a rule does
         # not mean rewriting a saved search.
         f" | lookup sigma_rules sigma_rule_id"
-        f" | where sigma_match_count >= coalesce(sigma_min_matches, 1)"
         f" | eval _time=sigma_first_seen, sigma_src_host=host,"
-        f" sigma_span_seconds=sigma_last_seen-sigma_first_seen"
+        f" sigma_span_seconds=sigma_last_seen-sigma_first_seen,"
+        f" sigma_corroborated=if(sigma_match_count >="
+        f" coalesce(sigma_min_matches, 1), \"yes\", \"no\")"
     )
 
 
@@ -354,9 +355,10 @@ def build_single_search(rule, scope: str, logsource_scope: str) -> str:
         f" dc(host) as sigma_host_count"
         f" by sigma_rule_id, host"
         f" | lookup sigma_rules sigma_rule_id"
-        f" | where sigma_match_count >= coalesce(sigma_min_matches, 1)"
         f" | eval _time=sigma_first_seen, sigma_src_host=host,"
-        f" sigma_span_seconds=sigma_last_seen-sigma_first_seen"
+        f" sigma_span_seconds=sigma_last_seen-sigma_first_seen,"
+        f" sigma_corroborated=if(sigma_match_count >="
+        f" coalesce(sigma_min_matches, 1), \"yes\", \"no\")"
     )
 
 
