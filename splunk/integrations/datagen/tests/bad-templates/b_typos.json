@@ -1,0 +1,13 @@
+{
+ "name": "typos", "sourcetype": "typo:st",
+ "variables": {
+   "ts":   {"gen": "timestmap", "format": "iso8601"},
+   "user": {"gen": "choise", "values": ["a","b"]},
+   "pid":  {"gen": "int", "min": 500, "max": 100},
+   "n":    {"gen": "choice", "values": ["a","b","c"], "weights": [1,2]},
+   "h":    {"gen": "hex", "widht": 8}
+ },
+ "records": [
+   {"weight": 0, "lines": ["{ts} {usr} did {thing} pid={pid} {h|basname} {n|joined}"]}
+ ]
+}
