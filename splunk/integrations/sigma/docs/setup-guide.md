@@ -123,6 +123,27 @@ appear within about ten minutes of a matching event.
 
 Then open **Sigma Detection Lab → Detection Coverage**.
 
+## 7. Detect what is already indexed
+
+Each search looks back only as far as its own interval -- fifteen minutes for
+critical rules, an hour for medium. A wider window would re-read the same
+events on every run and record the same detection repeatedly.
+
+That is right for a live feed and wrong on the day you install: an instance
+holding thirty days of logs shows nothing until new data arrives, and the
+dashboards read zero for a reason that has nothing to do with the rules.
+
+To examine what is already there, run the engine once across a wider window:
+
+```bash
+./bin/backfill.sh --container <indexer> --window -30d
+```
+
+It builds the engine with that window, waits for every search to complete,
+then restores the production cadence. It records a detection for everything
+it finds in that window, so running it twice over the same period records
+them twice -- it is meant to be run once, after installing.
+
 ## Checking it works
 
 ```bash
@@ -136,6 +157,7 @@ Nothing back, after the schedule has run, usually means one of:
 | no detections at all | the source types the rules need are not in your data — step 3 |
 | searches error on dispatch | the macro points at an index that does not exist — step 6 |
 | detections but no drilldown | an older package without the `sigma_src_*` fields |
+| detections only on new data, nothing historical | each search looks back one interval, by design. Run the one-off backfill in step 7 |
 | scheduler deferring runs | more scheduled searches than the instance's concurrency allows. `bin/preflight.py` reports this before deploying; `bin/check-instance.sh` reports it on the instance. Rules are batched precisely so this does not happen, so a recurrence usually means the cadence was tightened |
 
 ## Tuning

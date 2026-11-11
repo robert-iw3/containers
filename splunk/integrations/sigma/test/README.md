@@ -133,6 +133,27 @@ Work outward from the narrowest check:
 
 ---
 
+## Health alerts while staging data
+
+Staging a dataset pushes a hundred thousand backdated records through a
+single-node instance in a few minutes. Splunk's own health check reports it,
+and two of the three are the staging itself rather than a defect:
+
+| Alert | What it means here |
+|---|---|
+| **System IOWait** (yellow at 1) | the ingest. A hundred thousand records is a few seconds of disk; the indicator is sensitive by design and clears on its own |
+| **Forwarder Ingestion Latency** | lab events are backdated across the window, so the gap between event time and index time is the window width. Inherent to backdated data, and it clears once staging stops |
+| **Searches Delayed** | more scheduled searches than the instance can run at once. This one is **not** inherent -- it means searches were left installed. The harnesses remove their own apps when they finish; `bin/check-instance.sh` reports the real concurrency limit |
+
+An ingestion-latency gap far wider than the window is worth reading rather
+than dismissing. It is what exposed a generator fault: a scenario whose
+campaign was longer than the window had its later steps dated weeks ahead,
+and Splunk re-times anything past `MAX_DAYS_HENCE` to its ingest time -- so
+those events landed in the engine's live window whatever their recorded
+timestamp, and a round could score a detection the engine would not have
+made on correctly dated data. `scenario.py` now refuses to plant a campaign
+it cannot fit and names the window each would need.
+
 ## Files
 
 | path | what it is |
