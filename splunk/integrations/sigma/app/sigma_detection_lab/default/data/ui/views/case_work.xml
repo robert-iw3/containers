@@ -65,6 +65,7 @@
       <single>
         <search>
           <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | eval case_id=substr(md5(sigma_rule_id."|".sigma_src_host."|".tostring(round(sigma_first_seen,0))),1,12)
 | stats count by case_id
 | join type=left case_id [ search index=sigma_cases | stats count as touched by case_id ]
@@ -84,6 +85,7 @@
       <table>
         <search>
           <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | lookup sigma_rules sigma_rule_id OUTPUT sigma_technique_name
 | eval case_id = substr(md5(sigma_rule_id."|".sigma_src_host."|".tostring(round(sigma_first_seen,0))),1,12),
        when = strftime(sigma_first_seen,"%F %T"),

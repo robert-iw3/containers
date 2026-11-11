@@ -7,6 +7,7 @@
        full event set is one click away for when it is needed. -->
   <search id="det">
     <query>index=sigma_alerts $rule_tok$ $host_tok$ $sev_tok$
+    | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | lookup sigma_rules sigma_rule_id
     OUTPUT sigma_technique_name, sigma_tactic_name, sigma_confidence,
            sigma_confidence_score, sigma_falsepositives, sigma_disposition,
@@ -55,7 +56,9 @@
     <input type="dropdown" token="rule_tok" searchWhenChanged="true">
       <label>Rule</label>
       <search>
-        <query>index=sigma_alerts | stats count by sigma_rule | sort - count</query>
+        <query>index=sigma_alerts
+        | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+        | stats count by sigma_rule | sort - count</query>
         <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
       </search>
       <fieldForLabel>sigma_rule</fieldForLabel>
@@ -68,7 +71,9 @@
     <input type="dropdown" token="host_tok" searchWhenChanged="true">
       <label>Host</label>
       <search>
-        <query>index=sigma_alerts | stats count by sigma_src_host | sort - count</query>
+        <query>index=sigma_alerts
+        | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+        | stats count by sigma_src_host | sort - count</query>
         <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
       </search>
       <fieldForLabel>sigma_src_host</fieldForLabel>
@@ -133,8 +138,13 @@
       <title>Detections — select one to read the evidence</title>
       <table>
         <search base="det">
-          <query>| eval st = mvindex(sigma_src_sourcetype, 0),
-       idx = mvindex(sigma_src_index, 0),
+          <!-- coalesce around mvindex: the engine writes these with values(),
+               which yields one value when a detection came from a single
+               source type. mvindex() on a single-value field returns null,
+               so the token driving the evidence panels below was set to
+               "null" and every one of them searched for nothing. -->
+          <query>| eval st = coalesce(mvindex(sigma_src_sourcetype, 0), sigma_src_sourcetype),
+       idx = coalesce(mvindex(sigma_src_index, 0), sigma_src_index),
        from_t = tostring(floor(coalesce(sigma_first_seen, 0) - 1800)),
        to_t = tostring(ceiling(coalesce(sigma_last_seen, sigma_first_seen, 0) + 1800))
 | table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
@@ -252,6 +262,7 @@
       <table>
         <search>
           <query>index=sigma_alerts sigma_src_host="$sel_host$"
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | lookup sigma_rules sigma_rule_id OUTPUT sigma_technique_name
 | eval when=strftime(sigma_first_seen,"%F %T"),
        technique=if(sigma_technique_name="","no technique mapped",sigma_technique_name)

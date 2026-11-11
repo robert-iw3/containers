@@ -217,6 +217,7 @@
       <table>
         <search>
           <query>index=sigma_alerts sigma_rule_id=$rule_id|s$
+| dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | eval when=strftime(sigma_first_seen,"%F %T")
 | table when, sigma_src_host, sigma_match_count, sigma_src_sourcetype
 | rename when as "First seen", sigma_src_host as "Host",

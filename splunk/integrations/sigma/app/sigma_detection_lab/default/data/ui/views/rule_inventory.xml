@@ -221,7 +221,9 @@
       <title>What this rule has detected</title>
       <chart>
         <search>
-          <query>index=sigma_alerts sigma_rule="$rule_sel$" | timechart span=1h count as detections</query>
+          <query>index=sigma_alerts sigma_rule="$rule_sel$"
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | timechart span=1h count as detections</query>
           <earliest>-7d@d</earliest>
           <latest>now</latest>
         </search>
@@ -234,6 +236,7 @@
         <title>Click a detection for the events behind it</title>
         <search>
           <query>index=sigma_alerts sigma_rule="$rule_sel$"
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | eval when=strftime(sigma_first_seen,"%F %T")
 | table when, sigma_src_host, sigma_match_count, sigma_src_sourcetype
 | rename when as "First seen", sigma_src_host as "Host",

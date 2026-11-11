@@ -327,6 +327,7 @@
 | fields sigma_rule_id, sigma_platform, sigma_level, sigma_disposition
 | join type=left sigma_rule_id
     [ search index=sigma_alerts earliest=-7d latest=now
+    | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
     | stats count as detections by sigma_rule_id ]
 | eval detections = coalesce(detections, 0),
        fired = if(detections &gt; 0, 1, 0)
@@ -348,6 +349,7 @@
       <table>
         <search>
           <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | stats sum(sigma_match_count) as events, count as detections,
         dc(sigma_src_host) as hosts by sigma_rule, sigma_level
 | eval "Events per detection" = round(events/detections, 1)

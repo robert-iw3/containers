@@ -30,7 +30,9 @@
       <title>Needs action</title>
       <single>
         <search>
-          <query>index=sigma_alerts $plat$ sigma_disposition=immediate | stats count</query>
+          <query>index=sigma_alerts $plat$ sigma_disposition=immediate
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats count</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -44,7 +46,9 @@
       <title>Recorded for trend</title>
       <single>
         <search>
-          <query>index=sigma_alerts $plat$ sigma_disposition=trend | stats count</query>
+          <query>index=sigma_alerts $plat$ sigma_disposition=trend
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats count</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -57,7 +61,9 @@
       <title>Hosts</title>
       <single>
         <search>
-          <query>index=sigma_alerts $plat$ | stats dc(sigma_src_host)</query>
+          <query>index=sigma_alerts $plat$
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats dc(sigma_src_host)</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -67,7 +73,9 @@
       <title>Distinct rules fired</title>
       <single>
         <search>
-          <query>index=sigma_alerts $plat$ | stats dc(sigma_rule)</query>
+          <query>index=sigma_alerts $plat$
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats dc(sigma_rule)</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -98,6 +106,7 @@
       <table>
         <search>
           <query>index=sigma_alerts $plat$ sigma_disposition=immediate
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | stats min(sigma_first_seen) as first, sum(sigma_match_count) as events,
         values(sigma_src_sourcetype) as source
   by sigma_rule, sigma_src_host, sigma_level, sigma_technique_name
@@ -128,6 +137,7 @@
       <chart>
         <search>
           <query>index=sigma_alerts $plat$
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | stats count by sigma_src_host, sigma_level
 | sort - count | head 20</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
@@ -146,6 +156,7 @@
       <table>
         <search>
           <query>index=sigma_alerts $plat$
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | stats count as detections, dc(sigma_src_host) as hosts by sigma_rule, sigma_confidence, sigma_rule_id
 | where detections &gt;= 3
 | lookup sigma_rules sigma_rule_id OUTPUT sigma_falsepositives

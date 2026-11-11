@@ -8,6 +8,7 @@
        alphabetically. -->
   <search id="cov">
     <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
+    | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | lookup sigma_rules sigma_rule_id
     OUTPUT sigma_technique_name, sigma_tactic_name, sigma_confidence_score,
            sigma_disposition, sigma_platform
@@ -214,6 +215,7 @@
 | stats count as rules by sigma_platform, sigma_log_source
 | join type=left sigma_log_source
     [ search index=sigma_alerts earliest=$tr.earliest$ latest=$tr.latest$
+    | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
     | lookup sigma_rules sigma_rule_id OUTPUT sigma_log_source
     | stats count as detections by sigma_log_source ]
 | eval detections = coalesce(detections, 0),

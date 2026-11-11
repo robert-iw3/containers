@@ -45,7 +45,9 @@
       <title>Things worth a look</title>
       <single>
         <search>
-          <query>index=sigma_alerts | stats count</query>
+          <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats count</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -60,7 +62,9 @@
       <title>Needing prompt attention</title>
       <single>
         <search>
-          <query>index=sigma_alerts sigma_disposition=immediate | stats count</query>
+          <query>index=sigma_alerts sigma_disposition=immediate
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats count</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -75,7 +79,9 @@
       <title>Computers involved</title>
       <single>
         <search>
-          <query>index=sigma_alerts | stats dc(sigma_src_host)</query>
+          <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
+          | stats dc(sigma_src_host)</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
@@ -111,6 +117,7 @@
       <chart>
         <search>
           <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | eval urgency=if(sigma_disposition="immediate","Needs prompt attention","Recorded and watched")
 | timechart span=1d count by urgency useother=f</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
@@ -131,6 +138,7 @@
       <table>
         <search>
           <query>index=sigma_alerts
+          | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
 | stats count as detections, dc(sigma_src_host) as computers by sigma_technique_name, sigma_level
 | eval meaning=case(
     sigma_level="critical", "Strongly associated with an active intrusion.",

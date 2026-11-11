@@ -70,13 +70,15 @@ deploy "deployed for backfill"
 
 echo
 echo "== 2. Wait for every search to run once =="
+# Only the detection searches. The rollups run once a day, so counting them
+# here makes the target unreachable and the wait always runs to its timeout.
 want=$(podman exec -u splunk "$CONTAINER" sh -c \
-    "grep -c '^\[Sigma ' /opt/splunk/etc/apps/$APP/default/savedsearches.conf")
+    "grep -cE '^\[Sigma (Engine|Rule) - ' /opt/splunk/etc/apps/$APP/default/savedsearches.conf")
 start=$(date +%s)
 deadline=$(( start + WAIT ))
 while [ "$(date +%s)" -lt "$deadline" ]; do
     done_n=$(podman exec -u splunk "$CONTAINER" sh -c \
-      "awk -v s=$start '\$0 ~ /status=success/ && /savedsearch_name=\"Sigma /' /opt/splunk/var/log/splunk/scheduler.log 2>/dev/null \
+      "awk -v s=$start '\$0 ~ /status=success/ && /savedsearch_name=\"Sigma (Engine|Rule) - /' /opt/splunk/var/log/splunk/scheduler.log 2>/dev/null \
        | grep -oE 'savedsearch_name=\"[^\"]+\"' | sort -u | wc -l" || echo 0)
     printf '\r  %s of %s search(es) have run' "${done_n:-0}" "$want"
     [ "${done_n:-0}" -ge "$want" ] && break

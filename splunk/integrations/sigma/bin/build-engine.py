@@ -45,17 +45,33 @@ import sigma2splunkalert as s2s  # noqa: E402
 
 # Cadence, window and default state per severity. The window matches the
 # interval so no detection is written twice.
+# Each tier runs on its own cadence and looks back over exactly that
+# interval. The window must not be wider: a wider window re-reads events the
+# previous run already matched and records the same detection again. Gaps
+# are prevented by continuous scheduling instead -- see realtime_schedule
+# below -- which anchors each run's time range to its scheduled time, so a
+# run that starts late still covers the window it was meant to.
+#
+# "spread" is how many minutes the scheduler may defer a search to even out
+# load. Every search in a tier is scheduled on the same minute and an
+# instance runs only a handful at once, so without a spread they queue and
+# each one's start time walks further from its schedule.
+#
+# schedule_window rather than allow_skew, for two reasons: Splunk counts a
+# skewed search as delayed in its own health reporting but a deferral inside
+# schedule_window as on time, and allow_skew applies only to */N crons, so
+# it does nothing for the hourly tier.
 TIERS: Dict[str, Dict] = {
-    "critical":      {"cron": "*/15 * * * *", "window": "-15m", "enabled": True,
-                      "priority": "higher"},
-    "high":          {"cron": "*/30 * * * *", "window": "-30m", "enabled": True,
-                      "priority": "higher"},
-    "medium":        {"cron": "0 * * * *",    "window": "-60m", "enabled": True,
-                      "priority": "default"},
-    "low":           {"cron": "0 */4 * * *",  "window": "-4h",  "enabled": False,
-                      "priority": "default"},
-    "informational": {"cron": "0 */6 * * *",  "window": "-6h",  "enabled": False,
-                      "priority": "default"},
+    "critical":      {"cron": "*/15 * * * *", "window": "-15m", "spread": 5,
+                      "enabled": True,  "priority": "higher"},
+    "high":          {"cron": "*/30 * * * *", "window": "-30m", "spread": 10,
+                      "enabled": True,  "priority": "higher"},
+    "medium":        {"cron": "0 * * * *",    "window": "-60m", "spread": 20,
+                      "enabled": True,  "priority": "default"},
+    "low":           {"cron": "0 */4 * * *",  "window": "-4h",  "spread": 60,
+                      "enabled": False, "priority": "default"},
+    "informational": {"cron": "0 */6 * * *",  "window": "-6h",  "spread": 60,
+                      "enabled": False, "priority": "default"},
 }
 TIER_ORDER = ["critical", "high", "medium", "low", "informational"]
 
@@ -535,7 +551,7 @@ realtime_schedule = 0
 cron_schedule = {tier["cron"]}
 dispatch.earliest_time = {tier["window"]}
 dispatch.latest_time = now
-allow_skew = 100%
+schedule_window = {tier['spread']}
 schedule_priority = {tier["priority"]}
 alert.digest_mode = 1
 alert.track = 0
@@ -611,7 +627,7 @@ realtime_schedule = 0
 cron_schedule = {tier["cron"]}
 dispatch.earliest_time = {tier["window"]}
 dispatch.latest_time = now
-allow_skew = 100%
+schedule_window = {tier['spread']}
 schedule_priority = {tier["priority"]}
 alert.digest_mode = 1
 alert.track = 0
