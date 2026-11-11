@@ -183,3 +183,13 @@ disabled = 1
 
 It does not install anything on endpoints, change how the add-ons parse, or
 alter your existing indexes. It reads them and writes to its own.
+
+It does not find a slow campaign. Every search looks back one interval, and
+`sigma_min_matches` counts corroborating events within a single run, so two
+events days apart never meet in one window. A patient intrusion -- a beacon
+calling home every few days over weeks -- goes undetected, and that has been
+measured rather than assumed: the `t4_patient_dns_c2` scenario, fifteen
+events across fifty-one days, is caught by none of the 1,377 rules. What
+this app detects well is activity visible in a single event or a short
+burst, which is what the great majority of Sigma rules describe.
+`planning/gap-analysis.md` records what closing that would take.
