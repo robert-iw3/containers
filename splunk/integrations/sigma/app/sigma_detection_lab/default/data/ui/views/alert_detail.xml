@@ -1,187 +1,254 @@
 <form version="1.1" theme="dark">
   <label>Alert Detail</label>
-  <description>One detection at a time, with the Windows or Linux events that triggered it. Select a detection in the upper table and the lower panels load the source events around it.</description>
+  <description>Triage one detection: what the rule was looking for, the event that matched it, and what else happened on that host at the time.</description>
+
+  <!-- Detections carry the earliest matching event in sigma_sample, so the
+       evidence can be read here without a second search. The pivot to the
+       full event set is one click away for when it is needed. -->
+  <search id="det">
+    <query>index=sigma_alerts $rule_tok$ $host_tok$ $sev_tok$
+| lookup sigma_rules sigma_rule_id
+    OUTPUT sigma_technique_name, sigma_tactic_name, sigma_confidence,
+           sigma_confidence_score, sigma_falsepositives, sigma_disposition,
+           sigma_platform, sigma_source_url
+| eval when = strftime(sigma_first_seen, "%F %T"),
+       seen_for = case(sigma_span_seconds &lt;= 0, "a single event",
+                       sigma_span_seconds &lt; 60, sigma_span_seconds." seconds",
+                       sigma_span_seconds &lt; 3600, round(sigma_span_seconds/60,0)." minutes",
+                       1==1, round(sigma_span_seconds/3600,1)." hours"),
+       technique = if(sigma_technique_name="" OR isnull(sigma_technique_name),
+                      "no technique mapped", sigma_technique_name),
+       tactic = if(sigma_tactic_name="" OR isnull(sigma_tactic_name),
+                   "unmapped", sigma_tactic_name),
+       urgency = if(sigma_disposition="immediate", "act now", "trend")
+| rex field=sigma_sample "Name='CommandLine'&gt;(?&lt;evt_cmdline&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='Image'&gt;(?&lt;evt_image&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='ParentImage'&gt;(?&lt;evt_parent&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='User'&gt;(?&lt;evt_user&gt;[^&lt;]*)"
+| rex field=sigma_sample "Name='ParentCommandLine'&gt;(?&lt;evt_parentcmd&gt;[^&lt;]*)"</query>
+    <earliest>$tr.earliest$</earliest>
+    <latest>$tr.latest$</latest>
+  </search>
 
   <fieldset submitButton="false" autoRun="true">
     <input type="time" token="tr">
       <label>Time range</label>
-      <default>
-        <earliest>-7d@d</earliest>
-        <latest>now</latest>
-      </default>
+      <default><earliest>-7d@d</earliest><latest>now</latest></default>
     </input>
     <input type="dropdown" token="rule_tok" searchWhenChanged="true">
       <label>Rule</label>
-      <choice value="*">Any rule</choice>
-      <default>*</default>
-      <fieldForLabel>sigma_rule</fieldForLabel>
-      <fieldForValue>sigma_rule</fieldForValue>
       <search>
         <query>index=sigma_alerts | stats count by sigma_rule | sort - count</query>
-        <earliest>$tr.earliest$</earliest>
-        <latest>$tr.latest$</latest>
+        <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
       </search>
+      <fieldForLabel>sigma_rule</fieldForLabel>
+      <fieldForValue>sigma_rule</fieldForValue>
+      <choice value="*">Any rule</choice>
+      <default>*</default>
       <prefix>sigma_rule="</prefix>
       <suffix>"</suffix>
     </input>
-    <input type="dropdown" token="hostsel" searchWhenChanged="true">
+    <input type="dropdown" token="host_tok" searchWhenChanged="true">
       <label>Host</label>
-      <choice value="*">Any host</choice>
-      <default>*</default>
-      <fieldForLabel>sigma_src_host</fieldForLabel>
-      <fieldForValue>sigma_src_host</fieldForValue>
       <search>
         <query>index=sigma_alerts | stats count by sigma_src_host | sort - count</query>
-        <earliest>$tr.earliest$</earliest>
-        <latest>$tr.latest$</latest>
+        <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
       </search>
+      <fieldForLabel>sigma_src_host</fieldForLabel>
+      <fieldForValue>sigma_src_host</fieldForValue>
+      <choice value="*">Any host</choice>
+      <default>*</default>
       <prefix>sigma_src_host="</prefix>
       <suffix>"</suffix>
+    </input>
+    <input type="multiselect" token="sev_tok" searchWhenChanged="true">
+      <label>Severity</label>
+      <choice value="*">Any</choice>
+      <choice value="critical">critical</choice>
+      <choice value="high">high</choice>
+      <choice value="medium">medium</choice>
+      <choice value="low">low</choice>
+      <default>*</default>
+      <valuePrefix>sigma_level="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
     </input>
   </fieldset>
 
   <row>
     <panel>
-      <title>Matching detections</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $rule_tok$ $hostsel$ | stats count</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
+      <title>Detections</title>
+      <single><search base="det"><query>| stats count</query></search>
+        <option name="drilldown">none</option></single>
+    </panel>
+    <panel>
+      <title>Needing action now</title>
+      <single><search base="det"><query>| search urgency="act now" | stats count</query></search>
         <option name="drilldown">none</option>
         <option name="colorBy">value</option>
-        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
-        <option name="rangeValues">[1,25]</option>
-        <option name="useColors">1</option>
-      </single>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option></single>
     </panel>
     <panel>
-      <title>Highest severity seen</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $rule_tok$ $hostsel$
-| stats max(sigma_severity) as s
-| eval severity=case(s=5,"critical",s=4,"high",s=3,"medium",s=2,"low",s=1,"informational",true(),"none")
-| fields severity</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-      </single>
+      <title>Hosts</title>
+      <single><search base="det"><query>| stats dc(sigma_src_host)</query></search>
+        <option name="drilldown">none</option></single>
     </panel>
     <panel>
-      <title>Source types involved</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $rule_tok$ $hostsel$ | stats dc(sigma_src_sourcetype)</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
+      <title>Techniques</title>
+      <single><search base="det">
+        <query>| search technique!="no technique mapped" | stats dc(technique)</query></search>
+        <option name="drilldown">none</option></single>
+    </panel>
+    <panel>
+      <title>Highest severity</title>
+      <single><search base="det">
+        <query>| eval r=case(sigma_level="critical",4,sigma_level="high",3,sigma_level="medium",2,1==1,1)
+| stats max(r) as r | eval v=case(r=4,"critical",r=3,"high",r=2,"medium",1==1,"low") | fields v</query></search>
         <option name="drilldown">none</option>
-      </single>
+        <option name="colorBy">value</option></single>
     </panel>
   </row>
 
   <row>
     <panel>
-      <title>Detections — select one to load its source events</title>
+      <title>Detections — select one to read the evidence</title>
       <table>
-        <search>
-          <query>index=sigma_alerts $rule_tok$ $hostsel$
-| eval when=strftime(sigma_first_seen,"%F %T"),
-       attack=replace(sigma_attack,"attack\.",""),
-       span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event"),
-       win_start=sigma_first_seen-120, win_end=sigma_last_seen+120
-| table when, sigma_level, sigma_rule, sigma_match_count, span, sigma_src_host, sigma_src_sourcetype, sigma_src_index, attack, win_start, win_end
-| sort - when</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+        <search base="det">
+          <query>| table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
+        sigma_confidence, urgency, sigma_match_count, seen_for, sigma_src_sourcetype,
+        sigma_rule_id, sigma_src_index, evt_cmdline, evt_image, evt_parent, evt_user, evt_parentcmd
+| rename when as "When", sigma_src_host as "Host", sigma_rule as "Rule",
+         technique as "ATT&amp;CK technique", tactic as "Tactic", sigma_level as "Severity",
+         sigma_confidence as "Confidence", urgency as "Handling",
+         sigma_match_count as "Events", seen_for as "Over",
+         sigma_src_sourcetype as "Source type"
+| fields - sigma_rule_id, sigma_src_index, evt_*
+| sort - "When"</query>
         </search>
-        <option name="count">20</option>
+        <option name="count">15</option>
         <option name="drilldown">row</option>
-        <format type="color" field="sigma_level">
-          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
-        </format>
-        <!-- Selecting a row sets the tokens the panels below search on.
-             The source index, source type and host come from the detection
-             event itself, recorded before collect rewrote them. -->
+        <option name="wrap">false</option>
         <drilldown>
-          <set token="sel_index">$row.sigma_src_index$</set>
-          <set token="sel_sourcetype">$row.sigma_src_sourcetype$</set>
-          <set token="sel_host">$row.sigma_src_host$</set>
-          <set token="sel_rule">$row.sigma_rule$</set>
-          <set token="sel_start">$row.win_start$</set>
-          <set token="sel_end">$row.win_end$</set>
-          <set token="sel_count">$row.sigma_match_count$</set>
-          <set token="sel_when">$row.when$</set>
+          <set token="sel_rule">$row.Rule$</set>
+          <set token="sel_host">$row.Host$</set>
+          <set token="sel_when">$row.When$</set>
+          <set token="sel_st">$row.Source type$</set>
         </drilldown>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
+        </format>
+        <format type="color" field="Handling">
+          <colorPalette type="map">{"act now":#d03b3b,"trend":#19C1EB}</colorPalette>
+        </format>
       </table>
     </panel>
   </row>
 
-  <row depends="$sel_index$">
+  <!-- The evidence, read straight from the detection. -->
+  <row depends="$sel_rule$">
     <panel>
-      <title>The $sel_count$ matching event(s) on $sel_host$ — triggered "$sel_rule$"</title>
-      <event>
-        <!-- A two minute window either side of the matching event. Wider
-             than needed on purpose: the surrounding activity is usually
-             what makes the detection interpretable. -->
-        <search>
-          <query>index=$sel_index$ sourcetype="$sel_sourcetype$" host="$sel_host$"</query>
-          <earliest>$sel_start$</earliest>
-          <latest>$sel_end$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="count">20</option>
-        <option name="list.drilldown">full</option>
-        <option name="maxLines">12</option>
-        <option name="raw.drilldown">full</option>
-        <option name="type">list</option>
-      </event>
-    </panel>
-  </row>
-
-  <row depends="$sel_index$">
-    <panel>
-      <title>What else happened on $sel_host$ in the same window</title>
+      <title>What triggered it — "$sel_rule$" on $sel_host$</title>
       <table>
-        <search>
-          <query>index=$sel_index$ host="$sel_host$"
-| stats count as events, values(sourcetype) as sourcetypes by host
-| fields host, events, sourcetypes</query>
-          <earliest>$sel_start$</earliest>
-          <latest>$sel_end$</latest>
+        <search base="det">
+          <query>| search sigma_rule="$sel_rule$" sigma_src_host="$sel_host$"
+| head 1
+| eval "Process"=coalesce(evt_image,"not in the sample"),
+       "Command line"=coalesce(evt_cmdline,"not in the sample"),
+       "Parent process"=coalesce(evt_parent,"not in the sample"),
+       "Parent command line"=coalesce(evt_parentcmd,"not in the sample"),
+       "User"=coalesce(evt_user,"not in the sample"),
+       "Host"=sigma_src_host,
+       "When"=when,
+       "Matching events"=sigma_match_count." over ".seen_for,
+       "Source type"=sigma_src_sourcetype,
+       "Index"=sigma_src_index
+| fields "When","Host","User","Process","Command line","Parent process",
+         "Parent command line","Matching events","Source type","Index"
+| transpose column_name="Field" | rename "row 1" as "Value"</query>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Why this rule fired, and what it gets wrong</title>
+      <table>
+        <search base="det">
+          <query>| search sigma_rule="$sel_rule$" sigma_src_host="$sel_host$"
+| head 1
+| lookup sigma_rule_logic sigma_rule_id OUTPUT sigma_condition, sigma_description
+| eval "What it looks for"=coalesce(sigma_description,"no description"),
+       "Sigma condition"=coalesce(sigma_condition,"unavailable"),
+       "ATT&amp;CK technique"=technique." (".sigma_attack.")",
+       "Tactic"=tactic,
+       "Confidence"=sigma_confidence." (".sigma_confidence_score."/100)",
+       "Handling"=if(urgency="act now",
+         "Alerts on a single match: this rule is both severe and specific.",
+         "Recorded and baselined; its value is the pattern, not one occurrence."),
+       "Known false positives"=if(sigma_falsepositives="",
+         "The author declared none. That is not the same as there being none.",
+         sigma_falsepositives)
+| fields "What it looks for","Sigma condition","ATT&amp;CK technique","Tactic",
+         "Confidence","Handling","Known false positives"
+| transpose column_name="Field" | rename "row 1" as "Value"</query>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>
+        <option name="wrap">true</option>
       </table>
     </panel>
+  </row>
+
+  <row depends="$sel_rule$">
     <panel>
-      <title>Other detections on $sel_host$</title>
+      <title>The events behind it — on $sel_host$, around $sel_when$</title>
+      <!-- Back to the raw log. The detection kept its origin index and
+           source type precisely so this pivot does not have to guess. -->
+      <event>
+        <search>
+          <query>`sigma_lab_index` host="$sel_host$" sourcetype="$sel_st$"</query>
+          <earliest>$tr.earliest$</earliest>
+          <latest>$tr.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="list.drilldown">none</option>
+        <option name="maxLines">8</option>
+        <option name="raw.drilldown">none</option>
+      </event>
+    </panel>
+    <panel>
+      <title>Everything else detected on $sel_host$</title>
       <table>
         <search>
           <query>index=sigma_alerts sigma_src_host="$sel_host$"
-| stats count as detections, values(sigma_level) as level, max(_time) as last by sigma_rule
-| eval last=strftime(last,"%F %T")
-| sort - detections</query>
+| lookup sigma_rules sigma_rule_id OUTPUT sigma_technique_name
+| eval when=strftime(sigma_first_seen,"%F %T"),
+       technique=if(sigma_technique_name="","no technique mapped",sigma_technique_name)
+| table when, sigma_rule, technique, sigma_level, sigma_match_count
+| rename when as "When", sigma_rule as "Rule", technique as "Technique",
+         sigma_level as "Severity", sigma_match_count as "Events"
+| sort - "When"</query>
           <earliest>$tr.earliest$</earliest>
           <latest>$tr.latest$</latest>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>
-        <format type="color" field="level">
-          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
         </format>
       </table>
     </panel>
   </row>
 
-  <row rejects="$sel_index$">
+  <row rejects="$sel_rule$">
     <panel>
       <html>
-        <div style="padding:16px;color:#9aa0a6;font-family:Roboto,Helvetica,Arial,sans-serif">
-          Select a detection above to load the Windows or Linux events behind it.
+        <div style="padding:16px;color:#8A8A93;font-family:Roboto,Helvetica,Arial,sans-serif;font-size:13px">
+          Select a detection above to read the event that triggered it, what the rule was
+          looking for, and what else happened on that host.
         </div>
       </html>
     </panel>

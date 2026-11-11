@@ -1,14 +1,39 @@
 <form version="1.1" theme="dark">
   <label>Detection Coverage</label>
-  <description>What the Sigma rules caught, and on which hosts. Every table drills through to the Windows or Linux events that triggered the detection.</description>
+  <description>What was caught, and which of it is worth opening first. A host showing activity across several stages of an intrusion matters more than the same number of unrelated detections spread across a fleet.</description>
+
+  <!-- Every panel reads this. The tactic is resolved to its ATT&CK name and
+       prefixed with its kill-chain position, so a matrix ordered by column
+       name is ordered by how an intrusion actually progresses rather than
+       alphabetically. -->
+  <search id="cov">
+    <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
+| lookup sigma_rules sigma_rule_id
+    OUTPUT sigma_technique_name, sigma_tactic_name, sigma_confidence_score,
+           sigma_disposition, sigma_platform
+| eval tactic = if(sigma_tactic_name="" OR isnull(sigma_tactic_name), "Unmapped",
+                   trim(mvindex(split(sigma_tactic_name,","),0))),
+       technique = if(sigma_technique_name="" OR isnull(sigma_technique_name),
+                      "no technique mapped", sigma_technique_name),
+       stage = case(tactic=="Reconnaissance",1, tactic=="Resource Development",2,
+                    tactic=="Initial Access",3, tactic=="Execution",4,
+                    tactic=="Persistence",5, tactic=="Privilege Escalation",6,
+                    tactic=="Defense Evasion",7, tactic=="Credential Access",8,
+                    tactic=="Discovery",9, tactic=="Lateral Movement",10,
+                    tactic=="Collection",11, tactic=="Command and Control",12,
+                    tactic=="Exfiltration",13, tactic=="Impact",14, 1==1,15),
+       stage_label = printf("%02d",stage)." ".tactic,
+       weight = case(sigma_level=="critical",10, sigma_level=="high",6,
+                     sigma_level=="medium",3, 1==1,1)
+                * (coalesce(tonumber(sigma_confidence_score),50)/100)</query>
+    <earliest>$tr.earliest$</earliest>
+    <latest>$tr.latest$</latest>
+  </search>
 
   <fieldset submitButton="false" autoRun="true">
     <input type="time" token="tr">
       <label>Time range</label>
-      <default>
-        <earliest>-7d@d</earliest>
-        <latest>now</latest>
-      </default>
+      <default><earliest>-7d@d</earliest><latest>now</latest></default>
     </input>
     <input type="multiselect" token="sev_tok" searchWhenChanged="true">
       <label>Severity</label>
@@ -18,8 +43,7 @@
       <choice value="medium">medium</choice>
       <choice value="low">low</choice>
       <default>*</default>
-      <valuePrefix>sigma_level="</valuePrefix>
-      <valueSuffix>"</valueSuffix>
+      <valuePrefix>sigma_level="</valuePrefix><valueSuffix>"</valueSuffix>
       <delimiter> OR </delimiter>
     </input>
     <input type="multiselect" token="plat_tok" searchWhenChanged="true">
@@ -28,167 +52,208 @@
       <choice value="Windows">Windows</choice>
       <choice value="Linux">Linux</choice>
       <default>*</default>
-      <valuePrefix>sigma_platform="</valuePrefix>
-      <valueSuffix>"</valueSuffix>
+      <valuePrefix>sigma_platform="</valuePrefix><valueSuffix>"</valueSuffix>
       <delimiter> OR </delimiter>
     </input>
     <input type="text" token="host_tok" searchWhenChanged="true">
       <label>Host (wildcards allowed)</label>
       <default>*</default>
-      <prefix>sigma_src_host="</prefix>
-      <suffix>"</suffix>
+      <prefix>sigma_src_host="</prefix><suffix>"</suffix>
     </input>
   </fieldset>
 
-  <!-- Tiles first: the question "is anything wrong" should be answerable
-       without reading a table. -->
   <row>
     <panel>
       <title>Detections</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats count</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
-        <option name="rangeValues">[1,25]</option>
-        <option name="useColors">1</option>
-      </single>
+      <single><search base="cov"><query>| stats count</query></search>
+        <option name="drilldown">none</option></single>
     </panel>
     <panel>
-      <title>Critical and high</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $host_tok$ sigma_level IN ("critical","high") | stats count</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="rangeColors">["0x0ca30c","0xfab219","0xd03b3b"]</option>
-        <option name="rangeValues">[1,10]</option>
-        <option name="useColors">1</option>
-      </single>
+      <title>Act now</title>
+      <single><search base="cov"><query>| search sigma_disposition="immediate" | stats count</query></search>
+        <option name="drilldown">none</option><option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option><option name="useColors">1</option></single>
     </panel>
     <panel>
-      <title>Rules that fired</title>
+      <title>Hosts showing multiple stages</title>
+      <!-- The number that should drive the shift. One host crossing several
+           kill-chain stages is an intrusion; the same count spread one-per-
+           host is usually noise. -->
       <single>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats dc(sigma_rule)</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+        <search base="cov">
+          <query>| stats dc(tactic) as stages by sigma_src_host | where stages &gt;= 2 | stats count</query>
         </search>
         <option name="drilldown">none</option>
+        <option name="underLabel">open these first</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
+        <option name="rangeValues">[0]</option><option name="useColors">1</option>
       </single>
     </panel>
     <panel>
       <title>Hosts affected</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | stats dc(sigma_src_host)</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-      </single>
+      <single><search base="cov"><query>| stats dc(sigma_src_host)</query></search>
+        <option name="drilldown">none</option></single>
     </panel>
     <panel>
-      <title>ATT&amp;CK techniques</title>
-      <single>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | where sigma_technique_name!="" AND sigma_technique_name!="unmapped" | stats dc(sigma_technique_name)</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-      </single>
+      <title>Techniques seen</title>
+      <single><search base="cov">
+        <query>| search technique!="no technique mapped" | stats dc(technique)</query></search>
+        <option name="drilldown">none</option></single>
     </panel>
   </row>
 
+  <!-- ===== The analytic that decides the queue order ===== -->
   <row>
     <panel>
-      <title>Detections over time, by severity</title>
-      <chart>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$ | timechart count by sigma_level</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
-        </search>
-        <option name="charting.chart">column</option>
-        <option name="charting.chart.stackMode">stacked</option>
-        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c,"informational":0x19C1EB}</option>
-        <option name="charting.legend.placement">bottom</option>
-        <option name="charting.axisTitleY.text">detections</option>
-      </chart>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <title>Rules by volume</title>
+      <title>Hosts ranked by what the detections together suggest</title>
+      <!-- Score is severity weighted by the rule's own confidence, then
+           multiplied for breadth across kill-chain stages. Ten noisy
+           detections of one kind rank below three that cross stages,
+           because the second pattern is what an intrusion looks like. -->
       <table>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
-| stats count as detections, dc(sigma_src_host) as hosts, values(sigma_level) as level, min(_time) as first, max(_time) as last by sigma_rule, sigma_rule_id
-| eval first=strftime(first,"%F %T"), last=strftime(last,"%F %T")
-| sort - detections</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+        <search base="cov">
+          <query>| stats sum(weight) as base, dc(tactic) as stages, count as detections,
+        dc(sigma_rule) as rules, values(stage_label) as seen,
+        min(sigma_first_seen) as first, max(sigma_last_seen) as last
+  by sigma_src_host
+| eval risk = round(base * (1 + (stages - 1) * 0.6), 1),
+       window = tostring(last - first, "duration"),
+       first = strftime(first, "%F %T"),
+       reading = case(stages &gt;= 3, "multi-stage activity — investigate",
+                      stages == 2, "two stages — corroborate",
+                      detections &gt;= 5, "repeated single-stage — likely noisy rule",
+                      1==1, "isolated")
+| sort - risk
+| table sigma_src_host, risk, stages, detections, rules, reading, first, window, seen
+| rename sigma_src_host as "Host", risk as "Risk", stages as "Stages",
+         detections as "Detections", rules as "Rules", reading as "What it suggests",
+         first as "First seen", window as "Spanning", seen as "Stages seen"</query>
         </search>
-        <option name="count">15</option>
+        <option name="count">12</option>
         <option name="drilldown">row</option>
-        <!-- A rule name is only useful if it leads to the events. -->
+        <option name="wrap">true</option>
         <drilldown>
-          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.rule_tok=$row.sigma_rule$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.host_tok=$row.Host$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
         </drilldown>
-        <format type="color" field="level">
-          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        <format type="color" field="What it suggests">
+          <colorPalette type="map">{"multi-stage activity — investigate":#d03b3b,"two stages — corroborate":#ec835a,"repeated single-stage — likely noisy rule":#fab219,"isolated":#19C1EB}</colorPalette>
+        </format>
+        <format type="color" field="Risk">
+          <colorPalette type="minMidMax" maxColor="#D03B3B" midColor="#FAB219" minColor="#19C1EB"/>
         </format>
       </table>
     </panel>
+  </row>
+
+  <row>
     <panel>
-      <title>By MITRE tactic</title>
+      <title>Kill-chain progression — where each host sits</title>
+      <!-- Columns are ordered by kill-chain position, so reading a row left
+           to right is reading how far the activity on that host has gone. -->
       <chart>
-        <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
-| eval tactic=if(sigma_tactic_name="" OR isnull(sigma_tactic_name),"Unmapped",trim(mvindex(split(sigma_tactic_name,","),0)))
-| eval tactic=replace(tactic,"^attack\.","")
-| stats count by tactic | sort - count</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+        <search base="cov">
+          <query>| chart count over sigma_src_host by stage_label</query>
         </search>
         <option name="charting.chart">bar</option>
-        <option name="charting.legend.placement">none</option>
-        <option name="charting.fieldColors">{"count":0x19C1EB}</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">detections</option>
+        <option name="height">300</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>When it happened, and how severe</title>
+      <chart>
+        <search base="cov">
+          <query>| timechart span=1h count by sigma_level useother=f</query>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.fieldColors">{"critical":0xd03b3b,"high":0xec835a,"medium":0xfab219,"low":0x0ca30c}</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="height">300</option>
       </chart>
     </panel>
   </row>
 
   <row>
     <panel>
-      <title>Most recent detections — click a row for the events behind it</title>
+      <title>Rules that fire together — candidates to treat as one finding</title>
+      <!-- Two rules that only ever fire within minutes of each other on the
+           same host are describing one action twice. Knowing which pairs do
+           that is what stops an analyst opening the same thing three times. -->
+      <table>
+        <search base="cov">
+          <query>| bin _time span=10m
+| stats dc(sigma_rule) as rules_in_window, values(sigma_rule) as rule_set,
+        sum(sigma_match_count) as events by _time, sigma_src_host
+| where rules_in_window &gt;= 2
+| eval window=strftime(_time,"%F %H:%M")
+| sort - rules_in_window, - events
+| table window, sigma_src_host, rules_in_window, events, rule_set
+| rename window as "10-minute window", sigma_src_host as "Host",
+         rules_in_window as "Rules", events as "Events", rule_set as "Fired together"</query>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Coverage against telemetry — what could fire, and what cannot</title>
+      <!-- Rules deployed for a log source that produces no data will never
+           fire. That is a collection gap, not a quiet network, and the two
+           are indistinguishable from a detection count alone. -->
       <table>
         <search>
-          <query>index=sigma_alerts $plat_tok$ $sev_tok$ $host_tok$
-| eval when=strftime(sigma_first_seen,"%F %T"),
-       span=if(sigma_span_seconds>0, tostring(round(sigma_span_seconds,0),"duration"), "single event")
-| table when, sigma_level, sigma_rule, sigma_match_count, span, sigma_src_host, sigma_src_sourcetype, sigma_src_index
-| sort - when</query>
-          <earliest>$tr.earliest$</earliest>
-          <latest>$tr.latest$</latest>
+          <query>| inputlookup sigma_rules.csv
+| stats count as rules by sigma_platform, sigma_log_source
+| join type=left sigma_log_source
+    [ search index=sigma_alerts earliest=$tr.earliest$ latest=$tr.latest$
+    | lookup sigma_rules sigma_rule_id OUTPUT sigma_log_source
+    | stats count as detections by sigma_log_source ]
+| eval detections = coalesce(detections, 0),
+       state = if(detections &gt; 0, "producing detections", "nothing has fired")
+| sort - rules
+| head 12
+| table sigma_platform, sigma_log_source, rules, detections, state
+| rename sigma_platform as "Platform", sigma_log_source as "Log source",
+         rules as "Rules deployed", detections as "Detections", state as "State"</query>
         </search>
-        <option name="count">25</option>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="State">
+          <colorPalette type="map">{"producing detections":#0ca30c,"nothing has fired":#8A8A93}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Most recent — click a row for the events behind it</title>
+      <table>
+        <search base="cov">
+          <query>| eval when=strftime(sigma_first_seen,"%F %T"),
+       over=if(sigma_span_seconds&lt;=0,"single event",tostring(sigma_span_seconds,"duration"))
+| table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
+        sigma_match_count, over, sigma_src_sourcetype
+| rename when as "When", sigma_src_host as "Host", sigma_rule as "Rule",
+         technique as "ATT&amp;CK technique", tactic as "Tactic",
+         sigma_level as "Severity", sigma_match_count as "Events",
+         over as "Over", sigma_src_sourcetype as "Source type"
+| sort - "When"</query>
+        </search>
+        <option name="count">15</option>
         <option name="drilldown">row</option>
-        <!-- Straight to the source events: the alert's own index, source
-             type and host, in a window around the matching event. -->
+        <option name="wrap">false</option>
         <drilldown>
-          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.rule_tok=$row.sigma_rule$&amp;form.hostsel=$row.sigma_src_host$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
+          <link target="_blank">/app/sigma_detection_lab/alert_detail?form.host_tok=$row.Host$&amp;form.rule_tok=$row.Rule$&amp;form.tr.earliest=$tr.earliest$&amp;form.tr.latest=$tr.latest$</link>
         </drilldown>
-        <format type="color" field="sigma_level">
-          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c,"informational":#19C1EB}</colorPalette>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"critical":#d03b3b,"high":#ec835a,"medium":#fab219,"low":#0ca30c}</colorPalette>
         </format>
       </table>
     </panel>
