@@ -1,0 +1,27 @@
+{
+ "name": "linux_secure",
+ "sourcetype": "linux_secure",
+ "origin": "Splunk Add-on for Unix and Linux (/var/log/secure, /var/log/auth.log)",
+ "output_file": "linux_secure.log",
+ "weight": 20,
+ "notes": "Maps to the Authentication, Network Sessions and Change CIM data models in the add-on. Message bodies follow sshd, sudo and shadow-utils wording.",
+ "variables": {
+  "ts":   {"gen": "timestamp", "format": "iso8601"},
+  "host": {"gen": "choice", "values": ["lab-lnx-01", "lab-lnx-02", "lab-lnx-03", "lab-lnx-04"]},
+  "user": {"gen": "choice", "values": ["jdoe", "svc_deploy", "analyst", "root", "operator"]},
+  "pid":  {"gen": "int", "min": 1000, "max": 60000},
+  "src":  {"gen": "ipv4", "prefix": "10.20"},
+  "port": {"gen": "int", "min": 1024, "max": 65535},
+  "key":  {"gen": "sha256_of", "of": "user", "length": 43}
+ },
+ "records": [
+  {"weight": 45, "lines": ["{ts} {host} CRON[{pid}]: pam_unix(cron:session): session opened for user {user}(uid=0) by (uid=0)"]},
+  {"weight": 20, "lines": ["{ts} {host} sshd[{pid}]: Accepted publickey for {user} from {src} port {port} ssh2: RSA SHA256:{key}"]},
+  {"weight": 15, "lines": ["{ts} {host} sudo[{pid}]:  {user} : TTY=pts/1 ; PWD=/home/{user} ; USER=root ; COMMAND=/usr/bin/systemctl restart nginx"]},
+  {"weight": 8,  "lines": ["{ts} {host} sshd[{pid}]: Failed password for {user} from {src} port {port} ssh2"]},
+  {"weight": 5,  "lines": ["{ts} {host} sshd[{pid}]: Failed password for invalid user {user} from {src} port {port} ssh2"]},
+  {"weight": 4,  "lines": ["{ts} {host} sudo[{pid}]:  {user} : 1 incorrect password attempt ; TTY=pts/1 ; PWD=/home/{user} ; USER=root ; COMMAND=/bin/bash"]},
+  {"weight": 2,  "lines": ["{ts} {host} useradd[{pid}]: new user: name={user}_svc, UID=1337, GID=1337, home=/home/{user}_svc, shell=/bin/bash, from=/dev/pts/1"]},
+  {"weight": 1,  "lines": ["{ts} {host} usermod[{pid}]: add '{user}' to group 'sudo'"]}
+ ]
+}

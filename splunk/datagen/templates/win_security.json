@@ -1,0 +1,30 @@
+{
+ "name": "win_security",
+ "sourcetype": "XmlWinEventLog:Security",
+ "origin": "Splunk Add-on for Microsoft Windows (Security channel)",
+ "output_file": "XmlWinEventLog_Security.log",
+ "weight": 10,
+ "notes": "Maps to Authentication and Change in CIM. 4624 logon, 4625 failed logon, 4688 process creation, 4720 user created, 4732 member added to privileged group.",
+ "variables": {
+  "ts":     {"gen": "timestamp", "format": "win_xml"},
+  "host":   {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WIN-03"]},
+  "user":   {"gen": "choice", "values": ["jsmith", "svc_sql", "administrator", "analyst", "backupop"]},
+  "rec":    {"gen": "int", "min": 1, "max": 99999999},
+  "src":    {"gen": "ipv4", "prefix": "10.20"},
+  "wks":    {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WKS-11"]},
+  "image":  {"gen": "choice", "values": [
+    "C:\\Windows\\System32\\svchost.exe", "C:\\Windows\\System32\\cmd.exe",
+    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "C:\\Windows\\explorer.exe", "C:\\Windows\\System32\\taskhostw.exe"
+  ]},
+  "parent": {"gen": "choice", "values": ["C:\\Windows\\explorer.exe", "C:\\Windows\\System32\\services.exe"]},
+  "logon":  {"gen": "choice", "values": [2, 3, 10], "weights": [20, 60, 20]}
+ },
+ "records": [
+  {"weight": 60, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Security-Auditing\" Guid=\"{54849625-5478-4994-a5ba-3e3b0328c30d}\"/><EventID>4624</EventID><Version>2</Version><Level>0</Level><Task>12544</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"4\" ThreadID=\"8\"/><Channel>Security</Channel><Computer>{host}</Computer><Security/></System><EventData><Data Name=\"SubjectUserName\">-</Data><Data Name=\"TargetUserName\">{user}</Data><Data Name=\"TargetDomainName\">LAB</Data><Data Name=\"LogonType\">{logon}</Data><Data Name=\"AuthenticationPackageName\">Negotiate</Data><Data Name=\"WorkstationName\">{wks}</Data><Data Name=\"IpAddress\">{src}</Data><Data Name=\"IpPort\">{rec}</Data></EventData></Event>"]},
+  {"weight": 20, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Security-Auditing\" Guid=\"{54849625-5478-4994-a5ba-3e3b0328c30d}\"/><EventID>4688</EventID><Version>2</Version><Level>0</Level><Task>13312</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"4\" ThreadID=\"8\"/><Channel>Security</Channel><Computer>{host}</Computer><Security/></System><EventData><Data Name=\"SubjectUserName\">{user}</Data><Data Name=\"SubjectDomainName\">LAB</Data><Data Name=\"NewProcessId\">0x{rec}</Data><Data Name=\"NewProcessName\">{image}</Data><Data Name=\"CommandLine\">{image}</Data><Data Name=\"ParentProcessName\">{parent}</Data></EventData></Event>"]},
+  {"weight": 13, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Security-Auditing\" Guid=\"{54849625-5478-4994-a5ba-3e3b0328c30d}\"/><EventID>4625</EventID><Version>0</Version><Level>0</Level><Task>12544</Task><Opcode>0</Opcode><Keywords>0x8010000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"4\" ThreadID=\"8\"/><Channel>Security</Channel><Computer>{host}</Computer><Security/></System><EventData><Data Name=\"SubjectUserName\">-</Data><Data Name=\"TargetUserName\">{user}</Data><Data Name=\"TargetDomainName\">LAB</Data><Data Name=\"Status\">0xc000006d</Data><Data Name=\"SubStatus\">0xc000006a</Data><Data Name=\"LogonType\">{logon}</Data><Data Name=\"WorkstationName\">{wks}</Data><Data Name=\"IpAddress\">{src}</Data></EventData></Event>"]},
+  {"weight": 5, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Security-Auditing\" Guid=\"{54849625-5478-4994-a5ba-3e3b0328c30d}\"/><EventID>4720</EventID><Version>0</Version><Level>0</Level><Task>13824</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"4\" ThreadID=\"8\"/><Channel>Security</Channel><Computer>{host}</Computer><Security/></System><EventData><Data Name=\"SubjectUserName\">administrator</Data><Data Name=\"TargetUserName\">{user}_svc</Data><Data Name=\"TargetDomainName\">LAB</Data><Data Name=\"SamAccountName\">{user}_svc</Data></EventData></Event>"]},
+  {"weight": 2, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Security-Auditing\" Guid=\"{54849625-5478-4994-a5ba-3e3b0328c30d}\"/><EventID>4732</EventID><Version>0</Version><Level>0</Level><Task>13826</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"4\" ThreadID=\"8\"/><Channel>Security</Channel><Computer>{host}</Computer><Security/></System><EventData><Data Name=\"SubjectUserName\">administrator</Data><Data Name=\"TargetUserName\">Administrators</Data><Data Name=\"MemberName\">CN={user},CN=Users,DC=lab</Data><Data Name=\"TargetDomainName\">Builtin</Data></EventData></Event>"]}
+ ]
+}

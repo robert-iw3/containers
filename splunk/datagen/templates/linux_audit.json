@@ -1,0 +1,48 @@
+{
+ "name": "linux_audit",
+ "sourcetype": "linux_audit",
+ "origin": "Splunk Add-on for Unix and Linux (/var/log/audit/audit.log)",
+ "output_file": "linux_audit.log",
+ "weight": 45,
+ "notes": "Record layout and field order taken from a real auditd corpus. One execution emits five records sharing an audit() id. auditd hex-encodes values containing whitespace, which the hexify transform reproduces.",
+ "variables": {
+  "ts":    {"gen": "timestamp", "format": "epoch_ms3"},
+  "seq":   {"gen": "sequence", "start": 86000000, "step": 1, "jitter": 3},
+  "host":  {"gen": "choice", "values": ["lab-lnx-01", "lab-lnx-02", "lab-lnx-03", "lab-lnx-04"]},
+  "uid":   {"gen": "choice", "values": [1000, 1101, 1102, 0], "weights": [40, 25, 25, 10]},
+  "pid":   {"gen": "int", "min": 2000, "max": 90000},
+  "ppid":  {"gen": "int", "min": 500, "max": 1999},
+  "inode": {"gen": "int", "min": 100000, "max": 9999999},
+  "ah0":   {"gen": "hex", "width": 12},
+  "ah1":   {"gen": "hex", "width": 12},
+  "ah2":   {"gen": "hex", "width": 12},
+  "argv":  {"gen": "choice", "values": [
+     ["/usr/bin/bash", "-c", "ls -l /var/log"],
+     ["ls", "-l"],
+     ["cat", "/etc/hostname"],
+     ["grep", "-r", "error", "/var/log/syslog"],
+     ["systemctl", "status", "sshd"],
+     ["/usr/bin/python3", "-c", "print(1)"],
+     ["df", "-h"],
+     ["ps", "-ef"],
+     ["/usr/bin/git", "status"],
+     ["tar", "-czf", "/tmp/backup.tgz", "/etc/hosts"],
+     ["sed", "-n", "1,10p", "/etc/passwd"],
+     ["find", "/home", "-name", "*.log"]
+  ]},
+  "exe":   {"gen": "compose", "value": "{argv|first|abspath}"},
+  "cwd":   {"gen": "choice", "values": ["/", "/home/lab", "/var/tmp", "/opt/app"]}
+ },
+ "records": [
+  {
+   "weight": 100,
+   "lines": [
+    "type=SYSCALL msg=audit({ts}:{seq}): arch=c000003e syscall=59 success=yes exit=0 a0={ah0} a1={ah1} a2={ah2} a3=0 items=2 ppid={ppid} pid={pid} auid={uid} uid={uid} gid={uid} euid={uid} suid={uid} fsuid={uid} egid={uid} sgid={uid} fsgid={uid} tty=pts1 ses=3 comm={exe|basename|hexify} exe=\"{exe}\" subj=unconfined key=\"exec\"ARCH=x86_64 SYSCALL=execve AUID=\"user{uid}\" UID=\"user{uid}\"",
+    "type=EXECVE msg=audit({ts}:{seq}): argc={argv|argc} {argv|audit_args}",
+    "type=CWD msg=audit({ts}:{seq}): cwd=\"{cwd}\"",
+    "type=PATH msg=audit({ts}:{seq}): item=0 name=\"{exe}\" inode={inode} dev=fc:01 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0OUID=\"root\" OGID=\"root\"",
+    "type=PROCTITLE msg=audit({ts}:{seq}): proctitle={argv|join|hexify}"
+   ]
+  }
+ ]
+}

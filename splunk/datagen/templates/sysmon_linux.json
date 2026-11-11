@@ -1,0 +1,32 @@
+{
+ "name": "sysmon_linux",
+ "sourcetype": "sysmon:linux",
+ "origin": "Splunk Add-on for Sysmon for Linux (journald, Linux-Sysmon/Operational)",
+ "output_file": "sysmon_linux.log",
+ "weight": 10,
+ "notes": "Requires Sysmon for Linux on the endpoint. This is the only Linux source carrying Sysmon-style Image and CommandLine fields; the Unix add-on has no equivalent. EventID 1 process creation, 3 network connect, 11 file create.",
+ "variables": {
+  "ts":     {"gen": "timestamp", "format": "iso8601_z"},
+  "host":   {"gen": "choice", "values": ["lab-lnx-01", "lab-lnx-02", "lab-lnx-03"]},
+  "user":   {"gen": "choice", "values": ["jdoe", "svc_deploy", "analyst", "root"]},
+  "pid":    {"gen": "int", "min": 1000, "max": 99999},
+  "rec":    {"gen": "int", "min": 1, "max": 9999999},
+  "pguid":  {"gen": "guid_braced"},
+  "image":  {"gen": "choice", "values": [
+    "/usr/bin/bash", "/usr/bin/ls", "/usr/bin/python3", "/usr/bin/curl",
+    "/usr/bin/git", "/usr/sbin/nginx", "/usr/bin/systemctl", "/usr/bin/find"
+  ]},
+  "args":   {"gen": "choice", "values": ["-l /var/log", "--version", "status nginx", "-c 'print(1)'", "pull --rebase"]},
+  "parent": {"gen": "choice", "values": ["/usr/bin/bash", "/usr/lib/systemd/systemd", "/usr/bin/sshd"]},
+  "dhost":  {"gen": "choice", "values": ["repo.internal.example.com", "updates.example.com", "api.example.com"]},
+  "sip":    {"gen": "ipv4", "prefix": "10.99.1"},
+  "dip":    {"gen": "ipv4", "prefix": "10.30"},
+  "dport":  {"gen": "choice", "values": [443, 80, 8080, 53]},
+  "tfile":  {"gen": "choice", "values": ["/tmp/build.log", "/var/tmp/cache.db", "/opt/app/out.json"]}
+ },
+ "records": [
+  {"weight": 70, "lines": ["<Event><System><Provider Name=\"Linux-Sysmon\" Guid=\"{ff032593-a8d3-4f13-b0d6-01fc615a0f97}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Channel>Linux-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserId=\"0\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">/home/{user}</Data><Data Name=\"User\">{user}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent|basename}</Data></EventData></Event>"]},
+  {"weight": 20, "lines": ["<Event><System><Provider Name=\"Linux-Sysmon\" Guid=\"{ff032593-a8d3-4f13-b0d6-01fc615a0f97}\"/><EventID>3</EventID><Version>5</Version><Level>4</Level><Task>3</Task><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Channel>Linux-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserId=\"0\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"User\">{user}</Data><Data Name=\"Protocol\">tcp</Data><Data Name=\"Initiated\">true</Data><Data Name=\"SourceIp\">{sip}</Data><Data Name=\"SourcePort\">{pid}</Data><Data Name=\"DestinationIp\">{dip}</Data><Data Name=\"DestinationHostname\">{dhost}</Data><Data Name=\"DestinationPort\">{dport}</Data></EventData></Event>"]},
+  {"weight": 10, "lines": ["<Event><System><Provider Name=\"Linux-Sysmon\" Guid=\"{ff032593-a8d3-4f13-b0d6-01fc615a0f97}\"/><EventID>11</EventID><Version>2</Version><Level>4</Level><Task>11</Task><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Channel>Linux-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserId=\"0\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"TargetFilename\">{tfile}</Data><Data Name=\"User\">{user}</Data></EventData></Event>"]}
+ ]
+}

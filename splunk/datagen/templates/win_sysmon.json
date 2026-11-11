@@ -1,0 +1,29 @@
+{
+ "name": "win_sysmon",
+ "sourcetype": "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
+ "origin": "Splunk Add-on for Sysmon (Windows)",
+ "output_file": "XmlWinEventLog_Sysmon.log",
+ "weight": 5,
+ "notes": "The source most Windows process_creation Sigma rules target. Maps to Endpoint in CIM via the add-on.",
+ "variables": {
+  "ts":     {"gen": "timestamp", "format": "win_xml"},
+  "host":   {"gen": "choice", "values": ["LAB-WIN-01", "LAB-WIN-02", "LAB-WIN-03"]},
+  "user":   {"gen": "choice", "values": ["LAB\\jsmith", "LAB\\svc_sql", "NT AUTHORITY\\SYSTEM"]},
+  "pid":    {"gen": "int", "min": 500, "max": 65000},
+  "rec":    {"gen": "int", "min": 1, "max": 99999999},
+  "pguid":  {"gen": "guid_braced"},
+  "image":  {"gen": "choice", "values": [
+    "C:\\Windows\\System32\\cmd.exe",
+    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+    "C:\\Windows\\System32\\svchost.exe",
+    "C:\\Windows\\System32\\rundll32.exe"
+  ]},
+  "args":   {"gen": "choice", "values": ["/c dir", "-NoProfile -Command Get-Process", "-k netsvcs", "shell32.dll,Control_RunDLL"]},
+  "parent": {"gen": "choice", "values": ["C:\\Windows\\explorer.exe", "C:\\Windows\\System32\\services.exe", "C:\\Windows\\System32\\userinit.exe"]},
+  "md5":    {"gen": "sha256_of", "of": "image", "length": 32}
+ },
+ "records": [
+  {"weight": 100, "lines": ["<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime=\"{ts}\"/><EventRecordID>{rec}</EventRecordID><Execution ProcessID=\"2104\" ThreadID=\"3048\"/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>{host}</Computer><Security UserID=\"S-1-5-18\"/></System><EventData><Data Name=\"RuleName\">-</Data><Data Name=\"UtcTime\">{ts}</Data><Data Name=\"ProcessGuid\">{pguid}</Data><Data Name=\"ProcessId\">{pid}</Data><Data Name=\"Image\">{image}</Data><Data Name=\"FileVersion\">10.0.19041.1</Data><Data Name=\"OriginalFileName\">{image|basename}</Data><Data Name=\"CommandLine\">{image} {args}</Data><Data Name=\"CurrentDirectory\">C:\\Windows\\system32\\</Data><Data Name=\"User\">{user}</Data><Data Name=\"Hashes\">MD5={md5}</Data><Data Name=\"ParentProcessId\">{pid}</Data><Data Name=\"ParentImage\">{parent}</Data><Data Name=\"ParentCommandLine\">{parent}</Data></EventData></Event>"]}
+ ]
+}
