@@ -125,12 +125,46 @@ im_splunk_auth() {
     fi
 }
 
+# Ask for credentials when they are needed and none were supplied. The
+# password is read with the terminal echo off and is not written anywhere.
+im_prompt_auth() {
+    im_auth_from_env && return 0
+    if [ ! -t 0 ]; then
+        im_die "credentials needed and no terminal to ask on: pass --auth-file <file> or set SPLUNK_AUTH=user:password"
+    fi
+    local u p
+    printf '  Splunk username: ' >&2
+    read -r u
+    [ -n "$u" ] || im_die "no username given"
+    printf '  Password for %s: ' "$u" >&2
+    stty -echo 2>/dev/null || true
+    read -r p
+    stty echo 2>/dev/null || true
+    printf '\n' >&2
+    [ -n "$p" ] || im_die "no password given"
+    IM_AUTH="$u:$p"
+    unset p
+}
+
 # Checked before the first search rather than inside it: im_die in a command
 # substitution exits only the subshell, so the caller carries on and reports a
 # second, less useful failure after the real one.
 im_require_auth() {
     im_auth_from_env && return 0
-    im_die "this needs credentials: pass --auth-file <file> or set SPLUNK_AUTH=user:password"
+    im_prompt_auth
+}
+
+# Does the credential actually work? A wrong password otherwise surfaces as
+# an empty search result, which reads like an empty index.
+im_auth_works() {
+    local out
+    out="$(im_splunk_auth "search 'index=_internal | head 1 | stats count' -output csv -preview false" 2>&1)"
+    case "$out" in
+        *"Login failed"*|*"Unauthorized"*|*"username and password"*) return 1 ;;
+    esac
+    printf '%s' "$out" | grep -c . >/dev/null 2>&1
+    case "$out" in *count*) return 0 ;; esac
+    return 1
 }
 
 im_splunkd_running() {
