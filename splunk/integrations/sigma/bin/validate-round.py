@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -116,6 +117,41 @@ def stage(uf: str, batch: Path, tag: str, host: str) -> None:
            "/opt/splunkforwarder/bin/splunk restart >/dev/null 2>&1")
 
 
+def batches_for(planted: Dict[str, Dict], lookup: Path) -> set:
+    """The searches that carry the planted rules.
+
+    Recall is only measurable once the search that could find a rule has
+    actually run. Waiting a fixed time instead measures the scheduler's
+    luck: with allow_skew spreading dozens of searches across an interval,
+    a batch can start nearly ten minutes late, and a round that gave up
+    first records a miss for a rule the engine detects perfectly well.
+    """
+    want = set()
+    if not lookup.exists():
+        return want
+    import csv as _c
+    with open(lookup, newline="", encoding="utf-8") as fh:
+        for row in _c.DictReader(fh):
+            if row.get("sigma_rule_id") in planted and row.get("sigma_batch"):
+                want.add(row["sigma_batch"])
+    return want
+
+
+def ran_since(container: str, names: set, since: float) -> set:
+    """Which of those searches have completed a run since the batch landed."""
+    if not names:
+        return set()
+    log = podman(container, "splunk", "sh", "-c",
+                 "grep -h 'status=success' /opt/splunk/var/log/splunk/scheduler.log "
+                 "2>/dev/null | tail -4000")
+    done = set()
+    for line in log.splitlines():
+        m = re.search(r'savedsearch_name="([^"]+)".*?dispatch_time=(\d+)', line)
+        if m and m.group(1) in names and int(m.group(2)) >= since:
+            done.add(m.group(1))
+    return done
+
+
 def read_detections(container: str) -> List[Dict[str, str]]:
     raw = podman(container, "splunk", "sh", "-c",
                  "cat /opt/splunk/var/run/splunk/csv/validation_readout.csv 2>/dev/null")
@@ -162,15 +198,29 @@ def main(argv=None):
         print("  staging the batch")
         stage(args.uf, batch, tag, host_tag)
 
+    # Wait for the searches that could find these rules to have run, not
+    # for a clock. A fixed timeout measures scheduling luck.
+    need = batches_for(planted, HERE / "app/sigma_detection_lab/lookups/sigma_rules.csv")
+    staged_at = time.time()
     deadline = time.time() + args.wait
     found: Dict[str, Dict] = {}
+    ran: set = set()
     while time.time() < deadline:
         rows = read_detections(args.container)
         found = {d["sigma_rule_id"]: d for d in rows if in_window(d)}
         hit = set(found) & set(planted)
+        ran = ran_since(args.container, need, staged_at)
         if len(hit) >= len(planted):
             break
+        if need and ran >= need:
+            # Every search that could find a planted rule has now run; what
+            # is missing is genuinely missing.
+            break
         time.sleep(20)
+    if need and not (ran >= need):
+        print(f"\n  INCOMPLETE: {len(need) - len(ran)} of {len(need)} search(es) "
+              f"carrying a planted rule had not run when the wait expired.")
+        print(f"  Recall below is a lower bound, not a measurement. Raise --wait.")
 
     hit = sorted(set(found) & set(planted))
     missed = sorted(set(planted) - set(found))
@@ -205,6 +255,8 @@ def main(argv=None):
 
     result = {
         "tier": spec["tier"], "seed": spec["seed"],
+        "searches_expected": len(need), "searches_ran": len(ran),
+        "complete": bool(need) and ran >= need,
         "planted": len(planted), "detected": len(hit), "missed": len(missed),
         "unplanted": len(unplanted),
         "recall_pct": round(recall, 1), "precision_pct": round(precision, 1),
