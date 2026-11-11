@@ -32,7 +32,10 @@ TA_SHA256="${TA_SHA256:-9bfb2061b55961841d5babba04ead35509730dc73a7b6bfbc676a721
 INDEXER="${INDEXER:-epo-uat-indexer}"
 UF="${UF:-epo-uat-uf}"
 INDEX_NAME="${INDEX_NAME:-linux_lab}"
-STAGE_DIR="${STAGE_DIR:-/opt/splunkforwarder/var/lab-logs}"
+# Staged under the app rather than var/: on this image var/ is owned by
+# another account, and keeping the data inside the app means removing
+# the app removes the data.
+STAGE_DIR="${STAGE_DIR:-/opt/splunkforwarder/etc/apps/sigma_lab_inputs/lab-logs}"
 WORK="${WORK:-$(mktemp -d)}"
 APPLY="${APPLY:-0}"
 
@@ -104,6 +107,14 @@ run podman cp "$WORK/ta/Splunk_TA_nix" "$INDEXER:/opt/splunk/etc/apps/Splunk_TA_
 run podman exec -u root "$INDEXER" chown -R splunk:splunk /opt/splunk/etc/apps/Splunk_TA_nix
 
 # The indexer parses; it must not run the add-on's scripted inputs.
+say "Indexer: create the directories that follow"
+# podman cp will not create a missing parent, so every destination
+# directory is made before anything is copied into it.
+run podman exec -u splunk "$INDEXER" mkdir -p \
+    /opt/splunk/etc/apps/Splunk_TA_nix/local \
+    /opt/splunk/etc/apps/sigma_lab_indexes/local \
+    /opt/splunk/etc/apps/sigma_lab_indexes/metadata
+
 say "Indexer: disable every input the add-on ships"
 cat > "$WORK/indexer-inputs.conf" <<'CONF'
 # The indexer uses this add-on for parsing only. Every input it ships is
@@ -137,10 +148,6 @@ cat > "$WORK/index-local.meta" <<'META'
 access = read : [ * ], write : [ admin ]
 export = system
 META
-run podman exec -u splunk "$INDEXER" mkdir -p \
-    /opt/splunk/etc/apps/sigma_lab_indexes/local \
-    /opt/splunk/etc/apps/sigma_lab_indexes/metadata \
-    /opt/splunk/etc/apps/Splunk_TA_nix/local
 run podman cp "$WORK/indexes.conf"     "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/local/indexes.conf"
 run podman cp "$WORK/index-app.conf"   "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/local/app.conf"
 run podman cp "$WORK/index-local.meta" "$INDEXER:/opt/splunk/etc/apps/sigma_lab_indexes/metadata/local.meta"
@@ -154,7 +161,8 @@ run podman cp "$WORK/ta/Splunk_TA_nix" "$UF:/opt/splunkforwarder/etc/apps/Splunk
 run podman exec -u root "$UF" chown -R splunk:splunk /opt/splunkforwarder/etc/apps/Splunk_TA_nix
 
 say "Forwarder: stage this host's real log data under $STAGE_DIR"
-run podman exec -u splunk "$UF" mkdir -p "$STAGE_DIR"
+run podman exec -u splunk "$UF" mkdir -p \
+    /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local "$STAGE_DIR"
 
 staged=0
 # audit.log is the source Sigma's auditd rules read. It is root:adm 0640, so
@@ -211,6 +219,8 @@ state = enabled
 is_visible = 0
 label = Sigma Lab Linux Inputs
 CONF
+run podman exec -u splunk "$UF" mkdir -p \
+    /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local
 run podman exec -u splunk "$UF" mkdir -p \
     /opt/splunkforwarder/etc/apps/sigma_lab_inputs/local
 run podman cp "$WORK/uf-inputs.conf" \
