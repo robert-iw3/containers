@@ -3,6 +3,36 @@
 A Splunk app holding converted Sigma rules as saved searches, the detection
 events they produce, and dashboards to read them.
 
+
+## The views
+
+| view | for |
+|---|---|
+| `detection_coverage` | what was caught, and which of it to open first |
+| `alert_detail` | triage one detection with the event behind it |
+| `case_work` | the append-only case journal |
+| `rule_inventory` | every deployed rule, filterable |
+| `rule_reference` | one rule explained end to end |
+| `engine_health` | ingest, parsing, and what each batch costs |
+| `report_executive` | Detection Summary, built for PDF |
+| `report_operations` | Shift Handover, built for PDF |
+
+## What this app contains
+
+Saved searches are **generated**, not hand-written: `bin/build-engine.py`
+emits `default/savedsearches.conf` and the two lookups that go with it.
+Editing them here is lost on the next build.
+
+| path | written by |
+|---|---|
+| `default/savedsearches.conf` | the build; do not edit |
+| `lookups/sigma_rules.csv` | the build; rule identity, severity, ATT&CK |
+| `lookups/sigma_rule_logic.csv` | the build; each rule's detection block and SPL |
+| `lookups/mitre_techniques.csv` | the MITRE ATT&CK bundle, baked in for offline use |
+| `lookups/sigma_allowlist.csv` | **yours** — tuning, and it survives a reinstall |
+| `local/` | **yours** — never shipped, never overwritten |
+
+
 ## Colors
 
 Severity is a status scale, so it uses reserved status colors rather than
