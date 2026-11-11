@@ -307,6 +307,49 @@ whitespace, which is why a string search for a command line with spaces
 fails against real auditd data. Reproducing it is deliberate: a generator
 that emits a cleaner format than reality lets a broken search pass.
 
+
+## Replaying generated files: the add-on you will need
+
+Generated logs are read from disk, and that is not how the official
+add-ons expect to see them. `addons/TA_datagen_parsing/` supplies what is
+missing. Install it wherever the files are read -- a universal forwarder,
+or the indexer if it reads them itself. Structured-data parsing happens at
+the point of collection, not downstream, so an add-on on the indexer does
+nothing for a file a forwarder reads.
+
+Three faults it exists to prevent, each of which was found the hard way and
+each of which is silent:
+
+**Line breaking.** `Splunk_TA_windows` supplies `LINE_BREAKER` only under
+`[XmlWinEventLog]`. The channel source types inherit `SHOULD_LINEMERGE =
+true`, so file-read events glue together until `MAX_EVENTS` trips and the
+structured parser gives up. This never shows on a real Windows host,
+because the event log input hands splunkd one discrete event at a time and
+there is nothing to break.
+
+**Quoting.** Windows renders EventData as `<Data Name='Image'>` with single
+quotes, and the vendor transform matches only that form. Event XML written
+by anything else is likely to use double quotes, which is valid XML and
+parses everywhere except here. The events index cleanly, `EventCode`
+resolves, and then every EventData field is silently missing -- so a rule
+keyed on `Image` matches nothing and the failure looks like a rule problem.
+The templates here emit the single-quoted form; the add-on also handles the
+double-quoted one, so either shape yields the same fields.
+
+**Timestamps.** Without an explicit `TIME_PREFIX` the structured parser can
+leave events stamped at index time. The symptom is thousands of events
+sharing one timestamp, which breaks every time-bounded search while looking
+entirely healthy.
+
+```bash
+cp -r addons/TA_datagen_parsing <splunk>/etc/apps/
+# restart whatever reads the files
+```
+
+If detections are empty and the events look fine, check field extraction
+before checking the rules. `sigma/bin/check-instance.sh` reports this, and
+Engine Health has a panel for it.
+
 ## Reproducibility
 
 `--seed` alone is not enough, because the wall clock still moves the
