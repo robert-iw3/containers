@@ -182,7 +182,7 @@ instance. All 121 CIM-convertible rules would error at dispatch.
 
 `splunk-all.yml` is legacy sigmac configuration. pySigma cannot read it —
 it takes processing pipelines, a different format. Its `logsources` entries
-also carry a `sourcetype:` key, which sigmac never recognised in a log
+also carry a `sourcetype:` key, which sigmac never recognized in a log
 source, so the sourcetype would not have reached the SPL even under
 sigmac. The file is retained as a written record; only its `datamodels`
 section is read, and only to annotate stanzas.

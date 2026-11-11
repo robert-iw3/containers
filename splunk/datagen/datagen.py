@@ -10,7 +10,7 @@ No third-party packages. Templates are JSON because JSON is the only format
 both Python 3 and Windows PowerShell 5.1 parse natively with zero
 dependencies, so datagen.ps1 reads the same template files.
 
-Volume matters on a metered licence: a download-trial or Free licence indexes
+Volume matters on a metered license: a download-trial or Free license indexes
 500 MB/day and repeatedly exceeding it disables search. Every run measures
 bytes before writing and --budget-mb refuses to go past a ceiling.
 
@@ -237,7 +237,7 @@ def main(argv):
                     help="Spread timestamps over this many hours ending now")
     ap.add_argument("--budget-mb", type=float, default=150.0,
                     help="Refuse to write more than this many MB. "
-                         "A download-trial or Free licence indexes 500 MB/day.")
+                         "A download-trial or Free license indexes 500 MB/day.")
     ap.add_argument("--seed", type=int, default=None,
                     help="RNG seed. Pair with --now-epoch for byte-identical output; "
                          "on its own the wall clock still moves the timestamps.")
@@ -299,7 +299,7 @@ def main(argv):
     print(f"{'TOTAL':<24} {'':<52} {total_records:>9,} {total_bytes/1048576:>8.2f}")
     pct = total_bytes / 1048576 / args.budget_mb * 100 if args.budget_mb else 0
     print(f"\nbudget {args.budget_mb:.0f} MB, {pct:.1f}% used. "
-          f"500 MB/day is the download-trial and Free licence cap.")
+          f"500 MB/day is the download-trial and Free license cap.")
 
     if args.budget_mb and total_bytes / 1048576 > args.budget_mb:
         sys.exit(f"\nREFUSED: {total_bytes/1048576:.1f} MB exceeds --budget-mb "

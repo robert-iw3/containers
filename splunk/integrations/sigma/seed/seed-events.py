@@ -15,7 +15,7 @@ to assert against.
 
 Output is one file per source type, plus ground-truth.json.
 
-Volume matters: a download-trial or Free licence indexes 500 MB/day, and
+Volume matters: a download-trial or Free license indexes 500 MB/day, and
 exceeding it repeatedly disables search. Every tier reports measured bytes
 and --budget-mb refuses to write past a ceiling.
 """
@@ -57,7 +57,7 @@ MEASURED_SIZES = {
 
 # Tiers are RECORD counts, not logical events: one auditd execution is five
 # records (SYSCALL, EXECVE, CWD, PATH, PROCTITLE). Sized so large stays
-# near a quarter of the 500 MB/day licence cap.
+# near a quarter of the 500 MB/day license cap.
 TIERS = {"small": 2_000, "medium": 150_000, "large": 600_000}
 
 HOSTS = [f"lab-lnx-{i:02d}" for i in range(1, 9)]
@@ -381,7 +381,7 @@ def main(argv):
                     help="Planted matching events per satisfiable rule")
     ap.add_argument("--budget-mb", type=float, default=150.0,
                     help="Refuse to write more than this. A download-trial or "
-                         "Free licence indexes 500 MB/day.")
+                         "Free license indexes 500 MB/day.")
     ap.add_argument("--window-hours", type=float, default=2.0,
                     help="Spread timestamps over this many hours ending now")
     ap.add_argument("--seed", type=int, default=1337, help="RNG seed")
@@ -483,7 +483,7 @@ def main(argv):
     print()
     print(f"planted positive records: {planted_records:,} "
           f"across {len(truth)} rules ({args.positives_per_rule} per rule)")
-    print(f"licence budget:           {args.budget_mb:.0f} MB "
+    print(f"license budget:           {args.budget_mb:.0f} MB "
           f"({total_bytes/1048576/args.budget_mb*100:.1f}% used); "
           f"500 MB/day is the download-trial and Free cap")
 

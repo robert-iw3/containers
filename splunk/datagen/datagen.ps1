@@ -17,7 +17,7 @@
   Output is not byte-identical to datagen.py: the two runtimes have
   different RNGs. Record shapes, source types and volumes match.
 
-  Volume matters on a metered licence: a download-trial or Free licence
+  Volume matters on a metered license: a download-trial or Free license
   indexes 500 MB/day. Every run measures bytes first and -BudgetMB refuses
   to go past a ceiling.
 
@@ -426,7 +426,7 @@ $usedMB = $totalBytes / 1MB
 $pct = 0
 if ($BudgetMB -gt 0) { $pct = ($usedMB / $BudgetMB) * 100 }
 ''
-'budget {0:N0} MB, {1:N1}% used. 500 MB/day is the download-trial and Free licence cap.' -f $BudgetMB, $pct
+'budget {0:N0} MB, {1:N1}% used. 500 MB/day is the download-trial and Free license cap.' -f $BudgetMB, $pct
 
 if ($BudgetMB -gt 0 -and $usedMB -gt $BudgetMB) {
     throw ("REFUSED: {0:N1} MB exceeds -BudgetMB {1:N0}. Lower -Tier or raise the budget deliberately." -f $usedMB, $BudgetMB)

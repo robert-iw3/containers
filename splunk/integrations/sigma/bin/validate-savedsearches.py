@@ -3,7 +3,7 @@
 
 Models Splunk's conf parser (stanzas, key = value, trailing-backslash
 continuation, # comments) and checks every key against a copy of
-savedsearches.conf.spec, honouring the spec's <wildcard> key forms.
+savedsearches.conf.spec, honoring the spec's <wildcard> key forms.
 
 Exists so generated output can be checked without writing anything into a
 Splunk instance. Get the spec from the target version:
