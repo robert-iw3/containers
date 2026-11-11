@@ -270,6 +270,170 @@ def jsonable(entry):
     return out
 
 
+# ------------------------------------------------- template generation
+
+# A starter generator per field, chosen from the field's name. Writing a
+# template by hand against 25 declared fields is where typos come from, so
+# the first draft is generated and the operator corrects the values.
+#
+# Order matters: the first pattern that matches a field name wins, so
+# narrower patterns come first.
+FIELD_GENERATORS = [
+    (r"(?i)^(utc)?time$|^.*_time$|^timestamp$",
+     {"gen": "timestamp", "format": "iso8601_z"}),
+    (r"(?i)guid",            {"gen": "guid_braced"}),
+    (r"(?i)^(md5|sha1|sha256|hash(es)?)$",
+     {"gen": "sha256_of", "of": "__self_seed", "length": 32}),
+    (r"(?i)(^|_)(src|source|dest|destination|client|server)_?ip$|^addr$|^ip$",
+     {"gen": "ipv4", "prefix": "10.20"}),
+    (r"(?i)port$",           {"gen": "int", "min": 1024, "max": 65535}),
+    (r"(?i)^(p|pp)id$|_pid$|^process_?id$|^thread_?id$",
+     {"gen": "int", "min": 300, "max": 65000}),
+    (r"(?i)^(uid|gid|euid|egid|suid|fsuid|auid|ses)$",
+     {"gen": "choice", "values": [0, 1000, 1101, 1102]}),
+    (r"(?i)^(event)?(code|id)$|^recordnumber$|^eventrecordid$",
+     {"gen": "int", "min": 1, "max": 99999999}),
+    (r"(?i)user|acct|account|logon",
+     {"gen": "choice", "values": ["jdoe", "svc_deploy", "analyst", "root"]}),
+    (r"(?i)^(computer|host|hostname|dvc)$",
+     {"gen": "choice", "values": ["lab-host-01", "lab-host-02", "lab-host-03"]}),
+    (r"(?i)image|^exe$|^comm$|processname|^path$|filename|filepath|^file$",
+     {"gen": "choice", "values": ["/usr/bin/bash", "/usr/bin/python3",
+                                  "/usr/sbin/sshd", "/usr/bin/curl"]}),
+    (r"(?i)commandline|^cmd$|proctitle",
+     {"gen": "choice", "values": ["bash -c id", "python3 -c pass",
+                                  "curl -s http://example.internal/health"]}),
+    (r"(?i)^(level|severity)(_id)?$", {"gen": "choice", "values": [0, 2, 4]}),
+    (r"(?i)^(status|result|action|res)$",
+     {"gen": "choice", "values": ["success", "failure"]}),
+    (r"(?i)^(count|bytes|size|kb)$", {"gen": "int", "min": 0, "max": 100000}),
+    (r"(?i)_xml$|^xml$",
+     {"gen": "const", "value": "<REPLACE-xml-blob/>"}),
+    (r"(?i)service|daemon|^application$|^app$",
+     {"gen": "choice", "values": ["sshd", "cron", "systemd", "nginx"]}),
+    (r"(?i)^(src|dest|source|destination)(_host|_dns|_nt_host)?$",
+     {"gen": "choice", "values": ["lab-host-01", "lab-host-02", "peer-01"]}),
+    (r"(?i)^direction$", {"gen": "choice", "values": ["inbound", "outbound"]}),
+    (r"(?i)error_?code|^code$", {"gen": "choice", "values": [0, 11, 20]}),
+    (r"(?i)^(vendor|product|vendor_product)$",
+     {"gen": "const", "value": "REPLACE-vendor"}),
+    (r"(?i)^(type|signature|name|task|channel|provider|providername)$",
+     {"gen": "choice", "values": ["sample_a", "sample_b", "sample_c"]}),
+]
+
+
+def generator_for(field):
+    for pattern, spec in FIELD_GENERATORS:
+        if re.search(pattern, field):
+            spec = dict(spec)
+            if spec.get("of") == "__self_seed":
+                # sha256_of needs a variable to hash; the host is always
+                # defined, so it gives a stable per-event value.
+                spec["of"] = "_seed"
+            return spec
+    # Anything unrecognized becomes a visible placeholder rather than a
+    # plausible-looking value, so the operator can see what still needs a
+    # decision.
+    return {"gen": "choice", "values": [f"REPLACE_{field}_1", f"REPLACE_{field}_2"]}
+
+
+def emit_template(sourcetype, entry, add_on):
+    """Build a datagen template covering every field the add-on expects.
+
+    The event shape follows how the add-on reads the source type: XML where
+    it uses indexed XML extraction, key=value where automatic extraction is
+    left on, and a syslog line otherwise.
+    """
+    fields = sorted(entry["raw_required"])
+    # Splunk's own metadata is not part of the event body.
+    fields = [f for f in fields if f not in ("host", "source", "sourcetype",
+                                             "index", "_raw", "_time", "punct")]
+    indexed = (entry.get("indexed_extractions") or "").upper()
+    is_xml = "XML" in indexed or sourcetype.lower().startswith("xmlwineventlog")
+
+    variables = {
+        "_seed": {"gen": "hex", "width": 12},
+        "ts": {"gen": "timestamp",
+               "format": "iso8601_z" if is_xml else "epoch_ms3"},
+        "host": {"gen": "choice",
+                 "values": ["lab-host-01", "lab-host-02", "lab-host-03"]},
+    }
+    for f in fields:
+        var = re.sub(r"[^A-Za-z0-9_]", "_", f)
+        if var and var[0].isdigit():
+            var = "f_" + var
+        if var in variables:
+            continue
+        variables[var] = generator_for(f)
+
+    def var_of(f):
+        v = re.sub(r"[^A-Za-z0-9_]", "_", f)
+        return ("f_" + v) if v and v[0].isdigit() else v
+
+    # The auditd shape is only right for auditd. Its TIME_PREFIX anchors on
+    # "audit(", and its records carry type and the aN argument fields, so
+    # those are what identify it. Guessing from KV_MODE alone put a syslog
+    # source into an auditd envelope, which the add-on cannot parse.
+    # TIME_PREFIX is a regex, so its punctuation is escaped: auditd's reads
+    # "audit\(" and a plain substring test for "audit(" misses it.
+    time_prefix = (entry.get("time_prefix") or "").replace("\\", "")
+    auditd_markers = {"type", "a0", "a1", "SYSCALL", "auid", "argc", "proctitle"}
+    is_auditd = ("audit(" in time_prefix
+                 or "auditd" in sourcetype.lower()
+                 or sourcetype.lower() in ("linux_audit", "linux:audit")
+                 or len(auditd_markers & set(fields)) >= 2)
+
+    if is_xml:
+        data = "".join(f'<Data Name="{f}">{{{var_of(f)}}}</Data>' for f in fields)
+        line = ('<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">'
+                '<System><Provider Name="REPLACE-provider"/>'
+                '<EventID>1</EventID><Version>0</Version><Level>4</Level>'
+                '<TimeCreated SystemTime="{ts}"/>'
+                '<Channel>REPLACE-channel</Channel><Computer>{host}</Computer>'
+                '<Security/></System>'
+                f'<EventData>{data}</EventData></Event>')
+        shape = "Windows event log XML"
+    elif is_auditd:
+        kv = " ".join(f'{f}="{{{var_of(f)}}}"' for f in fields
+                      if f not in ("type",))
+        line = f"type=REPLACE_TYPE msg=audit({{ts}}:{{_seed}}): {kv}"
+        shape = "auditd record"
+    else:
+        # A syslog line: timestamp, host, process, then the fields. Most
+        # file-monitored sources on Unix look like this, and the add-on's
+        # transforms expect the prefix.
+        kv = " ".join(f"{f}={{{var_of(f)}}}" for f in fields)
+        line = f"{{ts}} {{host}} REPLACE_PROCESS[{{_pid}}]: {kv}"
+        variables["_pid"] = {"gen": "int", "min": 1000, "max": 60000}
+        variables["ts"] = {"gen": "timestamp", "format": "syslog_rfc3164"}
+        shape = "syslog line"
+
+    note = (f"Generated by ta-schema.py from {add_on}, as a {shape}. Covers "
+            f"the {len(fields)} field(s) that add-on expects in a raw "
+            f"{sourcetype} event. Values marked REPLACE_ need a real "
+            f"decision before the data means anything, and the event shape "
+            f"is a guess from the add-on's settings: check it against a real "
+            f"event.")
+    if entry.get("rename_chain"):
+        note += (f" Note: this source type is renamed to "
+                 f"{entry['rename_chain'][-1]} at search time, so search that "
+                 f"name, not {sourcetype}.")
+    if indexed:
+        note += f" Fields are extracted at index time ({entry['indexed_extractions']})."
+
+    safe = re.sub(r"[^A-Za-z0-9_]", "_", sourcetype).strip("_").lower()
+    return {
+        "name": safe,
+        "sourcetype": sourcetype,
+        "origin": add_on,
+        "output_file": safe + ".log",
+        "weight": 10,
+        "notes": note,
+        "variables": variables,
+        "records": [{"weight": 100, "lines": [line]}],
+    }
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -282,6 +446,10 @@ def main(argv):
     ap.add_argument("--json", default=None, help="Write the full schema here")
     ap.add_argument("--assignments", action="store_true",
                     help="Also list source:: stanzas that assign a source type")
+    ap.add_argument("--emit-template", default=None, metavar="DIR",
+                    help="Write a datagen template covering every field the "
+                         "add-on expects, for --sourcetype, or for every "
+                         "source type meeting --min-fields")
     args = ap.parse_args(argv[1:])
 
     def stanza_matches(pattern, sourcetype):
@@ -357,6 +525,25 @@ def main(argv):
         if entry is None:
             matches = [s for s in combined if args.sourcetype.lower() in s.lower()]
             sys.exit(f"source type not found. Close matches: {matches[:10]}")
+
+        if args.emit_template:
+            out = Path(args.emit_template)
+            out.mkdir(parents=True, exist_ok=True)
+            tpl = emit_template(args.sourcetype, entry, entry["add_on"])
+            path = out / (tpl["name"] + ".json")
+            path.write_text(json.dumps(tpl, indent=1), encoding="utf-8")
+            print(f"\nwrote {path}")
+            print(f"  {len(entry['raw_required'])} field(s) the add-on expects")
+            placeholders = sum(
+                1 for spec in tpl["variables"].values()
+                for v in (spec.get("values") or [])
+                if str(v).startswith("REPLACE_"))
+            if placeholders:
+                print(f"  {placeholders} value(s) marked REPLACE_ need a real "
+                      f"decision; the field name was not recognizable")
+            print(f"  validate it with: ./validate-templates.py --templates {out}")
+            return 0
+
         print(f"\n=== {args.sourcetype}  ({entry['add_on']}) ===")
         print(f"KV_MODE          {entry['kv_mode'] or '(unset -> auto)'}")
         if entry.get("rename_chain"):

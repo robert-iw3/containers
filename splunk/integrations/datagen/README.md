@@ -85,7 +85,26 @@ settings worth knowing before you write a search:
 | `Raw event must carry` | fields your generated event needs |
 | knowledge objects applied | fields the add-on supplies once the raw fields exist |
 
-### 4. Generate
+### 4. Generate a starter template for a source type
+
+Writing a template by hand against twenty-five declared fields is where
+typos come from, so the first draft is generated from the add-on:
+
+```bash
+python3 ta-schema.py --ta ./ta/Splunk_TA_nix --sourcetype linux_audit --emit-template ./templates
+```
+
+It covers every field that add-on expects, picks a generator per field from
+the field's name, and chooses the event shape from the add-on's own settings
+— Windows event log XML, an auditd record, or a syslog line. Anything it
+could not infer becomes a visible `REPLACE_` value rather than a
+plausible-looking one, so what still needs a decision is obvious.
+
+The shape is a guess. Check it against a real event before trusting it: the
+add-on's settings say what fields it reads, not how the vendor lays them
+out.
+
+### 5. Generate
 
 ```bash
 python3 datagen.py --tier small --out ./out --index my_test_index
@@ -122,7 +141,7 @@ Check the volume before committing to it:
 python3 datagen.py --tier large --estimate-only
 ```
 
-### 5. Collect it
+### 6. Collect it
 
 The run writes an `inputs.conf` next to the data, with an explicit
 `sourcetype` on every stanza. Copy it into an app on a forwarder:
