@@ -10,6 +10,21 @@ Nothing else has to be installed on the endpoints. If the Splunk Add-on for
 Microsoft Windows or the Splunk Add-on for Unix and Linux is already
 collecting, the data needed is already arriving.
 
+## At a glance
+
+![Components and data flow](docs/sigma-analyzer-dataflow.svg)
+
+| | |
+|---|---|
+| **What it reads** | the Windows and Linux logs the official Splunk add-ons already collect, in the indexes they already sit in |
+| **What it does** | runs each Sigma rule as a scheduled search against those logs |
+| **What it writes** | one detection event per match, into its own `sigma_alerts` index, carrying the rule, its severity, its ATT&CK mapping, and where the matching log came from |
+| **What you open** | the `sigma_detection_lab` app: tiles first, then detail, then the original event |
+| **What it installs on endpoints** | nothing |
+
+Set it up in six steps: [docs/setup-guide.md](docs/setup-guide.md).
+Build an installable package with [`bin/package-app.sh`](bin/package-app.sh).
+
 ## How it works
 
 ```
