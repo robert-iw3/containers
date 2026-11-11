@@ -139,7 +139,7 @@
        to_t = tostring(ceiling(coalesce(sigma_last_seen, sigma_first_seen, 0) + 1800))
 | table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
         sigma_confidence, urgency, sigma_match_count, seen_for, st,
-        sigma_rule_id, idx, from_t, to_t, sigma_rule_id as rid
+        sigma_rule_id, idx, from_t, to_t
 | sort - when</query>
         </search>
         <option name="count">15</option>
@@ -225,7 +225,7 @@
 
   <row depends="$sel_rule$">
     <panel>
-      <title>Every event that matched — "$sel_rule$" on $sel_host$</title>
+      <title>Events on $sel_host$ around the detection — $sel_st$</title>
       <!-- Back to the raw log. The detection kept its origin index and
            source type precisely so this pivot does not have to guess. -->
       <!-- The rule's own condition, pulled from the lookup and injected as
@@ -234,10 +234,7 @@
            events the rule matched rather than everything on the host. -->
       <event>
         <search>
-          <query>index=$sel_idx|s$ host=$sel_host|s$
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
-     | eval search=if(sigma_spl="", "*", sigma_spl)
-     | fields search]</query>
+          <query>index=$sel_idx|s$ host=$sel_host|s$ sourcetype=$sel_st|s$</query>
           <earliest>$sel_from$</earliest>
           <latest>$sel_to$</latest>
         </search>
@@ -277,13 +274,10 @@
 
   <row depends="$sel_rule$">
     <panel>
-      <title>Those events, field by field</title>
+      <title>Those events, field by field — the rule matched within this set</title>
       <table>
         <search>
-          <query>index=$sel_idx|s$ host=$sel_host|s$
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
-     | eval search=if(sigma_spl="", "*", sigma_spl)
-     | fields search]
+          <query>index=$sel_idx|s$ host=$sel_host|s$ sourcetype=$sel_st|s$
 | eval when=strftime(_time,"%F %T.%3N")
 | rex field=_raw "Name='(?&lt;_k&gt;[^']+)'&gt;(?&lt;_v&gt;[^&lt;]*)" max_match=60
 | table when, host, sourcetype, EventCode, Image, CommandLine, ParentImage,
@@ -308,10 +302,7 @@
            before acting on it. -->
       <table>
         <search>
-          <query>index=$sel_idx|s$ host=$sel_host|s$
-    [| inputlookup sigma_rule_logic.csv where sigma_rule_id=$sel_ruleid|s$
-     | eval search=if(sigma_spl="", "*", sigma_spl)
-     | fields search]
+          <query>index=$sel_idx|s$ host=$sel_host|s$ sourcetype=$sel_st|s$
 | fieldsummary maxvals=3
 | eval coverage=round(count/max(count)*100,0)
 | table field, count, distinct_count, values
@@ -322,6 +313,32 @@
           <latest>$sel_to$</latest>
         </search>
         <option name="count">25</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <row depends="$sel_rule$">
+    <panel>
+      <title>The event the rule matched, exactly as it was stored</title>
+      <!-- The detection keeps its earliest matching event. That is the
+           evidence, and it does not depend on being able to re-run the
+           rule's condition here. -->
+      <table>
+        <search base="det">
+          <query>| search sigma_rule="$sel_rule$" sigma_src_host="$sel_host$"
+| head 1
+| eval line=split(replace(sigma_sample, "&gt;&lt;", "&gt;
+&lt;"), "
+")
+| mvexpand line
+| where line!=""
+| streamstats count as n
+| table n, line
+| rename n as "#", line as "The matching event"</query>
+        </search>
+        <option name="count">30</option>
         <option name="drilldown">none</option>
         <option name="wrap">true</option>
       </table>
