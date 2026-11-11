@@ -179,8 +179,25 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
     cadence = scenario.get("cadence") or {}
     spread = float(cadence.get("spread_seconds", 300))
     jitter = float(cadence.get("jitter", 0.25))
-    # Where in the available window this occurrence starts.
-    start_offset = rng.random() * max(0.0, window_seconds - spread)
+    # A campaign needs room for its whole span. A slow one -- a beacon that
+    # calls home over weeks -- is longer than a short window can hold, and
+    # placing it anyway marched its later steps past the present: events
+    # dated weeks ahead, which Splunk re-times or drops under
+    # MAX_DAYS_HENCE, leaving the recorded ground truth disagreeing with
+    # what was indexed. The caller is told it does not fit instead.
+    steps_for_fit = scenario["steps"]
+    span = spread
+    for i, st in enumerate(steps_for_fit):
+        if "offset_seconds" in st:
+            at_i = float(st["offset_seconds"])
+        else:
+            at_i = (spread * (i / max(1, len(steps_for_fit) - 1))
+                    if len(steps_for_fit) > 1 else 0.0)
+        span = max(span, at_i + (int(st.get("repeat", 1)) - 1)
+                   * float(st.get("repeat_gap_seconds", 1.0)))
+    if span > window_seconds:
+        return None, span
+    start_offset = rng.random() * (window_seconds - span)
     base = now - timedelta(seconds=window_seconds) + timedelta(seconds=start_offset)
 
     events = []
@@ -197,9 +214,13 @@ def instantiate(scenario, templates_by_name, rng, seq_state, now, window_seconds
         else:
             step_at = spread * (i / max(1, len(steps) - 1)) if len(steps) > 1 else 0.0
         for r in range(repeat):
-            drift = rng.uniform(-jitter, jitter) * spread / max(1, len(steps))
+            gap = spread / max(1, len(steps) - 1) if len(steps) > 1 else spread
+            drift = rng.uniform(-jitter, jitter) * gap
             at = base + timedelta(seconds=step_at + drift
                                   + r * float(st.get("repeat_gap_seconds", 1.0)))
+            # No event is dated ahead of the run. Anything past it would be
+            # re-timed on ingest and break attribution.
+            at = min(at, now)
             overrides = st.get("set") or {}
             lines, ctx = render_step(tpl, ridx, overrides, shared,
                                      rng, seq_state, at)
@@ -325,14 +346,30 @@ def main(argv):
 
     buffers = defaultdict(list)
     truths = []
+    skipped = {}
     for scenario, count in plan:
         for _ in range(count):
             events, truth = instantiate(scenario, templates_by_name, rng,
                                         seq_state, now, window)
+            if events is None:
+                # truth carries the span the scenario needs.
+                skipped[scenario["name"]] = skipped.get(scenario["name"], (0, truth))
+                skipped[scenario["name"]] = (skipped[scenario["name"]][0] + 1, truth)
+                continue
             tag = f' datagen_scenario="{scenario["name"]}"' if args.mark_events else ""
             for st, line in events:
                 buffers[st].append(line + tag)
             truths.append(truth)
+
+    if skipped:
+        print()
+        print("  NOT PLANTED -- these scenarios are longer than the window:")
+        for name, (n, span) in sorted(skipped.items()):
+            print(f"    {name}  x{n}: needs {span / 3600:.1f}h, "
+                  f"the window is {window / 3600:.1f}h")
+        print("    Raise --window-hours to include them. A slow campaign is")
+        print("    a real detection problem and cannot be compressed into a")
+        print("    short window without becoming a different problem.")
 
     planted = sum(len(v) for v in buffers.values())
 
