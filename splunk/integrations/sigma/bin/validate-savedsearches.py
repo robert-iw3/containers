@@ -12,10 +12,10 @@ Splunk instance. Get the spec from the target version:
     cat /opt/splunk/etc/system/README/savedsearches.conf.spec > spec.txt
   bin/validate-savedsearches.py savedsearches.conf spec.txt
 
-Reports parse errors and unknown keys separately, and always exits 0:
-read the counts, not the exit status.
+Reports parse errors and unknown keys separately, and exits non-zero when
+it finds either, so it can gate a build the way preflight.py does.
 """
-import re, sys, collections
+import os, re, sys, collections
 
 def spec_keys(path):
     exact, wild = set(), []
@@ -73,7 +73,14 @@ def parse(path):
     return stanzas, errors
 
 def main():
+    if len(sys.argv) < 3:
+        print(__doc__.strip(), file=sys.stderr)
+        sys.exit(2)
     conf, specpath = sys.argv[1], sys.argv[2]
+    for pth in (conf, specpath):
+        if not os.path.exists(pth):
+            print(f"FAIL: no such file: {pth}", file=sys.stderr)
+            sys.exit(2)
     exact, wild = spec_keys(specpath)
     stanzas, errors = parse(conf)
     unknown = []
@@ -94,7 +101,10 @@ def main():
     seen = collections.Counter(k for _, _, k in unknown)
     for k, c in seen.most_common(15):
         print(f"   {c:>5}x  {k}")
-    sys.exit(0)
+    # Non-zero when something is wrong, so this can gate a build the way
+    # preflight.py does. A validator that always exits 0 reports, but it
+    # cannot stop anything, and a report nobody reads is not a check.
+    sys.exit(1 if (errors or unknown) else 0)
 
 if __name__ == "__main__":
     main()

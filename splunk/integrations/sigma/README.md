@@ -82,6 +82,7 @@ Six steps in full: [docs/setup-guide.md](docs/setup-guide.md).
 | [`bin/check-instance.sh`](bin/check-instance.sh) | checks the instance — spool input, concurrency, indexes, where parsing happens |
 | [`bin/field-inventory.sh`](bin/field-inventory.sh) | collects the fields an environment produces, for preflight to check against |
 | [`bin/backfill.sh`](bin/backfill.sh) | runs the engine once across a wider window, so an instance that already holds months of logs is examined rather than waiting for new data |
+| [`bin/validate-savedsearches.py`](bin/validate-savedsearches.py) | checks generated `savedsearches.conf` against the target version's own `.spec`, offline — parse errors and keys Splunk does not define. Exits non-zero, so it can gate a build |
 | [`bin/package-app.sh`](bin/package-app.sh) | builds the installable `.spl` |
 | [`bin/stage-lab-data.sh`](bin/stage-lab-data.sh) | generates one canonical labelled dataset and gives the forwarder one set of inputs, replacing whatever accumulated. Refuses to stage a dataset that disagrees with its own ground truth |
 | [`bin/reset-lab-data.sh`](bin/reset-lab-data.sh) | empties a lab index, so only data that parses correctly is re-ingested |
