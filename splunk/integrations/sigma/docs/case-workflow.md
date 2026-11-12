@@ -58,21 +58,29 @@ which is what the "Detections with no case yet" figure counts.
 ## One setting the operator has to make
 
 Writing a case entry uses `collect`, which Splunk classifies as a risky
-command and **blocks from dashboards by default**. That default is
+command and **challenges in dashboards by default**. That default is
 correct: a dashboard that can write to an index is a dashboard that can be
 made to write to an index.
 
-Case Work will therefore do nothing until an operator decides otherwise.
-In `$SPLUNK_HOME/etc/system/local/web.conf`:
+What an analyst sees is a dialog headed "We've identified a potential
+security risk", naming `collect` as the flagged command and showing the
+whole query, with **Cancel** and **Run Query Anyway**. Reading it and
+clicking through works: the case is written. So Case Work is usable as
+shipped, at the cost of that dialog on every case action, which is a poor
+thing to put in front of someone a dozen times a shift.
+
+To remove it, an operator decides otherwise. In
+`$SPLUNK_HOME/etc/system/local/web.conf`:
 
 ```ini
 [settings]
 enable_risky_command_check_dashboard = false
 ```
 
-and restart splunkd. This is instance-wide, so it is a decision about the
-whole installation rather than about this app, which is why the app does
-not ship it. Read it before enabling it.
+and restart splunkd. This is instance-wide and it turns the check off for
+every dashboard on the installation, not just this one, which is why the
+app does not ship it and why it is worth reading the dialog once before
+deciding. Splunk offers no way to allow the command for a single dashboard.
 
 If you would rather not, the alternative is to leave Case Work read-only
 and record decisions in `lookups/sigma_allowlist.csv` by hand. That
