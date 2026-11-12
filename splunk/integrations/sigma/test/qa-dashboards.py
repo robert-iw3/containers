@@ -151,7 +151,13 @@ def main(argv=None):
     ap.add_argument("--container", default="epo-uat-indexer")
     ap.add_argument("--views", nargs="*", default=[])
     ap.add_argument("--app", default="sigma_detection_lab")
-    ap.add_argument("--wait", type=int, default=480)
+    ap.add_argument("--wait", type=int, default=1500,
+                    help="Seconds to wait for every panel to have run")
+    ap.add_argument("--per-minute", type=int, default=8,
+                    help="How many panel searches to schedule on each "
+                         "minute. Keep it near the instance's scheduled "
+                         "search concurrency; bin/check-instance.sh "
+                         "reports what that actually is")
     ap.add_argument("--keep", action="store_true",
                     help="leave the QA app installed for inspection; it "
                          "schedules 93 searches and will compete with the engine")
@@ -169,20 +175,34 @@ def main(argv=None):
     print("\n  %d panel search(es) across %d view(s)\n"
           % (len(queries), len({v for v, _, _ in queries})))
 
+    # Spread over successive minutes rather than firing together. An
+    # instance runs only a handful of scheduled searches at once -- four
+    # here -- so ninety on one minute queue behind each other, every one is
+    # reported as delayed, and the engine's own detection searches are
+    # pushed out of the way while this runs. Each search is cheap; it is
+    # only their arriving together that hurts.
+    per_minute = max(1, args.per_minute)
+    start_minute = (time.gmtime().tm_min + 2) % 60
+
     conf = ["[default]", "enableSched = 1", "realtime_schedule = 0",
-            "schedule_priority = highest", "cron_schedule = */3 * * * *",
+            "schedule_priority = default",
             "dispatch.earliest_time = -7d@d", "dispatch.latest_time = now",
             "counttype = number of events", "relation = greater than",
             "quantity = 0", "alert.track = 0", ""]
     names, skipped = {}, []
+    scheduled = 0
     for i, (view, title, q) in enumerate(queries):
         if any(w in q for w in WRITES):
             skipped.append((view, title))
             continue
         nm = "qa_%03d" % i
         names[nm] = (view, title)
+        minute = (start_minute + scheduled // per_minute) % 60
+        scheduled += 1
         # Bounded: this checks that a search runs, not what it returns.
-        conf += ["[%s]" % nm, "search = %s | head 5 | outputcsv %s" % (q, nm), ""]
+        conf += ["[%s]" % nm,
+                 "cron_schedule = %d * * * *" % minute,
+                 "search = %s | head 5 | outputcsv %s" % (q, nm), ""]
 
     tmp = Path("/tmp/_qa.conf")
     tmp.write_text("\n".join(conf))
@@ -193,7 +213,13 @@ def main(argv=None):
     sh(["podman", "cp", str(tmp), "%s:%s/default/savedsearches.conf" % (args.container, base)])
     sh(["podman", "exec", "-u", "root", args.container, "chown", "-R", "splunk:splunk", base])
     podman(args.container, "sh", "-c", "rm -f /opt/splunk/var/run/splunk/csv/qa_*.csv")
-    print("  scheduling %d search(es); %d skipped as writes" % (len(names), len(skipped)))
+    minutes = (len(names) + per_minute - 1) // per_minute
+    print("  scheduling %d search(es) at %d per minute over %d minute(s); "
+          "%d skipped as writes"
+          % (len(names), per_minute, minutes, len(skipped)))
+    if minutes * 60 > args.wait:
+        print("  NOTE: that needs about %dm but --wait is %dm; raise --wait "
+              "or --per-minute" % (minutes, args.wait // 60))
     podman(args.container, "sh", "-c", "/opt/splunk/bin/splunk restart >/dev/null 2>&1")
 
     deadline, done = time.time() + args.wait, {}

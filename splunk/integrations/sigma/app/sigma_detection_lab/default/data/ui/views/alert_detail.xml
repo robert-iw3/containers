@@ -21,7 +21,9 @@
                       "no technique mapped", sigma_technique_name),
        tactic = if(sigma_tactic_name="" OR isnull(sigma_tactic_name),
                    "unmapped", sigma_tactic_name),
-       urgency = if(sigma_disposition="immediate", "act now", "trend")
+       urgency = if(sigma_disposition="immediate", "act now", "trend"),
+       st = mvindex(sigma_src_sourcetype, 0),
+       idx = mvindex(sigma_src_index, 0)
 | rex field=sigma_sample "Name='CommandLine'&gt;(?&lt;evt_cmdline&gt;[^&lt;]*)"
 | rex field=sigma_sample "Name='Image'&gt;(?&lt;evt_image&gt;[^&lt;]*)"
 | rex field=sigma_sample "Name='ParentImage'&gt;(?&lt;evt_parent&gt;[^&lt;]*)"
@@ -138,14 +140,13 @@
       <title>Detections — select one to read the evidence</title>
       <table>
         <search base="det">
-          <!-- coalesce around mvindex: the engine writes these with values(),
-               which yields one value when a detection came from a single
-               source type. mvindex() on a single-value field returns null,
-               so the token driving the evidence panels below was set to
-               "null" and every one of them searched for nothing. -->
-          <query>| eval st = coalesce(mvindex(sigma_src_sourcetype, 0), sigma_src_sourcetype),
-       idx = coalesce(mvindex(sigma_src_index, 0), sigma_src_index),
-       from_t = tostring(floor(coalesce(sigma_first_seen, 0) - 1800)),
+          <!-- st and idx are computed in the base search, not here. A
+               post-process receives only the fields the base is known to
+               need, and neither is named anywhere in the base; sigma_src_host
+               and sigma_rule survive only because the filter tokens put them
+               there. Computed here they came back null, so every evidence
+               panel searched for a source type of "null". -->
+          <query>| eval from_t = tostring(floor(coalesce(sigma_first_seen, 0) - 1800)),
        to_t = tostring(ceiling(coalesce(sigma_last_seen, sigma_first_seen, 0) + 1800))
 | table when, sigma_src_host, sigma_rule, technique, tactic, sigma_level,
         sigma_confidence, urgency, sigma_match_count, seen_for, st,
@@ -284,72 +285,49 @@
 
 
   <row depends="$sel_rule$">
-    <panel>
-      <title>Those events, field by field — the rule matched within this set</title>
-      <table>
-        <search>
-          <query>index=$sel_idx|s$ host=$sel_host|s$ sourcetype=$sel_st|s$
-| eval when=strftime(_time,"%F %T.%3N")
-| rex field=_raw "Name='(?&lt;_k&gt;[^']+)'&gt;(?&lt;_v&gt;[^&lt;]*)" max_match=60
-| table when, host, sourcetype, EventCode, Image, CommandLine, ParentImage,
-        ParentCommandLine, User, IntegrityLevel, CurrentDirectory,
-        OriginalFileName, Hashes, exe, comm, auid, a0, a1, a2, a3
-| sort - when</query>
-          <earliest>$sel_from$</earliest>
-          <latest>$sel_to$</latest>
-        </search>
-        <option name="count">20</option>
-        <option name="drilldown">none</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
+  </row>
+
+  <row depends="$sel_rule$">
   </row>
 
   <row depends="$sel_rule$">
     <panel>
-      <title>Which fields those events carry — what the rule had to work with</title>
-      <!-- If a field the rule keys on is absent here, the detection came
-           from something else in the condition, and that is worth knowing
-           before acting on it. -->
-      <table>
-        <search>
-          <query>index=$sel_idx|s$ host=$sel_host|s$ sourcetype=$sel_st|s$
-| fieldsummary maxvals=3
-| eval coverage=round(count/max(count)*100,0)
-| table field, count, distinct_count, values
-| rename field as "Field", count as "Events with it",
-         distinct_count as "Distinct values", values as "Sample values"
-| sort - "Events with it"</query>
-          <earliest>$sel_from$</earliest>
-          <latest>$sel_to$</latest>
-        </search>
-        <option name="count">25</option>
-        <option name="drilldown">none</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
-
-  <row depends="$sel_rule$">
-    <panel>
-      <title>The event the rule matched, exactly as it was stored</title>
+      <title>The event the rule matched, field by field</title>
       <!-- The detection keeps its earliest matching event. That is the
            evidence, and it does not depend on being able to re-run the
            rule's condition here. -->
       <table>
         <search base="det">
           <query>| search sigma_rule="$sel_rule$" sigma_src_host="$sel_host$"
-| head 1
-| eval line=split(replace(sigma_sample, "&gt;&lt;", "&gt;
-&lt;"), "
-")
-| mvexpand line
-| where line!=""
-| streamstats count as n
-| table n, line
-| rename n as "#", line as "The matching event"</query>
+  | head 1
+  | rex max_match=0 field=sigma_sample "&lt;Data Name='(?&lt;dk&gt;[^']+)'&gt;(?&lt;dv&gt;[^&lt;]*)&lt;/Data&gt;"
+  | rex max_match=0 field=sigma_sample "(?&lt;ak&gt;\b[a-zA-Z_][a-zA-Z0-9_]*)=\"(?&lt;av&gt;[^\"]*)\""
+  | eval pair = coalesce(mvzip(dk, dv, ":::"), mvzip(ak, av, ":::"))
+  | eval pair = if(isnull(pair), "the event:::".sigma_sample, pair)
+  | mvexpand pair
+  | eval f = mvindex(split(pair, ":::"), 0), v = mvindex(split(pair, ":::"), 1)
+  | where isnotnull(v) AND v!="" AND v!="-"
+  | eval rank = case(
+      f=="CommandLine" OR f=="ProcessCommandLine" OR f=="cmdline", 1,
+      f=="Image" OR f=="NewProcessName" OR f=="exe" OR f=="comm", 2,
+      f=="ParentImage" OR f=="ParentProcessName", 3,
+      f=="ParentCommandLine", 4,
+      f=="User" OR f=="SubjectUserName" OR f=="TargetUserName" OR f=="auid", 5,
+      f=="CurrentDirectory" OR f=="cwd", 6,
+      f=="Hashes" OR f=="MD5" OR f=="SHA256", 7,
+      f=="ProcessId" OR f=="ParentProcessId" OR f=="pid" OR f=="ppid", 8,
+      f=="the event", 0, 1==1, 9)
+  | eval meaning = case(
+      rank==1, "what was run", rank==2, "the program",
+      rank==3, "what started it", rank==4, "how that was started",
+      rank==5, "as whom", rank==6, "from where",
+      rank==7, "file identity", rank==8, "process identity", 1==1, "")
+  | sort rank, f
+  | dedup f
+  | table f, v, meaning
+  | rename f as "Field", v as "Value", meaning as "Why it matters"</query>
         </search>
-        <option name="count">30</option>
+        <option name="count">40</option>
         <option name="drilldown">none</option>
         <option name="wrap">true</option>
       </table>
