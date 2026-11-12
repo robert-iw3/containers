@@ -127,22 +127,40 @@ those detections are never found and the index has gaps nothing reports.
 
 ### Cadence by severity
 
-| severity | cron | window | shipped |
-|---|---|---|---|
-| critical | `*/15` | `-15m` | enabled |
-| high | `*/30` | `-30m` | enabled |
-| medium | hourly | `-60m` | enabled |
-| low | every 4h | `-4h` | **disabled** |
-| informational | every 6h | `-6h` | **disabled** |
+| severity | interval | window | spread | shipped |
+|---|---|---|---|---|
+| critical | `*/15` | `-15m` | 5m | enabled |
+| high | `*/30` | `-30m` | 10m | enabled |
+| medium | hourly | `-60m` | 20m | enabled |
+| low | every 4h | `-4h` | 60m | **disabled** |
+| informational | every 6h | `-6h` | 60m | **disabled** |
 
 The window always equals the interval. A window wider than the interval
 re-reads the same events and writes the same detection again; gaps are
 prevented by continuous scheduling instead of by overlap.
 
-`allow_skew = 100%` lets the scheduler distribute start times. It applies
-only to `* * * * *` and `*/M` crons, so a hand-computed
-`0,10,20,30,40,50` would defeat it. The cron is deliberately left in the
-form that can be skewed.
+Each search is given its own minute within that interval. The cron shown
+above is the interval; what is written is offset per search, so the
+critical tier emits `0,15,30,45` for one search, `1,16,31,46` for the next,
+and so on. Every search keeps its interval exactly; only its position in
+the interval differs.
+
+This replaced `allow_skew = 100%`, which was wrong in two ways. It applies
+only to `* * * * *` and `*/M` crons, so it did nothing for the hourly tier.
+More importantly, neither it nor `schedule_window` stops a run being
+counted as late: both let the scheduler move a search, which does spread
+the load, but the run is still measured against the time it was scheduled
+for. Forty searches sharing one minute on an instance that runs four at
+once reported almost every run as delayed no matter which was set. Giving
+them different minutes is what actually empties the queue.
+
+`schedule_window` is still set, to the spread shown below, so the scheduler
+may even out what the offsets do not. It is kept under the interval, since
+a deferral longer than the interval can collide with the next run.
+
+`splunk/search_maintenance/bin/search-lint.py` checks all of this against a
+live instance, and `search-stagger.py` applies the same treatment to any
+other app that needs it.
 
 ---
 
@@ -237,9 +255,16 @@ trend      =  everything else
 
 | | immediate | trend |
 |---|---|---|
-| corroboration expected | 1 match | 2 matches |
-| alert action | yes | no |
-| scheduling | `schedule_priority = higher` | `schedule_window = auto` |
+| `sigma_min_matches` | 1 | 2 |
+| recorded as corroborated | on a single match | once a second match lands in the same run |
+| how the pages read it | "act now" | "trend" |
+
+Disposition is the only thing it changes. Both dispositions are scheduled
+identically, by severity, and both write to the detection index on every
+run; what differs is the number of matches a detection must carry before
+`sigma_corroborated` says yes, and how the analyst pages label it. An
+earlier version of this table claimed disposition drove alert actions and
+scheduling. It does not, and never did in the generated configuration.
 
 Each stanza carries its own scoring as comments, so a decision can be
 audited without re-running the converter.

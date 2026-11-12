@@ -109,7 +109,7 @@ belongs to exactly one round and nothing is inferred from timing.
 
 A dashboard that errors shows the error in a panel and nowhere else. Nobody
 reads eight dashboards' worth of panels after every change. This extracts
-the query from all 93 panels, resolves the tokens, reassembles
+the query from every panel, resolves the tokens, reassembles
 post-process panels onto their base search, runs them all and reports which
 errored.
 

@@ -84,7 +84,7 @@ Six steps in full: [docs/setup-guide.md](docs/setup-guide.md).
 | [`bin/backfill.sh`](bin/backfill.sh) | runs the engine once across a wider window, so an instance that already holds months of logs is examined rather than waiting for new data |
 | [`bin/package-app.sh`](bin/package-app.sh) | builds the installable `.spl` |
 | [`bin/reset-lab-data.sh`](bin/reset-lab-data.sh) | empties a lab index and prunes what test rounds leave behind |
-| [`test/run-all.sh`](test/run-all.sh) | the end-to-end proof: labelled data, rules, instance, detection at four levels of camouflage, and all 93 dashboard panels |
+| [`test/run-all.sh`](test/run-all.sh) | the end-to-end proof: labelled data, rules, instance, detection at four levels of camouflage, and every dashboard panel |
 | [`test/check-dataset.py`](test/check-dataset.py) | checks a labelled dataset against its own ground truth before anything is scored against it |
 
 `preflight` exits non-zero, so it can gate a deployment. A check that could
@@ -105,7 +105,7 @@ them through the instance, and reports what came back.
 | rule set | every rule converts, parses, is mapped, and the schedule fits |
 | instance | detections can actually be written here |
 | detection | a control round with nothing planted, then four tiers from obvious to one event in twelve thousand |
-| dashboards | all 93 panel searches run, with errors named |
+| dashboards | every panel search runs, with errors named |
 
 Recall is the number usually quoted. **The control round is the one that
 decides whether the app is usable** — nothing is planted, so anything it
