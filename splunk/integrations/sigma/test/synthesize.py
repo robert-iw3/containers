@@ -26,7 +26,7 @@ A rule that is caught at t1 and missed at t4 is not a rule problem. It is a
 statement about aggregation thresholds and search windows, which is exactly
 what this is for.
 
-    ./bin/synthesize.py --rules <dir> --count 12 --tier t3 --out batch.json
+    ./test/synthesize.py --rules <dir> --count 12 --tier t3 --out batch.json
 """
 from __future__ import annotations
 

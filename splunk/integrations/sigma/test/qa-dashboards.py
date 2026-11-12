@@ -17,8 +17,8 @@ A panel returning no rows is reported separately from one that errored. An
 empty panel can be correct -- nothing matched in the period -- so it is a
 warning to read. An error never is.
 
-    ./bin/qa-dashboards.py --container epo-uat-indexer
-    ./bin/qa-dashboards.py --container epo-uat-indexer --views alert_detail
+    ./test/qa-dashboards.py --container epo-uat-indexer
+    ./test/qa-dashboards.py --container epo-uat-indexer --views alert_detail
 """
 from __future__ import annotations
 

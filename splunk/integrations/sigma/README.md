@@ -83,7 +83,9 @@ Six steps in full: [docs/setup-guide.md](docs/setup-guide.md).
 | [`bin/field-inventory.sh`](bin/field-inventory.sh) | collects the fields an environment produces, for preflight to check against |
 | [`bin/backfill.sh`](bin/backfill.sh) | runs the engine once across a wider window, so an instance that already holds months of logs is examined rather than waiting for new data |
 | [`bin/package-app.sh`](bin/package-app.sh) | builds the installable `.spl` |
-| [`bin/reset-lab-data.sh`](bin/reset-lab-data.sh) | empties a lab index and prunes what test rounds leave behind |
+| [`bin/stage-lab-data.sh`](bin/stage-lab-data.sh) | generates one canonical labelled dataset and gives the forwarder one set of inputs, replacing whatever accumulated. Refuses to stage a dataset that disagrees with its own ground truth |
+| [`bin/reset-lab-data.sh`](bin/reset-lab-data.sh) | empties a lab index, so only data that parses correctly is re-ingested |
+| [`bin/prune-round-inputs.py`](bin/prune-round-inputs.py) | removes the monitor stanzas validation rounds leave behind, which outlive the data they loaded |
 | [`test/run-all.sh`](test/run-all.sh) | the end-to-end proof: labelled data, rules, instance, detection at four levels of camouflage, and every dashboard panel |
 | [`test/check-dataset.py`](test/check-dataset.py) | checks a labelled dataset against its own ground truth before anything is scored against it |
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run one labelled batch through a live instance and measure what it caught.
 
-bin/synthesize.py produces events that a named rule provably matches, with
+test/synthesize.py produces events that a named rule provably matches, with
 an independent evaluator agreeing before anything is claimed. This puts
 such a batch into Splunk and compares what came back.
 
@@ -19,7 +19,7 @@ is usually quoted:
 Precision is measured against background events generated alongside the
 planted ones. Anything detected that was not planted is counted against it.
 
-    ./bin/validate-round.py --batch round-t1.json --container epo-uat-indexer
+    ./test/validate-round.py --batch round-t1.json --container epo-uat-indexer
 """
 from __future__ import annotations
 
