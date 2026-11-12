@@ -60,13 +60,17 @@ def main(argv=None) -> int:
 
     t = E.Target(args.container, args.splunk_home, args.user)
     slots = E.concurrency_limit(t)
-    runs = E.scheduler_runs(t, args.lines)
+    raw = E.scheduler_runs(t, args.lines)
+    runs = E.collapse_waits(raw)
+    collapsed = len(raw) - len(runs)
     if args.app:
         runs = [r for r in runs if r.app in args.app]
 
     print()
     print(f"  {t.home}{f'  in {args.container}' if args.container else ''}")
-    print(f"  {len(runs)} scheduler entries read")
+    print(f"  {len(runs)} scheduled attempt(s) from {len(raw)} log entries"
+          + (f"; {collapsed} were repeats of a search still waiting"
+             if collapsed else ""))
     print(f"  concurrency limit: {slots if slots else 'not stated in the log'}"
           "  (read from the scheduler, not computed)")
     print()

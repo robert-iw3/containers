@@ -196,7 +196,7 @@ def window_minutes(earliest: str) -> Optional[float]:
 
 class Run:
     __slots__ = ("name", "app", "status", "reason", "run_time", "results",
-                 "skew", "when")
+                 "skew", "when", "scheduled_at")
 
     def __init__(self, **kw):
         for k in self.__slots__:
@@ -228,8 +228,30 @@ def scheduler_runs(t: Target, lines: int = 20000) -> List[Run]:
             results=g(r"\bresult_count=(\d+)", int),
             skew=g(r"\bskew_seconds=(\d+)", int),
             when=g(r"^(\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})"),
+            scheduled_at=g(r"\bscheduled_time=(\d+)"),
         ))
     return runs
+
+
+def collapse_waits(runs: List[Run]) -> List[Run]:
+    """One entry per attempt, not one per second spent waiting.
+
+    A held-back search is logged again every second until it starts, so a
+    search that waited three seconds writes three 'continued' lines. Counting
+    those lines makes a brief queue look like a crisis: 210 lines for a
+    handful of searches that each waited a moment. Collapsing on the search
+    and the time it was scheduled for gives one entry per held-back attempt,
+    which is the thing worth counting.
+    """
+    out, seen = [], set()
+    for r in runs:
+        if r.status == "continued":
+            key = (r.name, r.scheduled_at)
+            if key in seen:
+                continue
+            seen.add(key)
+        out.append(r)
+    return out
 
 
 def concurrency_limit(t: Target) -> Optional[int]:
