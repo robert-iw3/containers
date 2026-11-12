@@ -127,6 +127,115 @@ detects is unambiguously a false positive.
 
 ---
 
+## A walk through it
+
+Every screenshot below is this app running against the generated dataset in
+[`../datagen`](../datagen): 116,452 events over four hours, 0.5% of it planted
+intrusion activity, the rest ordinary background. Ten detections came out of
+it, and they are a coherent chain rather than ten unrelated hits — an Office
+document spawning PowerShell, an encoded command, `IEX`, credential dumping,
+lateral movement by WMIC, and shadow copies deleted.
+
+### 1. What was caught, and what to open first
+
+![Detection Coverage](img/demo_1.png)
+
+One host, ten detections, and the number that matters is **three stages**:
+execution, defence evasion and credential access on the same machine. That is
+what "multi-stage activity — investigate" is reading, and why this host
+outranks one with more detections of a single kind. The telemetry panel on
+the right is the other half of the question — which log sources are producing
+detections and which are deployed but silent.
+
+### 2. The triage queue
+
+![Alert Detail](img/demo_3.png)
+
+Ten detections, five needing action now. `urgency` is not the Sigma severity:
+it combines severity with the confidence scored from the rule's own
+declarations, so a severe rule whose author documented that it matches
+legitimate work is recorded and baselined rather than put in front of
+someone at 3am.
+
+### 3. The evidence behind one detection
+
+![Alert Detail, one detection selected](img/demo_4.png)
+
+Select a row and the rest fills in. For Mimikatz: the user, the binary, and
+the command line — `privilege::debug sekurlsa::logonpasswords` — with the
+parent process, the Sigma condition that matched, the confidence and its
+reasoning, the raw events around it on that host, and everything else
+detected on the same machine. This is the page that answers "is this real",
+without leaving it.
+
+### 4. Working the case
+
+![Case Work](img/demo_5.png)
+
+Open a case against a detection and record what you found. The journal is
+append-only: every note and decision is its own entry, so the reasoning
+outlives whoever wrote it. Rules repeatedly resolved as false positive
+surface as allowlist candidates, which is how tuning gets decided from
+evidence rather than from irritation.
+
+### 5. Every rule deployed
+
+![Rule Inventory](img/demo_6.png)
+
+622 rules: 222 that alert on a single match, 400 recorded and trended, across
+160 ATT&CK techniques and 20 tactics. Filter by platform, severity, tactic or
+handling, or click a bar.
+
+### 6. What a rule actually does
+
+![Rule Reference](img/demo_7.png)
+
+The rule, and the ATT&CK technique it maps to with the technique's own
+description — what it is, the telemetry ATT&CK expects, and how ATT&CK
+suggests detecting it.
+
+![Rule Reference, lower](img/demo_7a.png)
+
+Below that: the author's detection block **unchanged**, the SPL it compiles
+to, which batch evaluates it, how its confidence was scored line by line,
+the false positives its author declared, and the source it came from. An
+operator can satisfy themselves about a rule without reading the repository.
+
+### 7. Whether the engine is healthy
+
+![Engine Health](img/demo_8.png)
+
+Events indexed, detections written, searches run, how many waited for a slot,
+and the concurrency ceiling actually in force — four on this instance. The
+lag table distinguishes replayed data, where lag is simply the age of the
+events, from timestamp extraction having failed, where every event shares one
+lag and every time-bounded detection breaks silently.
+
+![Engine Health, search cost](img/demo_8a.png)
+
+The panel that decides whether this scales: per batch, how many events it
+read, how many it matched, its selectivity, and the projected cost at ten
+times this index. Batches marked **reading for nothing** are scanning
+millions of events for rules that never fire here — the first thing to cut
+on a larger index.
+
+### 8. Reporting
+
+![Report — Detection Summary](img/demo_10.png)
+
+Written for someone who does not work in security: what the system looked
+for, what it found, and what the techniques mean, with the counts grouped so
+one piece of activity on one machine counts once however many log lines it
+produced.
+
+![Report — Shift Handover](img/demo_11.png)
+
+And for the next shift: what needs action, what is only being trended, what
+fired for the first time, and a collection-health table saying what would
+make the report wrong.
+
+---
+
 ## What it does not do
 
 - **Only the log sources it is mapped for.** 558 of 622 rules are Windows
