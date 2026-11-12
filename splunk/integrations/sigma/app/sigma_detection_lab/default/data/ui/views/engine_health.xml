@@ -59,28 +59,39 @@
       </single>
     </panel>
     <panel>
-      <title>Runs deferred or skipped</title>
-      <!-- Anything above zero means the instance cannot carry the schedule
-           it has been given, and detections are being lost. -->
+      <title>Runs held back</title>
+      <!-- Attempts, not log lines. A search that cannot start is logged
+           again every second until it does, so counting lines turns a queue
+           that drains in two seconds into tens of thousands. Collapsing on
+           the search and the time it was scheduled for gives one entry per
+           held-back attempt.
+
+           A held-back run is not a lost detection: continuous scheduling
+           anchors each run to its scheduled time and catches it up. This is
+           a load reading, not a fault, which is why it is not coloured red.
+           The panel beside it is the figure to compare against. -->
       <single>
         <search>
           <query>index=_internal sourcetype=scheduler savedsearch_name="Sigma*"
-(status=continued OR status=skipped) | stats count</query>
+(status=continued OR status=skipped)
+| eval attempt = savedsearch_name . "@" . scheduled_time
+| stats dc(attempt) as held_back</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
         <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="rangeColors">["0x0ca30c","0xd03b3b"]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+        <option name="underLabel">attempts that waited for a slot</option>
+        <option name="useColors">0</option>
       </single>
     </panel>
     <panel>
       <title>Concurrency ceiling</title>
       <single>
         <search>
+          <!-- latest, not max. The ceiling can change across a restart,
+               and the figure that matters is the one in force now; max over
+               a day reports a limit that is no longer being applied. -->
           <query>index=_internal sourcetype=scheduler concurrency_limit=*
-| rex "concurrency_limit=(?&lt;lim&gt;\d+)" | stats max(lim) as lim | fields lim</query>
+| rex "concurrency_limit=(?&lt;lim&gt;\d+)" | stats latest(lim) as lim | fields lim</query>
           <earliest>-24h</earliest><latest>now</latest>
         </search>
         <option name="drilldown">none</option>
