@@ -56,7 +56,7 @@ events to 12,396.
 ## Quick start
 
 ```bash
-pip install -r requirements.txt -t ./pylib          # pySigma, vendored
+pip install -r requirements.txt -t ./pylib           # pySigma, vendored
 ./fetch-rules.py --package core                      # SigmaHQ, hash-checked
 ./bin/preflight.py rules-core/.../windows/process_creation rules-core/.../linux
 ./bin/package-app.sh --rules "rules-core/.../windows/process_creation rules-core/.../linux"
@@ -194,9 +194,11 @@ The rule, and the ATT&CK technique it maps to with the technique's own
 description — what it is, the telemetry ATT&CK expects, and how ATT&CK
 suggests detecting it.
 
-![Rule Reference, lower](img/demo_7a.png)
+*The same page, further down.*
 
-Below that: the author's detection block **unchanged**, the SPL it compiles
+![Rule Reference, continued](img/demo_7a.png)
+
+The author's detection block **unchanged**, the SPL it compiles
 to, which batch evaluates it, how its confidence was scored line by line,
 the false positives its author declared, and the source it came from. An
 operator can satisfy themselves about a rule without reading the repository.
@@ -211,7 +213,9 @@ lag table distinguishes replayed data, where lag is simply the age of the
 events, from timestamp extraction having failed, where every event shares one
 lag and every time-bounded detection breaks silently.
 
-![Engine Health, search cost](img/demo_8a.png)
+*The same page, further down.*
+
+![Engine Health, continued](img/demo_8a.png)
 
 The panel that decides whether this scales: per batch, how many events it
 read, how many it matched, its selectivity, and the projected cost at ten
