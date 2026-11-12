@@ -2,9 +2,11 @@
 # The Central Log Server must implement an audit reduction capability that
 # supports on-demand reporting requirements.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000755-AU-000140
 group:           V-263560
@@ -30,7 +32,6 @@ check:           macros.conf [<STANZA_NAME>] definition non_empty
 check:           savedsearches.conf [<stanza name>] search non_empty
 check:           savedsearches.conf [<stanza name>] enableSched equals 1
 check:           savedsearches.conf [<stanza name>] cron_schedule non_empty
-check:           savedsearches.conf [<stanza name>] action.email.sendpdf present
 # --- vendor verification: generated, do not edit by hand
 vendor:          savedsearches.conf [<stanza name>] action.email.sendpdf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
 vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
@@ -40,6 +41,9 @@ external:        The reporting cycle, the recipients and the required report for
                  organization-defined parameters recorded in the system security plan.
 external:        Delivery of the rendered report rests on the mail transfer agent and on
                  network reachability from the Splunk host.
+external:        The delivered form of a report, which is organization-defined and spread
+                 across five savedsearches.conf switches and alert_actions.conf, so no
+                 single key carries it.
 
 citation:        props.conf.spec:80 [<spec>], :1085 REPORT-<class>, :1329 LOOKUP-<class>;
                  macros.conf.spec:52 definition; savedsearches.conf.spec:44 search, :73

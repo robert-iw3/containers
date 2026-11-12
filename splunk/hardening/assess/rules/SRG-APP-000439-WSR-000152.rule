@@ -1,9 +1,11 @@
 # SRG-APP-000439-WSR-000152  -  CAT II
 # Web server session IDs must be sent to the client using SSL/TLS.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000439-WSR-000152
 group:           V-206435
@@ -24,7 +26,7 @@ contribution:    Splunk Web can serve sessions only over HTTPS and set the Secur
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           web.conf [settings] enableSplunkWebSSL in 1|true
-check:           web.conf [settings] tools.sessions.forceSecure in 1|true
+check:           web.conf [settings] tools.sessions.secure in 1|true
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 vendor:          web.conf [settings] tools.sessions.forceSecure https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
@@ -41,6 +43,11 @@ retired_check:   web.conf [settings] tools.sessions.secure in 1|true
 external:        Browser enforcement of the Secure cookie attribute
 external:        Any TLS terminating reverse proxy, whose hop to the client is outside the
                  application's configuration
+external:        The secure bit on a cookie returned through a TLS-terminating proxy, which
+                 web.conf [settings] tools.sessions.forceSecure governs only where
+                 tools.proxy.on is true; with no proxy configured the setting is inert and
+                 a test on it reports a finding against an instance that serves TLS
+                 directly.
 
 citation:        SRG-APP-000439-WSR-000152 check text; SPLK-CL-000330 fix text;
                  web.conf.spec:70-73, 951-969

@@ -3,9 +3,11 @@
 # log record storage capacity large enough to accommodate the logging
 # requirements of the web server.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000357-WSR-000150
 group:           V-206421
@@ -31,7 +33,7 @@ governs:         server.conf - Core server settings, including the certificates 
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           indexes.conf [<index name>] maxTotalDataSizeMB present
-check:           server.conf [diskUsage] minFreeSpace present
+check:           server.conf [diskUsage] minFreeSpace matches ^([1-9][0-9]?(\.[0-9]+)?%|[0-9]{6,}|[1-9][0-9]{4})$
 check:           web.conf [settings] log.access_maxsize present
 check:           web.conf [settings] log.access_maxfiles present
 check:           web.conf [settings] log.error_maxsize present

@@ -7,48 +7,37 @@ date: "2026-11-09"
 
 # Baseline Selection
 
-Before any finding is worth reading, one question has to be settled: **which security
-requirements govern this product?** A checklist built from the wrong baseline is wrong
-in every row.
-
-This document states which baselines were selected, what the selection rests on, which
-part of it is DISA precedent and which part is our own determination, and what about it
-is still unfinished.
+**Which security requirements govern this product?** This document answers that: the
+baselines selected, the basis for each, and what is still unfinished.
 
 ## Why a baseline has to be selected at all
 
-DISA has published exactly one product STIG for Splunk: the **Splunk Enterprise 8.x for
-Linux STIG, V2R3**, benchmark date 02 July 2025. It is **sunsetted** - DISA no longer
-maintains it.
+DISA has published one product STIG for Splunk: the **Splunk Enterprise 8.x for Linux
+STIG, V2R3**, benchmark date 02 July 2025. It is **sunsetted** and no longer maintained.
+It addresses Splunk 8.x. The instance assessed here runs Splunk Enterprise 10.4.2.
 
-There is no current product STIG for Splunk. So the governing requirements fall back to
-the Security Requirements Guides, which are maintained. That fallback is why a selection
-has to be made and defended rather than simply named.
-
-The version gap points the same way. The sunsetted STIG addresses Splunk 8.x. The
-instance assessed here runs Splunk Enterprise 10.4.2.
+With no current product STIG, the governing requirements fall back to the Security
+Requirements Guides, which are maintained. Which SRGs apply has to be determined.
 
 ## SRG and STIG
 
 **An SRG - a Security Requirements Guide - states requirements for a whole category of
-product.** It says what must be true, in technology-neutral words: a central log server
+product.** It says what must be true in technology-neutral words: a central log server
 must protect its audit records, a web server must limit simultaneous session requests. It
-does not say which setting to change, because it does not know which product you have.
+names no setting, because it does not know which product you have.
 
 **A STIG is the product-specific version of those requirements.** DISA takes an SRG
 requirement and writes the exact file, setting, and command for one named product.
 
-When a product has a current STIG, the translation work is DISA's and already done. When
-it does not, the SRG is still the governing document, but **translating each requirement
-into Splunk settings becomes the assessor's work**. That translation is what this toolkit
-records, which is why every finding states the setting it read and how much confidence
-stands behind the reading. `02-how-it-decides.md` covers that.
+Where a current STIG exists, DISA has already done that translation. Where it does not,
+the SRG still governs and **translating each requirement into Splunk settings is the
+assessor's work**. This toolkit records that translation. Every finding states the setting
+it read and the confidence behind the reading; see `02-how-it-decides.md`.
 
 ## The evidence from DISA's own Splunk STIG
 
-The sunsetted STIG is the best available evidence of how DISA itself categorized Splunk.
-Each of its rules names the SRG requirement it was derived from, so the question can be
-answered by counting.
+Each rule in the sunsetted STIG names the SRG requirement it was derived from, so DISA's
+own categorization of Splunk can be counted.
 
 | | |
 |---|---|
@@ -61,14 +50,13 @@ answered by counting.
 Thirty-seven rules map to thirty-six requirements because one requirement,
 `SRG-APP-000391-AU-002290`, received two rules.
 
-DISA treated Splunk as a central log server and nothing else. Every rule it wrote carries
-a Central Log Server SRG identifier, and the `CL` in its own `SPLK-CL-` identifiers says
-the same thing. No rule in it derives from the Web Server SRG.
+DISA treated Splunk as a central log server. Every rule carries a Central Log Server SRG
+identifier, and so does the `CL` in `SPLK-CL-`.
 
 The sunsetted STIG is kept in `benchmarks/` and parsed into the inventory alongside the
-two SRGs - 290 rules in `assess/inventory/srg-rules.json`, being 127 plus 126 plus 37 -
-so anyone can re-run that count instead of taking it on trust. It contributes no rule
-file and produces no finding.
+two SRGs: 290 rules in `assess/inventory/srg-rules.json`, being 127 plus 126 plus 37.
+Anyone can re-run that count. The STIG itself contributes no rule file and produces no
+finding.
 
 ## The determination
 
@@ -79,39 +67,29 @@ Two baselines govern this assessment.
 | Central Log Server SRG | V3R5 | 30 Sep 2026 | 127 | `SRG-APP-xxxxxx-AU-xxxxxx` | DISA precedent |
 | Web Server SRG | V4R5 | 01 Jul 2026 | 126 | `SRG-APP-xxxxxx-WSR-xxxxxx` | **our determination** |
 
-The assessed rule set is **253 requirements, exactly the union of those two** - one rule
-file per requirement in `assess/rules/`. Nothing was added and nothing was omitted; this
-was verified by comparing the two sets, and it holds in both directions. The two baselines
-share no requirement identifier, which is why 127 plus 126 is 253 and not less.
+The assessed rule set is **253 requirements, exactly the union of those two**, with one
+rule file per requirement in `assess/rules/`. The two baselines share no requirement
+identifier, so 127 plus 126 is 253. Comparing the two sets against the rule files
+confirmed the union in both directions.
 
-### The Central Log Server SRG is settled
-
-It is what DISA applied to this product, and it matches what Splunk is used for here:
-the place audit records are sent so they can be kept, protected and reviewed.
+The Central Log Server SRG is settled. DISA applied it to this product, and it matches
+what Splunk is used for here: the place audit records are sent so they can be kept,
+protected and reviewed.
 
 ### The Web Server SRG is our addition
 
-**Including the Web Server SRG is our determination, not DISA precedent.** An assessor
-has to be able to see that and to challenge it, so it is stated plainly rather than
-folded into the total.
-
-The technical basis is that this product serves two HTTP interfaces of its own:
+**Including the Web Server SRG is our determination, not DISA precedent.** Splunk serves
+two HTTP interfaces of its own:
 
 - **Splunk Web** - the browser interface people sign in to and run searches from. Default
   port 8000.
 - **splunkd** - the management service, which also answers a REST interface used by
   administrative tools and by other Splunk instances. Default port 8089.
 
-Both are web servers reached over the network. Web Server SRG requirements - session
-limits, TLS protocol versions, cipher selection, what the server discloses in an error -
-describe exactly those interfaces, and Splunk has settings for them. Judging the two
-ports against no web server baseline would leave a real, exposed attack surface
-unassessed.
-
-The counter-argument deserves to be recorded: DISA, with the same product in front of it,
-did not do this. Our answer is that the Web Server SRG requirements land on settings
-Splunk actually has, and that an assessment that reads them is more useful than one that
-does not.
+Both are web servers reached over the network. Web Server SRG requirements cover session
+limits, TLS protocol versions, cipher selection, and what the server discloses in an
+error. Splunk has settings for all of them. Judged against no web server baseline, those
+two ports go unassessed.
 
 **If the Authorizing Official rejects the extension**, the effect is contained. The 126
 Web Server requirements are their own 126 rule files, named for `-WSR-` identifiers, and
@@ -128,23 +106,21 @@ current baseline**:
 | `SRG-APP-000165-AU-002580` | Prohibit password reuse for five generations. |
 | `SRG-APP-000361-AU-000140` | Notify the System Administrator or ISSO. |
 
-Both appear in the sunsetted STIG. Neither appears in Central Log Server SRG V3R5 or in
-Web Server SRG V4R5. So neither has a rule file here, and neither is assessed.
+Neither appears in Central Log Server SRG V3R5 or in Web Server SRG V4R5. Neither has a
+rule file here, and neither is assessed. A requirement that is in no current baseline is
+not a current requirement.
 
-That is not an omission. A requirement that is in no current baseline is not a current
-requirement. It is recorded because anyone comparing this assessment against the old
-STIG will find two of its thirty-seven rules unanswered, and this is why. The other
-thirty-four derivation identifiers are in Central Log Server SRG V3R5 and are assessed.
+This is recorded because anyone comparing this assessment against the old STIG will find
+two of its thirty-seven rules unanswered. The other thirty-four derivation identifiers
+are in Central Log Server SRG V3R5 and are assessed.
 
 ## The Web Server SRG question, settled by precedent
 
-Including the Web Server SRG was this assessment's own determination. DISA's Splunk
-STIG derived nothing from it, which is a fair challenge to answer.
-
-Three other product STIGs held in `stig_viewer/library` answer it. Dragos Platform,
-Tanium and Xylok Security Suite are security platforms administered through a web
-interface, as Splunk is. Counting the requirements each cites that exist **only** in
-the Web Server SRG, and not in the Central Log Server SRG:
+DISA's Splunk STIG derived nothing from the Web Server SRG. Three other product STIGs
+held in `stig_viewer/library` bear on that. Dragos Platform, Tanium and Xylok Security
+Suite are security platforms administered through a web interface, as Splunk is. Counting
+the requirements each cites that exist **only** in the Web Server SRG, and not in the
+Central Log Server SRG:
 
 | Product STIG | SRG-APP requirements cited | Web-Server-only |
 |---|---|---|
@@ -153,21 +129,20 @@ the Web Server SRG, and not in the Central Log Server SRG:
 | Dragos Platform 2.x | 62 | **8** |
 | Splunk Enterprise 8.x | 42 | **0** |
 
-Every comparable platform draws on Web Server requirements. Splunk's STIG is the one
-that does not. The precedent supports inclusion, and the omission in the Splunk STIG
-looks like a gap in that document rather than a determination that the Web Server SRG
-does not apply.
+Every comparable platform draws on Web Server requirements; Splunk's STIG does not. The
+precedent supports inclusion, and the omission reads as a gap in that document rather
+than a determination that the Web Server SRG does not apply.
 
-This is reproducible: the base requirement identifiers are in the XCCDF files, and a
+The count is reproducible: the base requirement identifiers are in the XCCDF files, and a
 requirement carrying a `-WSR-` identifier and no `-AU-` equivalent belongs to the Web
 Server SRG alone.
 
 ## Baseline tracker
 
-An SRG governs a product that **performs** that function as a service to others - not
-one that merely uses or contains the capability. Splunk authenticates users but is not
-an authentication service; it stores data but is not a database; it exposes an API but
-is not an API platform. That rule settles every candidate.
+An SRG governs a product that **performs** that function as a service to others, not one
+that merely uses or contains the capability. Splunk authenticates users but is not an
+authentication service; it stores data but is not a database; it exposes an API but is not
+an API platform. That rule settles every candidate.
 
 | Baseline | Status | Basis |
 |---|---|---|

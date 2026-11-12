@@ -57,6 +57,13 @@ awk -v G="$G" -v R="$R" -v Y="$Y" -v Z="$Z" '
     function test_cond(op, want, got, found,   i, n, parts, lo) {
         if (op == "present")    return (found == "present")
         if (op == "absent")     return (found != "present")
+        # The shipped Splunk configuration declares many settings with no value:
+        # etc/system/default/alert_actions.conf carries "filename =" so the key
+        # exists while nothing is configured. "absent" is false there, which
+        # reports a finding against a feature that is switched off. "empty" is
+        # the honest test for not-configured: the key is missing, or it is
+        # declared and carries no value.
+        if (op == "empty")      return (found != "present" || got == "")
         if (found != "present") return 0      # every other operator needs a value
         if (op == "non_empty")  return (got != "")
         if (op == "equals")     return (tolower(got) == tolower(want))

@@ -34,7 +34,7 @@ date: "2026-11-09"
 
 This matrix records **applicability**, which is a property of the requirement and the product. It records no instance's configured state, and the word satisfied appears in it only as the name of a finding category. Whether a given instance satisfies an applicable requirement is established by an assessment of that instance and reported in its checklist. A determination of Applicable here is therefore not a finding against any system; it states that the requirement is in scope and names what an assessment examines.
 
-**Related documents.** Splunk for Assessors (docs/01-splunk-for-assessors.md); Implementation Risk Determination (docs/RISK-MODEL.md).
+**Related documents.** Splunk for Assessors (docs/01-splunk-for-assessors.md).
 
 \newpage
 

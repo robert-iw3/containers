@@ -2,9 +2,11 @@
 # The Central Log Server must use multifactor authentication for local
 # access using privileged user accounts.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000151-AU-002330
 group:           V-206463
@@ -24,8 +26,10 @@ contribution:    Local privileged access to Splunk runs through the splunkd REST
                  CLI.
 
 governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
+check:           authentication.conf [authentication] externalTwoFactorAuthVendor in Duo|RSA
+check:           authentication.conf [authentication] externalTwoFactorAuthSettings non_empty
 
-check:           authentication.conf [<duo-externalTwoFactorAuthSettings-key>] enableMfaAuthRest equals true
+
 # --- vendor verification: generated, do not edit by hand
 vendor:          authentication.conf [<duo-externalTwoFactorAuthSettings-key>] enableMfaAuthRest https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
 # --- end vendor verification
@@ -37,6 +41,10 @@ external:        Duo or RSA enrollment and policy for the privileged accounts, h
 external:        Splunk offers no PKI-based second factor for the CLI or REST path, so a
                  site standardized on PKI alone carries this part of the objective in the
                  operating system's console authentication
+external:        Enforcement of the second factor on the REST interface, which lives in a
+                 stanza whose name is chosen by the operator at run time; a criterion
+                 addressed by conf, stanza, key and operator cannot reach a stanza named by
+                 the value of another setting.
 
 citation:        SRG-APP-000151-AU-002330 check and fix text;
                  authentication.conf.spec:1421-1427 (the vendor stanza is the one named by

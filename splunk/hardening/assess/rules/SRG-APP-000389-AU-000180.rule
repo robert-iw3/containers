@@ -2,9 +2,11 @@
 # The Central Log Server must require users to reauthenticate when
 # organization-defined circumstances or situations require reauthentication.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000389-AU-000180
 group:           V-221926
@@ -24,10 +26,11 @@ contribution:    Splunk can force reauthentication by expiring the web session a
 
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] tools.sessions.timeout max 15
+check:           web.conf [settings] tools.sessions.timeout max 5
 check:           web.conf [settings] ui_inactivity_timeout min 1
-check:           web.conf [settings] ui_inactivity_timeout max 15
+check:           web.conf [settings] ui_inactivity_timeout max 10
 check:           web.conf [settings] tools.sessions.restart_persist equals false
+check:           server.conf [general] sessionTimeout matches ^(([1-9]|1[0-5])m|([1-9]|[1-9][0-9]|[1-8][0-9]{2}|900)s)$
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] tools.sessions.restart_persist https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 vendor:          web.conf [settings] tools.sessions.timeout https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/manage-users/configure-user-session-timeouts

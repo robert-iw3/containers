@@ -2,9 +2,11 @@
 # The web server must be built to fail to a known safe state if system
 # initialization fails, shutdown fails, or aborts fail.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000225-WSR-000140
 group:           V-206405
@@ -30,7 +32,7 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
                  starts in FIPS mode.
 
 check:           splunk-launch.conf [] OPTIMISTIC_ABOUT_FILE_LOCKING not_equals 1, evaluated against the vendor-documented default of 0 when the setting is absent, which yields Not a Finding on this instance.
-check:           server.conf [diskUsage] minFreeSpace non_empty
+check:           server.conf [diskUsage] minFreeSpace matches ^([1-9][0-9]?(\.[0-9]+)?%|[0-9]{6,}|[1-9][0-9]{4})$
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] OPTIMISTIC_ABOUT_FILE_LOCKING not_equals 1 -> splunk-launch.conf [] OPTIMISTIC_ABOUT_FILE_LOCKING not_equals 1, evaluated against the vendor-documented default of 0 when the setting is absent, which yields Not a Finding on this instance.
 vendor:          server.conf [diskUsage] minFreeSpace https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf

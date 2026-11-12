@@ -3,9 +3,11 @@
 # a warning to the ISSO and SA when allocated record storage volume reaches
 # 75% of maximum log record storage capacity.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000359-WSR-000065
 group:           V-206424
@@ -27,8 +29,7 @@ governs:         savedsearches.conf - Saved searches, scheduled reports and aler
 governs:         server.conf - Core server settings, including the certificates and protocols used to
                  protect management and replication traffic.
 
-check:           server.conf [diskUsage] minFreeSpace non_empty
-check:           savedsearches.conf [<stanza name>] alert_condition non_empty
+check:           server.conf [diskUsage] minFreeSpace matches ^([1-9][0-9]?(\.[0-9]+)?%|[0-9]{6,}|[1-9][0-9]{4})$
 check:           savedsearches.conf [<stanza name>] action.email.to non_empty
 check:           savedsearches.conf [<stanza name>] enableSched equals 1
 # --- vendor verification: generated, do not edit by hand
@@ -41,6 +42,10 @@ external:        SMTP relay reachability and mail delivery, which depend on the 
 external:        The ISSO and SA recipient addresses, which the organization supplies
 external:        The size of the storage volume, needed only to confirm an absolute
                  minFreeSpace value; a percentage value expresses 25 percent in the product
+external:        Which saved search carries the trigger, which is organization-defined
+                 content: a trigger is expressed either by alert_condition or by counttype
+                 with relation and quantity, so a test on alert_condition alone reports a
+                 finding against a search that is correctly configured the other way.
 
 citation:        web.conf log.access_maxsize min 1 is removed on two counts: nothing in the
                  check text or the fix text ties a web access log rotation ceiling to a 75

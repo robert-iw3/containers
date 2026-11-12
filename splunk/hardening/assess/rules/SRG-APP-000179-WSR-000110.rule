@@ -3,9 +3,11 @@
 # of applicable federal laws, Executive Orders, directives, policies,
 # regulations, standards, and guidance when encrypting stored data.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000179-WSR-000110
 group:           V-206390
@@ -30,7 +32,7 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
                  starts in FIPS mode.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
 check:           server.conf [search_artifact_remote_storage] remote.s3.encryption not_equals none - and only where that stanza configures a remote store. For index data at rest the setting is an indexes.conf volume setting and does not belong in a server.conf condition at all.
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
@@ -48,6 +50,9 @@ external:        For remote storage, the cloud provider's key management service
                  validates the keys for the selected scheme
 external:        File system protection of splunk.secret, which protects stored
                  credentials, is an operating system control
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        SPLK-CL-000390 check and fix text (FIPS mode) and SPLK-CL-000430 note that
                  the instance must operate in FIPS mode; splunk-launch.conf.spec:110-130

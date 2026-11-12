@@ -2,9 +2,11 @@
 # The Central Log Server must be configured to enforce a 180-day maximum
 # password lifetime restriction.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000174-AU-002570
 group:           V-206477
@@ -25,6 +27,7 @@ governs:         authentication.conf - How users sign in, and the password rules
 
 check:           authentication.conf [splunk_auth] expireUserAccounts in true|1
 check:           authentication.conf [splunk_auth] expirePasswordDays max 180
+check:           authentication.conf [splunk_auth] expirePasswordDays min 1
 # --- vendor verification: generated, do not edit by hand
 corrected:       authentication.conf [splunk_auth] expireUserAccounts equals true -> authentication.conf [splunk_auth] expireUserAccounts in true|1
 vendor:          authentication.conf [splunk_auth] expirePasswordDays https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf

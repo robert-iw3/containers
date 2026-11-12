@@ -2,9 +2,11 @@
 # The web server must maintain the confidentiality and integrity of
 # information during preparation for transmission.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000441-WSR-000181
 group:           V-206441
@@ -30,11 +32,12 @@ governs:         outputs.conf - Where this instance forwards its data, and how t
 
 check:           outputs.conf [tcpout:<target_group>] useSSL in true|1
 check:           outputs.conf [tcpout:<group>] sslPassword non_empty
-check:           outputs.conf [tcpout:<group>] sslVersions equals tls1.2
+check:           outputs.conf [tcpout:<group>] sslVersions not_matches (^|[ ,])(\*|tls1\.0|tls1\.1|ssl3|tls)([ ,]|$)
 check:           outputs.conf [tcpout:<group>] sslVerifyServerCert in 1|true
 check:           outputs.conf [tcpout:<group>] useACK in 1|true
 check:           alert_actions.conf [email] use_tls in 1|true (added alongside the existing sslVerifyServerCert in 1|true condition)
 check:           alert_actions.conf [email] sslVersions matches ^\s*(tls1\.2|tls1\.3)(\s*,\s*(tls1\.2|tls1\.3))*\s*$
+check:           outputs.conf [tcpout:<group>] sslVersions matches tls1\.[23]
 # --- vendor verification: generated, do not edit by hand
 corrected:       outputs.conf [tcpout:<group>] clientCert non_empty -> outputs.conf [tcpout:<target_group>] useSSL in true|1
 corrected:       alert_actions.conf [email] sslVerifyServerCert in 1|true -> alert_actions.conf [email] use_tls in 1|true (added alongside the existing sslVerifyServerCert in 1|true condition)

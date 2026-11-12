@@ -2,9 +2,11 @@
 # The web server must, for password-based authentication, enforce
 # organization-defined composition and complexity rules.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000870-WSR-000270
 group:           V-264353
@@ -34,6 +36,7 @@ check:           authentication.conf [splunk_auth] minPasswordDigit min 1
 check:           authentication.conf [splunk_auth] minPasswordSpecial min 1
 check:           authentication.conf [splunk_auth] minPasswordLength min 15
 check:           authentication.conf [splunk_auth] expirePasswordDays max 60
+check:           authentication.conf [splunk_auth] expirePasswordDays min 1
 # --- vendor verification: generated, do not edit by hand
 vendor:          authentication.conf [splunk_auth] expirePasswordDays https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
 vendor:          authentication.conf [splunk_auth] minPasswordDigit https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf

@@ -2,9 +2,11 @@
 # The Central Log Server must be configured to perform audit reduction that
 # supports on-demand reporting requirements.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000181-AU-000200
 group:           V-206483
@@ -26,7 +28,7 @@ contribution:    Audit reduction and on-demand reporting are native Splunk searc
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 
 check:           savedsearches.conf [<stanza name>] search non_empty
-check:           savedsearches.conf [<stanza name>] dispatch.earliest_time present
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time non_empty
 # --- vendor verification: generated, do not edit by hand
 vendor:          savedsearches.conf [<stanza name>] dispatch.earliest_time https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf
 vendor:          savedsearches.conf [<stanza name>] search https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/savedsearches.conf

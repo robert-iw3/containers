@@ -3,9 +3,11 @@
 # as part of the Central Log Server must be configured to comply with
 # DoW-trusted path and access requirements.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000516-AU-000410
 group:           V-206518
@@ -37,7 +39,7 @@ check:           web.conf [settings] privKeyPath non_empty
 check:           server.conf [sslConfig] enableSplunkdSSL in true|1
 check:           inputs.conf [SSL] serverCert non_empty
 check:           server.conf [sslConfig] sslRootCAPath non_empty
-check:           authorize.conf [role_<roleName>] importRoles present
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
 # --- vendor verification: generated, do not edit by hand
 vendor:          authorize.conf [role_<roleName>] importRoles https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
 vendor:          server.conf [sslConfig] enableSplunkdSSL https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-tls-certificates-for-inter-splunk-communication

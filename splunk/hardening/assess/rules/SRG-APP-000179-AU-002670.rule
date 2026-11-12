@@ -5,9 +5,11 @@
 # hash-only applications, and digital signature verification (legacy use
 # only).
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000179-AU-002670
 group:           V-206482
@@ -32,10 +34,10 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           server.conf [sslConfig] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
-check:           server.conf [sslConfig] sslVersions not_in ssl3|tls1.0|tls1.1|tls|*
 check:           server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
-check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
+check:           web.conf [settings] sslVersions not_matches (^|,)\s*(ssl3|tls1\.0|tls1\.1|\*|tls)\s*(,|$)
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.(2|3)\s*(,|$)
+check:           server.conf [sslConfig] sslVersions matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 corrected:       server.conf [sslConfig] sslVersionsForClient matches (^|,)\s*tls1\.2\s*(,|$) -> server.conf [sslConfig] sslVersionsForClient matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$

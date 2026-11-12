@@ -7,13 +7,12 @@ date: "2026-11-09"
 
 # Splunk Hardening Toolkit
 
-This toolkit assesses a Splunk Enterprise instance against the Security Requirements
-Guides that govern it, and produces the artifacts an assessment package needs: DISA
-checklists, an evidence bundle, and a record of how each determination was reached.
+Splunk Enterprise is a platform that indexes and searches log data. This toolkit
+assesses one instance against the Security Requirements Guides that govern it, and
+records how each determination was reached.
 
 **It reads. It does not change anything.** Every observation comes from `splunk btool`,
-which reads configuration and writes none. There is no code path in the assessment module
-that modifies an instance, so it can run on a production system without a change request.
+which reads configuration and writes none. It needs no change request.
 
 ## What you get
 
@@ -23,11 +22,10 @@ that modifies an instance, so it can run on a production system without a change
 | Evidence bundle with a manifest | proving where every finding came from |
 | Applicability matrix | the Authorizing Official: what applies, and on what evidence |
 
-## Five minutes
+## Quickstart
 
-Four steps. The first two run on the Splunk instance. The last two are pure text over
-what the first two wrote, so they run wherever you read the results - no Splunk, no
-credentials, no network.
+Steps 1 and 2 run on the Splunk instance. Steps 3 and 4 process what they wrote and need
+no Splunk, no credentials and no network.
 
 ```
 # 1. is the instance sound enough to assess
@@ -49,37 +47,30 @@ assess/bin/emit-checklist.py \
     --out      assess/out/HOST
 ```
 
-`HOST` and `STAMP` are not placeholders you invent: `assess.sh` prints the exact paths it
-wrote, and `evaluate.sh` prints the verdict file it wrote. Copy them from that output.
+Do not invent `HOST` and `STAMP`. Copy them from the paths `assess.sh` and `evaluate.sh`
+print.
 
-Two things about those commands are easy to get wrong.
+**`evaluate.sh` exits 1 when any requirement is Open.** That is the result, not an error. A
+wrapper must not treat it as failure. Verdicts go to `--out`, which defaults to the
+directory holding the results file.
 
-**`evaluate.sh` exits 1 when any requirement is Open.** That is the result, not an error.
-It writes its verdicts into the directory given by `--out`, defaulting to the directory
-the results file is in. A script wrapping it must not treat exit 1 as a failed run.
+**Always pass `--verdicts`.** Without it, `emit-checklist.py` reports every requirement
+`Not_Reviewed`. The decisions come from step 3.
 
-**`--verdicts` is not optional in practice.** `emit-checklist.py` accepts results without
-it, and then reports every requirement `Not_Reviewed` - a complete checklist that assesses
-nothing. The decisions come from step 3, so step 3 cannot be skipped.
-
-Assessing a containerized Splunk is the same operation. `assess/bin/in-container.sh`
-copies the toolkit in, runs it there as the account that owns the installation, and
-copies the results back:
+`assess/bin/in-container.sh` assesses a containerized Splunk. It copies the toolkit in,
+runs it as the account that owns the installation, and copies the results back:
 
 ```
 assess/bin/in-container.sh <container> health-check.sh --baseline
 assess/bin/in-container.sh <container> assess.sh
 ```
 
-Steps 3 and 4 then run on the host, against the results that came back.
-
-There is deliberately only one code path. The scripts always run on the instance they
-assess, so a container run exercises the same code as a host install rather than a
-parallel implementation that is never tested where it matters.
+Steps 3 and 4 then run on the host. There is one code path: the scripts always run on the
+instance they assess.
 
 ## The documents
 
-Read in this order if the toolkit is new to you. Each answers one question.
+Read in order if the toolkit is new to you. Skip `01` if you already know Splunk.
 
 | Document | Answers |
 |---|---|
@@ -88,24 +79,20 @@ Read in this order if the toolkit is new to you. Each answers one question.
 | `03-baseline-selection.md` | Which requirements govern, and why those? |
 | `04-evidence-and-custody.md` | What evidence is produced, and what does it establish? |
 | `05-checklists-and-stig-viewer.md` | How do I open, work and keep a checklist? |
+| `06-maintaining-the-rules.md` | Where is a change made, and what happens when an SRG is revised? |
 | `applicability-matrix.md` | Which requirements apply to Splunk, and why? (generated) |
-| `RISK-MODEL.md` | When is a change too risky to automate? (implementation module) |
 
-Skip `01` if you already know Splunk. Read `03` before quoting a count at anyone: two
-baselines govern, 253 requirements between them, and only one of the two has DISA
-precedent for this product. `03` states which, and on what basis the other was included.
+Read `03` before quoting a count: two baselines govern, 253 requirements between them,
+and only one has DISA precedent for this product.
 
 ## What it does not do
 
 **It does not change configuration.** Applying a hardening change is a separate module
-with a separate risk model, because deciding what is true and deciding what to alter are
-different problems with different consequences for getting them wrong.
+with its own risk model.
 
-**It does not claim a requirement is met without a criterion.** A requirement with no
-basis for judgment is reported `Not_Reviewed`, with the reason recorded. A checklist
-that reports a requirement as satisfied because nobody assessed it is the failure a
-checklist exists to prevent.
+**It does not report a requirement as met without a criterion.** A requirement nobody
+assessed is `Not_Reviewed`, with the reason recorded.
 
 **It assesses the application layer alone.** Where a requirement's objective extends past
-what Splunk itself can configure, the remainder is named in the finding rather than
-counted against the application.
+what Splunk itself can configure, the finding names what is left for someone else to
+answer.

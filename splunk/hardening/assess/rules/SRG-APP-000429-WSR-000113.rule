@@ -1,9 +1,11 @@
 # SRG-APP-000429-WSR-000113  -  CAT I
 # The web server must encrypt user identifiers and passwords.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000429-WSR-000113
 group:           V-206431
@@ -27,7 +29,7 @@ governs:         authentication.conf - How users sign in, and the password rules
 governs:         splunk-launch.conf - Environment settings read before Splunk starts, including whether it
                  starts in FIPS mode.
 
-check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA512-crypt(-[0-9]+)?$
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
@@ -47,6 +49,9 @@ external:        Encryption of the file system holding that file - operating sys
 external:        Protection of credentials held for the instance's own outbound connections
                  in its secret store - assessed separately against the credential storage
                  requirements
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        authentication.conf.spec:58-79 (passwordHashAlgorithm =
                  [SHA512-crypt|SHA256-crypt|SHA512-crypt-<num_rounds>|SHA256-crypt-<num_rounds>|MD5-crypt];

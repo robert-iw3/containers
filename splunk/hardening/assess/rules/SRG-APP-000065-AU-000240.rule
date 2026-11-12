@@ -2,9 +2,11 @@
 # The Central Log Server must enforce the limit of three consecutive invalid
 # logon attempts by a user during a 15 minute time period.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000065-AU-000240
 group:           V-221904
@@ -26,10 +28,10 @@ contribution:    Splunk's native authentication counts failed logons per user an
 governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
 
 check:           authentication.conf [splunk_auth] lockoutUsers in 1|true
-check:           authentication.conf [splunk_auth] lockoutAttempts present
 check:           authentication.conf [splunk_auth] lockoutAttempts max 3
-check:           authentication.conf [splunk_auth] lockoutThresholdMins present
 check:           authentication.conf [splunk_auth] lockoutThresholdMins min 15
+check:           authentication.conf [splunk_auth] lockoutAttempts min 1
+check:           authentication.conf [splunk_auth] lockoutThresholdMins max 120
 # --- vendor verification: generated, do not edit by hand
 vendor:          authentication.conf [splunk_auth] lockoutAttempts https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
 vendor:          authentication.conf [splunk_auth] lockoutThresholdMins https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf

@@ -3,9 +3,11 @@
 # function for digital signature generation and verification (non-legacy
 # use).
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000610-AU-000050
 group:           V-221929
@@ -54,6 +56,9 @@ external:        The TLS settings SPLK-CL-000430 names (server.conf sslVersions,
 external:        Signature generation and verification by peers (forwarders, LDAP servers,
                  SAML identity providers) - carried by those peers' own cryptographic
                  configurations.
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        splunk-spec-files/splunk-launch.conf.spec:110 (SPLUNK_FIPS = [0|1],
                  default 0, one-time setting);

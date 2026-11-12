@@ -1,9 +1,11 @@
 # SRG-APP-000439-WSR-000192  -  CAT II
 # The web server must use HTTP/2, at a minimum.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000439-WSR-000192
 group:           V-264362
@@ -11,7 +13,7 @@ severity:        medium
 cat:             CAT II
 determination:   APPLICABLE
 grade:           C
-decidable:       machine
+decidable:       manual
 confidence:      documented
 cci:             CCI-002418
 control_rev5:    SC-8
@@ -23,7 +25,13 @@ contribution:    Splunk Web's own HTTP server implements HTTP/1.x only, so the
 
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] forceHttp10 not_equals always
+retired_check:   web.conf [settings] forceHttp10 not_equals always
+                 reason: The operand is drawn from the documented auto|never|always
+                         vocabulary and the shipped value is auto, so the criterion is well
+                         formed and passes. It is retired because it tests something else:
+                         whether HTTP/1.1 features are withheld, not whether HTTP/2 is in
+                         use. Carried as the sole criterion it returned Not a Finding for a
+                         requirement the product cannot meet by itself.
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] forceHttp10 https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 # --- end vendor verification
@@ -35,6 +43,13 @@ external:        The protocol version that terminator uses on its upstream conne
                  Splunk Web, which is the terminator's own setting
 external:        The requirement that browsers support HTTP/2 only in HTTPS mode, which the
                  fix text notes and which the TLS terminator carries
+
+manual_reason:   Splunk Web's HTTP server implements HTTP/1.x only, and no web.conf setting
+                 selects HTTP/2. The requirement is met by an HTTP/2 terminator in front of
+                 Splunk Web, whose presence and protocol version are outside the
+                 application and are recorded as external dependencies. No configuration
+                 value can establish the requirement, so the assessor reads the
+                 terminator's configuration.
 
 citation:        SRG-APP-000439-WSR-000192 check and fix text; web.conf.spec:1016-1033,
                  1129-1142

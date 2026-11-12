@@ -2,9 +2,11 @@
 # The Central Log Server must be configured to protect the confidentiality
 # and integrity of transmitted information.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000439-AU-004310
 group:           V-206509
@@ -34,9 +36,10 @@ check:           inputs.conf [splunktcp-ssl:<port>] sslVersions equals tls1.2
 check:           inputs.conf [splunktcp-ssl:<port>] cipherSuite matches ^(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384))(:(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384)))*$
 check:           outputs.conf [tcpout:<target_group>] useSSL in true|1
 check:           outputs.conf [tcpout:<group>] sslPassword non_empty
-check:           outputs.conf [tcpout:<group>] sslVersions equals tls1.2
+check:           outputs.conf [tcpout:<group>] sslVersions not_matches (^|[ ,])(\*|tls1\.0|tls1\.1|ssl3|tls)([ ,]|$)
 check:           outputs.conf [tcpout:<group>] sslVerifyServerCert in 1|true
 check:           server.conf [sslConfig] enableSplunkdSSL in 1|true
+check:           outputs.conf [tcpout:<group>] sslVersions matches tls1\.[23]
 # --- vendor verification: generated, do not edit by hand
 corrected:       outputs.conf [tcpout:<group>] clientCert non_empty -> outputs.conf [tcpout:<target_group>] useSSL in true|1
 vendor:          outputs.conf [tcpout:<group>] clientCert https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/secure-splunk-platform-communications-with-transport-layer-security-certificates/configure-splunk-indexing-and-forwarding-to-use-tls-certificates

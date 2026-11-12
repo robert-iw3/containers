@@ -1,9 +1,11 @@
 # SRG-APP-000223-WSR-000145  -  CAT II
 # The web server must accept only system-generated session identifiers.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000223-WSR-000145
 group:           V-206398
@@ -25,8 +27,10 @@ contribution:    Splunk Web issues and tracks its own session identifiers throug
                  from substituting a look-alike header name.
 
 governs:         web.conf - Configures the Splunk Web interface.
+check:           web.conf [settings] tools.sessions.on equals true
+check:           web.conf [settings] enableSplunkWebSSL in 1|true
 
-check:           web.conf [settings] remoteUserMatchExact equals 1
+
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] SSOMode https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/authenticate-into-splunk-enterprise-using-hardware/configure-splunk-enterprise-to-use-a-common-access-card-for-authentication
 vendor:          web.conf [settings] allowSsoWithoutChangingServerConf https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
@@ -60,6 +64,10 @@ external:        The contents of the trusted IP list - organization-defined
 external:        Session identifier generation itself, which is a fixed property of the
                  product's session subsystem and has no configuration surface - Splunk
                  Enterprise implementation
+external:        Exact matching of the user name in a trusted header, which web.conf
+                 [settings] remoteUserMatchExact governs only where header-based single
+                 sign-on is configured through server.conf [general] trustedIP; with no
+                 trusted address set the setting is inert and cannot carry the objective.
 
 citation:        web.conf.spec:920-922 (tools.sessions.on = true, "Always set this to
                  true"); web.conf.spec:787-795 (SSOMode = [permissive|strict], default

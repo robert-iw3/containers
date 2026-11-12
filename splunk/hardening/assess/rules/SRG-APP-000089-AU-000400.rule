@@ -2,9 +2,11 @@
 # The Central Log Server must be configured to retain the DoW-defined
 # attributes of the log records sent by the devices and hosts.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000089-AU-000400
 group:           V-206453
@@ -26,7 +28,6 @@ governs:         inputs.conf - Configures inputs, distributed inputs such as for
                  monitoring.
 governs:         props.conf - How incoming data is recognized, parsed and timestamped.
 
-check:           inputs.conf [] index non_empty
 check:           inputs.conf [] sourcetype non_empty
 check:           props.conf [] DATETIME_CONFIG not_in NONE|CURRENT
 # --- vendor verification: generated, do not edit by hand
@@ -39,6 +40,10 @@ external:        The DoD/organization-defined attribute list is held in the site
 external:        Where field filters are defined, comparing the fields they mask against
                  the organization's attribute list is an inspection against that document,
                  not a condition configuration can decide.
+external:        Automatic aggregation of account-action events for every in-scope device,
+                 which is not decidable from inputs.conf because the scope of coverage is
+                 organization-defined; the application-layer share is the existence of a
+                 receiving listener.
 
 citation:        INVENTION. Removed field_filters.conf [<fieldFilterName>] action not_in
                  "host"=null()|"source"=null()|"sourcetype"=null()|"_time"=null().

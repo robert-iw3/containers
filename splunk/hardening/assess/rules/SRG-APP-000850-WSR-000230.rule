@@ -3,9 +3,11 @@
 # using an approved salted key derivation function, preferably using a keyed
 # hash.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000850-WSR-000230
 group:           V-264349
@@ -42,6 +44,9 @@ external:        Where authType is LDAP, SAML, or ProxySSO, Splunk stores no pas
                  those users and the storage control rests with that provider.
 external:        FIPS validation of the hash implementation - carried by the host
                  platform's cryptographic module (see SRG-APP-000610).
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        splunk-spec-files/authentication.conf.spec:58 (passwordHashAlgorithm =
                  [SHA512-crypt|SHA256-crypt|SHA512-crypt-<num_rounds>|SHA256-crypt-<num_rounds>|MD5-crypt],

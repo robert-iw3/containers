@@ -3,9 +3,11 @@
 # upon detection of unauthorized access, modification, or deletion of audit
 # information.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000795-AU-000220
 group:           V-263568
@@ -31,8 +33,6 @@ governs:         indexes.conf - The indexes data is stored in, how large they ma
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 
 check:           savedsearches.conf [<stanza name>] search non_empty
-check:           savedsearches.conf [<stanza name>] alert_condition non_empty
-check:           savedsearches.conf [<stanza name>] counttype equals custom
 check:           savedsearches.conf [<stanza name>] action.email in 1|true
 check:           savedsearches.conf [<stanza name>] action.email.to non_empty
 check:           alert_actions.conf [email] present
@@ -55,6 +55,10 @@ external:        Product STIG SPLK-CL-000140, attached through this requirement'
 external:        Detecting unauthorized access to or deletion of the index files outside
                  Splunk requires operating system file auditing, which Splunk can ingest
                  but cannot generate.
+external:        Which saved search carries the trigger, which is organization-defined
+                 content: counttype is one of five documented values and the vendor
+                 documents no dependency between it and alert_condition, so neither key
+                 alone decides that an alert is configured.
 
 citation:        savedsearches.conf.spec:31 [<stanza name>], :44 search, :249 counttype =
                  number of events | number of hosts | number of sources | custom | always

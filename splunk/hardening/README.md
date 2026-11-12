@@ -8,26 +8,26 @@ date: "2026-11-09"
 # Splunk Hardening Toolkit
 
 Splunk Enterprise collects logs from many systems, stores them, and lets people search
-them. In an accreditation it is usually the central log server - the place audit records
-go so they can be kept, protected and reviewed.
+them. In an accreditation it is the central log server: where audit records are kept,
+protected and reviewed.
 
-This toolkit assesses a Splunk Enterprise instance against the DISA Security Requirements
-Guides that govern it, and emits DISA checklists in both formats: `.ckl` for STIG Viewer
-2.x and `.cklb` for STIG Viewer 3.x. It also produces an evidence bundle and a record of
-how each determination was reached.
+This toolkit assesses an instance against the DISA Security Requirements Guides (SRGs)
+that govern it. It emits DISA checklists in both formats, `.ckl` for STIG Viewer 2.x and
+`.cklb` for STIG Viewer 3.x, plus an evidence bundle and a record of how each
+determination was reached.
 
-Two baselines govern, 253 requirements between them. Only one of the two has DISA
-precedent for this product; including the other was our determination. `docs/03-baseline-selection.md`
-states which is which and on what basis.
+Two baselines govern, 253 requirements between them. One has DISA precedent for this
+product; including the other was our determination. `docs/03-baseline-selection.md` says
+which is which.
 
 ## Status
 
 Last full run: `epo-uat-indexer`, Splunk Enterprise 10.4.2. All 253 requirements have a
-status - **141 Open, 79 Not a Finding, 33 Not Reviewed**. Having a status is not the
-same as being verified; the table says which is which.
+status: **120 Open, 94 Not a Finding, 39 Not Reviewed**. A status is not a verified
+status; the table says which items are verified.
 
-**Not ready to submit as a finished assessment.** 60 Open findings do not yet cite
-vendor evidence.
+**Not ready to submit as a finished assessment.** 49 Open findings do not cite vendor
+evidence.
 
 | # | Item | Status |
 |---|---|---|
@@ -38,78 +38,60 @@ vendor evidence.
 | 5 | Setting-family resolution (`[role_<roleName>]` etc.) | **Done** |
 | 6 | Container and bare-metal execution, one code path | **Done** |
 | 7 | Documentation set | **Done** |
-| 8 | Vendor confirmation of criteria | **Partial** - 100 of 253; 81 of 141 Open findings |
-| 9 | Corrections from verification applied | **Partial** - 58 applied, 47 need reading |
+| 8 | Vendor confirmation of criteria | **Partial** - 100 of 253; 71 of 120 Open findings |
+| 9 | Corrections from verification applied | **Done** - 55 distinct corrections; 49 in full, 4 in part, 2 withheld with reasons |
 | 10 | Baseline selection | **Done** - 2 apply, 10 determined not applicable |
 | 11 | Specification set matched to product version | **Done** - rebuilt on 10.4.2 |
-| 12 | `checks.tsv` derived from rule files | **Not started** - tool written, not applied |
-| 13 | STIG Viewer re-import handoff | **Not started** - defect known, worked around by hand |
-| 14 | Send results to Splunk, RMF app dashboards | **Not started** - planned only |
-| 15 | Implementation: risk model | **Done** - `docs/RISK-MODEL.md` |
-| 16 | Implementation: checkpoint and apply design | **Design only** - no code |
-| 17 | Implementation: apply tooling | **Paused** - deliberately, until assessment is settled |
+| 12 | `checks.tsv` derived from rule files | **Done** - `derive-checks.py --merge`; 0 criteria decide on uncollected settings |
+| 13 | STIG Viewer staleness handoff | **Done** - `run.sh` detects a running window and offers to replace it; `--replace` for non-interactive |
+| 14 | Applying changes (a separate module) | **Not started** - assessment only; nothing in this toolkit alters an instance |
 
-### The gaps in one line each
+### Gaps
 
 - **153 requirements rest on the benchmark text alone**, never confirmed against vendor
-  documentation. Of the 141 Open findings, 81 cite evidence and 60 do not.
-- **The baseline is settled.** Two SRGs apply, ten were determined not applicable, and
-  comparable product STIGs support including the Web Server SRG.
-- **4 requirements had every criterion contradicted** by vendor documentation. Left
-  Open rather than silently made Not Reviewed. They need rewriting.
-- **27 Splunk-shipped sourcetypes set `DATETIME_CONFIG = NONE`**, which the strict
-  reading reports as findings. Real finding or vendor default - unresolved.
-- **Nothing in `implement/` is executable.** It is three design documents.
+  documentation. Of the 120 Open findings, 71 cite evidence and 49 do not.
+- **The baseline is settled.** Two SRGs apply, ten were determined not applicable.
+- **4 requirements had every criterion contradicted** by vendor documentation. They remain
+  Open and need rewriting.
+- **27 Splunk-shipped sourcetypes set `DATETIME_CONFIG = NONE`.** The strict reading
+  reports them as findings. Real finding or vendor default: unresolved.
+- **Nothing applies a change.** Making one is a separate module that does not exist yet.
 
 ### Baselines evaluated
 
-An SRG governs a product that **performs** that function as a service to others - not
-one that merely uses or contains the capability. Splunk authenticates users but is not
-an authentication service; it stores data but is not a database; it exposes an API but
-is not an API platform. That rule settles every candidate below.
+An SRG governs a product that **performs** that function as a service to others, not one
+that merely uses or contains the capability. That rule settles every candidate below.
 
 | Baseline | Status | Basis |
 |---|---|---|
 | Central Log Server SRG V3R5 | **Applies** - 127 reqs, assessed | Splunk is a central log server. All 37 rules of DISA's Splunk STIG derive from it |
-| Web Server SRG V4R5 | **Applies** - 126 reqs, assessed | Splunk Web serves a browser UI on 8000; splunkd serves HTTP on 8089. DISA's Splunk STIG drew nothing from it, but the STIGs for Dragos, Tanium and Xylok - comparable platforms with web UIs - each cite Web-Server-only requirements (8, 15, 16). The precedent supports inclusion; the Splunk STIG is the outlier |
+| Web Server SRG V4R5 | **Applies** - 126 reqs, assessed | Splunk Web serves a browser UI on 8000; splunkd serves HTTP on 8089. DISA's Splunk STIG drew nothing from it. The STIGs for Dragos, Tanium and Xylok in `stig_viewer/library`, comparable platforms with web management interfaces, each cite Web-Server-only requirements (8, 15 and 16 respectively). That precedent supports inclusion |
 | Application Security and Development STIG | **Not applicable** | Governs applications the organization develops. Splunk is commercial software. *Carve-out: custom Splunk apps written in-house are developed code and would fall under it* |
 | General Application (GAPP) SRG | **Not applicable** | A general application baseline is the fallback where no technology-specific SRG exists. Central Log Server is the specific one and supersedes it |
 | Application Programming Interface (API) SRG | **Not applicable** | Governs API management platforms and gateways. splunkd's REST interface is an application function, already governed as an HTTP listener under Web Server |
-| Application Server SRG | **Not applicable** | Governs middleware hosting independently deployed applications - Tomcat, JBoss, WebLogic. Splunk apps are configuration bundles, not deployed applications |
-| Authentication, Authorization and Accounting SRG | **Not applicable** | Governs AAA services - RADIUS, TACACS+, identity providers. Splunk authenticates its own users and consumes LDAP or SAML; it provides AAA to nothing |
+| Application Server SRG | **Not applicable** | Governs middleware that hosts independently deployed applications: Tomcat, JBoss, WebLogic. Splunk apps are configuration bundles, not deployed applications |
+| Authentication, Authorization and Accounting SRG | **Not applicable** | Governs AAA services: RADIUS, TACACS+, identity providers. Splunk authenticates its own users and consumes LDAP or SAML. It provides AAA to nothing |
 | Database SRG | **Not applicable** | Governs database management systems. Splunk's index is a proprietary time-series store with no RDBMS and no SQL engine |
-| Intrusion Detection and Prevention System SRG | **Not applicable** | Splunk inspects no traffic and blocks nothing. A SIEM consumes IDS output; Enterprise Security correlates and alerts, still not in-line detection |
+| Intrusion Detection and Prevention System SRG | **Not applicable** | Splunk inspects no traffic and blocks nothing. A SIEM consumes IDS output. Enterprise Security correlates and alerts, which is not in-line detection |
 | General Purpose Operating System SRG | **Not applicable** | Governs an operating system. The host is a separate asset with its own product STIG |
 | General Application Draft SRG V1R0.1 | **Tracking only** | A draft is not an authorization baseline |
 | 27 further SRGs | **Not applicable** | Network devices, cloud, containers, DNS, voice, endpoint management, virtualization, mainframe, operational technology |
 
-**Conclusion: Central Log Server SRG and Web Server SRG are the applicable baselines.**
-253 requirements, and the baseline question is closed.
+**Central Log Server SRG and Web Server SRG are the applicable baselines**, 253
+requirements. The baseline question is closed.
 
-Including the Web Server SRG was initially our own determination, since DISA's Splunk
-STIG drew nothing from it. Comparing the product STIGs held in `stig_viewer/library`
-settles it: Dragos, Tanium and Xylok - security platforms with web management
-interfaces, like Splunk - each derive rules from requirements that exist **only** in
-the Web Server SRG (8, 15 and 16 respectively). Splunk's STIG is the one that cites
-none. The precedent supports inclusion.
+## Read-only operation
 
-
-
-## It reads. It does not change anything.
-
-Every observation comes from `splunk btool`, the command that prints the configuration
-actually in effect and the file each value came from. It reads configuration and writes
-none. There is no code path in the assessment module that modifies an instance.
-
-Two further properties follow from that, and both matter in practice:
+Every observation comes from `splunk btool`, the command that prints the configuration in
+effect and the file each value came from. No code path in the assessment module modifies
+an instance. Two things follow:
 
 - **No credentials are needed.** Reading configuration needs no account and no cached
-  session, so an assessment needs no credentials on the system it assesses.
+  session.
 - **No change request is needed.** Nothing is written, so this can run on a production
   instance.
 
-Applying a hardening change is a separate module, deliberately. See `implement/`, which is
-paused.
+Applying a change is a separate module, `implement/`, which is paused.
 
 ## Quickstart
 
@@ -132,21 +114,20 @@ assess/bin/emit-checklist.py \
     --out      assess/out/HOST
 ```
 
-Steps 3 and 4 read only what steps 1 and 2 wrote. They need no Splunk, no credentials and
-no network. `assess.sh` and `evaluate.sh` each print the paths they wrote; copy `HOST` and
-`STAMP` from that output rather than guessing.
+Steps 3 and 4 read only what steps 1 and 2 wrote: no Splunk, no credentials, no network.
+`assess.sh` and `evaluate.sh` print the paths they wrote; copy `HOST` and `STAMP` from
+that output.
 
-Two notes that save a wasted run:
+Two notes:
 
 - **`evaluate.sh` exits 1 when any requirement is Open.** That is the result, not an
-  error. Do not let a wrapper script read it as a failure.
-- **Pass `--verdicts` to `emit-checklist.py`.** Without it the checklist is complete and
-  reports every requirement `Not_Reviewed`, because the decisions live in the verdicts
-  file from step 3.
+  error; do not let a wrapper script read it as a failure.
+- **Pass `--verdicts` to `emit-checklist.py`.** The decisions live in that file from step
+  3. Without it the checklist is complete and reports every requirement `Not_Reviewed`.
 
 For a containerized Splunk, `assess/bin/in-container.sh <container> <script> [args]`
-copies the toolkit in, runs it there as the account that owns the installation, and copies
-the results back. It is the same scripts, not a second code path.
+copies the toolkit in, runs it as the account that owns the installation, and copies the
+results back. Same scripts, not a second code path.
 
 ## Layout
 
@@ -163,17 +144,16 @@ the results back. It is the same scripts, not a second code path.
 | `reference/` | the CCI list, the `.cklb` JSON schema, an example checklist |
 | `implement/` | the implementation module. Paused; nothing applies a change yet |
 
-`assess/out/` is gitignored for a reason. The evidence bundle retains the raw `btool`
-output so a finding can be re-derived from it, which is roughly 26 MB per run and
-unredacted by design.
+`assess/out/` is gitignored: the evidence bundle keeps the raw `btool` output so a finding
+can be re-derived, roughly 26 MB per run and unredacted by design.
 
-Settings are read against a version-matched specification set in
+Settings are read against the version-matched specification set in
 `../splunk-spec-files-10.4.2`, a sibling of this directory.
 `bin/build-conf-glossary.py` prefers the highest-numbered `splunk-spec-files-*` directory
 it finds and honors `SPLUNK_SPEC_DIR`.
 
 ## Where to read next
 
-**`docs/00-START-HERE.md`.** It indexes the document set in reading order: what Splunk is,
-how a status is reached, which baselines govern and why, what the evidence establishes,
-and how to open and keep a checklist.
+`docs/00-START-HERE.md` indexes the document set in reading order: what Splunk is, how a
+status is reached, which baselines govern, what the evidence establishes, and how to keep
+a checklist.

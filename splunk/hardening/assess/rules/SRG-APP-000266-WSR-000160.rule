@@ -2,9 +2,11 @@
 # Debugging and trace information used to diagnose the web server must be
 # disabled.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000266-WSR-000160
 group:           V-206413
@@ -30,7 +32,6 @@ contribution:    Splunk Web exposes each debugging and trace facility the requir
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           web.conf [settings] request.show_tracebacks equals false
-check:           web.conf [settings] simple_xml_perf_debug not_equals true
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] appServerProcessLogStderr https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 vendor:          web.conf [settings] enableWebDebug https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf

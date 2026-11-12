@@ -3,9 +3,11 @@
 # locked account is released by an administrator when three unsuccessful
 # login attempts in 15 minutes are exceeded.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000345-AU-000400
 group:           V-221925
@@ -32,7 +34,6 @@ check:           authentication.conf [splunk_auth] lockoutAttempts max 3
 check:           authentication.conf [splunk_auth] lockoutAttempts min 1
 check:           authentication.conf [splunk_auth] lockoutThresholdMins min 15
 check:           authentication.conf [splunk_auth] lockoutThresholdMins max 120
-check:           authentication.conf [splunk_auth] lockoutMins present
 # --- vendor verification: generated, do not edit by hand
 vendor:          authentication.conf [splunk_auth] lockoutAttempts https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
 vendor:          authentication.conf [splunk_auth] lockoutMins https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
@@ -55,6 +56,10 @@ external:        authentication.conf.spec:517-519, 528-530, 539-541 and 550-552 
                  on search head cluster members the lockout state applies per member rather
                  than to the whole cluster, so cluster-wide enforcement depends on the
                  deployment topology.
+external:        Holding a locked account until an administrator releases it, which
+                 authentication.conf does not express: lockoutMins sets a duration whose
+                 documented maximum is 1440 minutes, and no value means release by an
+                 administrator only.
 
 citation:        SRG-APP-000345-AU-000400 check text ('lock out the account until released
                  by an administrator when 3 consecutive invalid attempts during a 15 minute

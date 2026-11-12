@@ -4,9 +4,11 @@
 # Orders, directives, policies, regulations, standards, and guidance when
 # encrypting data that must be compartmentalized.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000416-WSR-000118
 group:           V-239371
@@ -33,20 +35,11 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           splunk-launch.conf [] SPLUNK_COMMON_CRITERIA equals 1
-check:           server.conf [sslConfig] sslVersions matches tls1\.2
-check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*ssl3
-check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
-check:           server.conf [sslConfig] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
-check:           server.conf [sslConfig] sslVersions not_in *|tls
-check:           server.conf [sslConfig] cipherSuite non_empty
-check:           web.conf [settings] sslVersions matches tls1\.2
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*ssl3
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
-check:           web.conf [settings] sslVersions not_in *|tls
-check:           web.conf [settings] cipherSuite non_empty
+check:           web.conf [settings] cipherSuite matches ^((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384))(:((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384)))*$
 check:           server.conf [sslConfig] sslRootCAPath non_empty
+check:           server.conf [sslConfig] sslVersions matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+check:           web.conf [settings] sslVersions not_matches (^|,)\s*(ssl3|tls1\.0|tls1\.1|\*|tls)\s*(,|$)
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.(2|3)\s*(,|$)
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 vendor:          server.conf [sslConfig] cipherSuite https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
@@ -67,6 +60,10 @@ external:        Identification of which data is compartmentalized and therefore
                  directs be read from policy documents
 external:        The approved cipher string and TLS profile for the environment -
                  organization-defined value
+external:        Operation in the Common Criteria evaluated configuration, which
+                 splunk-launch.conf SPLUNK_COMMON_CRITERIA selects: it is an evaluation
+                 posture rather than the cryptographic-module control this requirement asks
+                 for, and SPLUNK_FIPS carries that control on the same requirement.
 
 citation:        Product STIG SPLK-CL-000390 fix text, which adds SPLUNK_COMMON_CRITERIA=1
                  and SPLUNK_FIPS=1 to splunk-launch.conf before the initial start of Splunk

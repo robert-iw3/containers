@@ -2,9 +2,11 @@
 # The web server must invalidate session identifiers upon hosted application
 # user logout or other session termination.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000220-WSR-000201
 group:           V-206396
@@ -29,7 +31,6 @@ governs:         server.conf - Core server settings, including the certificates 
                  protect management and replication traffic.
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           server.conf [general] invalidateSessionTokensOnLogout equals true
 check:           web.conf [settings] tools.sessions.restart_persist not_equals true
 check:           authorize.conf [tokens_auth] expiration not_equals never
 # --- vendor verification: generated, do not edit by hand
@@ -45,6 +46,11 @@ external:        Deletion of the session cookie in the user's browser once the s
                  invalidated it - client browser
 external:        Invalidation of sessions held by a fronting SSO proxy or identity provider
                  at logout - that component's single logout configuration
+external:        Cluster-wide invalidation of session tokens at logout, which server.conf
+                 [general] invalidateSessionTokensOnLogout performs only on a search head
+                 cluster member with the KV store enabled; this instance has search head
+                 clustering disabled, so the setting asserts a protection the product would
+                 not apply.
 
 citation:        server.conf.spec:81-87 (invalidateSessionTokensOnLogout = <boolean>,
                  invalidates tokens associated with a logged-out session, default false;

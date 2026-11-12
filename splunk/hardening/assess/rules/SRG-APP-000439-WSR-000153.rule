@@ -2,9 +2,11 @@
 # Web server cookies, such as session cookies, sent to the client using
 # SSL/TLS must not be compressed.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000439-WSR-000153
 group:           V-206436
@@ -30,7 +32,6 @@ governs:         server.conf - Core server settings, including the certificates 
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           server.conf [sslConfig] allowSslCompression in 0|false
-check:           web.conf [settings] allowSslCompression in 0|false
 check:           outputs.conf [tcpout:<group>] useClientSSLCompression in 0|false
 # --- vendor verification: generated, do not edit by hand
 vendor:          outputs.conf [tcpout:<group>] useClientSSLCompression https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
@@ -42,6 +43,10 @@ external:        Any TLS terminating reverse proxy or load balancer, whose own c
                  setting is outside the application
 external:        Browser and TLS library behavior, which can offer compression
                  independently of the server
+external:        Compression of a cookie on a TLS 1.3 listener, which web.conf [settings]
+                 allowSslCompression does not reach: compression at the HTTP layer is
+                 governed by enable_gzip, and this instance offers TLS 1.3, so the setting
+                 is inert here.
 
 citation:        SRG-APP-000439-WSR-000153 check text; server.conf.spec:1070-1078;
                  web.conf.spec:1176-1183; outputs.conf.spec:764-775; web.conf.spec:346-348

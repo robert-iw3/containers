@@ -2,9 +2,11 @@
 # The web server must use cryptography to protect the integrity of remote
 # sessions.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000015-WSR-000014
 group:           V-206353
@@ -29,12 +31,10 @@ governs:         web.conf - Configures the Splunk Web interface.
 check:           web.conf [settings] enableSplunkWebSSL in 1|true
 check:           web.conf [settings] serverCert non_empty
 check:           web.conf [settings] privKeyPath non_empty
-check:           web.conf [settings] sslVersions matches ^\s*(tls1\.2|\*|tls)(\s*,\s*-(ssl2|ssl3|tls1\.0|tls1\.1))*\s*$
-check:           web.conf [settings] sslVersions matches tls1\.2
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*ssl3
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.0
-check:           web.conf [settings] sslVersions not_matches (^|,)[[:space:]]*tls1\.1
-check:           web.conf [settings] cipherSuite non_empty
+check:           web.conf [settings] cipherSuite matches ^((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384))(:((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384)))*$
+check:           web.conf [settings] sslVersions not_matches (^|,)\s*(ssl3|tls1\.0|tls1\.1|\*|tls)\s*(,|$)
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.(2|3)\s*(,|$)
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] cipherSuite https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/10.4/install-splunk-enterprise-securely/about-tls-encryption-and-cipher-suites
 vendor:          web.conf [settings] enableSplunkWebSSL https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf

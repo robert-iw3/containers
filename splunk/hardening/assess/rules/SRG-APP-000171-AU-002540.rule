@@ -2,9 +2,11 @@
 # For accounts using password authentication, the Central Log Server must be
 # configured to store only cryptographic representations of passwords.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000171-AU-002540
 group:           V-206474
@@ -23,7 +25,7 @@ contribution:    Splunk stores native account passwords only as a salted hash, a
 
 governs:         authentication.conf - How users sign in, and the password rules applied to local accounts.
 
-check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
 # --- vendor verification: generated, do not edit by hand
 vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
 # --- end vendor verification
@@ -35,6 +37,9 @@ external:        Credentials for accounts held in LDAP or SAML are stored by tha
                  not by Splunk
 external:        File system protection of the Splunk password file and of splunk.secret,
                  provided by the operating system
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        SRG-APP-000171-AU-002540 check text; authentication.conf.spec:58-80
                  (passwordHashAlgorithm vocabulary SHA512-crypt, SHA256-crypt,

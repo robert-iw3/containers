@@ -3,9 +3,11 @@
 # records containing the client IP information as the source and destination
 # and not the load balancer or proxy IP information with each event.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000098-WSR-000060
 group:           V-206363
@@ -13,7 +15,7 @@ severity:        medium
 cat:             CAT II
 determination:   APPLICABLE
 grade:           C
-decidable:       machine
+decidable:       manual
 confidence:      documented
 revised:         yes
 cci:             CCI-000133
@@ -26,8 +28,6 @@ contribution:    Where a reverse proxy or load balancer fronts the instance, Spl
 
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] tools.proxy.on equals true
-check:           web.conf [settings] tools.proxy.base non_empty
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] tools.proxy.base https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 vendor:          web.conf [settings] tools.proxy.on https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
@@ -38,6 +38,22 @@ external:        Whether a proxy or load balancer fronts the instance decides wh
                  otherwise - and that is read from the network architecture documentation.
 external:        The fronting proxy must insert the client address in an X-Forwarded-For
                  header; Splunk can only consume a header the device sends.
+external:        Whether a reverse proxy or load balancer fronts this instance at all,
+                 which decides whether the requirement has a configuration surface here;
+                 where one is present, web.conf [settings] tools.proxy.on must be true and
+                 tools.proxy.base must carry a scheme as well as a host and port.
+external:        The proxy's own insertion of the X-Forwarded-For header, without which
+                 tools.proxy.on has no client address to record.
+
+manual_reason:   The requirement applies to a web server that sits behind a load balancer
+                 or proxy server, and it asks that the access record carry the client
+                 address rather than the proxy address. web.conf [settings] tools.proxy.on
+                 and tools.proxy.base tell Splunk Web that a proxy is in front of it, so
+                 they are correctly unset where none is, and asserting them unconditionally
+                 reports a finding against an instance that is reached directly. Whether a
+                 proxy fronts the instance is an architecture fact outside the
+                 configuration, so the assessor establishes that first and then reads the
+                 two settings.
 
 citation:        SCOPE drift within the product, and OVER-REACH. Removed inputs.conf
                  [http://<name>] connection_host equals proxied_ip. That setting governs

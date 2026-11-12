@@ -8,17 +8,16 @@ date: "2026-11-10"
 # Splunk for Assessors
 
 You do not need to know Splunk to read an assessment of it. This explains the parts the
-findings refer to. It is short on purpose.
+findings refer to.
 
 ## What Splunk is
 
 Splunk collects machine data - logs, events, metrics - from many systems, stores it, and
 lets people search it. In an accreditation it is usually the central log server: the
-place audit records go so they can be kept, protected and reviewed.
+place audit records go to be kept, protected and reviewed.
 
-That role is why two benchmarks govern it. It is a **log server**, so the Central Log
-Server SRG applies. It also serves a **web interface** to its users, so the Web Server
-SRG applies as well.
+Two benchmarks govern it: the Central Log Server SRG, because it is a **log server**, and
+the Web Server SRG, because it serves a **web interface**.
 
 ## The parts
 
@@ -32,9 +31,9 @@ A Splunk deployment is built from three roles. One machine can hold more than on
 
 Data moves one way: forwarder, then indexer, then whoever searches it.
 
-Which role a machine has decides which requirements bite. A forwarder stores nothing, so
-requirements about protecting stored audit records do not land on it the way they land on
-an indexer. The assessment reads the role from the configuration rather than being told.
+The role decides which requirements apply. A forwarder stores nothing, so requirements
+about protecting stored audit records land on an indexer and not on it. The assessment
+reads the role from the configuration.
 
 ## How Splunk is configured
 
@@ -47,42 +46,35 @@ sslVersions = tls1.2
 serverCert = /opt/splunk/etc/auth/server.pem
 ```
 
-A finding writes that as `server.conf [sslConfig] sslVersions` - the file, the stanza,
-the key. That is all those three words mean.
+A finding writes that as `server.conf [sslConfig] sslVersions`: the file, the stanza, the
+key.
 
-## The part that matters most: layering
+## Layering
 
-The same setting can appear in several files at once. Splunk merges them, and one wins.
-From weakest to strongest:
+The same setting can appear in several files at once. Splunk merges them, and one value
+wins. From weakest to strongest:
 
-1. **`etc/system/default`** - what Splunk ships. Nobody edited it.
+1. **`etc/system/default`** - what Splunk ships.
 2. **An app** - a bundle of configuration added to the instance. Most deliberate
    configuration arrives this way.
 3. **`etc/system/local`** - the instance's own local settings. **Beats every app.**
 
-This decides whether a finding is true. A setting present in an app is not necessarily
-in effect: if `etc/system/local` sets the same key, the local value wins and the app's is
-ignored. A tool that reported the app's value would claim a control that is not there.
-
-So every finding names the file the winning value came from, and which of the three
-layers that file belongs to. When a value comes from `etc/system/local`, the finding says
-so, because no app can override it.
+A setting present in an app is not necessarily in effect: if `etc/system/local` sets the
+same key, the local value wins. So every finding names the file the winning value came
+from, and which of the three layers that file belongs to.
 
 ## How the assessment reads all this
 
-Splunk ships a command called `btool` that prints the merged result - the value actually
-in effect - and, asked for it, the file each value came from. That is the whole basis of
-this assessment.
+Splunk ships a command called `btool`. It prints the merged value actually in effect and,
+asked for it, the file that value came from. The assessment is built on it. Two
+properties make it suitable:
 
-Two properties make it suitable:
+- **It needs no password.** An assessment needs no credentials on the system it assesses.
+- **It only reads.** It cannot change a setting.
 
-- **It needs no password.** Reading configuration needs no account, so an assessment
-  needs no credentials on the system it assesses.
-- **It only reads.** There is no way for it to change a setting.
-
-One caution recorded for anyone verifying by hand: `btool check`, which reports invalid
-settings, exits successfully even when it has found problems. Its output is the result;
-its exit status is not. This assessment reads the output.
+One caution for anyone verifying by hand: `btool check` reports invalid settings, but it
+exits successfully even when it has found problems. Read its output, not its exit status.
+This assessment reads the output.
 
 ## Vocabulary you will meet in findings
 

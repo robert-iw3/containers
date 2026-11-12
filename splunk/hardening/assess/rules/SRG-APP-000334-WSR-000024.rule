@@ -3,9 +3,11 @@
 # organization, system, application, and/or individual for information
 # transfer.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000334-WSR-000024
 group:           V-279028
@@ -45,6 +47,7 @@ check:           outputs.conf [tcpout:<group>] sslVerifyServerCert matches ^(1|t
 check:           web.conf [settings] enableSplunkWebSSL matches ^(1|true)$
 check:           web.conf [settings] serverCert non_empty
 check:           web.conf [settings] privKeyPath non_empty
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
 # --- vendor verification: generated, do not edit by hand
 corrected:       inputs.conf [SSL] requireClientCert matches ^(1|true)$ -> inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1, with [SSL] accepted as an equivalent placement and the stanza resolved against the stanzas that actually exist
 corrected:       outputs.conf [tcpout:<group>] clientCert non_empty -> outputs.conf [tcpout:<target_group>] useSSL in true|1

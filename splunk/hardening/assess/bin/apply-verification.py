@@ -40,7 +40,7 @@ import argparse, json, os, re, sys, collections
 
 # The evaluator's operator vocabulary. A correction using anything else is not a
 # criterion it can decide, so it is deferred rather than written.
-OPS = ('absent', 'equals', 'in', 'matches', 'max', 'min', 'non_empty',
+OPS = ('absent', 'empty', 'equals', 'in', 'matches', 'max', 'min', 'non_empty',
        'not_equals', 'not_in', 'not_matches', 'present')
 
 CHECK = re.compile(r'^(check:\s+)(\S+)\s+\[([^\]]*)\]\s+(\S+)\s+(\S+)(?:\s+(.*))?$')

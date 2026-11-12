@@ -3,9 +3,11 @@
 # must be configured to automatically aggregate events that indicate account
 # actions.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000516-AU-000370
 group:           V-206516
@@ -26,7 +28,6 @@ governs:         eventtypes.conf - Used to configure event types and their prope
 governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
                  monitoring.
 
-check:           inputs.conf [] index non_empty
 check:           eventtypes.conf [] search present
 # --- vendor verification: generated, do not edit by hand
 vendor:          inputs.conf [] index https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
@@ -39,6 +40,9 @@ external:        A props.conf or transforms.conf route that discards events to t
                  queue would drop them before indexing; whether a given filter does so is a
                  per-deployment data-routing decision (props.conf.spec:1043,
                  transforms.conf.spec:241).
+external:        Which account-action events are collected for each in-scope device, which
+                 is not decidable from inputs.conf because the scope of coverage is
+                 organization-defined.
 
 citation:        Central Log Server SRG SRG-APP-000516-AU-000370 check text;
                  inputs.conf.spec:93 (index), inputs.conf.spec:128 (queue =

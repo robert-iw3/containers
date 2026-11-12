@@ -4,9 +4,11 @@
 # (ISSO) (at a minimum) when allocated log record storage volume reaches 75
 # percent of the repository maximum log record storage capacity.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000359-AU-000120
 group:           V-206492
@@ -29,7 +31,7 @@ governs:         health.conf - Thresholds for Splunk reporting on its own health
 governs:         server.conf - Core server settings, including the certificates and protocols used to
                  protect management and replication traffic.
 
-check:           server.conf [diskUsage] minFreeSpace non_empty
+check:           server.conf [diskUsage] minFreeSpace matches ^([1-9][0-9]?(\.[0-9]+)?%|[0-9]{6,}|[1-9][0-9]{4})$
 check:           health.conf [alert_action:email] disabled equals 0
 check:           health.conf [alert_action:email] action.to non_empty
 check:           health.conf [health_reporter] alert.disabled equals 0

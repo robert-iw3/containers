@@ -3,9 +3,11 @@
 # use FIPS-validated SHA-1 or later protocol to protect the integrity of the
 # password authentication process.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000172-AU-002550
 group:           V-206475
@@ -28,7 +30,7 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
                  starts in FIPS mode.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
@@ -42,6 +44,9 @@ external:        FIPS mode is an install-time decision (splunk-launch.conf.spec:
                  a deployment action rather than a configuration change
 external:        Password verification for accounts held in LDAP or SAML is performed by
                  that provider's cryptographic module
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        SPLK-CL-000390 check text ("splunk show fips-mode" must return FIPS mode
                  enabled) and fix text (SPLUNK_COMMON_CRITERIA=1 and SPLUNK_FIPS=1 in

@@ -2,9 +2,11 @@
 # The web server must restrict a consistent inbound source IP for the entire
 # management session.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000219-WSR-000190
 group:           V-264360
@@ -27,9 +29,7 @@ contribution:    Splunk Enterprise has no setting that binds an authenticated ma
 governs:         server.conf - Core server settings, including the certificates and protocols used to
                  protect management and replication traffic.
 
-check:           server.conf [httpServer] acceptFrom non_empty
 check:           server.conf [httpServer] acceptFrom not_equals *
-check:           server.conf [general] allowRemoteLogin not_equals always
 # --- vendor verification: generated, do not edit by hand
 vendor:          server.conf [general] allowRemoteLogin https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
 vendor:          server.conf [httpServer] acceptFrom https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/server.conf
@@ -41,6 +41,10 @@ external:        Binding a management session to the source IP address it was es
                  front of the management port
 external:        The permitted management source addresses themselves -
                  organization-defined network allowlist
+external:        Whether remote splunkd login is needed at all: the only value of
+                 server.conf [general] allowRemoteLogin that restricts anything is "never",
+                 which disables it outright, so the choice is a deployment decision rather
+                 than a hardening default; acceptFrom carries the source restriction.
 
 citation:        server.conf.spec:1291 ([httpServer]) with :1345-1360 (acceptFrom =
                  <network_acl>, default "*" accept from anywhere); server.conf.spec:106-120

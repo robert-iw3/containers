@@ -2,9 +2,11 @@
 # The web server must have Multipurpose Internet Mail Extensions (MIME) that
 # invoke OS shell programs disabled.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000141-WSR-000081
 group:           V-206380
@@ -27,7 +29,7 @@ governs:         alert_actions.conf - What Splunk does when an alert fires, such
                  webhook.
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 
-check:           alert_actions.conf [script] filename absent
+check:           alert_actions.conf [script] filename empty
 check:           savedsearches.conf [] action.script in 0|false
 
 external:        Whether a shell is reachable by the Splunk service account at all, carried

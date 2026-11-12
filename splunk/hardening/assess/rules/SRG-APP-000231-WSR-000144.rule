@@ -2,9 +2,11 @@
 # Information at rest must be encrypted using a DOD-accepted algorithm to
 # protect the confidentiality and integrity of the information.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000231-WSR-000144
 group:           V-206407
@@ -29,7 +31,6 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
                  starts in FIPS mode.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           indexes.conf [volume:<volume_name>] remote.s3.encryption not_equals none
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 vendor:          indexes.conf [volume:<volume_name>] remote.s3.encryption https://help.splunk.com/en/data-management/manage-splunk-enterprise-indexers/10.4/deploy-smartstore/smartstore-on-s3-security-strategies
@@ -46,6 +47,10 @@ external:        Encryption of configuration files, lookups and saved search art
                  local disk - operating system or storage layer
 external:        Identification of which stored data requires protection - organizational
                  data classification
+external:        Encryption of index data held on local storage, which no indexes.conf
+                 value expresses; remote.s3.encryption applies to a remote volume, and this
+                 instance defines none, so an unconditional test on it reports a finding
+                 against a volume that does not exist.
 
 citation:        splunk-launch.conf.spec:110-116 (SPLUNK_FIPS = [0|1], FIPS Publication
                  140-2 algorithms and restrictions); indexes.conf.spec:2411-2420

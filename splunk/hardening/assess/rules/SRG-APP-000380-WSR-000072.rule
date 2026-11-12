@@ -2,9 +2,11 @@
 # The web server application, libraries, and configuration files must only
 # be accessible to privileged users.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000380-WSR-000072
 group:           V-206427
@@ -23,13 +25,18 @@ contribution:    Splunk defines distinct roles and grants each one named capabil
                  roles and withheld from every other role.
 
 governs:         authorize.conf - Used to create roles.
+check:           authorize.conf [role_user] admin_all_objects absent
+check:           authorize.conf [role_power] admin_all_objects absent
+check:           authorize.conf [role_user] change_authentication absent
+check:           authorize.conf [role_power] change_authentication absent
+check:           authorize.conf [role_user] edit_httpauths absent
+check:           authorize.conf [role_power] edit_httpauths absent
+check:           authorize.conf [role_user] edit_local_apps absent
+check:           authorize.conf [role_power] edit_local_apps absent
+check:           authorize.conf [role_user] install_apps absent
+check:           authorize.conf [role_power] install_apps absent
 
-check:           authorize.conf [role_<roleName>] admin_all_objects absent
-check:           authorize.conf [role_<roleName>] change_authentication absent
-check:           authorize.conf [role_<roleName>] edit_httpauths absent
-check:           authorize.conf [role_<roleName>] edit_local_apps absent
-check:           limits.conf [system_checks] enable_install_apps equals true ; authorize.conf [role_user] install_apps absent ; authorize.conf [role_user] edit_local_apps absent ; authorize.conf [role_power] install_apps absent ; authorize.conf [role_power] edit_local_apps absent
-check:           authorize.conf [role_<roleName>] importRoles present
+
 # --- vendor verification: generated, do not edit by hand
 corrected:       authorize.conf [role_<roleName>] install_apps absent -> limits.conf [system_checks] enable_install_apps equals true ; authorize.conf [role_user] install_apps absent ; authorize.conf [role_user] edit_local_apps absent ; authorize.conf [role_power] install_apps absent ; authorize.conf [role_power] edit_local_apps absent
 vendor:          authorize.conf [role_<roleName>] admin_all_objects https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf
@@ -45,6 +52,10 @@ external:        Ownership and modes on the installation directory, the binaries
                  outside the application, carried by the operating system.
 external:        Which individuals hold the administrative roles, carried by the directory
                  service and by the organization's access approval records.
+external:        Which capabilities a site-defined role may hold, which is
+                 organization-defined: the shipped role_admin holds every privileged
+                 capability by design, so the criteria name the two unprivileged roles the
+                 product ships rather than every role.
 
 citation:        Web Server SRG SRG-APP-000380-WSR-000072 check and fix text;
                  authorize.conf.spec:68 (<capability> = <enabled>, capabilities disabled by

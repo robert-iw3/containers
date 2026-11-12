@@ -2,9 +2,11 @@
 # The web server must separate the hosted applications from hosted web
 # server management functionality.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000211-WSR-000129
 group:           V-206395
@@ -32,9 +34,7 @@ governs:         server.conf - Core server settings, including the certificates 
                  protect management and replication traffic.
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           server.conf [httpServer] acceptFrom non_empty
 check:           server.conf [httpServer] acceptFrom not_equals *
-check:           web.conf [settings] mgmtHostPort matches ^(localhost|127\.0\.0\.1|\[::1\]):[0-9]+$
 check:           authorize.conf [role_user] admin_all_objects absent
 check:           authorize.conf [role_power] admin_all_objects absent
 # --- vendor verification: generated, do not edit by hand
@@ -50,6 +50,11 @@ external:        Review of locally defined roles beyond the built-in user and po
                  administrative or not
 external:        Separation of management and application functions in any custom app's own
                  endpoints - application development
+external:        Separation of the management interface from the user interface, which is
+                 reached through server.conf [httpServer] acceptFrom together with
+                 splunk-launch.conf SPLUNK_BINDIP; mgmtHostPort names the address splunkd
+                 is reached at and is set to match, so a loopback value is not required of
+                 it.
 
 citation:        server.conf.spec:1291 ([httpServer]) with :1345-1360 (acceptFrom, default
                  "*" accept from anywhere); web.conf.spec:35-41 (mgmtHostPort, the IP

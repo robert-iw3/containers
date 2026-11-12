@@ -2,9 +2,11 @@
 # The Central Log Server that aggregates log records from hosts and devices
 # must be configured to use TCP for transmission.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000516-AU-000340
 group:           V-206513
@@ -24,7 +26,7 @@ contribution:    Splunk chooses which transports it will accept log records on, 
 governs:         inputs.conf - Configures inputs, distributed inputs such as forwarders, and file system
                  monitoring.
 
-check:           inputs.conf [udp:<port>] disabled absent
+check:           inputs.conf [udp:<port>] * absent
 # --- vendor verification: generated, do not edit by hand
 vendor:          inputs.conf [udp:<port>] disabled https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/inputs.conf
 # --- end vendor verification

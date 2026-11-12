@@ -3,9 +3,11 @@
 # function to provide replay-resistant authentication mechanisms for network
 # access to privileged accounts.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000156-AU-002380
 group:           V-206465
@@ -31,6 +33,7 @@ check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case
 check:           web.conf [settings] enableSplunkWebSSL equals true
 check:           web.conf [settings] serverCert non_empty
 check:           web.conf [settings] privKeyPath non_empty
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 vendor:          splunk-launch.conf [] SPLUNK_FIPS https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf

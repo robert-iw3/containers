@@ -2,9 +2,11 @@
 # The web server must display a default hosted application web page, not a
 # directory listing, when a requested web page cannot be found.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000266-WSR-000142
 group:           V-206411
@@ -12,7 +14,7 @@ severity:        medium
 cat:             CAT II
 determination:   APPLICABLE
 grade:           C
-decidable:       machine
+decidable:       manual
 confidence:      documented
 cci:             CCI-001312
 control_rev5:    SI-11
@@ -25,7 +27,13 @@ contribution:    Splunk Web can deny the enumeration the requirement is aimed at
 
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] tools.staticdir.generate_indexes not_equals 1
+retired_check:   web.conf [settings] tools.staticdir.generate_indexes not_equals 1
+                 reason: The vendor documents the default as 0, the compliant
+                         value, and the setting is absent from the shipped configuration,
+                         so this criterion reported a finding against an instance that
+                         serves no directory listing. The operator vocabulary has no form
+                         under which a missing key and the value 0 both pass, so the
+                         criterion is retired rather than rewritten.
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] tools.staticdir.generate_indexes https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 # --- end vendor verification
@@ -41,6 +49,16 @@ external:        The directories in scope are bounded by web.conf [settings] sta
 external:        Any directory listing served by a front-end web server, object store or
                  CDN mapped into the same URI space is carried by that component and
                  assessed against its own baseline.
+
+manual_reason:   The only setting that decides this requirement is web.conf [settings]
+                 tools.staticdir.generate_indexes, whose documented default of 0 already
+                 denies the directory listing. Deciding it from configuration needs a
+                 criterion under which a missing key and an explicit 0 both pass, and the
+                 operator vocabulary has none: every value operator fails on a missing key,
+                 and empty fails on an explicit 0, which is the state the fix text
+                 produces. The assessor reads the value. simple_error_page does not stand
+                 in for it - the vendor default is false, and the requirement asks for a
+                 default application page rather than a minimal error page.
 
 citation:        SRG-APP-000266-WSR-000142 check, fix and discussion text (CCI-001312,
                  SI-11 a); no product STIG rule shares CCI-001312. Splunk 10.x

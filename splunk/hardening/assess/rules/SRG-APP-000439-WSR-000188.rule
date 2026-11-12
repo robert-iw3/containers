@@ -2,9 +2,11 @@
 # The web server must remove all export ciphers to protect the
 # confidentiality and integrity of transmitted information.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000439-WSR-000188
 group:           V-206440
@@ -30,7 +32,7 @@ governs:         server.conf - Core server settings, including the certificates 
                  protect management and replication traffic.
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] cipherSuite matches ^(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384))(:(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384)))*$
+check:           web.conf [settings] cipherSuite matches ^((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384))(:((ECDHE|DHE)-(ECDSA|RSA)-AES(128|256)-(GCM-)?SHA(256|384)))*$
 check:           server.conf [sslConfig] cipherSuite matches ^(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384))(:(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384)))*$
 check:           inputs.conf [SSL] cipherSuite matches ^(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384))(:(TLS_AES_(128|256)_GCM_SHA(256|384)|((ECDHE|DHE)-(ECDSA|RSA)-)?AES(128|256)-(GCM-|CCM-)?SHA(256|384)))*$
 check:           outputs.conf [tcpout:<target_group>] cipherSuite not_matches (EXP-|RC4|RC2|DES-CBC|3DES|IDEA|SEED|CAMELLIA|PSK|-MD5|NULL|ADH-|AECDH-)|(^|:)(ALL|DEFAULT|COMPLEMENTOFALL|LOW|MEDIUM|HIGH)($|:)

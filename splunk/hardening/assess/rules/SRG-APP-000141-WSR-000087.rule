@@ -2,9 +2,11 @@
 # Users and scripts running on behalf of users must be contained to the
 # document root or home directory tree of the web server.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000141-WSR-000087
 group:           V-206385
@@ -25,8 +27,8 @@ contribution:    Splunk Web declares the endpoint prefix and the static director
 governs:         authorize.conf - Used to create roles.
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [root_endpoint] root_endpoint present
 check:           authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
+check:           web.conf [settings] root_endpoint present
 # --- vendor verification: generated, do not edit by hand
 corrected:       authorize.conf [role_<roleName>] srchFilter non_empty -> authorize.conf [role_admin] srchFilter in *| (empty or the override wildcard - the audit-review role must not have its reach narrowed)
 vendor:          authorize.conf [role_<roleName>] srchFilter https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.3-configuration-file-reference/authorize.conf

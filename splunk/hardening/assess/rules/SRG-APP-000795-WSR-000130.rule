@@ -3,9 +3,11 @@
 # detection of unauthorized access, modification, or deletion of audit
 # information.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000795-WSR-000130
 group:           V-264340
@@ -29,7 +31,6 @@ governs:         alert_actions.conf - What Splunk does when an alert fires, such
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           savedsearches.conf [<stanza name>] alert_condition non_empty
 check:           savedsearches.conf [<stanza name>] action.email in 1|true
 check:           savedsearches.conf [<stanza name>] action.email.to non_empty
 check:           alert_actions.conf [email] present
@@ -58,6 +59,10 @@ external:        Product STIG SPLK-CL-000140 carries the related personnel eleme
                  role membership matching the ISSM's list - through the directory service
                  group mapped to the admin role and an ISSM-maintained roster, neither of
                  which is an application setting.
+external:        Which saved search carries the trigger, which is organization-defined
+                 content: a trigger is expressed either by alert_condition or by counttype
+                 with relation and quantity, so a test on alert_condition alone reports a
+                 finding against a search that is correctly configured the other way.
 
 citation:        web.conf.spec:16 [settings], :23 startwebserver = [0 | 1] default 1, :871
                  log.access_file default web_access.log; savedsearches.conf.spec:270

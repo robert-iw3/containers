@@ -444,6 +444,12 @@ def main(argv=None):
                     help='how many rows to show per difference (default 6)')
     ap.add_argument('--apply', action='store_true',
                     help='write the inventory; without this the tool only reports')
+    ap.add_argument('--merge', action='store_true',
+                    help='keep the rows already in the inventory and add the ones the '
+                         'rules need. Collection should be a superset of what the '
+                         'criteria decide on: a row no criterion uses still supplies '
+                         'the observed configuration a finding quotes, so dropping it '
+                         'thins the evidence without fixing anything.')
     args = ap.parse_args(argv)
 
     if not os.path.isdir(args.rules):
@@ -464,6 +470,25 @@ def main(argv=None):
     report(rows, existing, per_rule, unparsable, stanza_only, spaced_key,
            collapsed, spec_dir, args.examples, sys.stdout)
     print()
+    if args.merge:
+        # Union on the full row identity, so a row that differs only in its
+        # key_status label is not duplicated under both spellings.
+        existing = []
+        if os.path.exists(args.checks):
+            with open(args.checks, encoding='utf-8') as fh:
+                fh.readline()
+                for line in fh:
+                    f = line.rstrip('\n').split('\t')
+                    if len(f) >= 6:
+                        existing.append(tuple(f[:6]))
+        have = {(r[0], r[2], r[3], r[4]) for r in existing}
+        added = [r for r in rows if (r[0], r[2], r[3], r[4]) not in have]
+        rows = existing + added
+        rows.sort()
+        print()
+        print('MERGE: %d row(s) kept, %d added, %d total'
+              % (len(existing), len(added), len(rows)))
+
     if args.apply:
         write_atomically(args.checks, rows, keep_prev=True)
         print('wrote %d row(s) -> %s' % (len(rows), args.checks))

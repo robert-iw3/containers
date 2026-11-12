@@ -1,9 +1,11 @@
 # SRG-APP-000142-WSR-000089  -  CAT II
 # The web server must be configured to use a specified IP address and port.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000142-WSR-000089
 group:           V-206386
@@ -27,6 +29,7 @@ governs:         web.conf - Configures the Splunk Web interface.
 check:           web.conf [settings] server.socket_host not_in 0.0.0.0|::
 check:           splunk-launch.conf [] SPLUNK_BINDIP non_empty
 check:           web.conf [settings] mgmtHostPort present
+check:           splunk-launch.conf [] SPLUNK_BINDIP not_in 0.0.0.0|::|*
 # --- vendor verification: generated, do not edit by hand
 vendor:          splunk-launch.conf [] SPLUNK_BINDIP https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/splunk-launch.conf
 vendor:          web.conf [settings] httpport https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf

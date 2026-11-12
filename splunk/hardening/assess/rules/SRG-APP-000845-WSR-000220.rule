@@ -3,9 +3,11 @@
 # create or update passwords, that the passwords are not found on the list
 # of commonly-used, expected, or compromised passwords in IA-5 (1) (a).
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000845-WSR-000220
 group:           V-264348
@@ -41,6 +43,10 @@ external:        Screening a new password against a list of commonly used, expec
 external:        Where authentication is external (LDAP, SAML, ProxySSO), the password is
                  created and verified at that provider and Splunk Web never sees the
                  change.
+external:        Checking a new password against a list of commonly used, expected or
+                 compromised passwords, which Splunk has no setting for: the native
+                 controls cover reuse through enablePasswordHistory and
+                 passwordHistoryCount, not membership of an external list.
 
 citation:        splunk-spec-files/authentication.conf.spec:554, :561; SPLK-CL-000410 check
                  and fix text

@@ -2,9 +2,11 @@
 # The Central Log Server must be configured to off-load interconnected
 # systems in real time and off-load standalone systems weekly, at a minimum.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000515-AU-000110
 group:           V-206511
@@ -28,8 +30,7 @@ governs:         outputs.conf - Where this instance forwards its data, and how t
                  protected.
 
 check:           outputs.conf [tcpout:<target_group>] server non_empty
-check:           indexes.conf [<index>] frozenTimePeriodInSecs present
-check:           indexes.conf [<index>] coldToFrozenDir present
+check:           indexes.conf [_audit] coldToFrozenDir non_empty
 # --- vendor verification: generated, do not edit by hand
 corrected:       outputs.conf [tcpout] server non_empty -> outputs.conf [tcpout:<target_group>] server non_empty
 vendor:          indexes.conf [<index>] coldToFrozenDir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/indexes.conf
@@ -51,6 +52,15 @@ external:        Network reachability of the receiving system, and the capacity 
 external:        Product STIG SPLK-CL-000150 places the outputs.conf side of this on the
                  forwarder, which is a separate instance; this criterion assesses the
                  configuration present on the instance under review.
+external:        The retention period itself, which is organization-defined: every index
+                 declares frozenTimePeriodInSecs, so a test for the key cannot fail, and a
+                 test on the value would report a finding against any site that chooses the
+                 shipped six years deliberately.
+external:        Preservation of frozen audit buckets by a script rather than a directory:
+                 indexes.conf coldToFrozenScript is the documented equivalent of
+                 coldToFrozenDir, and the two are alternatives, so an instance that uses
+                 the script satisfies the objective by other means and the assessor reads
+                 which of the two is set.
 
 citation:        outputs.conf.spec:61 [tcpout], :121 [tcpout:<target_group>], :123 server =
                  <comma-separated list>; indexes.conf.spec:684 frozenTimePeriodInSecs, :713

@@ -3,9 +3,11 @@
 # Infrastructure (PKI)-established certificate authorities for verification
 # of the establishment of protected sessions.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000427-AU-000040
 group:           V-221927
@@ -35,17 +37,15 @@ governs:         server.conf - Core server settings, including the certificates 
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           server.conf [sslConfig] sslRootCAPath non_empty
-check:           server.conf [sslConfig] serverCert matches tls1\.2
-check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*ssl3
-check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*tls1\.0
-check:           server.conf [sslConfig] serverCert not_matches (^|,)[[:space:]]*tls1\.1
 check:           server.conf [sslConfig] sslVerifyServerCert equals true
-check:           web.conf [settings] serverCert matches tls1\.2
-check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*ssl3
-check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*tls1\.0
-check:           web.conf [settings] serverCert not_matches (^|,)[[:space:]]*tls1\.1
 check:           outputs.conf [tcpout:<target_group>] sslVerifyServerCert in 1|true
 check:           inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1
+check:           web.conf [settings] sslVersions not_matches (^|,)\s*(ssl3|tls1\.0|tls1\.1|\*|tls)\s*(,|$)
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.(2|3)\s*(,|$)
+check:           server.conf [sslConfig] sslVersions matches ^[[:space:]]*(tls1\.2|tls1\.3)([[:space:]]*,[[:space:]]*(tls1\.2|tls1\.3))*[[:space:]]*$
+check:           web.conf [settings] serverCert non_empty
+check:           web.conf [settings] serverCert not_equals $SPLUNK_HOME/etc/auth/splunkweb/cert.pem
+check:           server.conf [sslConfig] serverCert non_empty
 # --- vendor verification: generated, do not edit by hand
 corrected:       outputs.conf [tcpout] sslVerifyServerCert not_equals false -> outputs.conf [tcpout:<target_group>] sslVerifyServerCert in 1|true
 corrected:       inputs.conf [splunktcp-ssl] requireClientCert not_equals false -> inputs.conf [splunktcp-ssl:<port>] requireClientCert in true|1

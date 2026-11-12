@@ -2,9 +2,11 @@
 # The web server document directory must be in a separate partition from the
 # web servers system files.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000233-WSR-000146
 group:           V-206408
@@ -29,13 +31,6 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
                  starts in FIPS mode.
 
 check:           splunk-launch.conf [] SPLUNK_DB non_empty
-check:           splunk-launch.conf [] SPLUNK_DB matches tls1\.2
-check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*ssl3
-check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*tls1\.0
-check:           splunk-launch.conf [] SPLUNK_DB not_matches (^|,)[[:space:]]*tls1\.1
-check:           indexes.conf [<index_name>] homePath matches ^\$SPLUNK_DB/
-check:           indexes.conf [<index_name>] coldPath matches ^\$SPLUNK_DB/
-check:           indexes.conf [<index_name>] thawedPath matches ^\$SPLUNK_DB/
 # --- vendor verification: generated, do not edit by hand
 vendor:          indexes.conf [<index_name>] coldPath https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/manage-index-storage/use-multiple-partitions-for-index-data
 vendor:          indexes.conf [<index_name>] homePath https://help.splunk.com/en/splunk-enterprise/administer/manage-indexers-and-indexer-clusters/10.4/manage-index-storage/use-multiple-partitions-for-index-data
@@ -49,6 +44,10 @@ external:        Partition sizing and the mount options applied to the index fil
                  operating system
 external:        The location of the installation tree itself relative to the operating
                  system's own file systems - operating system
+external:        Whether index data sits on a partition separate from the Splunk system
+                 files, which is a filesystem property that no indexes.conf path expresses;
+                 the application-layer share is that splunk-launch.conf SPLUNK_DB is set
+                 and resolves outside the installation directory.
 
 citation:        splunk-launch.conf.spec:67-73 (SPLUNK_DB = <string>, "The fully qualified
                  path to the directory containing the index directories", primarily used by

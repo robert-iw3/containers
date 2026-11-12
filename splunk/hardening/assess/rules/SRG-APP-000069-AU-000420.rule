@@ -3,9 +3,11 @@
 # Consent Banner on the screen until users acknowledge the usage conditions
 # and take explicit actions to log on for further access.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000069-AU-000420
 group:           V-221906
@@ -43,6 +45,10 @@ external:        An explicit acknowledgment step - a dialog the user must dismis
 external:        As with the banner display requirement, the product STIG scopes this to
                  the instance used as a search head, and access paths that bypass the
                  Splunk Web login page are covered by their own banners.
+external:        Retaining the banner on screen until the user acknowledges it, which
+                 Splunk Web has no setting for: login_content places the text on the login
+                 page and the page proceeds on submission, so the acknowledgement half of
+                 the requirement is carried outside the application.
 
 citation:        splunk-spec-files/web.conf.spec:233-237 (login_content = <string>, no
                  default, HTML sanitized by removing potentially dangerous tags and

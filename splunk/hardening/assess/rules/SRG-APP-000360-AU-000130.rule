@@ -5,9 +5,11 @@
 # minimum) of all audit failure events, such as loss of communications with
 # hosts and devices, or if log records are no longer being received.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000360-AU-000130
 group:           V-206493
@@ -30,7 +32,6 @@ governs:         health.conf - Thresholds for Splunk reporting on its own health
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 
 check:           savedsearches.conf [<stanza name>] search non_empty
-check:           savedsearches.conf [<stanza name>] alert_condition non_empty
 check:           savedsearches.conf [<stanza name>] action.email.to non_empty
 check:           savedsearches.conf [<stanza name>] enableSched equals 1
 check:           health.conf [health_reporter] alert.disabled equals 0
@@ -45,6 +46,10 @@ external:        SMTP relay reachability and delivery within seconds, which depe
 external:        The SA and ISSO recipient addresses, which the organization supplies
 external:        Which hosts and devices are within the scope of coverage, and the ISSO's
                  confirmation of receipt that SPLK-CL-000170 obtains by interview
+external:        Which saved search carries the trigger, which is organization-defined
+                 content: a trigger is expressed either by alert_condition or by counttype
+                 with relation and quantity, so a test on alert_condition alone reports a
+                 finding against a search that is correctly configured the other way.
 
 citation:        Two corrections. savedsearches.conf realtime_schedule in 1|true is both
                  vacuous and a misreading: savedsearches.conf.spec:137-155 defaults it to

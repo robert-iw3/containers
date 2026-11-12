@@ -3,9 +3,11 @@
 # of applicable federal laws, Executive Orders, directives, policies,
 # regulations, standards, and guidance for such authentication.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000179-WSR-000111
 group:           V-206391
@@ -28,9 +30,10 @@ governs:         splunk-launch.conf - Environment settings read before Splunk st
 governs:         web.conf - Configures the Splunk Web interface.
 
 check:           splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
-check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[0-9]{4,})?$
+check:           authentication.conf [authentication] passwordHashAlgorithm matches ^SHA(256|512)-crypt(-[1-9][0-9]{3,})?$
 check:           web.conf [settings] enableSplunkWebSSL equals true
-check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.2\s*(,|$)
+check:           web.conf [settings] sslVersions not_matches (^|,)\s*(ssl3|tls1\.0|tls1\.1|\*|tls)\s*(,|$)
+check:           web.conf [settings] sslVersions matches (^|,)\s*tls1\.(2|3)\s*(,|$)
 # --- vendor verification: generated, do not edit by hand
 corrected:       splunk-launch.conf [] SPLUNK_FIPS equals 1 -> splunk-launch.conf [] SPLUNK_FIPS in 1|true|t|yes (matched case-insensitively)
 vendor:          authentication.conf [authentication] passwordHashAlgorithm https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/authentication.conf
@@ -47,6 +50,9 @@ external:        Cryptographic modules used by an LDAP or SAML identity provider
 external:        FIPS mode must be set before first start
                  (splunk-launch.conf.spec:110-130), so enabling it later is a reinstall or
                  upgrade
+external:        Re-hashing of passwords stored before the algorithm was set, which this
+                 setting does not perform: an existing hash keeps the algorithm it was
+                 written with until the password is next changed.
 
 citation:        SPLK-CL-000390 check and fix text (FIPS mode) and SPLK-CL-000430 fix text
                  (tls1.2 pin, with the note that the instance must operate in FIPS mode to

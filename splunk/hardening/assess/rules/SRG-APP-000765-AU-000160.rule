@@ -2,9 +2,11 @@
 # The Central Log Server must implement a report generation capability that
 # supports on-demand audit review and analysis.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000765-AU-000160
 group:           V-263562
@@ -26,8 +28,7 @@ governs:         authorize.conf - Used to create roles.
 governs:         savedsearches.conf - Saved searches, scheduled reports and alerts.
 
 check:           savedsearches.conf [<stanza name>] search non_empty
-check:           savedsearches.conf [<stanza name>] dispatch.earliest_time present
-check:           savedsearches.conf [<stanza name>] dispatch.latest_time present
+check:           savedsearches.conf [<stanza name>] dispatch.earliest_time non_empty
 check:           authorize.conf [role_user] search equals enabled
 check:           authorize.conf [role_<roleName>] srchIndexesAllowed non_empty
 # --- vendor verification: generated, do not edit by hand
@@ -42,6 +43,9 @@ external:        What the report must contain to support review and analysis is 
                  organization-defined parameter recorded in the system security plan.
 external:        Whether reviewing personnel are available to run the report on demand, and
                  the review cadence, are organizational procedures.
+external:        The closing bound of a report window, which 161 of the 182 saved searches
+                 this product ships leave unset because an open end means "to now"; a test
+                 for it reports a finding against the product as delivered.
 
 citation:        savedsearches.conf.spec:31 [<stanza name>], :44 search, :564
                  dispatch.earliest_time, :571 dispatch.latest_time;

@@ -2,9 +2,11 @@
 # The web server must have resource mappings set to disable the serving of
 # certain file types.
 #
-# Generated from the benchmark and the assessment determinations. Edit this
-# file to change how this requirement is assessed here; it is read at run
-# time. Regenerating overwrites it.
+# Generated from the benchmark and the assessment determinations, then kept
+# by hand. Edit this file to change how this requirement is assessed here;
+# it is read at run time. Regenerating refreshes the benchmark text in place
+# and leaves the criteria, the determination and any verification block as
+# they are.
 
 id:              SRG-APP-000141-WSR-000083
 group:           V-206382
@@ -24,8 +26,16 @@ contribution:    Splunk Web serves static content only from a declared directory
 
 governs:         web.conf - Configures the Splunk Web interface.
 
-check:           web.conf [settings] tools.staticdir.generate_indexes in 0|false
-check:           web.conf [settings] static_dir present
+check:           web.conf [settings] static_dir non_empty
+retired_check:   web.conf [settings] tools.staticdir.generate_indexes in 0|false
+                 reason: The vendor documents "tools.staticdir.generate_indexes =
+                         [1 | 0] ... Default: 0 (false)", and the setting is absent from
+                         the shipped configuration, so the compliant value is in effect and
+                         absence cannot be a finding. The operator vocabulary has no form
+                         that treats a missing key and the value 0 alike, so the criterion
+                         is retired rather than rewritten: absent would report a finding
+                         against an instance that sets 0 explicitly, which is the state the
+                         fix text produces.
 # --- vendor verification: generated, do not edit by hand
 vendor:          web.conf [settings] static_dir https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
 vendor:          web.conf [settings] tools.staticdir.generate_indexes https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.4/configuration-file-reference/10.4.0-configuration-file-reference/web.conf
