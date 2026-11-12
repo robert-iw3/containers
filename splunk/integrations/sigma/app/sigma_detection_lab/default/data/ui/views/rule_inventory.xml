@@ -142,8 +142,14 @@
       <title>By platform and severity</title>
       <chart>
         <search base="inv">
-          <query>| search $plat$ $sev$ $tac$ $disp$ $find$
-| stats count by platform, severity | sort platform</query>
+          <!-- chart over/by, not stats by two fields. stats returns three
+                 columns and a bar chart reads the first as the category
+                 and every remaining column as a series, so the second
+                 field was plotted as if it were a measure. chart gives
+                 one column per value, which is what a stacked bar wants
+                 and what the colours are keyed to. -->
+            <query>| search $plat$ $sev$ $tac$ $disp$ $find$
+| chart count over platform by severity</query>
         </search>
         <option name="charting.chart">bar</option>
         <option name="charting.chart.stackMode">stacked</option>
@@ -151,7 +157,7 @@
         <option name="charting.axisTitleX.text">rules</option>
         <option name="height">320</option>
         <drilldown>
-          <set token="plat">platform="$click.value2$"</set>
+          <set token="plat">platform="$click.value$"</set>
         </drilldown>
       </chart>
     </panel>

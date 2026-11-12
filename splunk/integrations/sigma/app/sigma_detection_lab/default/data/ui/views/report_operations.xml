@@ -136,9 +136,15 @@
       <title>Hosts by activity</title>
       <chart>
         <search>
-          <query>index=sigma_alerts $plat$
+          <!-- chart over/by, not stats by two fields. stats returns three
+                 columns and a bar chart reads the first as the category
+                 and every remaining column as a series, so the second
+                 field was plotted as if it were a measure. chart gives
+                 one column per value, which is what a stacked bar wants
+                 and what the colours are keyed to. -->
+            <query>index=sigma_alerts $plat$
           | dedup sigma_rule_id, sigma_src_host, sigma_first_seen
-| stats count by sigma_src_host, sigma_level
+| chart count over sigma_src_host by sigma_level
 | sort - count | head 20</query>
           <earliest>$tr.earliest$</earliest><latest>$tr.latest$</latest>
         </search>
@@ -184,9 +190,15 @@
         <search>
           <query>index=linux_lab
 | eval lag=_indextime-_time
-| stats count as events, max(_time) as newest, median(lag) as lag by sourcetype
+| stats count as events, max(_time) as newest, median(lag) as lag,
+        max(lag) as worst by sourcetype
+| eval spread = worst - lag
 | eval newest=strftime(newest,"%F %T"), lag=round(lag,0),
-       state=case(lag&gt;3600,"timestamps suspect", events=0,"no data", 1==1,"ok")
+       state=case(
+         lag &lt; 300, "ok",
+         spread &lt; 60 AND lag &gt; 3600, "timestamps not extracted",
+         lag &lt; 3600, "lagging",
+         1==1, "historical or replayed data")
 | table sourcetype, events, newest, lag, state
 | rename sourcetype as "Source type", events as "Events this shift",
          newest as "Newest event", lag as "Median lag (s)", state as "State"
@@ -196,7 +208,7 @@
         <option name="count">10</option>
         <option name="drilldown">none</option>
         <format type="color" field="State">
-          <colorPalette type="map">{"ok":#0ca30c,"timestamps suspect":#fab219,"no data":#d03b3b}</colorPalette>
+          <colorPalette type="map">{"ok":#0ca30c,"lagging":#fab219,"timestamps not extracted":#d03b3b,"historical or replayed data":#19C1EB}</colorPalette>
         </format>
       </table>
     </panel>

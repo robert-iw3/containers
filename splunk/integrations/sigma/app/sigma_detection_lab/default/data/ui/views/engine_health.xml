@@ -87,10 +87,15 @@
       <title>Concurrency ceiling</title>
       <single>
         <search>
-          <!-- latest, not max. The ceiling can change across a restart,
-               and the figure that matters is the one in force now; max over
-               a day reports a limit that is no longer being applied. -->
-          <query>index=_internal sourcetype=scheduler concurrency_limit=*
+          <!-- The scheduler logs three different limits under the same
+               field name: the jobs one saved search may run at once, the
+               instance-wide ceiling on scheduled searches, and a wider
+               historical-search ceiling. Taking the latest, or the largest,
+               picks whichever was written last and reports a number that
+               does not govern this app. The reason text is what separates
+               them, so match on it. -->
+          <query>index=_internal sourcetype=scheduler
+reason="*concurrent historical scheduled searches*"
 | rex "concurrency_limit=(?&lt;lim&gt;\d+)" | stats latest(lim) as lim | fields lim</query>
           <earliest>-24h</earliest><latest>now</latest>
         </search>

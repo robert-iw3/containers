@@ -261,7 +261,14 @@ def concurrency_limit(t: Target) -> Optional[int]:
     often not the number being enforced, and the enforced one is the only
     one that matters.
     """
-    out = t.sh("grep -ho 'concurrency_limit=[0-9]\\+' "
-               f"{t.home}/var/log/splunk/scheduler.log 2>/dev/null | tail -1")
+    # Three different limits share this field name: the jobs one saved
+    # search may run at once, the instance-wide ceiling on scheduled
+    # searches, and a wider historical-search ceiling. Only the second
+    # governs how many of an app's searches run together, and the reason
+    # text is what tells them apart. Taking the last line regardless
+    # returns whichever was written most recently.
+    out = t.sh("grep -h 'concurrent historical scheduled searches' "
+               f"{t.home}/var/log/splunk/scheduler.log 2>/dev/null "
+               "| grep -o 'concurrency_limit=[0-9]\\+' | tail -1")
     m = re.search(r"=(\d+)", out)
     return int(m.group(1)) if m else None
