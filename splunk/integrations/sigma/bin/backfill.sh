@@ -28,6 +28,7 @@ WAIT=1800
 RULES="$HERE/rules-core/SigmaHQ_sigma/core/rules/windows/process_creation $HERE/rules-core/SigmaHQ_sigma/core/rules/linux"
 
 usage() { sed -n '2,18p' "$0"; exit "${1:-0}"; }
+num() { case "${1:-}" in ''|*[!0-9]*) printf '0' ;; *) printf '%s' "$1" ;; esac; }
 while [ $# -gt 0 ]; do
     case "$1" in
         --container) CONTAINER="${2:-}"; shift 2 ;;
@@ -74,17 +75,35 @@ echo "== 2. Wait for every search to run once =="
 # here makes the target unreachable and the wait always runs to its timeout.
 want=$(podman exec -u splunk "$CONTAINER" sh -c \
     "grep -cE '^\[Sigma (Engine|Rule) - ' /opt/splunk/etc/apps/$APP/default/savedsearches.conf")
+
+# Count only what runs from here on. Matching the whole scheduler log counts
+# every run the engine has ever made, which is already more than the target:
+# the wait then returns at once, the production cadence goes back before a
+# single backfill search has fired, and the run reports success having done
+# nothing. Remembering how long the log was is enough, and needs no
+# timestamp parsing.
+mark=$(podman exec -u splunk "$CONTAINER" sh -c \
+    "wc -l < /opt/splunk/var/log/splunk/scheduler.log" | tr -d ' \r')
+mark=${mark:-0}
 start=$(date +%s)
 deadline=$(( start + WAIT ))
 while [ "$(date +%s)" -lt "$deadline" ]; do
     done_n=$(podman exec -u splunk "$CONTAINER" sh -c \
-      "awk -v s=$start '\$0 ~ /status=success/ && /savedsearch_name=\"Sigma (Engine|Rule) - /' /opt/splunk/var/log/splunk/scheduler.log 2>/dev/null \
-       | grep -oE 'savedsearch_name=\"[^\"]+\"' | sort -u | wc -l" || echo 0)
-    printf '\r  %s of %s search(es) have run' "${done_n:-0}" "$want"
-    [ "${done_n:-0}" -ge "$want" ] && break
+      "tail -n +$(( mark + 1 )) /opt/splunk/var/log/splunk/scheduler.log 2>/dev/null \
+       | grep 'status=success' \
+       | grep -oE 'savedsearch_name=\"Sigma (Engine|Rule) - [^\"]+\"' \
+       | sort -u | wc -l" | tr -d ' \r')
+    printf '\r  %s of %s search(es) have run since this pass began' \
+        "${done_n:-0}" "$want"
+    [ "$(num "${done_n:-0}")" -ge "$(num "$want")" ] && break
     sleep 20
 done
 echo
+if [ "$(num "${done_n:-0}")" -lt "$(num "$want")" ]; then
+    echo "  WARNING: only ${done_n:-0} of $want ran before the wait expired."
+    echo "  The cadence below is restored anyway, so re-run with a longer"
+    echo "  --wait, or a --cron that fires more often, to finish the pass."
+fi
 
 echo
 echo "== 3. Restore the production cadence =="

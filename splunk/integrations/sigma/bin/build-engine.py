@@ -75,6 +75,49 @@ TIERS: Dict[str, Dict] = {
 }
 TIER_ORDER = ["critical", "high", "medium", "low", "informational"]
 
+# How many searches have been emitted on each tier so far, so each one gets
+# its own minute rather than sharing with the rest of its tier.
+_TIER_SEQ: Dict[str, int] = {}
+
+
+def staggered_cron(cron: str, offset: int) -> str:
+    """The same interval, started `offset` minutes later.
+
+    Every search in a tier shares a cron, so they all fire on the same
+    minute and queue behind the handful an instance runs at once. Each one
+    then starts further from its schedule than the last, and every run is
+    reported as delayed. schedule_window lets the scheduler move them, which
+    spreads the load, but the run is still counted against its original
+    schedule -- a search deferred five minutes is still five minutes late.
+    Giving each its own offset is what actually stops the queue.
+    """
+    parts = cron.split()
+    if len(parts) != 5:
+        return cron
+    minute, hour = parts[0], parts[1]
+    if minute.startswith("*/"):
+        try:
+            step = int(minute[2:])
+        except ValueError:
+            return cron
+        if step <= 0 or step > 59:
+            return cron
+        mins = sorted((offset % step) + k * step for k in range(60 // step))
+        return ",".join(str(m) for m in mins) + " " + " ".join(parts[1:])
+    if minute.isdigit():
+        # Hourly or daily: move it within the hour.
+        return " ".join([str(offset % 60)] + parts[1:])
+    return cron
+
+
+def tier_cron(tier_name: str, tier: Dict) -> str:
+    """This tier's cron, offset so no two of its searches collide."""
+    n = _TIER_SEQ.get(tier_name, 0)
+    _TIER_SEQ[tier_name] = n + 1
+    return staggered_cron(tier["cron"], n)
+
+
+
 LOOKUP_COLUMNS = [
     "sigma_rule_id", "sigma_rule", "sigma_level", "sigma_severity",
     "sigma_confidence", "sigma_confidence_score", "sigma_disposition",
@@ -548,7 +591,7 @@ quantity = 0
 enableSched = 1
 disabled = {0 if tier["enabled"] else 1}
 realtime_schedule = 0
-cron_schedule = {tier["cron"]}
+cron_schedule = {tier_cron(lvl, tier)}
 dispatch.earliest_time = {tier["window"]}
 dispatch.latest_time = now
 schedule_window = {tier['spread']}
@@ -624,7 +667,7 @@ quantity = 0
 enableSched = 1
 disabled = {0 if tier["enabled"] else 1}
 realtime_schedule = 0
-cron_schedule = {tier["cron"]}
+cron_schedule = {tier_cron(lvl, tier)}
 dispatch.earliest_time = {tier["window"]}
 dispatch.latest_time = now
 schedule_window = {tier['spread']}
